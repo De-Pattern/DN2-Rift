@@ -1,0 +1,260 @@
+# The +Drive sample library: research and plan (for the owner's approval)
+
+**2026-10-28. A plan, not a build.** Nothing here is in a firmware yet. It builds on
+`docs/drive-storage-research.md` (the eMMC, its free region, the block driver) and on
+what v0.16..v0.29 already do (`docs/sampler.md`). Sources: the Digitakt II manual (OS
+1.17, §9.1, §13.3, §13.6), our own code (`csrc/sampler/link.c`, `rec.c`, `smp_page.c`),
+and the owner's reports (O12; the YouTube requests from paQ75 and DrLaemmerbein).
+
+## 1. Why: what is slow today, and why
+
+Today the +Drive holds **one image of the DSP's sample pool**, byte for byte (up to
+400 MB: 122 of your slots and the recorder's 4). At every power-on the whole image is read
+and sent to the DSP over our TDM link, which carries about **0.7 MB/s**, and every 64 KB
+is checked. So:
+
+| what is in the pool | power-on load |
+|---|---|
+| 20 MB | about 30 s |
+| 100 MB | about 2.5 min |
+| 400 MB | about 10 min |
+
+Two things follow: (1) the time is set by **how much is in the pool**, not by the
++Drive; (2) a library on the +Drive cannot make the link faster. What it can do is let you
+keep **far more** on the +Drive (about 20 GB free) while the pool only holds **what this
+project uses**, and load the samples the current pattern needs first.
+
+## 2. What the Digitakt II does (the model to copy)
+
+From the DT2 manual, in short:
+
+- **Two stores.** The **+Drive library** (about 20 GB, folders, every sample you own) and
+  the **project's RAM pool** (up to 400 MB, slots 1..1016). A track plays only what is in
+  the pool. Loading into the pool is an explicit action; power-on loads the active
+  project's pool.
+- **SAMPLES menu** (FUNC + SAMPLING on the DT2): UP/DOWN chooses **+DRIVE** or
+  **PROJECT RAM**, YES opens it.
+- **+DRIVE**: folders FACTORY (write-protected), INCOMING (where transfers land),
+  RECORDED (appears after the first recording), plus your own. UP/DOWN moves, YES opens a
+  folder, NO goes up one level, **NO held goes to the top**. A sample already in the
+  project's pool shows its slot number.
+  - **YES** ticks or unticks a sample; **FUNC + YES** previews about 10 s of it on the
+    active track's voice.
+  - **RIGHT** opens SAMPLE ACTION: **LOAD TO PROJECT** (the ticked ones into the first
+    empty slots; FUNC + YES there picks a RAM bank), **LOAD TO TRK**, **RENAME**, **MOVE
+    SELECTED** / **MOVE HERE**, **DELETE**, **CREATE DIR**, **UPLOAD HERE** (where a
+    transfer lands), **SELECT ALL**.
+- **PROJECT RAM**: the 1016 slots. **UNLOAD** (one or the ticked), **SELECT UNUSED**
+  (samples no pattern uses: "UNLOAD X SAMPLES? CONFIRM? Y/N"), **REPLACE** (browse the
+  +Drive for a slot's new sample).
+- **Samples are found by hash**, not by name or folder, so renaming or moving a sample
+  on the +Drive does not break a project that uses it; deleting it does.
+
+## 3. What we have already (most of the pieces)
+
+| piece | where | state |
+|---|---|---|
+| Our eMMC region from sector `0x600000` (3 GiB), read and written through the stock block driver, bounded to the region | `link.c` | in use since v0.15 |
+| The pool in the DSP (400 MB, 128 slots, the recorder's 4) and its checked loader | `link.c`, DSP `tdm_rx` | in use |
+| A DT2-style sample list (the pool's slots) and folder browser (INCOMING, RECORDED, the import tool's folders), SAMPLE ACTION (load, rename, delete), multi-select, FUNC + YES preview | `rec.c`, `smp_page.c` | v0.25..v0.29 |
+| The import tool (browser) and `tools/dn2samples.py`, writing the **whole** pool image | site, tools | in use |
+| Recordings saved to the +Drive | `link.c` | in use |
+
+What is missing is the split: the browser today shows the **pool** grouped by folder; there
+is no store bigger than the pool, and no "load this into the project".
+
+## 4. The proposal
+
+### 4.1 Storage on the +Drive (our region, nothing of Elektron's touched)
+
+```
+sector 0x600000   our superblock: magic, version, checksum, layout (as today's header, extended)
+                  the CURRENT POOL image (as today: what power-on loads), unchanged format
+then              the LIBRARY: an index + sample files
+```
+
+- **Library index**: a table of entries, each **name (36 chars), folder, size, frames,
+  rate/channels, xxHash32 of the frames, start sector, length**, plus a folder table
+  (INCOMING, RECORDED and yours; there is no factory set). xxHash32 is
+  already in the DN2 image (`docs/drive-storage-research.md` §4).
+- **Sample files**: contiguous extents, int16 as the DSP plays them (no conversion at
+  load), allocated from the end of the index upward; deleting frees an extent, and the
+  import tool compacts when it needs room (the computer is the master copy, as DNX
+  planned).
+- **Every write bounded** to the region (as `link.c` already does) and checked against
+  the device size. Projects, presets, kits: untouched, as today.
+- **Room**: about 20 GB (3 GiB .. 23 GiB). Sending from the computer runs at the USB
+  SysEx link's speed (a few hundred KB/s), so a large library is filled once and kept;
+  only the samples a project loads cross the slower DSP link afterwards.
+
+### 4.2 The pool stays what it is, but holds only the project's samples
+
+- **LOAD TO PROJECT** copies a library sample into the first empty pool slot: read from
+  the +Drive, sent over the link, checked (the loader we have, for one sample: seconds,
+  not minutes). The pool image on the +Drive is updated so power-on reloads it.
+- **Power-on**: loads the pool image as today, but **the samples the current pattern's
+  tracks use go first** (SAMP of each sample track read from the kit), so the pattern can
+  play while the rest loads. The page shows LOADING n/N meanwhile (today: nothing).
+- **Per project**: the DN2 has no place in its own project files for our list, so the
+  pool would belong to **the active project slot** by its number (128 pools' lists in our
+  region; switching project loads that project's list). *To be researched: where the OS
+  keeps the active project's slot number; until then, one pool for all projects, as
+  today.*
+- **Slots stay 1..127** (our SAMP parameter is 0..127; the DT2's 1016 would need a new
+  parameter range and bank pages, a much bigger change).
+
+### 4.3 Menus and keys (as the DT2's, on keys the DN2 has)
+
+| | DT2 | here |
+|---|---|---|
+| open | FUNC + SAMPLING | **FUNC + YES on a sample page** opens the browser (as today), its top now **+DRIVE / PROJECT RAM** |
+| +DRIVE | folders, YES ticks, FUNC + YES previews, RIGHT: SAMPLE ACTION | the same; NO up a level, NO held to the top; a sample in the pool shows its slot |
+| SAMPLE ACTION (+DRIVE) | LOAD TO PROJECT, LOAD TO TRK, RENAME, MOVE, DELETE, CREATE DIR, SELECT ALL | the same (MOVE and CREATE DIR in phase 3) |
+| PROJECT RAM | slots, UNLOAD, SELECT UNUSED, REPLACE | the same (today's list, renamed); SELECT UNUSED in phase 3 |
+| the SAMP knob | the pool's slots | unchanged: the pool's slots |
+
+### 4.4 The computer side
+
+- The import tool (site) and `dn2samples.py` send samples **into the library**
+  (INCOMING, or a folder you name) instead of rewriting the whole pool; one sample at a
+  time, each checked. Nothing in the pool changes until you load it.
+- A list of what is on the +Drive (names, sizes, folders), and delete from the computer.
+
+## 5. Phases (each its own build, each through the full gate)
+
+1. **Library store + import into it** (no UI change): the superblock and index, the tool
+   writes library samples; the pool works as today. Gate: emulator writes and reads the
+   index (bounds checked), the runner unchanged. *Risk: medium (eMMC writes): bounded like
+   today's.*
+2. **+DRIVE / PROJECT RAM in the browser, LOAD TO PROJECT, UNLOAD, LOAD TO TRK,
+   preview from the library**. Gate: the 6f/6i-style emulator checks for each action.
+3. **Priority loading at power-on, LOADING n/N, SELECT UNUSED, MOVE, CREATE DIR,
+   REPLACE.**
+4. **Per-project pools** (after finding the active project's slot number).
+
+## 6. Decisions for you
+
+1. **Approve the shape**: library + per-project pool (the DT2's), slots staying 1..127?
+2. **Where the browser opens**: FUNC + YES on a sample page as today, or another
+   combination you prefer?
+3. **Phase order**: is priority loading at power-on (phase 3) more urgent than the menus
+   (phase 2)? It is the quickest win for the slow start.
+4. **One pool for all projects** until phase 4, as today: OK?
+
+## 6a. The owner's decisions (2026-10-28)
+
+1. **Shape approved**: the +Drive library and the project's pool, as the DT2's. **Pool
+   banks** (a BANK control beside SAMP, A-H, 8 x 127 slots) only if they can be drawn and
+   reached close to the DT2's; otherwise 127 slots stay, and the owner is told.
+2. **FUNC + YES** opens the browser (as today).
+3. **Faster start first**: priority loading at power-on (phase 3's first item) comes before
+   the menus. Order now: **(a)** priority loading and LOADING n/N, **(b)** the library store,
+   **(c)** +DRIVE / PROJECT RAM, **(d)** per-project pools, **(e)** presets that bring their
+   sample.
+4. **One pool per project**, as the DT2 (phase 4).
+5. **Leaving the browser**: NO goes up a level and closes it at the top; NO held goes to the
+   top; any page key (SRC, FLTR, AMP, FX, MOD, TRK, PTN) closes it at once and does its job.
+
+## 6b. Presets ("sounds") that bring their sample
+
+A DN2 preset already keeps the whole sound record, so a preset saved from one of our sample
+machines keeps the machine, SAMP and every page's settings (to confirm on hardware: save one
+from a sample track and a PERC track, load it on another track). But SAMP is a **slot
+number**: recalled after the pool has changed, it plays whatever is in that slot now. The DT2
+links a preset to its sample by hash. Ours, later: when a preset is saved, our region notes
+the library sample in that slot (one record for each of the DN2's 2,048 presets); when it is
+loaded, that sample is loaded into the pool if it is not there, and SAMP set to it. Presets
+stay in the DN2's own banks, named and browsed as now (FUNC + LEVEL, the trig keys for the
+bank). Kits keep sixteen sounds and take the same fix.
+
+## 7. Open research before phase 1
+
+- The active project's slot number in the OS (for phase 4).
+- The read speed of the eMMC through the stock driver while the sequencer runs (it is
+  not the bottleneck today, the TDM link is; to confirm for priority loading).
+- Whether the link's 0.7 MB/s can be raised (more TDM slots, or the RGPIO page link
+  `docs/drive-storage-research.md` §4 describes): a separate, riskier project.
+
+## 8. Other people's research (shared by the owner, 2026-10-28)
+
+- **lalzart, digitakt-ii-firmware-research-public** (DT2 OS 1.15C, documentation only,
+  CC0; nothing run on a device): the DT2 keeps a track's sample as a signed **Project
+  slot** (parameter 0xcd at track receiver +0x4c), resolved through Project state to its
+  backing; samples reach the SHARC as **five-word resource descriptors and 4 KiB pages**
+  over the ColdFire's **Rapid-GPIO** byte/strobe/ready port (0x8c000000, RGPIO15..8 a
+  byte, RGPIO7 strobe, RGPIO0 ready) into the SHARC's **link port 0 under DMA** (source
+  0x51, a 0x401-dword receive block, a 1,025-entry resource table). The DT2's sample
+  file: a 64-byte header (+1 mono/stereo, +4 payload bytes big-endian, +8 rate 48000),
+  the payload, a 16-byte trailer. **For us:** the DN2 has the same board and the
+  ColdFire end (`docs/drive-storage-research.md` §4) but no SHARC receiver; a receiver of
+  our own on LP0 could replace the 0.7 MB/s TDM link for loading. That is the only route
+  to a much faster power-on load, and it is the riskiest part (the external join between
+  the two ends is unproven there too). Phase 5 research, not part of phases 1-4.
+- **naturarum, dn2-cfw** (DN2 1.12 custom firmware notes): stock DSP DDR use (the stock
+  delay's state at 0x8005912c..0x80451814, the reverb's from 0x80000018) confirms our
+  areas from 0x81200000 up sit clear of stock's. Also a reminder that DN2 OS 1.12 exists;
+  this mod stays on 1.11.
+- **digikit** (the emulator and SHARC tools) and **angellinares/dn2_firmware_explore**
+  (this repository's origin) are what this project is built on already;
+  **elektron-firmware-tool** covers what `dnfw` does here (unpack, repack, checksums).
+
+## 9. Technical design for v0.31 (the library store and its menus)
+
+**Region.** The pool's image stays where it is (sector `0x600000`, its header, then up to
+400 MB: it ends below `0x6C8001`). The library starts at **sector `0x700000` (3.5 GiB)** and
+runs to the device's end (about 19.5 GiB). Every library read and write is checked against
+`[0x700000, device sectors)` before the block driver is called, as the pool's are.
+
+| sectors from `0x700000` | what |
+|---|---|
+| 0 | superblock: magic `DN2L`, version 1, capacity 2,048, the index's checksum, its own check |
+| 1 .. 256 | the index: 2,048 entries of 64 bytes |
+| 257 .. 260 | 64 folder names of 32 bytes: 0 INCOMING, 1 RECORDED, 2.. yours |
+| 261 .. | the samples' frames, each one extent of whole sectors |
+
+**An entry (64 bytes).** First sector of its frames (0: the entry is free), frames, rate
+(as the pool's entries: a float ratio), format (int16 mono as the pool's), folder, flags,
+a check of the frames (adler-32, as the link's), the name (36 characters).
+
+**Allocation.** First fit among the extents the index holds, so a delete leaves a hole the
+next sample can use; the device never moves frames (no compaction on the instrument).
+
+**In the ColdFire's RAM.** The index and folders are read at power-on into the mirror's free
+part (`SMP_MIRROR + 0x100000`, 132 KB; nothing else uses it) and written back sector by
+sector when they change.
+
+**The computer.** New SysEx commands on the sample link (proto 5): LIB_INFO, LIB_BEGIN
+(name, folder, frames, format, rate: an entry and its room), LIB_WRITE (data, in order),
+LIB_END (the check; the entry is written last, so an interrupted send leaves nothing),
+LIB_LIST, LIB_DELETE, LIB_FOLDER. `tools/dn2samples.py lib send|list|delete` uses them; the
+site's import tool follows.
+
+**LOAD TO PROJECT.** For each ticked sample: the first empty pool slot (1..122), room in the
+pool's frames area (first fit among the slots' extents), the frames copied +Drive to +Drive
+through a 64 KB stage, the slot's entry, name and long name written, the directory saved,
+then that one slot sent to the DSP (the loader's per-slot path: frames, then its entry). The
+pool on the +Drive stays the master copy of what the project holds.
+
+**The browser.** FUNC + YES opens it on a top level of two lines, **+DRIVE** and **PROJECT
+RAM**. PROJECT RAM is today's browser (the pool's slots by folder), its DELETE renamed
+UNLOAD. +DRIVE lists the library's folders, then a folder's samples (those in the pool show
+their slot). YES ticks; RIGHT opens SAMPLE ACTION: LOAD TO PROJECT, LOAD TO TRK, RENAME,
+DELETE, SELECT ALL / CLEAR ALL. NO goes up and closes at the top; NO held goes to the top;
+a page key closes it. Preview of a sample that is only on the +Drive (FUNC + YES) comes
+with v0.32: today's preview plays from the DSP's pool.
+
+**Gate.** Emulator checks on a simulated +Drive: the library written over SysEx and read
+back byte for byte; nothing written outside the library's region (every block write
+recorded and bounded); a delete then a send reusing its hole; LOAD TO PROJECT putting the
+frames, entry and name in the first empty slot and sending that slot to the DSP; the
+browser's two levels, ticks and actions drawn and working.
+
+## 10. Pool banks: not in v0.31 (2026-10-29)
+
+The owner's condition (§6a.1) was banks only if they can be close to the DT2's and clean.
+They cannot be clean yet: SAMP is a stock parameter slot whose range (0..127) the OS keeps,
+saves in every sound and kit, and modulates; 8 x 127 slots needs a second parameter (a BANK
+control) that the OS would save and recall with the sound, and the DSP's pool directory
+(128 entries, 400 MB) would have to grow or be paged per bank. Both are doable but touch the
+saved-sound format and the DSP's loader, so they wait for the per-project pools (v0.32), which
+change the same directory. Until then: 122 slots of yours, the 20 GB library behind them.

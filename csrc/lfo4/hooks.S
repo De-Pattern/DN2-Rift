@@ -1,0 +1,170 @@
+/* The two patch sites: `memcpy` and `memset` at their entries.
+ *
+ * Eight bytes of each becomes `jmp <stub> ; nop`, so each stub tests whether
+ * the call can concern the table (below) and, if it can, passes the
+ * routine's own three arguments to C, replays the two instructions the jump
+ * displaced, and continues at entry + 8. Neither stub saves a register: the C
+ * it calls follows the same convention the firmware's callers expect, so
+ * d0/d1/a0/a1 are already the caller's to lose, and both displaced pairs write
+ * their registers *after* the call.
+ *
+ * The displaced pairs, read out of stock 1.11:
+ *   memcpy  0x40134490  moveal 4(%sp),%a1 ; moveal 8(%sp),%a0
+ *   memset  0x401344d8  moveal 8(%sp),%a0 ; mvzb 11(%sp),%d0
+ * `scripts/build_lfo4_ext.py` checks both against the image before patching,
+ * and checks that this file assembles back to exactly those bytes.
+ */
+#include "dn2_111.h"
+#include "slots.h"
+
+    .text
+
+/* **The test is here, not in C (2026-09-27).** Every copy and every fill in
+ * the firmware passes through these two stubs, the audio frame's dozens per
+ * frame among them, and the C's first act was to return for anything smaller
+ * than a sound or while the table is empty. Paying a call, three pushes and a
+ * return to learn that cost 17 instructions on a 202-byte copy and 82 on a
+ * 2,688-byte one (`scripts/emu_mod_cost.py`); the owner heard the sum as a
+ * stutter while saving. So the stubs decide first and only call when there is
+ * work: a table with an entry in it, and a block the size of a sound or more.
+ *
+ * With the table empty the C would have done nothing but count -- `ext_copy`,
+ * `ext_carry` and `ext_clear` all return at once when `ext_live` is 0 -- so
+ * skipping it changes no entry; only the diagnostic counters in `carry.c`
+ * (`lfo4_copies`, the size log) stop counting copies made while nothing is
+ * tracked. Each stub uses a register its routine overwrites first thing after
+ * the displaced pair: `memcpy` loads `%d0` with n at entry + 8, `memset` loads
+ * `%d1` there. */
+#define SOUND_BYTES 1163
+
+    .globl  lfo4_memcpy_stub
+lfo4_memcpy_stub:
+    tst.l   ext_live
+    beq.s   lfo4_memcpy_displaced   | nothing tracked: nothing to carry
+    move.l  12(%sp),%d0
+    cmp.l   #SOUND_BYTES,%d0
+    bcs.s   lfo4_memcpy_displaced   | smaller than a sound: not ours
+    move.l  12(%sp),-(%sp)          | n
+    move.l  12(%sp),-(%sp)          | src
+    move.l  12(%sp),-(%sp)          | dst
+    jsr     lfo4_on_memcpy
+    lea     12(%sp),%sp
+    .globl  lfo4_memcpy_displaced
+lfo4_memcpy_displaced:
+    movea.l 4(%sp),%a1
+    movea.l 8(%sp),%a0
+    jmp     DN2_MEMCPY + 8
+
+    .globl  lfo4_memset_stub
+lfo4_memset_stub:
+    tst.l   ext_live
+    beq.s   lfo4_memset_displaced
+    move.l  12(%sp),%d1
+    cmp.l   #SOUND_BYTES,%d1
+    bcs.s   lfo4_memset_displaced
+    move.l  12(%sp),-(%sp)          | n
+    move.l  12(%sp),-(%sp)          | fill
+    move.l  12(%sp),-(%sp)          | dst
+    jsr     lfo4_on_memset
+    lea     12(%sp),%sp
+    .globl  lfo4_memset_displaced
+lfo4_memset_displaced:
+    movea.l 8(%sp),%a0
+    mvz.b   11(%sp),%d0
+    jmp     DN2_MEMSET + 8
+
+/* The other two sites are inside code that never expected a call, so unlike the
+ * `memcpy` / `memset` stubs these must preserve what the compiler calls
+ * scratch: at both, d0, d1, a0 and a1 are live across the site. ColdFire's
+ * MOVEM has no predecrement or postincrement mode, hence the `lea` either side.
+ *
+ * Each sits just past its converter's value loop, where the live sound and the
+ * stored sound are both still in a2/a3 -- in opposite roles, which is why the
+ * two stubs push their arguments in opposite orders.
+ *
+ *   load   0x400dd282  mvs.b 28(%a2),%d0 ; moveq #6,%d2          a2 live, a3 stored
+ *   save   0x400dd724  mvs.b 54(%a2),%d0 ; move.l (%a0,%d0*4),%d0  a2 stored, a3 live
+ */
+
+    .globl  lfo4_load_stub
+lfo4_load_stub:
+    lea     -16(%sp),%sp
+    movem.l %d0-%d1/%a0-%a1,(%sp)
+    move.l  %a3,-(%sp)              | stored
+    move.l  %a2,-(%sp)              | live
+    jsr     lfo4_on_load
+    addq.l  #8,%sp
+    movem.l (%sp),%d0-%d1/%a0-%a1
+    lea     16(%sp),%sp
+    .globl  lfo4_load_displaced
+lfo4_load_displaced:
+    mvs.b   %a2@(28),%d0
+    moveq   #6,%d2
+    jmp     DN2_LOAD_SITE + 6
+
+    .globl  lfo4_save_stub
+lfo4_save_stub:
+    lea     -16(%sp),%sp
+    movem.l %d0-%d1/%a0-%a1,(%sp)
+    move.l  %a3,-(%sp)              | live
+    move.l  %a2,-(%sp)              | stored
+    jsr     lfo4_on_save
+    addq.l  #8,%sp
+    movem.l (%sp),%d0-%d1/%a0-%a1
+    lea     16(%sp),%sp
+    .globl  lfo4_save_displaced
+lfo4_save_displaced:
+    mvs.b   %a2@(54),%d0
+    move.l  %a0@(0,%d0:l:4),%d0
+    jmp     DN2_SAVE_SITE + 8
+
+/* The third kind of site: a bound, not an entry, and nothing is replayed.
+ *
+ * `DN2_SET_BOUND` is the parameter setter's `slot > 100 -> skip` test, six
+ * bytes for three instructions, and this stub takes over the decision. It has
+ * two exits and controls both, so unlike the four stubs above it is entered
+ * with `jmp` and leaves with `jmp` -- there is no return address to fix up and
+ * no displaced pair to replay.
+ *
+ *   slot <= 100   the firmware's own slots, on to its own write
+ *   101..108      LFO4's: fetch the live sound the way the write path is about
+ *                 to, and record the value in the extension table
+ *   > 108         nothing, which is exactly what stock does
+ *
+ * The compare is signed, as the `blt.s` it replaces was. d0 held 100 at the
+ * site and is dead either way: the write path overwrites it with the virtual
+ * call's result, and the skip path is the function's epilogue.
+ *
+ * The sound comes from the firmware's *own* virtual call -- a2@(16), its
+ * vtable slot 40 -- rather than from this project's track map, because that
+ * call is what the very next instructions do and its answer is the sound the
+ * write would have landed in. d2, d3 and a2 survive it: the firmware relies on
+ * exactly that across the same call.
+ */
+
+    .globl  lfo4_set_stub
+lfo4_set_stub:
+    cmp.l   #100,%d2
+    ble.s   lfo4_set_stock
+    cmp.l   #LFO4_LAST,%d2
+    bgt.s   lfo4_set_none
+    lea     -16(%sp),%sp
+    movem.l %d0-%d1/%a0-%a1,(%sp)
+    movea.l %a2@(16),%a0            | the object that owns the sound
+    movea.l %a0@,%a1                | its vtable
+    move.l  %a0,-(%sp)              | this
+    movea.l %a1@(40),%a0
+    jsr     %a0@                    | -> d0 = the live sound
+    addq.l  #4,%sp
+    move.l  %a2@(16),-(%sp)         | holder: announcing the change goes through it
+    move.l  %d3,-(%sp)              | value
+    move.l  %d2,-(%sp)              | slot
+    move.l  %d0,-(%sp)              | sound
+    jsr     lfo4_on_set
+    lea     16(%sp),%sp
+    movem.l (%sp),%d0-%d1/%a0-%a1
+    lea     16(%sp),%sp
+lfo4_set_none:
+    jmp     DN2_SET_SKIP
+lfo4_set_stock:
+    jmp     DN2_SET_WRITE

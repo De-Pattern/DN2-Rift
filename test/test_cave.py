@@ -1,0 +1,252 @@
+"""The code-cave detour: its guards, and that a plan splices the right bytes."""
+
+import pytest
+
+from dnfw.image.coldfire import LoadedImage
+from dnfw.patch.cave import Cave, CaveError, CaveHook, apply, plan
+from dnfw.patch.coldfire import jmp_abs
+
+BASE = 0x40000400
+# A section: 0x40 bytes of "code" then a 0x40-byte free (zero) run for the cave.
+# move.l (0x401e29d0).l, %d0 -- exactly 6 bytes, straight-line (not PC-relative).
+STOCK_AT_HOOK = bytes.fromhex("2039401e29d0")  # 6 bytes = one jmp's worth, no pad
+
+
+def _image() -> LoadedImage:
+    content = bytearray(0x80)
+    content[0x10 : 0x10 + len(STOCK_AT_HOOK)] = STOCK_AT_HOOK
+    # everything from 0x40 on stays zero -- the cave
+    return LoadedImage(dest=BASE, content=bytes(content))
+
+
+def _hook(**over) -> CaveHook:
+    fields = dict(
+        id="t",
+        site=BASE + 0x10,
+        stock=STOCK_AT_HOOK,
+        payload=bytes.fromhex("7001"),  # moveq #1,d0 -- a stand-in payload
+        cave=Cave(address=BASE + 0x40, capacity=0x40),
+    )
+    fields.update(over)
+    return CaveHook(**fields)
+
+
+def test_plan_builds_payload_then_displaced_then_return_jump():
+    p = plan(_image(), _hook())
+    expected = b"\x70\x01" + STOCK_AT_HOOK + jmp_abs(BASE + 0x10 + len(STOCK_AT_HOOK))
+    assert p.cave_bytes == expected
+    assert p.return_address == BASE + 0x16
+
+
+def test_plan_writes_a_jmp_at_the_hook():
+    p = plan(_image(), _hook())
+    _, hook_write = p.writes
+    assert hook_write.new == jmp_abs(BASE + 0x40)  # stock was exactly 6 bytes -> no pad
+
+
+def test_hook_longer_than_a_jmp_is_nop_padded():
+    stock = STOCK_AT_HOOK + b"\x4e\x71\x4e\x71"  # 10 bytes: 6 for jmp + 2 nops
+    img = bytearray(_image().content)
+    img[0x10 : 0x10 + len(stock)] = stock
+    image = LoadedImage(dest=BASE, content=bytes(img))
+    p = plan(image, _hook(stock=stock))
+    _, hook_write = p.writes
+    assert hook_write.new == jmp_abs(BASE + 0x40) + b"\x4e\x71\x4e\x71"
+
+
+def test_apply_leaves_everything_else_untouched():
+    image = _image()
+    out = apply(image, _hook())
+    # hook site now a jmp into the cave
+    assert out[0x10:0x16] == jmp_abs(BASE + 0x40)
+    # cave now holds the body
+    body = b"\x70\x01" + STOCK_AT_HOOK + jmp_abs(BASE + 0x16)
+    assert out[0x40 : 0x40 + len(body)] == body
+    # untouched span between hook and cave stays zero
+    assert out[0x16:0x40] == bytes(0x40 - 0x16)
+    assert len(out) == len(image.content)
+
+
+def test_wrong_stock_is_refused():
+    image = _image()
+    with pytest.raises(CaveError, match="expected"):
+        plan(image, _hook(stock=b"\xde\xad\xbe\xef\xca\xfe"))
+
+
+def test_a_non_free_cave_is_refused():
+    img = bytearray(_image().content)
+    img[0x44] = 0xFF  # dirty a byte inside the intended cave
+    image = LoadedImage(dest=BASE, content=bytes(img))
+    with pytest.raises(CaveError, match="not free"):
+        plan(image, _hook())
+
+
+def test_a_cave_too_small_is_refused():
+    with pytest.raises(CaveError, match="cave body"):
+        plan(_image(), _hook(cave=Cave(address=BASE + 0x40, capacity=8)))
+
+
+def test_stock_shorter_than_a_jmp_is_refused():
+    with pytest.raises(CaveError, match="at least"):
+        _hook(stock=b"\x4e\x75\x4e\x75")  # 4 bytes
+
+
+def test_pcrel_displaced_bytes_are_refused_by_default():
+    # 0x67 is beq.b -- a PC-relative branch; replaying it verbatim retargets it.
+    stock = b"\x67\x10" + STOCK_AT_HOOK[:4]
+    img = bytearray(_image().content)
+    img[0x10 : 0x10 + len(stock)] = stock
+    image = LoadedImage(dest=BASE, content=bytes(img))
+    with pytest.raises(CaveError, match="PC-relative"):
+        plan(image, _hook(stock=stock))
+
+
+def test_pcrel_can_be_overridden_when_verified_safe():
+    stock = b"\x67\x10" + STOCK_AT_HOOK[:4]
+    img = bytearray(_image().content)
+    img[0x10 : 0x10 + len(stock)] = stock
+    image = LoadedImage(dest=BASE, content=bytes(img))
+    p = plan(image, _hook(stock=stock, allow_pcrel=True))
+    assert p.cave_bytes.startswith(b"\x70\x01" + stock)
+
+
+# --- authoring aids ---
+
+def test_find_free_runs_reports_only_runs_at_least_min_size():
+    from dnfw.patch.cave import find_free_runs
+
+    # 0x00..0x10 zeros, 0x10..0x16 stock, then zeros to 0x80 (a 0x6a-byte run).
+    runs = find_free_runs(_image(), BASE, BASE + 0x80, min_size=8)
+    assert len(runs) == 2  # the 0x10 lead-in zeros, and the big tail run
+    tail = max(runs, key=lambda r: r.size)
+    assert tail.address == BASE + 0x16
+    assert tail.size == 0x80 - 0x16
+    # min_size filters the 16-byte lead-in out, leaving only the tail.
+    assert len(find_free_runs(_image(), BASE, BASE + 0x80, min_size=0x20)) == 1
+
+
+def test_find_free_runs_refuses_a_range_outside_the_section():
+    from dnfw.patch.cave import find_free_runs
+
+    with pytest.raises(CaveError, match="outside"):
+        find_free_runs(_image(), BASE, BASE + 0x100, min_size=4)
+
+
+def test_displaced_stock_accumulates_whole_instructions_to_min_len():
+    from dnfw.patch.cave import displaced_stock
+
+    # two 2-byte instructions then a 4-byte one; need >= 6 -> first three.
+    parts = [b"\x70\x01", b"\x4e\x71", b"\x22\x39\x40\x1f", b"\x7f\xc8"]
+    assert displaced_stock(parts, min_len=6) == b"\x70\x01\x4e\x71\x22\x39\x40\x1f"
+
+
+def test_displaced_stock_raises_when_too_few_bytes():
+    from dnfw.patch.cave import displaced_stock
+
+    with pytest.raises(CaveError, match="need 6"):
+        displaced_stock([b"\x4e\x75"], min_len=6)
+
+
+# --- fixed-stride groups are arrays, not padding --------------------------
+#
+# Added 2026-09-13. Caves were placed at 0x40287ef6 because find_free_runs
+# offered it; it is one record of a 16-element array the firmware writes at
+# runtime, and the device took an address error. See docs/flashing.md.
+
+from dnfw.patch.cave import FreeRun, suspect_arrays
+
+
+def test_a_fixed_stride_group_is_flagged():
+    runs = [FreeRun(address=0x1000 + i * 0x400, size=0x3F0) for i in range(6)]
+    suspects = suspect_arrays(runs)
+    assert len(suspects) == 1
+    assert len(suspects[0].runs) == 6
+    assert suspects[0].stride == 0x400
+
+
+def test_scattered_runs_are_not_flagged():
+    runs = [FreeRun(address=a, size=64) for a in (0x1000, 0x1900, 0x4400, 0x9110)]
+    assert suspect_arrays(runs) == []
+
+
+def test_two_runs_alone_are_not_a_group():
+    # Any two addresses have a stride; it takes a third to be a pattern.
+    runs = [FreeRun(address=0x1000, size=64), FreeRun(address=0x1400, size=64)]
+    assert suspect_arrays(runs) == []
+
+
+def test_a_slightly_longer_first_record_is_still_caught():
+    """The case that actually bit us, and that an exact-stride rule misses.
+
+    0x40287ef6 is 12 bytes longer than its fifteen siblings, so its gap is
+    0x418 against their 0x40c -- 2.9% out. An exact rule flags the fifteen and
+    leaves the one caves were put in unflagged.
+    """
+    runs = [FreeRun(address=0x40287EF6, size=1047)]
+    runs += [FreeRun(address=0x4028830E + i * 0x40C, size=1035) for i in range(15)]
+    suspects = suspect_arrays(runs)
+    assert len(suspects) == 1
+    assert suspects[0].runs[0].address == 0x40287EF6, "the crashing run must be flagged"
+    assert len(suspects[0].runs) == 16
+
+
+def test_a_gap_well_outside_tolerance_breaks_the_group():
+    runs = [FreeRun(address=a, size=64) for a in (0x1000, 0x1400, 0x1800, 0x3000)]
+    suspects = suspect_arrays(runs)
+    assert len(suspects) == 1
+    assert len(suspects[0].runs) == 3
+
+
+# --- code references into a candidate run --------------------------------
+
+from dnfw.patch.cave import qualified_references, references_into
+
+
+def _image_with(code: bytes, at: int = 0x100, size: int = 0x2000):
+    content = bytearray(b"\x00" * size)
+    content[at:at + len(code)] = code
+    return LoadedImage(dest=0x40000000, content=bytes(content))
+
+
+def test_a_lea_of_an_absolute_address_is_a_reference():
+    # lea 0x40001234,%a0
+    image = _image_with(bytes.fromhex("41f940001234"))
+    refs = qualified_references(image, 0x40001000, 0x40002000)
+    assert refs == {0x40001234: (0x40000100,)}
+
+
+def test_pea_and_move_l_immediate_also_count():
+    image = _image_with(bytes.fromhex("487940001234") + bytes.fromhex("203c40001238"))
+    refs = qualified_references(image, 0x40001000, 0x40002000)
+    assert set(refs) == {0x40001234, 0x40001238}
+
+
+def test_a_bare_address_shaped_word_is_not_a_reference():
+    """The filter that matters: raw data that happens to look like an address.
+
+    An unqualified 32-bit scan over a 3 MB image finds ~175 such values in a
+    0x74000-byte window -- about one per free run, enough to condemn every run
+    and mean nothing.
+    """
+    image = _image_with(bytes.fromhex("00000000") + bytes.fromhex("40001234"))
+    assert qualified_references(image, 0x40001000, 0x40002000) == {}
+
+
+def test_references_into_selects_only_those_inside_the_run():
+    refs = {0x40001000: (0xAA,), 0x40001500: (0xBB,), 0x40002000: (0xCC,)}
+    run = FreeRun(address=0x40001000, size=0x800)
+    assert references_into(run, refs) == (0xAA, 0xBB)
+
+
+def test_the_two_checks_are_complementary():
+    """An array base is referenced; its later records are not.
+
+    0x40287ef6's base carries 9 references because the code holds it in a
+    register, while its other fifteen records carry none -- they are reached by
+    base + i*1036. A reference check alone calls those fifteen free.
+    """
+    runs = [FreeRun(address=0x1000 + i * 0x400, size=0x3F0) for i in range(6)]
+    refs = {0x1000: (0xAA,)}  # only the base is named in code
+    unreferenced = [r for r in runs if not references_into(r, refs)]
+    assert len(unreferenced) == 5, "references alone would clear five records"
+    assert len(suspect_arrays(runs)[0].runs) == 6, "stride catches all six"

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DN2 Mod Patcher</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/patcher-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/patcher-192.png">
+<link rel="apple-touch-icon" href="icons/patcher-180.png">
+<meta name="theme-color" content="#111214">
+<style>
+:root {
+  --bg: #111214; --panel: #1a1c1f; --line: #2c2f34; --text: #e8e6e1; --dim: #8d9096;
+  --accent: #ff8a3d; --ok: #63c27a; --warn: #e8c14a; --bad: #e5604f;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f2ee; --panel: #ffffff; --line: #dcd8d0; --text: #1d1d1f; --dim: #6b6b70;
+    --accent: #d9661c; --ok: #2f8a48; --warn: #a77f00; --bad: #c23a2b;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+h1 { font: 600 20px/1.2 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: .04em; margin: 0 0 4px; }
+.sub { color: var(--dim); margin: 0 0 18px; }
+.sub a, .note a { color: var(--accent); }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+section h2 { font: 600 12px/1 ui-monospace, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; }
+button { cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+.pill.ok { color: var(--ok); border-color: var(--ok); } .pill.bad { color: var(--bad); border-color: var(--bad); } .pill.warn { color: var(--warn); border-color: var(--warn); }
+.files { display: grid; gap: 10px; }
+.file[hidden] { display: none; }
+.file { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.file.over { border-color: var(--accent); }
+.file b { font-weight: 600; }
+.file small { color: var(--dim); grid-column: 1 / -1; overflow-wrap: anywhere; }
+.mono { font-family: ui-monospace, Consolas, monospace; }
+.note { color: var(--dim); font-size: 13px; margin: 10px 0 0; }
+.note.bad { color: var(--bad); } .note.ok { color: var(--ok); }
+#log { font: 12px/1.5 ui-monospace, Consolas, monospace; color: var(--dim); white-space: pre-wrap; max-height: 220px; overflow: auto; margin: 10px 0 0; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: s 1s linear infinite; vertical-align: -2px; }
+@keyframes s { to { transform: rotate(360deg); } }
+input[type=file] { display: none; }
+details { margin-top: 10px; } summary { cursor: pointer; }
+.guide { margin: 6px 0 0; padding-left: 18px; color: var(--text); font-size: 13px; }
+.guide li { margin: 4px 0; }
+.key { font: 600 11px ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>DN2 MOD PATCHER</h1>
+  <p class="sub">Builds the Digitone II mod firmware here, in this page, from your own copies of three Elektron OS files. Nothing is uploaded anywhere.
+    <a href="./">← DN2 Sample Import</a></p>
+
+  <section>
+    <h2>1 · Version</h2>
+    <div class="row"><select id="ver"></select><span id="verNote" class="pill">loading…</span></div>
+    <p class="note">Each version here was cleared by the project's ship gate. The page builds it, then checks the result is byte for byte that cleared file (its sha256) before it lets you save it.</p>
+  </section>
+
+  <section>
+    <h2>2 · Your stock files</h2>
+    <div class="files">
+      <label class="file" data-k="dn2"><span><b>Digitone II OS 1.11</b> <span class="mono">.syx</span> or Elektron's .zip — the file that gets patched (exactly 1.11: not 1.12 or later)</span><button type="button">Choose…</button><small>not chosen</small><input type="file" accept=".syx,.zip"></label>
+      <label class="file" data-k="dt2"><span><b>Digitakt II OS 1.17</b> (or 1.16) <span class="mono">.syx</span> or .zip — its DSP's sample-reading tables</span><button type="button">Choose…</button><small>not chosen</small><input type="file" accept=".syx,.zip"></label>
+      <label class="file" data-k="md"><span><b>Machinedrum UW OS 1.63</b> <span class="mono">.syx</span>, .bin or .zip — its machines' tables, for PERC</span><button type="button">Choose…</button><small>not chosen</small><input type="file" accept=".syx,.bin,.zip"></label>
+      <label class="file" data-k="mnm" hidden><span><b>Monomachine SFX-6/60 OS 1.32B</b> <span class="mono">.syx</span> (<span class="mono">Elektron_SFX6-60_OS1.32B.syx</span>) or .zip — its machines' tables (SID, DigiPRO, VO-6)</span><button type="button">Choose…</button><small>not chosen</small><input type="file" accept=".syx,.zip"></label>
+    </div>
+    <p class="note"><b>The Digitone II file must be stock OS 1.11</b>, even if your instrument runs a later OS: the mod is built on 1.11, and the page stops if it is given any other version. <b>If your instrument runs 1.12 or later, installing the mod is a downgrade</b>: Elektron does not support downgrading, and projects made on the newer OS may not load or behave correctly (back them up first, and start new work in a project made on the mod). All of them are free downloads from Elektron's support pages for each instrument. Drop them on their boxes, or choose them. This browser remembers them for next time (they stay on this device; nothing is uploaded). <a href="#" id="forget">Forget my files</a></p>
+  </section>
+
+  <section>
+    <h2>3 · Build</h2>
+    <div class="row"><button id="go" class="primary" disabled>Build</button><span id="state" class="pill">waiting for the files</span><button id="save" disabled>Save the .syx</button></div>
+    <p id="result" class="note"></p>
+    <div id="log"></div>
+  </section>
+
+  <section>
+    <h2>4 · Flash</h2>
+    <p class="note" style="margin-top:0"><b>If your Digitone II runs OS 1.12 or later</b>, flashing the mod takes it back to a 1.11-based OS: projects and sounds saved under the newer OS may not open on it. Back them up first, and keep the newer OS file to go back to.</p>
+    <p class="note">Back up the +Drive and your projects first (Elektron Transfer). Then send the saved file as any Digitone II OS update: drag it onto Elektron Transfer with the instrument running and connected by USB. The stock OS 1.11 file, sent the same way, puts it back. If an update ever fails to start, the recovery route is the Early Start-up Menu (hold [FUNC] while powering on, then [TRIG 4]), receiving the stock file over a DIN MIDI cable (not USB) from Transfer's SysEx window.</p>
+    <p class="note">Each version's notes, tests and known issues are in the project's FIRMWARE.md. What to know before and after flashing: <a href="#readme">Read me</a>, below.</p>
+  </section>
+
+  <section id="readme">
+    <h2>5 · Read me</h2>
+    <p class="note" style="margin-top:0">The mod adds machines and features the DN2's manual doesn't cover. Where to find them and what to watch out for. What changed in each version, what to test and its known issues: the release notes in the Discord's #announcements and the project's FIRMWARE.md. The version you're running shows as "MOD v…" at the top of the sample browser.</p>
+    <details open><summary><b>What's in it</b></summary>
+      <ul class="guide">
+        <li><b>Machinedrum:</b> every MD machine except the sample-based E-12s, as one machine, <b>Perc</b>. Its TYPE control picks the machine and can be p-locked, so each step of a Perc track can be a different MD machine.</li>
+        <li><b>Monomachine, polyphonic:</b> SID 6581, DPRO Wave, DPRO Ddrw, DPRO Dens and VO-6, each note its own voice, as many at once as DSP time allows.</li>
+        <li><b>Digitakt II:</b> all its sample machines (Oneshot, Werp, Stretch, Repitch, Grid, Slice), a sample library on the +Drive, a sample pool per project, recording and resampling.</li>
+        <li><b>Sequencer:</b> Direct Jump and parameter slides.</li>
+        <li><b>OS 1.11 only</b> (not 1.12), so no Outbox.</li>
+      </ul>
+    </details>
+    <details open><summary><b>Where things are</b></summary>
+      <ul class="guide">
+        <li><b>New machines:</b> MACHINE SEL ([FUNC] + [SYN]), after Swarmer.</li>
+        <li><b>Perc:</b> page 2's TYPE picks the machine. It can be p-locked per step.</li>
+        <li><b>Sample recorder:</b> <span class="key">FUNC</span> + <span class="key">VOICE</span>, then TRIM, FILE NAME and ASSIGN, as on the Digitakt II.</li>
+        <li><b>Samples:</b> turn SAMP for the project's samples. <span class="key">FUNC</span> + <span class="key">YES</span> opens the browser: +DRIVE (the library) and PROJECT RAM. FUNC + YES on a sample previews it; RIGHT opens its actions (LOAD TO PROJECT, rename, delete, move).</li>
+        <li><b>Slices:</b> on a Slice track's page press <span class="key">YES</span> for the slice editor and slice grids; KEYBOARD mode with SLCE at NOTE plays the slices.</li>
+        <li><b>Direct Jump:</b> hold PTN, then YES (on) or NO (off).</li>
+        <li><b>Parameter slides:</b> TRIG page 2, SLD and SLEN.</li>
+        <li><b>PING:</b> in the FILTER type list.</li>
+        <li><b>ERASE MOD DATA</b> (before going back to stock for good): at the top of the sample browser, on +DRIVE press RIGHT. It asks twice.</li>
+        <li><b>Your own samples:</b> send them to the +Drive library with <a href="./">DN2 Sample Import</a>.</li>
+      </ul>
+    </details>
+    <details><summary><b>Watch out for</b></summary>
+      <ul class="guide">
+        <li><b>Stock OS 1.11 only.</b> On OS 1.12 or later, flashing takes you back to a 1.11-based OS (see Flash).</li>
+        <li><b>Back up</b> the +Drive and your projects before every flash. Keep the stock 1.11 file and a DIN MIDI cable for recovery.</li>
+        <li><b>DSP time.</b> The Machinedrum and Monomachine machines are heavy. Many of them sounding at once can use more DSP time than there is; a voice that won't fit drops out for that moment.</li>
+        <li><b>Monomachine voices</b> never go quiet on their own (as on the Monomachine): shape them with the AMP envelope.</li>
+        <li><b>Going back to stock:</b> stock's FORMAT +DRIVE doesn't remove the mod's samples and data. Use ERASE MOD DATA first if you want it all gone.</li>
+      </ul>
+    </details>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const files = {};
+let builds = [], out = null, worker = null, busy = false, failed = false;
+
+async function sha256(buf) {
+  const h = await crypto.subtle.digest("SHA-256", buf);
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function label(b) { return (/^\d/.test(b.version) ? "v" : "") + b.version; }   // MNM-1: a separate line, no v
+function cur() { return builds.find(b => b.version === $("#ver").value); }
+function inputs() { const b = cur(); return (b && b.inputs) || ["dn2", "dt2", "md"]; }
+function ready() {
+  const need = inputs();
+  document.querySelectorAll(".file").forEach(box => { box.hidden = !need.includes(box.dataset.k); });
+  const n = need.filter(k => files[k]).length, all = need.length;
+  $("#go").disabled = busy || n < all || !cur();
+  if (!busy && !out && !failed) setState(n < all ? `waiting for the files (${n} of ${all})` : "ready", n < all ? "" : "ok");
+}
+function setState(t, cls = "") { const s = $("#state"); s.textContent = t; s.className = "pill " + cls; }
+function log(t) { const l = $("#log"); l.textContent += t + "\n"; l.scrollTop = l.scrollHeight; }
+
+fetch("patcher/builds.json", { cache: "no-cache" }).then(r => r.json()).then(list => {
+  builds = list;
+  $("#ver").innerHTML = list.map((b, i) => `<option value="${b.version}">${label(b)} ${b.name}${i ? "" : " (latest)"}</option>`).join("");
+  $("#verNote").textContent = list.length ? "sha256 " + list[0].sha256.slice(0, 12) + "…" : "none";
+  ready();
+}).catch(() => { $("#verNote").textContent = "could not load the list"; $("#verNote").className = "pill bad"; });
+$("#ver").onchange = () => { const b = cur(); failed = false; $("#verNote").textContent = "sha256 " + b.sha256.slice(0, 12) + "…"; out = null; $("#save").disabled = true; $("#result").textContent = ""; ready(); };
+
+// The files you choose are kept in this browser (IndexedDB), so the next visit has them
+// already: nothing is uploaded anywhere. "Forget my files" clears them.
+const DB = { name: "dn2patch", store: "files" };
+function db() {
+  return new Promise((ok, bad) => {
+    const r = indexedDB.open(DB.name, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(DB.store);
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => bad(r.error);
+  });
+}
+async function keep(k, v) {
+  try {
+    const d = await db();
+    await new Promise((ok, bad) => {
+      const t = d.transaction(DB.store, "readwrite");
+      v ? t.objectStore(DB.store).put(v, k) : t.objectStore(DB.store).delete(k);
+      t.oncomplete = ok; t.onerror = () => bad(t.error);
+    });
+  } catch (e) { /* private window or storage off: the page works as before, without remembering */ }
+}
+async function recall() {
+  try {
+    const d = await db();
+    const all = await new Promise((ok, bad) => {
+      const t = d.transaction(DB.store, "readonly"), st = t.objectStore(DB.store), got = {};
+      const c = st.openCursor();
+      c.onsuccess = () => { const cur = c.result; if (cur) { got[cur.key] = cur.value; cur.continue(); } else ok(got); };
+      c.onerror = () => bad(c.error);
+    });
+    for (const [k, v] of Object.entries(all)) {
+      const box = document.querySelector(`.file[data-k="${k}"]`);
+      if (!box || !v || !v.bytes) continue;
+      files[k] = v;
+      shown(box, v.name, v.bytes.length, true);
+    }
+    ready();
+  } catch (e) { /* nothing remembered */ }
+}
+function shown(box, name, n, remembered) {
+  box.querySelector("small").textContent = `${name} · ${(n / 1048576).toFixed(2)} MB${remembered ? " · remembered" : ""}`;
+}
+function take(k, f, box) {
+  f.arrayBuffer().then(buf => {
+    files[k] = { name: f.name, bytes: new Uint8Array(buf) };
+    shown(box, f.name, f.size, false);
+    keep(k, files[k]);
+    out = null; failed = false; $("#save").disabled = true; ready();
+  });
+}
+async function forget() {
+  for (const k of Object.keys(files)) { delete files[k]; await keep(k, null); }
+  document.querySelectorAll(".file small").forEach(s => { s.textContent = "not chosen"; });
+  out = null; failed = false; $("#save").disabled = true; ready();
+}
+document.querySelectorAll(".file").forEach(box => {
+  const k = box.dataset.k, inp = box.querySelector("input");
+  box.querySelector("button").onclick = (e) => { e.preventDefault(); inp.click(); };
+  inp.onchange = () => inp.files[0] && take(k, inp.files[0], box);
+  box.ondragover = (e) => { e.preventDefault(); box.classList.add("over"); };
+  box.ondragleave = () => box.classList.remove("over");
+  box.ondrop = (e) => { e.preventDefault(); box.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) take(k, f, box); };
+});
+
+$("#go").onclick = () => {
+  const b = cur(); if (!b) return;
+  if (!window.crypto || !crypto.subtle) { setState("needs https", "bad"); return; }
+  busy = true; failed = false; out = null; $("#save").disabled = true; $("#log").textContent = ""; $("#result").textContent = "";
+  $("#result").className = "note";
+  setState("building…"); $("#state").insertAdjacentHTML("afterbegin", '<span class="spin"></span> ');
+  ready();
+  worker = worker || new Worker("patcher-worker.js");
+  const t0 = performance.now();
+  worker.onmessage = async (e) => {
+    const m = e.data;
+    if (m.log !== undefined) { log(m.log); return; }
+    busy = false;
+    if (m.error) {
+      failed = true;
+      setState("stopped", "bad");
+      $("#result").className = "note bad";
+      $("#result").textContent = "The build stopped: " + m.error;
+      ready(); return;
+    }
+    const got = await sha256(m.done);
+    const secs = Math.round((performance.now() - t0) / 1000);
+    if (got === b.sha256) {
+      out = m.done;
+      setState("matches the cleared build", "ok");
+      $("#result").className = "note ok";
+      $("#result").textContent = `Built in ${secs} s. sha256 ${got} — exactly ${label(b)}'s cleared file. Save it, then flash.`;
+      $("#save").disabled = false;
+    } else {
+      failed = true;
+      setState("does not match: do not flash", "bad");
+      $("#result").className = "note bad";
+      $("#result").textContent = `The result (sha256 ${got.slice(0, 16)}…) is not ${label(b)}'s cleared file (${b.sha256.slice(0, 16)}…). Do not flash anything from this. Check the files are the versions named above.`;
+    }
+    ready();
+  };
+  const need = inputs();
+  worker.postMessage({ zipUrl: "patcher/" + b.zip, zipSha: b.zip_sha256, inputs: need,
+    files: Object.fromEntries(need.map(k => [k, files[k]])) });
+};
+
+$("#forget").onclick = (e) => { e.preventDefault(); forget(); };
+recall();
+
+$("#save").onclick = () => {
+  const b = cur(); if (!out || !b) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "application/octet-stream" }));
+  a.download = b.file; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+</script>
+</body>
+</html>

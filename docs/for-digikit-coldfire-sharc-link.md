@@ -1,0 +1,342 @@
+# Notes for the `machine-engine-link` work: how the ColdFire reaches the SHARC
+
+**2026-09-16.** Your branch note says you are *"mapping out the DSP and how to
+interface with it from ColdFire"*. This is what we found on that exact question
+over one session, written to be useful without our repository — every claim has
+the address and the bytes, so you can check it in your own tooling rather than
+take our word for it.
+
+Measured against **Digitone II OS 1.11**, section 3 (MAIN OS), depacked and
+loaded at `0x40000400`. The DT2 should be the same code with a different device
+gate; we have not re-run these addresses against 1.16.
+
+**Two of these correct things we ourselves published earlier.** Where that is
+so, it is flagged — our old claim may already be in your notes.
+
+---
+
+## 1. The ColdFire boots the SHARC over SPI. Section 7 is the image.
+
+This is the headline, and it retracts a claim of ours you may have picked up:
+we previously concluded there was **no upload path in MAIN OS**, and therefore
+that the SHARC boots from its own serial flash and its program was out of
+reach. **That was wrong.** It was a negative produced by searching the wrong
+window — we looked through the `0xec09xxxx` accesses, found only byte-wide
+registers, and stopped. The boot channel is a DSPI next door.
+
+**The uploader is at `0x400cf34c`.** It looks section 7 up by id, mallocs 1 MB,
+copies the stored bytes in, writes a `0x03` block header, and then pushes the
+image **one byte at a time**:
+
+```
+0x400cf602  movel %a0,%d0           ; a0 walks the buffer, d3 its start
+0x400cf604  subl %d3,%d0
+0x400cf606  cmpl %d0,%d2            ; d2 = length
+0x400cf608  bles 0x400cf63c         ; done
+
+0x400cf60a  moveb 0xec094018,%d0    ; flow control from the FPGA
+0x400cf610  moveq #16,%d1
+0x400cf612  andl %d1,%d0            ; bit 4
+0x400cf616  bnes 0x400cf60a         ; spin while asserted
+
+0x400cf618  mvzb %a0@+,%d1          ; next byte of the boot stream
+0x400cf61a  oril #0x90010000,%d1
+0x400cf620  movel %d1,0xec038034    ; push
+0x400cf626  movel 0xec03802c,%d0
+0x400cf62c  bges 0x400cf626         ; spin on bit 31
+0x400cf62e  movel #0x80000000,%d0
+0x400cf634  movel %d0,0xec03802c    ; write-1-clear
+
+0x400cf63c  movel #0x18000000,%d1   ; final frame closes the queue
+0x400cf644  movel %d1,0xec038034
+```
+
+### Why we are confident it is a DSPI, rather than reading tea leaves
+
+Not from one constant. The **whole `0xec03xxxx` window is 15 accesses across
+exactly six addresses**, and the six are the offsets a minimal ColdFire DSPI
+driver uses, in their standard positions:
+
+| Offset | DSPI register | Accesses |
+|---|---|---|
+| `+0x00` | `MCR` | 5 |
+| `+0x0c` | `CTAR0` | 1 write |
+| `+0x10` | `CTAR1` | 1 write |
+| `+0x2c` | `SR` | 5 |
+| `+0x30` | `RSER` | 1 write |
+| `+0x34` | `PUSHR` | 2 writes |
+
+Six for six at the right offsets, and **internally consistent**: `CTAR1` is
+written, and the `PUSHR` words select attributes register 1. The two magic
+words decode as `PUSHR` fields exactly:
+
+| Bits | Field | `0x90010000` | `0x18000000` |
+|---|---|---|---|
+| 31 | `CONT` hold CS | 1 | 0 |
+| 30–28 | `CTAS` | 1 | 1 |
+| 27 | `EOQ` | 0 | **1** |
+| 23–16 | `PCS` | `0x01` | — |
+| 15–0 | `TXDATA` | the byte | — |
+
+and `SR` bit 31 is `TCF`, spun on and then cleared write-1.
+
+**So it is SPI *slave* boot: the host pushes the image.** The ADSP-21569 has no
+on-chip flash; this settles which of its boot modes is in use. The DSP has no
+program until the ColdFire gives it one, every power-up, out of section 7.
+
+**What follows for you:** the DSP's program is in the update file, in reach of
+the same rebuild-and-sign pipeline as everything else. (Whether a *modified*
+boot stream is accepted is a separate question — it carries ADI block headers
+and checksums we have not parsed.)
+
+Caveat we are keeping honest about: `0xec038000` is in the FlexBus window, not
+the MCF5441x's own peripheral space at `0xfc0xxxxx` — which this same function
+also uses, at `0xfc0451f0`. So it is either an external controller presenting a
+DSPI-compatible interface or a second mapping of an on-chip one. The register
+layout and semantics are certain; the silicon is not, and nothing above depends
+on which.
+
+## 2. `0xec09xxxx` is an FPGA register file, not a data path
+
+If you have our earlier number for this, it was **wrong and too low**. We said
+220 accesses across 50 addresses; the real figure is **at least 279 across 57**.
+The undercount came from an opcode mask that matched only the `d0` spelling of
+each `move` — and the access it missed was `movel %d1,0xec038034`, the boot
+data port itself. Worth knowing if you wrote a similar scanner: the register
+number is part of the opcode.
+
+| Address | Accesses | Shape |
+|---|---|---|
+| `0xec09404e` | 25 | 12 read / 12 write / 1 `lea`, **7 functions** |
+| `0xec094018` | 21 | 8 functions, incl. the uploader's flow control |
+| `0xec094024` | 18 | **write-only**, 7 functions |
+| `0xec09404b` | 15 | 6 functions |
+| `0xec094019` | 13 | 4 functions |
+| `0xec094034` | 8 | the only exclusively **word-wide** register, only in `0x400cf34c` |
+| `0xec09406x` | 1–4 | all in `0x400cec70` — one subsystem's block |
+
+257 of 279 are byte-wide, spanning `0xec094000`–`0xec094070`. A byte-wide file
+with several write-only registers and one subsystem per range is a **control
+surface**. It is far too small to carry audio, so this is not where sound data
+crosses.
+
+Read those as lower bounds: we match `move`/`movea`/`clr`/`tst` whose absolute
+address sits right after the opcode word, and deliberately not `andi`/`bset`
+and friends, whose immediate comes first and would make us misread operands as
+addresses.
+
+## 3. The runtime path: `0x400cf7be`, driven by two interrupt handlers
+
+The same SPI port carries a **periodic bulk stream** at runtime, and this is
+the most interesting thread we have open.
+
+`0x400cf7be` differs from the boot path in exactly the way that matters: boot
+spins on `TCF` (transfer *complete*) once per byte, correct and slow; this one
+tests **`SR` bit 28, `TFFF`** (FIFO *has room*) and pushes through a
+register-held port address. That is how you keep a FIFO fed — a throughput
+path.
+
+Its two callers both open by saving `macsr`, `acc0`–`acc3`, `accext01/23` and
+`mask`, and close by restoring them. **That is an ISR prologue** — ordinary C
+has no reason to preserve the MAC unit. The transfer is periodic and
+interrupt-driven.
+
+The argument list reads as a two-buffer scatter send, `(len1, buf1, len2, buf2)`:
+
+```
+0x40025e9e   (2688, 0x80005e60, 2748, 0x800053a4)    both SRAM
+0x400d0fec   (2688, 0x4244098c,    0,          0)    BSS, second pair null
+                    ^ a 16-bit `2` is written here first, like a header
+```
+
+`0xa80` = 2,688 in both, against the function's own `#2800` chunk bound — so
+2,688 is a payload and 2,800 the stride it sits in.
+
+The buffers are not scratch: `0x80005000`–`0x80006000` holds **≥125 accesses
+across 43 addresses**, largely longword, from the same `0x40025xxx` cluster the
+first caller lives in (`0x400258da`, `0x40025b6e`, `0x40025baa`, `0x40025e0a`).
+There is a subsystem there maintaining structured SRAM buffers and streaming
+them to the DSP on an interrupt.
+
+**What it carries, we do not know, and we are not guessing.** A periodic ~2.7 KB
+push fits per-frame control data, audio, and a codec refresh equally well.
+Loose ends we have not pulled: a descriptor structure around `0x42440950`
+(`0x42440958` is a length, 52 bytes below `0x4244098c`), and the SRAM address
+`0x80001a20` passed to `0x40134490` at `0x400cf7ea`.
+
+**The discriminator, if you get there first:** find what *writes* `0x80005e60`
+and `0x4244098c`. Sound parameters reaching them makes this the control path to
+the engine. An audio ring means it is not.
+
+## 4. The container lookup, since it is how the uploader finds its image
+
+MAIN OS carries its own full ELE3 parser — `movel #'ELE3',d0` at `0x40134546`,
+a `moveq #52` product gate at `0x40134554` (52 = DN2; DT2 is 43). Four
+generic entry points, which between them read any section by id:
+
+| Address | What |
+|---|---|
+| `0x4013459a` | `find_section_by_id(u32 id, Entry out[16]) -> bool` |
+| `0x4013458a` | `section_data_address(Entry *) -> entry.offset + 0x80000` |
+| `0x401350ce` | `block_copy(src, len, dst)` — the parser's own, 3 callers |
+| `0x4011ffe8` | `malloc(size)` — 18 callers |
+
+Entry layout confirmed from the caller at `0x400f2934`: `+0 id`, `+4 offset`,
+`+8 stored length`, `+12 dest`.
+
+Two things you may find useful from this:
+
+- **`find_section_by_id` has exactly two callers**, `0x400cf59a` (id 7, the
+  SHARC) and `0x400f2934` (id 8, which by the same pattern is a second
+  coprocessor image — we read it as ARM Cortex-M).
+- **Nothing anywhere reads `entry.dest`.** The same table walk is compiled into
+  the bootstrap (`0x02015066`) and the updater (`0x80003d6e`) as well, and in
+  both it is **dead code** — zero callers, confirmed by full disassembly, by a
+  byte-level scan showing the address is never taken as an immediate, and with
+  a positive control (the same scan finds both MAIN OS callers). `dest` is
+  documentation: the address each section is linked for.
+
+## 5. One methodological note, offered because it cost us months
+
+Two of the four sections above correct earlier claims of ours, and **both
+originals were negatives** — "no upload path", "220 accesses". Looking back,
+every expensive mistake in our repository has this shape: a search runs, finds
+nothing, and the nothing is written down as a property of the firmware rather
+than of the search.
+
+Ours, in full: "no SHARC program in the update" (searched for a raw 48-bit
+instruction stream; it is a *boot stream*); "no upload path in MAIN OS"
+(searched the wrong window); "no reference to any SHARC landmark" (searched at
+load addresses, but SHARC code addresses live in a different space); "the PRM
+publishes no register encodings" (read 118 of 798 pages — that one we already
+retracted to you on PR #11); "87.82% is 100% of what the figures contain"
+(blind to the yellow *unused* cell colour).
+
+The cheap guard we now run before writing down any negative: **point the
+instrument at a known positive first.** If it cannot find something you already
+know is there, its zero means nothing. And state the scope in the same sentence
+as the result — "not found by X" and "not present" are different claims.
+
+Offered as a shared hazard of this kind of work, not as advice about your
+process, which from the outside looks more careful than ours has been.
+
+---
+
+## 6. The audio is not on that SPI port — it is SSI0 and eDMA 48/50 — 2026-09-20
+
+Added after the original note. It bears on §3's open question, and one part of
+it lands squarely on something your emulator work is waiting for.
+
+**Two windows, and they are the ColdFire/SHARC audio crossing.**
+
+| window | eDMA channel | direction |
+|---|---|---|
+| `0x4E6E0100` / `0x4E6E0900` | 50, TX | ColdFire -> SHARC |
+| `0x4E6DF100` / `0x4E6DF900` | 48, RX | SHARC -> ColdFire |
+
+Each is double-buffered, the halves `0x800` apart, and the half in flight is
+found by reading **channel 50's `SADDR` at `0xFC045640`** and comparing it with
+`0x4E6E0900` (MCF5441x eDMA: TCDs from `0xFC045000`, `0x20` stride). The frame
+is **64 bytes**, stepped to `0x800` per half — 32 frames — and the service
+engine's loops use **three longwords** of each frame. Sixteen slots with three
+in use: a TDM frame, not a stereo codec stream.
+
+**The `0x007FFFFF` marker: what it is for.** Your `EMULATOR-SHARC-BOUNDARY`
+phase 2 notes the vector-170 handler *"waiting for an external `0x007fffff`
+sync marker before it installs the pending normal channel-50 callback"*. The
+service-mode alignment routine at **`0x400d5470`** (DN2 1.11) shows the same
+constant doing a job:
+
+```
+0x400d547a  moveb #50,0xfc04401c          ; kick
+0x400d5480  movel 0xfc045640,%d0          ; channel 50 SADDR
+0x400d5486  cmpil #0x4e6e0900,%d0 ; scs %d1
+0x400d54a2  addil #0x4e6df100,%d1         ; -> the RX half now safe to read
+0x400d54aa  moveal #0x7fffff,%a1
+0x400d54b0  lsll #6,%d2                   ; frame index * 64
+0x400d54b4  cmpal %a0@(0,%d2:l),%a1       ; is this frame's slot 0 full scale?
+0x400d54b8  beqs <found>                  ; ... over 32 frames
+```
+
+On a hit it takes the scatter-gather pointers of **both** channels
+(`0xFC045618` = ch48 + 0x18, `0xFC045658` = ch50 + 0x18) and writes **62** into
+the linked descriptor's `CITER` and `BITER` (`+0x14`, `+0x1C`) instead of
+**64**, on each. That slips the stream by two frames. Miss it on all 32 and it
+gives up through `0x400d5590`; the retry budget is `0x42c4baf0` and the miss
+count `0x42c4baec`.
+
+So the marker is a **frame-alignment probe, corrected by a two-frame DMA slip**
+— which also says the RX side is expected to echo something the ColdFire can
+provoke, and that the handler you are stuck at is waiting on exactly that.
+
+**And a partial answer to §3's discriminator.** We asked there what writes
+`0x80005e60` and `0x4244098c`, and said sound parameters would make the SPI
+stream the control path while an audio ring would not. The audio has now turned
+up somewhere else entirely — SSI0, not that DSPI — and the audio-frame function
+`0x40025e0a` touches **both**: at `0x400277b4` it computes
+`0x4E6DF100 + (x << 11)`, the RX half, and passes it to `0x40138460` together
+with **`0x800053c0`**, which is `0x1C` inside the `0x800053a4` buffer of §3's
+scatter send. One function, both regions. That is evidence *for* the SPI stream
+being control rather than audio, though it does not name what the control is.
+
+**Unread, and we are not guessing:** which three of the sixteen slots the loops
+use, and whether they are a mix or three of a per-track set.
+
+## 7. The DSP side of the 2,748-byte reply, DN2 1.11 -- 2026-09-27
+
+Your finding 04 ends the SHARC-side thread with "what happens to 2748 after the call
+is not known". This is what we read in DN2 1.11's section 7, statically, with your
+`sharcdb` as the lister:
+
+- **sw `0x1ca46a`** is called with R4 = `0xabc` (sw `0x1ca812`). It builds two
+  two-descriptor rings: `0x2c2960 <-> 0x2c297c` over buffers `0x2c39d0` / `0x2c29d0`,
+  and `0x2c2998 <-> 0x2c29b4` over `0x2c59d0` / `0x2c49d0`. The descriptors carry CFG
+  `0x100000`, XMOD 2, and element counts `0xabc >> 1` = `0x55e` (16-bit elements).
+- **sw `0x1ca020`** returns the current pair: `0x2c29d0 + (DM(0x2c0450) << 12)` and
+  `0x2c49d0 + (DM(0x2c0450) << 12)`. `0x1ca04a` toggles the page word.
+- **sw `0x1c9d6b`**, the per-frame handler (the engine task at `0x1c9fe7` loops on it):
+  - reads a command word from the first buffer and dispatches through the table
+    `0x268a68`, so that ring is **receive**;
+  - and, last, stores one word at the second buffer's offset 0. That word is its own
+    EMUCLK cycle count, with the halves swapped (`0x1c9e4c..0x1c9e62`).
+
+  So the second ring is the **reply**, and reply word 0 is a per-frame DSP load
+  figure. **[D]** for the listing. That these rings are the ones on SPI2 is **[I]**:
+  your SPI instance table puts SPI2 at `0x2694f0`, and we did not follow the
+  descriptors into the DMA registers.
+
+If that holds, reply word 0 at `0x800053a4` on the ColdFire is a free DSP heartbeat.
+It changes every frame while the core runs, and it freezes if the core stops while
+the DMA replays the ring.
+
+## 8. The reply on the instrument -- 2026-09-30
+
+Read with our USB probe's PEEK, which is read-only: 20 readings of the 2,748-byte reply at `0x800053a4` in each of five states (silent; one held note; a busy pattern; the busy pattern again; the busy pattern with the master compressor off). **[V]**
+
+| offset | what it is | evidence |
+|---|---|---|
+| `+0x000` | the high half of word 0 | `0x0006` in every state |
+| `+0x002` | the low half of word 0 | changes every frame |
+| `+0x016` | **the master compressor's gain reduction**; the ColdFire copies it to `0x4058e82a` (`0x40027966`) | 0 silent and with one note; `0x1a87`..`0x455c` with the busy pattern; **0 in 20 of 20 readings with the compressor off**, the pattern still playing |
+| `+0x01c`..`+0xa9c` | 32 records of 84 B | all 32 change with a single held note, and the note shows at the same offsets (`+30..+35`) in every record. That fits one record per sample of the 32-sample block, with 28 channels of 24-bit audio (the per-track stream Overbridge carries). **[I]**: not checked channel by channel |
+| after `+0xa9c` | the per-track tail | 0 in every state |
+
+**Word 0 is §7's cycle count, confirmed as a load figure.** Read as one big-endian u32, it is about 416,000 silent, about 419,000 with the busy pattern, and about 424,000 with one note held on our added machine. It follows what the DSP is asked to do, so it is more than a heartbeat. `docs/sharc-load.md` has the method.
+
+**The core clock is 1 GHz, from the init program** (DN2 1.11; DT2 1.16's init block has the same size and the same CGU table at `0x242c88`, not otherwise compared). **[D]**
+- CLKIN is 20 MHz (`r8=0x1312d00` at sw `0x120230`).
+- The settings record `0x06a10464` / `0x310` is built at `0x120532` and unpacked at `0x120a06` into MSEL 100, DF 0, CSEL 2, SYSSEL 4, S0SEL 4, S1SEL 2, DSEL 3 and OSEL 16.
+- So a frame at 1,500 frames/s has 666,667 cycles, and word 0 reads about 62 % silent.
+- `docs/sharc-load.md` has the field-by-field reading.
+
+## Reproducing
+
+```
+python scripts/mmio_window_map.py <image.syx> 0xec030000 0xec040000
+python scripts/mmio_window_map.py <image.syx> 0xec090000 0xec0a0000
+dnfw fn <image.syx> --section 3 callers --at 0x4013459a
+dnfw disasm <image.syx> 0x400cf5e0 200
+```
+
+Happy to hand over anything here in another form, or to re-run any of it
+against 1.16 if that is more useful to you than 1.11.

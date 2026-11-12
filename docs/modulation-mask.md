@@ -1,0 +1,489 @@
+# The modulation mask: the firmware is already dimensioned for four modulators
+
+Every parameter record carries a **four-bit modulator mask**, and each LFO's
+destination list is built by filtering on it. Three of the four bits are spent
+on LFO1, LFO2 and LFO3. **The fourth bit is set on all 189 modulatable
+parameters and on all three LFOs' own parameters, and no existing filter
+selects on it alone.**
+
+This is the strongest evidence yet that a fourth LFO is the shape Elektron left
+room for, and it is independent of — and agrees with — DNX's finding that the
+stored sound format reserves a fourth slot in its LFO grid. It was read from the
+bytes of both builds and from the code that consumes them.
+
+It also does **not** find the modulation tick. Everything here is the
+*destination and parameter* layer. See "What this does not establish".
+
+## The mask field
+
+This uses the anchor already in `docs/version-anchors.md` — the **parameter
+record base**, the address the accessors `lea`, with `record[id] = base + id*60`:
+
+| | 1.10E | 1.11 |
+|---|---|---|
+| parameter record base | `0x401e29a0` | `0x401f7f94` |
+
+### The full record layout
+
+`record(id) = base + id*60` — the record starts **at** the base. Fifteen 4-byte
+fields, closing the 60 bytes exactly with nothing left over:
+
+| Offset | Holds | Example (id 75, LFO1 `SPD`) |
+|---|---|---|
+| `+0x00` | **page id** (`paramPageID`) | `0x1a` = LFO1 |
+| `+0x04` | parameter id within the page | `1` |
+| `+0x08` | zero in every record seen | `0` |
+| `+0x0c` | maximum value (`<< 8`) | `0x7ffe` |
+| `+0x10` | default value (`<< 8`) | `0x7000` |
+| `+0x14` | flag — set on bipolar parameters | `1` |
+| `+0x18` | MIDI controller; `0xffffffff` when unassigned | `0x66ffff` |
+| `+0x1c` | NRPN; `0xffffffff` when unassigned | `0xaa` |
+| `+0x20` | a dense ordinal — **every** record has one | `0x4f` |
+| **`+0x24`** | **the modulation mask** | `0xe00` |
+| `+0x28` | long-name string pointer | `Speed` |
+| `+0x2c` | page-label string pointer | `LFO1` |
+| `+0x30` | short-name string pointer — what `version-anchors.md` indexes on | `SPD` |
+| `+0x34` | **value formatter** — renders the value for display. The dispatch at `0x40035f32` (1.10E) tests it for null, `jmp`s through it, and prints `ERR` when it is null. Each one ends in the sprintf at `0x40000e82`; LFO `MULT`'s, for instance, computes `1 << v` and appends `k` above 512 | `0x400e44a4` |
+| `+0x38` | unit-suffix string — **empty in all 320 records** | `""` |
+
+Confirmed by indexing both images: ids **75–84, 85–94, 95–104** are the LFO1,
+LFO2 and LFO3 blocks, and ids **6** and **10** resolve to `Machine Type` and
+`Track Level` — the two live head entries `docs/parameter-table-consumer.md`
+already named, from a derivation that did not use them.
+
+### How to know an anchor is right
+
+**A wrong anchor still produces plausible strings.** The table is dense and
+every record holds four pointers, so "some record says `LFO1`" proves nothing.
+Two probes do prove something, and both are in `_check_geometry` in
+`scripts/build_lfo4_test.py`:
+
+1. **A page boundary.** Id 84 is the last LFO1 record and id 85 the first LFO2
+   one. An off-by-one-record anchor shifts exactly here, and nowhere a casual
+   look would notice.
+2. **The three LFO blocks are the same ten parameters**, so their `+0x34`
+   formatter sequences must be *identical*. This is the probe that settled the
+   record boundary: with the start taken 8 bytes low, LFO1's first slot picked
+   up id 74's handler and LFO1 disagreed with LFO2 and LFO3. With the start at
+   the base, all three sequences match exactly.
+
+Two separate anchor errors were found and fixed this way on 2026-09-12; both are
+recorded in `docs/lfo4-feasibility.md`, "The Stage 1 corrections".
+
+## What the mask contains, measured
+
+Histogram of `record+0x24` over all 271 named records. **Identical in 1.10E and
+1.11, value for value and count for count**:
+
+| Mask | Records | Which |
+|---|---|---|
+| `0x1e00` | 189 | every ordinary modulatable parameter — SYN, Filter, Amp, FX, Delay, Reverb, Ext-in, Src, CC |
+| `0x0e00` | 8 | LFO1's own parameters |
+| `0x0600` | 8 | LFO2's own parameters |
+| `0x0200` | 8 | LFO3's own parameters |
+| `0x0` | 55 | not modulatable at all — Master, Chorus, Retrig, Euclidean, Portamento, and each LFO's `SLEW` |
+| `0x40000` | 1 | LFO1's `DEST` |
+| `0x20000` | 1 | LFO2's `DEST` |
+| `0x10000` | 1 | LFO3's `DEST` |
+
+So the mask occupies **bits 9–12** (`0x200`, `0x400`, `0x800`, `0x1000`), and
+each LFO's `DEST` parameter carries a unique identifying bit in bits 16–18.
+
+## How the destination list is built
+
+Four byte-identical sites do this, at `0x400397f2`, `0x40039ad4`, `0x40039cf6`
+and `0x40039ef4` on 1.11 (`0x4003908a`, `0x4003936c`, `0x4003958e`, `0x4003978c`
+on 1.10E — a uniform `+0x768` shift, so the code is structurally unchanged
+between builds). The idiom:
+
+```
+4003 9ac2:  movel %d0,%d1
+4003 9ac4:  lsll #2,%d1              ; d1 = id*4
+4003 9ac6:  lsll #6,%d0              ; d0 = id*64
+4003 9ac8:  lea 0x401f7f94,%a2
+4003 9ace:  subl %d1,%d0             ; d0 = id*60
+4003 9ad0:  movel %a2@(24,%d0:l),%d1 ; d1 = rec[id].mask   <- 24 is HEX: 0x24
+4003 9ad4:  movel #7680,%d0          ; 0x1e00
+4003 9ada:  btst #18,%d1             ; LFO1's DEST?
+4003 9ade:  bnes done
+4003 9ae0:  movew #3584,%d0          ; 0x0e00
+4003 9ae4:  btst #17,%d1             ; LFO2's DEST?
+4003 9ae8:  bnes done
+4003 9aea:  movew #1536,%d0          ; 0x0600
+4003 9aee:  btst #16,%d1             ; LFO3's DEST?
+4003 9af2:  bnes done
+4003 9af4:  clrl %d0                 ; not a DEST parameter -> no list
+done:
+```
+
+Note the radix trap again: `%a2@(24,%d0:l)` is indexed mode, so `24` is **hex**
+`0x24`, not decimal. `docs/mainos-image.md` records why this matters.
+
+The resulting value is the **filter**, passed to the list builder
+`FUN_4003951e`, whose decompiled loop is:
+
+```c
+do {
+    slot = (**(code **)(*param_1 + 0x50))(param_1, i);      /* parameter at slot i */
+    if (slot != 0 && (mask = FUN_400dc30e(slot), (filter & ~mask) == 0))
+        push_back(destinations, &slot);
+    i++;
+} while (i != 0x65);                                        /* 101 slots */
+```
+
+`(filter & ~mask) == 0` is a **subset test**: a parameter joins the list only if
+its mask contains *every* bit of the filter.
+
+### The filter is the modulator's identity, not just a bitmask
+
+At `0x40106a08` the same three values are mapped straight back to names for
+display:
+
+| Filter | Name string |
+|---|---|
+| `0x1e00` | **`MOD1`** |
+| `0x0e00` | **`MOD2`** |
+| `0x0600` | **`MOD3`** |
+
+So the filter value *is* how the firmware refers to a modulator — and those are
+the `[MOD]` page names the instrument shows.
+
+### Working the rule through
+
+| Filter | Admits |
+|---|---|
+| `MOD1` = `0x1e00` | only `0x1e00` records — ordinary parameters |
+| `MOD2` = `0x0e00` | ordinary + **LFO1's** parameters |
+| `MOD3` = `0x0600` | ordinary + LFO1's + **LFO2's** parameters |
+
+Which is exactly the Digitone's documented behaviour: a higher-numbered LFO may
+modulate a lower-numbered one, never the reverse, and never itself.
+
+## The fourth bit
+
+The filter series drops one high bit per LFO: `0x1e00`, `0x0e00`, `0x0600`. The
+next term is **`0x0200`**, and it is the only filter value left. Its admission
+set is:
+
+| Record class | Mask | `0x200 ⊆ mask`? |
+|---|---|---|
+| ordinary parameters | `0x1e00` | **yes** |
+| LFO1's parameters | `0x0e00` | **yes** |
+| LFO2's parameters | `0x0600` | **yes** |
+| LFO3's parameters | `0x0200` | **yes** |
+| unmodulatable | `0x0` | no |
+
+A modulator filtering on `0x0200` would see every modulatable parameter **plus
+all three LFOs' own parameters, and not itself** — precisely and only what a
+fourth LFO sitting at the end of the chain needs.
+
+The practical consequence is large: **no parameter-record edits are needed to
+make the existing 189 parameters LFO4 destinations.** The bit is already set on
+every one of them, in both shipped builds. That removes the single most
+error-prone part of the change set sketched in `docs/lfo4-feasibility.md`.
+
+## What a fourth modulator would still require
+
+Honest accounting, all of it still to do:
+
+1. **A fourth `DEST` bit.** No record carries `0x8000` (bit 15) or any other
+   fourth `DEST` marker, because there is no LFO4 page. LFO4's `DEST` record
+   needs one, and the four filter sites need a fourth `btst`/`movew #0x200`
+   pair. Each site is a straight insertion — the existing tests are already a
+   chain, so a cave is only needed if the inserted code does not fit.
+2. **Ten parameter ids.** LFO ids run 75–104 with no slack; id 105 is
+   unallocated and Chorus resumes at 106. So there is **no reserved ten-id block
+   for LFO4** — the `ERR` filler slots at the head of the table remain the plan,
+   per `docs/lfo4-feasibility.md`.
+3. **A `paramPageID` value.** Pages run `0x00`..`0x1e` — `0x1a`=LFO1,
+   `0x1b`=LFO2, `0x1c`=LFO3, `0x1d`=Retrig, and **`0x1e` is already taken** by
+   the single record id 19, `None`/`---`, the "no destination" entry (which
+   carries mask `0x1e00`, so it appears in every LFO's list — that is the
+   `NONE` row at the top of a `DEST` menu). So a fourth LFO page needs id
+   `0x1f` or higher, and anything sized by the page count has to be found and
+   grown.
+4. **The engine.** Untouched by any of this.
+
+## The hardware test, built and waiting
+
+`scripts/build_modmask_test.py` builds
+`00_Resources/02_Builds/modmask-test_DN2_1.11.syx` — **two 4-byte writes and
+nothing else**, flipping two closed parameters from mask `0x0` to `0x1e00`:
+
+| id | page | parameter | mask |
+|---|---|---|---|
+| 34 | Portamento | Portamento Time `PTIM` | `0x0` → `0x1e00` |
+| 61 | Amp | Delay Time `DEL` (the AMP envelope delay, **not** the FX delay) | `0x0` → `0x1e00` |
+
+Both are parameters of a synth track's own pages, so they are certainly
+enumerated by the track's `ParameterSet`. That isolates the mask as the only
+variable.
+
+Verified offline: decoded back and diffed against stock — **2 bytes differ**,
+both inside `record+0x24` of ids 34 and 61, every other byte identical, value
+formatters unchanged, and all 21 integrity checks pass including the HMAC
+trailer.
+
+### CONFIRMED on hardware, 2026-09-12
+
+Flashed to the instrument. **`PORT  Portamento Time` appears in MOD1's
+destination list.** A parameter that the stock firmware offers to no modulator
+at all is now an LFO destination, from a **two-byte** change to one field.
+
+**The mask is the gate.** For a parameter the track's `ParameterSet` already
+enumerates, `record+0x24` alone decides whether an LFO can target it.
+
+Three things the screen confirms beyond the main result:
+
+- The header reads **`MOD1 DEST`** — the instrument itself calls LFO1 "MOD1",
+  exactly as the filter-to-name map at `0x40106a08` said it would. That mapping
+  was read from the bytes before anyone looked at a screen.
+- The list is **grouped by page** with the page's short label in the left
+  column (`FX` over Bit Reduction / Sample-Rate Redu / SRR Routing / Overdrive /
+  OVR Routing, then `PORT` over Portamento Time). That is
+  `GroupedModDestListView` doing its job, and it means a new destination
+  inherits its grouping from its record's page field with no extra work.
+- Portamento Time sits **after a dotted separator at the end of the list**,
+  which fits the second loop in `FUN_4003951e` — the one that walks 26 entries
+  from `DAT_4028bfc4` to build a page ordering. Portamento is evidently not in
+  that ordering table, so it lands last rather than in place. Cosmetic, but it
+  is the next thing to fix if a destination should appear in its natural spot.
+
+### And it modulates
+
+Assigned and heard on the instrument, same session: **the LFO actually modulates
+Portamento Time.** Not merely listed as a destination — applied.
+
+This is the largest single result the project has had, because of what it says
+about the engine rather than about the mask:
+
+**The modulation apply path is generic and data-driven.** A parameter that
+Elektron never wired to any modulator — no mask bit, absent from every
+destination list — became fully modulated by flipping one 32-bit field in a
+lookup table. Nothing in the engine special-cases which parameters can be
+modulated; it resolves a destination index and applies. Had the apply side been
+a hand-written switch over the parameters Elektron chose to support, a two-byte
+change could not have produced this.
+
+**What that closes.** `docs/lfo4-feasibility.md` named the audio engine as "the
+true open gate": even with a fourth LFO's parameters, UI and storage in place,
+would the engine *apply* a fourth modulator? For the *apply* half the answer is
+now yes — the destination side is generic over the parameter index space and
+takes new entries without complaint.
+
+**What it does not close, and the scope matters.** Portamento Time is a **sound
+parameter**: per-voice, already computed by the engine for every voice on every
+note. All that changed is that a modulator was allowed to write it. Two things
+remain genuinely open:
+
+1. **Global parameters are a different object.** Chorus, Master, Delay and
+   Reverb settings are not per-voice. That the engine can modulate a per-voice
+   parameter is no evidence it can modulate a global one, and that is precisely
+   the risk in the FX-modulation idea (`docs/ideas-backlog.md` §4).
+2. **The generator, not the application.** Nothing here shows the engine can
+   *run* a fourth LFO. Whether the tick advances an array of N phases or three
+   named instances is still unknown, and it is now the single remaining unknown
+   on the LFO4 path. `docs/engine-state.md` holds that hunt.
+
+**The method that produced it is worth as much as the result**: read a table
+field from two builds, derive a rule from how the code consumes it, predict a
+behaviour change, make the smallest possible edit, and check it on hardware.
+Two bytes, one flash, one screenshot, one listen.
+
+## Why the FX delay could not be the test
+
+The obvious experiment — open an FX Delay parameter to LFO1 — turns out not to
+be a mask edit at all. **The FX Delay page's parameters already carry `0x1e00`**
+(ids 113–122, 9 of 10), as do Reverb's (123–131, 7 of 9). They are excluded
+somewhere else.
+
+That somewhere is the enumeration. `FUN_4003951e` does not walk the parameter
+table; it walks 101 slots of a `ParameterSet` through vtable slot `+0x50`, and
+only then tests the mask. The four implementations (1.11):
+
+| Class | vtable | slot `+0x50` |
+|---|---|---|
+| `SoundParameterSet` | `0x401db7fc` | `0x40036720` → `FUN_400dc02a(slot, machineA, machineB)` |
+| `FxParameterSet` | `0x401db884` | `0x40036768` → `FUN_400dc0b0(slot)` |
+| `TrigParameterSet` | `0x401db90c` | `0x400369c6` |
+| `MidiParameterSet` | `0x401db994` | `0x400369e6` |
+
+`SoundParameterSet`'s mapping is machine-dependent — it reads two type bytes at
+`+0xde`/`+0xdf` before indexing — and the tables it indexes are `lea`d at
+**`0x42c64b3c`** and **`0x42c64d18`**, which are **outside the MAIN OS image**
+(`0x40000400`–`0x4030b980`). So they cannot be patched by editing section 3, and
+where they actually live is an open question — that address region also shows up
+as `_DAT_446478d0` elsewhere, so something is mapped up there that this project
+has not mapped yet.
+
+### Why do Delay and Reverb carry a mask nothing uses? Two answers ruled out
+
+**Not an FX track.** The DN2 has none — checked with the device's owner, who
+notes an FX track with its own LFOs is Octatrack-only.
+
+**Not MIDI.** The natural next guess, also from the owner: perhaps Delay and
+Reverb are masked because they can be modulated over MIDI. The records refute
+it. MIDI addressability lives in two *different* fields, `record+0x18` (CC) and
+`record+0x1c` (NRPN), and it does not track the mask at all:
+
+| Page | Mask | CC / NRPN assigned |
+|---|---|---|
+| Delay | `0x1e00` | yes — CC `0x15`–`0x1c`, NRPN `0x100`–`0x107` |
+| Reverb | `0x1e00` | yes — CC `0x1d`–`0x5c`, NRPN `0x108`–`0x10f` |
+| **Chorus** | **`0x0`** | **yes — CC `0x09`–`0x47`, NRPN `0x129`–`0x12f`** |
+| **Master** | **`0x0`** | **yes — all eleven, CC `0x11`, `0x6f`–`0x77`** |
+
+Chorus and Master are **fully MIDI-addressable and still masked closed**. So the
+mask is not "can be driven from outside"; CC and NRPN are, and the two are
+independent. The owner's hypothesis is disproved by their own device's table.
+
+**Not MOD SETUP either.** Checked on the device by its owner: `Delay Time` and
+`Reverb Decay` are **not** assignable as modulation-setup destinations.
+
+So Delay and Reverb carry a full modulation mask that **no destination list in
+the instrument offers** — not the LFO's, not the MIDI modulation sources'. It is
+**latent capability**: the mask says yes, and nothing asks.
+
+That confirms the model — for FX parameters the gate is the **enumeration**, not
+the mask — and it makes the enumeration the only thing worth attacking for the
+FX-modulation idea.
+
+### The caveat this creates, and the argument that survives it
+
+Delay and Reverb being marked modulatable when nothing can reach them is
+evidence that **these masks are not authored tightly**. That cuts against this
+document's headline: if the table carries capability the UI never exposes, then
+the fourth bit being set on 189 parameters could be the same kind of slack
+rather than a deliberate reservation for a fourth LFO.
+
+The argument has to be made on the *structure* instead, and there it holds:
+
+The mask is a **thermometer-coded rank**, not a set of independent flags. Count
+the bits: ordinary parameters rank **4**, LFO1's rank **3**, LFO2's rank **2**,
+LFO3's rank **1**, closed parameters rank **0**. A modulator's filter demands a
+minimum rank — MOD1 needs 4, MOD2 needs 3, MOD3 needs 2 — which is exactly the
+"a later LFO may modulate an earlier one" rule expressed arithmetically.
+
+Now the decisive detail: **LFO3's own parameters are rank 1, not rank 0.** Rank
+0 exists and is used — Chorus, Master, Portamento, Retrig, Euclidean and every
+`SLEW` are rank 0, genuinely closed. LFO3's parameters are deliberately placed
+one step above that.
+
+The *only* thing that distinction can mean is "modulatable by something strictly
+later than LFO3". No such modulator exists in the shipped firmware. **The rank
+system has one level more than it has modulators**, and that surplus level is
+precisely the one a fourth LFO would occupy.
+
+That is a claim about the grading's internal consistency, not about how
+generously any single bit was set, so loose authoring elsewhere does not touch
+it. It remains an inference — no code selects on `0x0200`, and the filter
+dispatcher at `0x400c2a90` emits only three values, with no fourth case
+anywhere.
+
+
+
+## What this does not establish
+
+- **Nothing about the modulation tick.** This is the destination/parameter/UI
+  layer. The code that advances an LFO's phase and applies it has still not been
+  found; `docs/engine-state.md` holds that hunt.
+- **Nothing about the runtime sound object.** Whether a fourth LFO's phase and
+  output have somewhere to live in the 960-byte runtime preset entry is open.
+- **`0x200` is inferred as MOD4, not observed.** No code selects on `0x0200`
+  today. The inference rests on the arithmetic series of the filters, the
+  four-bit width of the field, the bit being set on all 189 modulatable records,
+  and the admission set coming out exactly right. That is strong, and it is
+  still an inference — the sort that `docs/engine-state.md` records a retraction
+  for. It gets confirmed the day a patched build shows a parameter in a MOD4
+  destination list, not before.
+
+## Method note
+
+The table was found by scanning the image for 60-byte-strided records with three
+valid string pointers, not by following code.
+
+> **[CORRECTED 2026-09-14]** This said: *"Ghidra builds no references into it,
+> because every access computes `base + id*60` at runtime. `FindDataRefs.java`
+> returns zero hits here, which is a property of the reference model and not
+> evidence of absence."*
+>
+> The zero was real and the explanation was wrong. **`FindDataRefs.java` was
+> broken** — it walked the reference iterator by *from* address starting at the
+> table, so every reference originating in the code region below was never
+> visited, and its `break` fired almost immediately. It returned zero for
+> everything, including ranges with hundreds of references.
+>
+> Fixed (`docs/pcm-hunt.md` §12), it finds **10 references** to this table, the
+> largest group being `FUN_400dc4d0` — which `docs/parameter-set-tables.md`
+> independently names **`param_set_tables_build`**, the boot-time builder that
+> walks this very table.
+>
+> The general claim still holds: runtime-computed `base + id*60` accesses are
+> invisible to any reference model, which is why the table was found by scanning
+> bytes. But that is a reason to expect *few* references, not zero, and it was
+> used here to explain away a tool failure. The full objdump of the image is what found the four filter
+sites, by grepping for the mask constant.
+
+## The follow-up experiment, built 2026-09-12
+
+`scripts/build_moddest_expand.py` →
+`00_Resources/02_Builds/moddest-expand_DN2_1.11.syx`. It opens **all 32**
+parameters the stock firmware marks closed, in three groups chosen so the
+results read apart. **32 bytes change**, every one inside a `record+0x24`, all
+21 integrity checks pass.
+
+| Group | What | Prediction |
+|---|---|---|
+| **A** (13) | SYN `ATRG ARST BTRG BRST PHRT KSA KSB1 KSB2`, Amp `DEL MODE RSET`, Portamento `PTIM PORT` | **appear and modulate** — same per-voice class as the confirmed `PTIM` |
+| **B** (8) | Chorus `DPTH SPD HPF WDTH DEL REV CHR VOL` | **do not appear** — excluded by enumeration, not by the mask |
+| **C** (11) | Master `MOVD THR ATK REL MUP RAT SCS SCF MIX VOL` | **do not appear** — same, a different global object |
+
+### RESULT, 2026-09-12: all of A, none of B or C
+
+Flashed and checked on the instrument:
+
+- **Group A — all 13 appear.** Every per-voice sound parameter opened by a mask
+  flip shows up as a modulation destination.
+- **Group B (Chorus) — none appear.**
+- **Group C (Master) — none appear.**
+
+**The enumeration is confirmed as the gate for global parameters.** Setting the
+mask on Chorus and Master changed nothing, exactly as predicted, which means the
+mask is necessary but not sufficient and the `ParameterSet` never offers those
+ids in the first place. Delay and Reverb carrying a full mask and still being
+unreachable is the same fact seen from the other side.
+
+So the two halves are now cleanly separated and both are measured:
+
+| For a parameter that is... | the gate is |
+|---|---|
+| **enumerated** by the track's `ParameterSet` (per-voice sound parameters) | **the mask at `record+0x24`** — flip it and the parameter is both offered and modulated |
+| **not enumerated** (global FX, Master) | **the enumeration** — the mask is irrelevant |
+
+**What this means for the FX-modulation idea** (`docs/ideas-backlog.md` §4): it
+is an **enumeration problem**, definitively, and not a mask problem. The target
+is `SoundParameterSet`'s slot-to-id mapping — `FUN_400dc02a` on 1.11, which is
+machine-dependent (it reads type bytes at `+0xde`/`+0xdf`) and indexes tables
+the code `lea`s at **`0x42c64b3c`** and **`0x42c64d18`**. Those addresses are
+**outside the MAIN OS image**, so finding what is mapped there is the next
+concrete job — and it is also the job that would let a fourth LFO's parameters
+be enumerated.
+
+Note this does **not** yet tell us whether the engine *could* modulate a global
+parameter if one were offered. That question is still open, because nothing has
+ever been offered one.
+
+**B and C were the point.** This document argues FX settings are excluded by the
+`ParameterSet` enumeration rather than the mask, on the evidence that Delay and
+Reverb already carry a full mask and still cannot be reached. Setting Chorus's
+and Master's masks tests that directly:
+
+- **They do not appear** → the enumeration is the gate, confirmed. The
+  FX-modulation idea is an enumeration problem, and the `SoundParameterSet`
+  slot-to-id tables at `0x42c64b3c` (outside MAIN OS) are the thing to find.
+- **They appear** → this document is wrong, the mask was the gate all along,
+  and Delay and Reverb's absence needs a different explanation entirely.
+
+A parameter appearing but not moving is a third outcome and also informative: it
+would mean the engine cannot apply modulation to a global parameter even when
+offered, which is the risk `docs/ideas-backlog.md` §4 names.

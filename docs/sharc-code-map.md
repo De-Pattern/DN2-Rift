@@ -1,0 +1,179 @@
+# Which of the SHARC image is code, and where it executes
+
+**Measured 2026-09-13 on Digitone II 1.11**, against digikit `ec32de1`.
+
+`docs/sharc-image.md` establishes that section 7 is the SHARC program as an ADI
+boot stream, and `bootstream.load_regions()` plays it into the memory it
+describes — 9 regions, 6,423,108 bytes. That is an image, not yet a map: it does
+not say which of those bytes are instructions, nor what address the processor
+knows them by. Both are answered here, and neither needed a disassembler.
+
+## 1. About 240 KB of the 837 KB section is code
+
+The test is digikit's `sharcscan.py` decode, used as documented rather than
+re-derived: a 48-bit SHARC+ VISA instruction is three little-endian 16-bit words
+assembled **MSB word first**, `insn = (w0<<32)|(w1<<16)|w2`, with candidates only
+at even byte offsets. A `cjump` absolute is `(insn>>24) & 0xFFFFFF == 0x180400`,
+its target `insn & 0xFFFFFF`. This is how ADI's compiler emits a call, so
+counting them is a code detector.
+
+| region | bytes | cjump | what |
+|---|---|---|---|
+| `0x20000000..0x2001e880` | 125,056 | **1002** | **code** (L2) |
+| `0x2001e888..0x2008823c` | 432,564 | 0 | data |
+| `0x28240000..0x28240300` | 768 | 0 | |
+| `0x282403f0..0x2826f000` | 191,504 | 0 | rodata — `event_groups.c`, `queue.c`, `stream_buffer.c`, `port.c`, `Audio Task` |
+| `0x282c0000..0x282dd52c` | 120,108 | 0 | rodata — `tasks.c`, `timers.c`, `heap_4.c` |
+| `0x28380000..0x283825c0` | 9,664 | 10 | |
+| `0x283825c4..0x2839bffc` | 105,016 | **604** | **code** (L1) |
+| `0x80000000..0x80000014` | 20 | 0 | |
+| `0x80000018..0x8052fbe0` | 5,438,408 | 0 | DDR, almost all zero fill |
+
+**[WRONG — corrected 2026-09-16] The L1 and L2 labels in the table above were
+the wrong way round**, and are corrected above. `0x28xxxxxx` is **L1** — four
+independent blocks, each reachable through its own word-size aliases, which is
+the property `load = exec * 2 + 0x28000000` depends on. `0x20000000` is **L2** —
+one unified instance, L2CTL0, sharing the space with the boot ROM. Cross-checked
+against the ADI manuals: SHARC+ Core Programming Reference Rev 1.5 ch. 7 for L1,
+ADSP-2156x Hardware Reference Rev 1.0 ch. 8 for L2.
+
+Found upstream: m-dwyer/digikit `786dc04` corrected the same inversion in its own
+`docs/SHARC-ADDRESS-MAP.md`, which had inherited it from our PR #3. **No address,
+count or conclusion changes** — only the two names.
+
+**1,616 cjumps, and they are not spread evenly** — they concentrate in two
+regions and are absent from seven. A decoder firing on noise would not do that.
+
+**The control is built in and was not arranged for.** The 432,564-byte data
+region and the 5.4 MB DDR fill return **zero**, which is the same negative
+control digikit reports (49,152 bytes of float coefficients → zero hits). A test
+that fires everywhere proves nothing; this one is silent across 5.9 MB and loud
+across 240 KB.
+
+**Independent corroboration:** digikit measures **1,656** cjumps over a
+comparable Digitakt II code region. Ours is 1,616 on a different product from a
+different extractor. Two builds, two toolchains, same order of magnitude — the
+decode transfers.
+
+### The landmark strings are in rodata, which is where they belong
+
+Every FreeRTOS path and `Audio Task` sits in a region with **zero** cjumps. That
+is not a disappointment, it is the expected result: string constants live in
+read-only data, not in `.text`. It also bounds the search for the code that
+references them — it is somewhere in 240 KB, not 837 KB.
+
+## 2. The exec↔load mapping, confirmed for one address space
+
+Boot-stream targets are **load** addresses (`0x2826ee10`). cjump targets are
+**execution** addresses in two spaces, `0x1c` and `0xb8`, and they are not the
+same numbers. Nothing can be cross-referenced until they are related.
+
+```
+load = exec × 2 + 0x28000000
+```
+
+Two pieces of evidence, and the first is the one that matters:
+
+**The entry point lands on a boundary.** The boot stream's final block gives
+entry `0x001c12e2`. Mapped, that is `0x283825c4` — **exactly the first byte of
+the L2 code region**, to the byte. An arbitrary affine map does not land on a
+block boundary by chance.
+
+**And the population agrees.** Of the 1,616 cjump targets, **591 of 591** in the
+`0x1c` space land inside a loaded region under this map. The rival maps fail
+completely:
+
+| map | targets landing inside a loaded region |
+|---|---|
+| `t × 2 + 0x28000000` | **591** / 1616 |
+| `t × 4 + 0x28000000` | 0 / 1616 |
+| `t + 0x28000000` | 0 / 1616 |
+
+The factor of **2** is the interesting part: it says code addresses count
+**16-bit words**, which is exactly VISA's instruction granularity, and agrees
+with digikit's independent alignment analysis (motifs on even offsets, spread
+uniformly across mod 4, 6 and 8 — variable-length 16-bit-granular encoding, not
+fixed 48-bit words). Two unrelated measurements converging on the same fact.
+
+### ~~Open: the `0xb8` space~~ — **SOLVED 2026-09-14**
+
+```
+exec 0xb8WWWW  ->  load 0x20000000 + 2 x WWWW
+```
+
+**1,025 of 1,025 targets land inside the L1 code region**, and the fit is tight
+rather than merely possible: word offsets run `0x0020 .. 0xf3aa`, so the highest
+byte offset is `0x01e754` against a region length of `0x01e880` — the targets
+fill the region to within **0x12c bytes of its end and never overflow it**. A
+wrong scale would either spill past the region or occupy a fraction of it.
+
+**The factor of two was settled by alignment, not by fit.** Both candidate
+scales put every target inside the region, so "lands inside" could not
+discriminate — and the decode-rate could not either, because an all-zero word
+decodes as a confident `Type21a` (`docs/sharc-disassembly.md`). What does
+discriminate is that **47.2% of the `0xb8` targets are odd** (484 of 1,025). An
+odd *byte* address cannot begin an instruction on this machine — instructions
+start only at even offsets — so the targets cannot be byte addresses. They are
+16-bit **word** addresses, exactly as the `0x1c` space and ADI's own addressing
+model say.
+
+So both execution spaces are now mapped, by the same rule in different windows:
+
+| space | mapping | targets |
+|---|---|---|
+| `0x1c` | `load = exec x 2 + 0x28000000` | 591 / 591 |
+| `0xb8` | `load = (exec & 0xFFFF) x 2 + 0x20000000` | **1,025 / 1,025** |
+
+Together that is **1,616 of 1,616 cjump targets resolved** — the whole
+population, with nothing left over.
+
+The original paragraph, kept because the reasoning is the point:
+
+
+
+**1,025 of the 1,616 targets** are in the `0xb8` space and **no mapping is
+known**. `t × 2 + 0x28000000` puts them outside every loaded region. They may
+address DDR (the image reserves 5.4 MB at `0x80000000`, almost all fill, which is
+where a large working set would live), but that is a guess and is recorded as
+one. The `0x1c` result does not transfer to it by assumption.
+
+## 3. Data operands use a different rule, and it is byte-counted
+
+**Added 2026-09-14.** The two mappings above are for *execution* addresses —
+what a cjump target means. They are not what a data operand means, and assuming
+they were is why the first search for string references found **zero hits in
+6.4 MB**.
+
+```
+operand bytes = LE(hi) || LE(lo)   of   (load_address - 0x28000000)
+```
+
+Word-swapped, because a 48-bit instruction is assembled MSB-word-first, so a
+32-bit operand's halves sit in memory in the opposite order to a plain
+little-endian long. **Byte-counted, not word-counted** — unlike code addresses.
+
+All 105 references to the image's eight landmark strings resolve under this rule
+and land inside the code regions; nineteen other candidate encodings produce
+nothing. The counts are semantically right (`queue.c` 45, `tasks.c` 40,
+`Audio Task` exactly 1). Evidence and method: `docs/sharc-reading.md` §2.
+
+This is what makes the L1/L2 split readable: every FreeRTOS-named function is in
+**L1**, and the application — including whatever makes sound — is in **L2**.
+
+## What this is for
+
+A disassembler pointed at 240 KB of identified code with a working address
+mapping is a different proposition from one pointed at an 837 KB blob with no
+addresses. digikit's `sharc_disasm.py` is that disassembler; this is the input
+to hand it.
+
+**What it does not establish.** Nothing here says the synthesis engine is in this
+image, and the fourth-LFO question is untouched. It says where the instructions
+are and what the processor calls them.
+
+## Reproducing
+
+The counts come from walking `bootstream.load_regions()` output with the decode
+above. Nothing in this repository disassembles SHARC, and this does not either —
+it counts one instruction form whose encoding is published and whose false-positive
+rate is bounded by the zero-hit control regions in the table.

@@ -1,0 +1,160 @@
+"""Running a Machinedrum machine's DSL in run mode against the Machinedrum's own output
+(test/test_md.py, scripts/md_compare.py).
+
+The reference is the golden vectors: DSP2's own code for each machine run in a DSP56300
+emulator on the owner's firmware (`MD_GOLDEN`, default ../md163/research/emu56k/golden
+beside the repo; Elektron's output, so never in this repository). A case is a list of
+events (block, eight 14-bit inputs, trigger), the host's words the OS sent at each, and
+the 44.1 kHz output, 24-bit, every block.
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import pathlib
+import struct
+
+from . import core as K
+from . import rom
+from ..perc.dsl import Mem, Prog, bits
+
+ROOT = pathlib.Path(__file__).resolve().parents[3]
+GOLDEN = pathlib.Path(os.environ.get("MD_GOLDEN", str(ROOT.parent / "md163" / "research" / "emu56k" / "golden")))
+STATE = 0x82100000                     # the bench's own slot 0 (the build's, until v0.31; v0.32 puts it in L2)
+SCRATCH = 0x2DF000
+TABLES = 0x82000000                    # dnfw.waverider.dsp.MD_TABLES_DDR
+
+
+def layout() -> K.Layout:
+    return K.Layout(STATE, SCRATCH, TABLES)
+
+
+def golden_available() -> bool:
+    return GOLDEN.is_dir() and rom.available()
+
+
+def golden(name: str) -> dict:
+    return json.loads((GOLDEN / f"{name.replace('-', '')}.json").read_text())
+
+
+def unpack(s: str) -> list[float]:
+    raw = base64.b64decode(s)
+    return [x * K.Q23 for x in struct.unpack(f"<{len(raw) // 4}i", raw)]
+
+
+_TABLE_MEM: dict[int, dict[int, int]] = {}
+
+
+def table_mem(L: K.Layout) -> dict[int, int]:
+    """The tables as the DSP holds them: the ROM's from the firmware, and the sine as the
+    DSP's own fill computes it (run once here, through the DSL)."""
+    if L.tables not in _TABLE_MEM:
+        m: dict[int, int] = {}
+        data = K.tables_bytes()
+        base = L.T[K.SHIPPED]
+        for k in range(0, len(data), 4):
+            m[base + k] = struct.unpack_from("<I", data, k)[0]
+        if L.ready is not None:                # v0.26: as the ColdFire leaves it once sent
+            from ..sampler.machines import TABLE_MAGIC
+            m[L.ready] = TABLE_MAGIC
+        mem = Mem(lambda a: m.get(a, 0))
+        p = Prog("run", mem=mem)
+        for _ in range(K.Z_N // K.Z_PER_BLOCK):
+            K.table_fill(p, L)
+        m.update({a: v for a, v in mem.w.items() if L.tables <= a < L.T[K.SHIPPED]})
+        _TABLE_MEM[L.tables] = m
+    return _TABLE_MEM[L.tables]
+
+
+class Bench:
+    """One slot running machine M in run mode, block by block, at 44.1 kHz."""
+
+    def __init__(self, M):
+        self.M, self.L = M, layout()
+        tm = table_mem(self.L)
+        self.mem = Mem(lambda a: tm.get(a, 0))
+        self.first = True
+
+    def _prog(self) -> Prog:
+        p = Prog("run", mem=self.mem)
+        p.i[3] = self.L.state
+        self.mem.put(self.L.C["mdb"], self.L.state)
+        return p
+
+    def block(self, inputs=None, trig=False) -> list[float]:
+        p = self._prog()
+        if inputs is not None:
+            for k, x in enumerate(inputs):
+                p.iconst(0, x)
+                p.sti(K.INP0 + k, 3, 0)
+            p.iconst(0, 1 if trig else 0)
+            K.vws(p, "trg", 0)
+            self.M.host(p, self.L)
+        if self.first:
+            self.M.init(p, self.L)
+            self.first = False
+        if trig:
+            self.M.trig(p, self.L)
+        self.M.render(p, self.L)
+        self.steps = p.steps
+        return [struct.unpack("<f", struct.pack("<I", self.mem.get(self.L.state + 4 * (K.OUT0 + k))))[0]
+                for k in range(32)]
+
+
+def run_case(M, case: dict) -> tuple[list[float], list[float]]:
+    """-> (ours, the Machinedrum's), every sample of the case."""
+    ev = {b: (inputs, trig) for b, inputs, trig in case["events"]}
+    b = Bench(M)
+    ours = []
+    for k in range(case["nblocks"]):
+        if k in ev:
+            ours += b.block(ev[k][0], ev[k][1])
+        else:
+            ours += b.block()
+    return ours, unpack(case["out"])
+
+
+def compare(ours: list[float], theirs: list[float]) -> dict:
+    """The error against the Machinedrum: its peak, its RMS, and the signal-to-error ratio
+    (dB) over the case."""
+    import math
+    err = [a - b for a, b in zip(ours, theirs)]
+    pe = max((abs(e) for e in err), default=0.0)
+    sig = math.sqrt(sum(x * x for x in theirs) / max(1, len(theirs)))
+    rms = math.sqrt(sum(e * e for e in err) / max(1, len(err)))
+    snr = 200.0 if rms == 0 else (20 * math.log10(sig / rms) if sig > 0 else -200.0)
+    return {"peak_err": pe, "rms_err": rms, "signal_rms": sig, "snr_db": snr}
+
+
+# v0.51: TRX's hp1/res2 in float (trx2.EXACT False; TRX-CP kept exact). A noise-driven machine (hats,
+# maracas) decorrelates sample for sample through its resonant filters, so it is held to the
+# Machinedrum by level and octave-band shape instead (test_md.py, test_perc_live.py).
+LIKE_LEVEL_DB, LIKE_BAND_DB = 1.0, 3.0
+
+
+def float_filters(name: str) -> bool:
+    """a TRX machine whose filters run in float"""
+    from . import trx2
+    return not trx2.EXACT and name.startswith("TRX-") and name != "TRX-CP"
+
+
+def likeness(ours, theirs, rate: float = 44100.0) -> dict:
+    """level within LIKE_LEVEL_DB and every octave band within 20 dB of the reference's loudest within
+    LIKE_BAND_DB (Hann window over the whole case)"""
+    import math
+    import numpy as np
+
+    def bands(x):
+        a = np.asarray(x, dtype=float)
+        X = np.abs(np.fft.rfft(a * np.hanning(len(a)))) ** 2
+        f = np.fft.rfftfreq(len(a), 1 / rate)
+        e = (0, 250, 500, 1000, 2000, 4000, 8000, 16000, rate / 2 + 1)
+        return [10 * math.log10(X[(f >= lo) & (f < hi)].sum() + 1e-20) for lo, hi in zip(e, e[1:])]
+    lo = sum(v * v for v in ours) / max(1, len(ours))
+    lt = sum(v * v for v in theirs) / max(1, len(theirs))
+    level = 10 * math.log10((lo + 1e-30) / (lt + 1e-30))
+    bo, bt = bands(ours), bands(theirs)
+    dev = max(abs(a - b) for a, b in zip(bo, bt) if b > max(bt) - 20.0)
+    return {"ok": abs(level) <= LIKE_LEVEL_DB and dev <= LIKE_BAND_DB, "level_db": level, "band_dev_db": dev}

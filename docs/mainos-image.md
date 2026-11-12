@@ -1,0 +1,403 @@
+# The MAIN OS image
+
+> The runtime memory layout — code, constants, the .data/BSS
+> initializer, and the SDRAM at `0x80000000` where mutable state lives — is in
+> `docs/memory-map.md`.
+
+Section id 3 of the ELE3 container: the code the instrument runs.
+
+| | DN2 1.10E | DN1 1.42A |
+|---|---|---|
+| depacked size | 3,085,696 | 2,420,912 |
+| load address | `0x40000400` | `0x40000400` |
+| byte order | big-endian | big-endian |
+
+## It is ColdFire, and that is now measured rather than inferred
+
+The image opens `46 FC 27 00` — `MOVE #$2700,SR`, masking interrupts, the
+classic first instruction of a 68k-family reset path, at `0x40000410` behind a
+16-byte header. Counting opcodes across the DN2 image: 11,285 `RTS` (`4E75`),
+25,503 `JSR.L` (`4EB9`), 2,041 `LINK` (`4E56`), 2,378 `UNLK` (`4E5E`).
+
+**Confirmed 2026-09-07 by disassembling it.** `m68k-linux-gnu-objdump -m
+m68k:cfv4e` decodes instructions that exist on ColdFire and on no 68000-series
+part. At `0x400015f4` and `0x400015fa`:
+
+```
+400015f4:  7f dc    mvzw %a4@+,%d7
+400015fa:  71 00    mvsb %d0,%d0
+```
+
+`MVS` and `MVZ` are ColdFire ISA_B. Their encoding is `0111rrr1`, the MOVEQ
+opcode space with bit 8 set, which is undefined on the 68000 through 68060.
+There are **2,166** such halfwords in `0x40000400`–`0x40098000` alone.
+
+This also matches `sambanks/octabam`, which established the Octatrack's CPU as
+ColdFire V4e and loads its MAIN OS at **`0x40000400`** — the same address we
+measure on both Digitones. One Elektron platform, one convention.
+
+## Getting a disassembler that can read it
+
+Ubuntu's `binutils-m68k-linux-gnu` provides `m68k-linux-gnu-objdump`, and its
+BFD carries ColdFire even though `objdump -i` does not say so — that option
+lists the coarse architecture (`m68k`) and nothing about sub-machines, so
+support is tested by decoding a ColdFire-only instruction rather than read off
+a capability list. `image/objdump.py` does exactly that.
+
+On Windows, the shortest route is WSL:
+
+```
+wsl -u root apt-get install -y binutils-m68k-linux-gnu
+```
+
+`dnfw` finds it there and calls through `wsl`, translating the temporary file
+to a `/mnt/<drive>/...` path, so nothing else has to care where it lives.
+
+### Ghidra runs natively on Windows — no WSL needed for it
+
+Only objdump needs WSL. Ghidra's headless analyzer is Java and runs directly:
+
+```
+C:\Tools\jdk-21.0.12.1+1              JDK 21 (Temurin), for JAVA_HOME
+C:\Tools\ghidra_12.1.3_PUBLIC         set as GHIDRA_HOME
+```
+
+`ghidra
+un-gate-f.bat` is the Windows twin of `run-gate-f.sh` — same scripts,
+same `-noanalysis` linear sweep, but through `analyzeHeadless.bat` because the
+shell launcher mishandles a Windows JDK path. `ghidranalyze.bat` runs a full
+auto-analysis pass and keeps the project, so `DecompileFunction.java` can read a
+routine afterwards. Two gotchas met while setting this up, both recorded so they
+are not met again: `launch.properties` must be plain UTF-8 with **no BOM**, and
+a `%~dp0` script path ends in a backslash that will escape the following quote
+in a `.bat` unless it is stripped.
+
+**Gate F still gates everything**, and its reference is objdump, so a section is
+not cleared for reading until `dnfw validate-disasm` agrees on it — which needs
+WSL. Ghidra passing on MAIN OS (below) does not automatically clear the
+bootstrap section: different bytes, and its load base is not yet pinned.
+
+## Gate F — CLOSED 2026-09-08
+
+> **Also cleared: the bootstrap (section 2), 2026-09-11.** Same language, same
+> reference, over a 16 KB code span: 99.28% agreement, **0 divergences on code**,
+> all 9 clusters on `0x0000` padding words objdump declines. Read the bootstrap
+> at load base `0x800003fc` — see `docs/bootstrap.md`. objdump now runs on this
+> machine too (Ubuntu 24.04 under WSL2, `binutils-m68k-linux-gnu`), so Gate F is
+> no longer tied to one machine.
+
+
+**The rule: no reverse-engineering starts on a decoder that has not been
+checked against objdump.** Run it with `dnfw validate-disasm`. Agreement is
+judged on instruction boundaries, not on how each engine spells the result,
+because a boundary disagreement means one side has desynchronised and
+everything it prints afterwards is fiction.
+
+Reference: `m68k-linux-gnu-objdump` 2.42, `-m m68k:cfv4e`, `-z`.
+
+### Capstone — FAILS, and this is why radare2 cannot be trusted here
+
+Capstone offers m68k modes for the 68000, 010, 020, 030, 040 and 060, and
+**no ColdFire mode**. Measured over `0x40001000` + 64 KB of real DN2 code:
+
+| | |
+|---|---|
+| objdump instructions | 19,117 |
+| boundaries Capstone got right | 18,916 (98.95%) |
+| divergences | **201** |
+
+The 201 break down into three kinds, and two of them are not what you would
+guess:
+
+| Count | What happened |
+|---|---|
+| 111 | A ColdFire-only `MVS`/`MVZ`. Capstone emits a two-byte `.byte` — but the real instruction can be **six** bytes: `73 f9 40 57 3e 80` is `mvzw 0x40573e80,%d1`. |
+| 81 | Capstone has no instruction at that address at all: the downstream wreckage of the above. |
+| 9 | The **opposite direction** — Capstone decodes `00 00 2f 0a` as `ori.b #$a,d0`, a 68k instruction ColdFire dropped. objdump correctly rejects it. |
+
+That third row is the one worth remembering. The problem is not only that
+Capstone is missing instructions ColdFire added; it also happily accepts
+instructions ColdFire removed. Both directions produce plausible-looking code
+that is not there.
+
+Across the wider window `0x40000400`–`0x40098000`, Capstone fails on 2,055 of
+195,649 instructions and assigns **two bytes to every single one of them** —
+which is the desync mechanism stated as a measurement.
+
+This independently reproduces, on the Digitone II, what octabam measured on the
+Octatrack on 30 August 2026 (6,757 undecodable instructions, 4,543 of them
+longer than two bytes). Their conclusion holds here: r2's m68k backend is
+Capstone-based, so **radare2 reads this firmware wrongly and does not say so.**
+
+### Ghidra — PASSES, with one characterised caveat
+
+Ghidra 12.1.3, language `68000:BE:32:Coldfire`, imported with the Binary loader
+at `0x40000400` and `-noanalysis`. The export script sweeps **linearly and does
+not follow flow**, because that is what `objdump -D` does and a comparison is
+only fair if both engines were asked the same question.
+
+Measured over `0x40001000` + **512 KB**:
+
+| | |
+|---|---|
+| objdump instructions | 165,086 |
+| boundaries Ghidra got right | 164,691 (99.76%) |
+| divergences | 395, in **99 runs** |
+| runs beginning on bytes objdump declined to decode | 93 |
+| runs beginning on a real instruction | **6** |
+
+**All six were examined by hand, and none of them is code.** Four sit directly
+after a switch dispatch:
+
+```
+40073d5e:  48 c0            extl %d0
+40073d60:  4e fb 08 02      jmp %pc@(0x40073d64,%d0:l)
+40073d64:  00 ba 01 1a ...  <- the jump table starts here
+```
+
+`JMP (d8,PC,Xn)` followed by its table. The bytes after it are offsets, and
+**both** engines invent instructions from them — objdump reads `oril
+#18481372,%d2`, Ghidra reads `ori.l #0x11a00dc,(0x11a,PC)`. Neither is right,
+because neither is wrong: a linear sweep cannot know a jump table is data. The
+remaining two clusters sit inside runs of `.short` for the same reason.
+
+So **Ghidra misread no real instruction in 512 KB**, and the disagreements are
+confined to padding and jump tables — exactly the places a linear sweep is
+meaningless. Ghidra's own analyser, which we disabled for fairness, follows
+flow and would not disassemble those bytes at all.
+
+`dnfw validate-disasm` still reports FAIL on strict equality, which is correct
+and deliberate: the tool counts, a person judges. What it flags is a shortlist
+of six things to look at, and looking at them is the work.
+
+**Ghidra is cleared for use on this firmware.** Keep objdump as the reference
+for anything that matters, and re-run the gate against a new Ghidra version
+before trusting it.
+
+### The two engines side by side
+
+Same span, `0x40001000` + 64 KB:
+
+| | objdump | Ghidra | Capstone |
+|---|---|---|---|
+| agreement with reference | — | 99.90% | 98.95% |
+| divergence runs | — | 9 | 106 |
+| runs beginning on real code | — | **0** | **97** |
+
+That last row is Gate F in one line.
+
+## objdump prints displacements in two different radixes — a real trap
+
+Gate F says objdump decodes the *instructions* correctly. It does. But its
+**printed operands are not all in the same base**, and that has already produced
+one wrong conclusion here, so it is recorded as a hazard rather than a curiosity.
+
+Measured by assembling known values with `m68k-linux-gnu-as` and disassembling
+the result:
+
+```
+lea (48,%a0,%d0.l),%a0   ->  41f0 0830  ->  objdump: lea %a0@(30,%d0:l),%a0
+lea (30,%a0,%d0.l),%a0   ->  41f0 081e  ->  objdump: lea %a0@(1e,%d0:l),%a0
+movea.l (24,%sp),%a2     ->  246f 0018  ->  objdump: moveal %sp@(24),%a2
+```
+
+So in one listing:
+
+- an **indexed-mode** displacement (mode 6, brief extension word) prints in
+  **hex with no `0x` prefix** — `0x30` shows as `30`;
+- a **`d16(An)`** displacement (mode 5) prints in **decimal** — `0x18` shows
+  as `24`.
+
+An indexed displacement that happens to look like a plausible decimal number is
+therefore silently ambiguous. This is exactly how `+0x30` (48) was first read as
+"+30" and then matched against an unrelated structure — a correlation that had
+to be retracted.
+
+**The rule:** for any displacement that matters, confirm it against the raw
+bytes or against Ghidra, which prints `0x30` unambiguously. When two tools
+disagree about a number, assemble the candidates and compare bytes — that is
+the only arbiter, and it takes seconds.
+
+**It bit again on 2026-09-16**, and the second time it was caught only because
+the result was absurd. Reading the OS-upgrade parser, `48 72 08 20` prints as
+`pea %a2@(20,%d0:l)`; taken as decimal 20 it put the received firmware's payload
+at `state + 20`, which made the validator's arguments come out as the container's
+*product code* and *section count* where the called function plainly wanted a
+*buffer* and a *length*. The displacement is `0x20` = **32**, the payload is at
+`state + 32`, and every argument then resolves. The tell was not the listing —
+it was that the callee did `digest(buf, len - 32)` and compared 32 bytes at
+`buf + len - 32`, which only one reading can satisfy. See `docs/version-gate.md`
+§5.
+
+**So the sharper rule:** when a structure offset derived from an indexed
+displacement produces fields that do not match how the *callee* uses them,
+suspect the radix before suspecting the structure.
+
+## Working the image in Ghidra: the project workflow
+
+`ghidra\analyze.bat` imports and auto-analyses once, keeps the project, and
+runs post-scripts against it. Auto-analysis is the slow part (**~128 s** for the
+3.19 MB 1.11 MAIN OS, dominated by Decompiler Switch Analysis at 68 s); once the
+project exists the script reuses it with `-process -noanalysis`, so later
+queries return in seconds.
+
+```bat
+rem first run: import + analyse + query (slow)
+ghidra\analyze.bat <projdir> mainos_111 <mainos.bin> 0x40000400 ^
+  -postScript DecompileFunction.java 0x4004dfb0
+
+rem later runs: reuse the project, batch several queries (fast)
+ghidra\analyze.bat <projdir> mainos_111 <mainos.bin> 0x40000400 ^
+  -postScript DecompileFunction.java 0x4004afec ^
+  -postScript DecompileFunction.java 0x40043fdc
+```
+
+Notes that cost time to learn:
+
+- Get the raw image with `dnfw extract` (or unpack section 3 in Python); the
+  loader wants a flat binary at base `0x40000400`, processor
+  `68000:BE:32:Coldfire`.
+- **Close the Ghidra GUI first.** A project open in the GUI holds a lock and the
+  headless run fails; use a separate project directory if you need both.
+- `DecompileFunction.java` also accepts a **quoted string** instead of an
+  address, and decompiles every function referencing that literal — the way to
+  get from a message on screen to the code that prints it.
+- The decompiler emits a `Could not recover jumptable … too many branches`
+  warning on some large switch functions; the surrounding C is still sound, but
+  the indirect target is not resolved and must be read as assembly.
+- Keep the project out of the repository (it is gitignored) — it is derived from
+  Elektron's firmware and is regenerated in two minutes.
+
+## It was built with GCC, and the C++ names are still in it
+
+This is the single most valuable property of the image. Elektron ship it with
+RTTI intact, so a 3 MB anonymous blob carries several hundred class names.
+
+`dnfw symbols <image>` lists them; `--ghidra FILE` writes a script that labels
+each address.
+
+454 Itanium-ABI type names are recovered from DN2 1.10E. A sample of what is
+there, and why it matters:
+
+| Name | Why it is interesting |
+|---|---|
+| `11LfoPageView` | the `[MOD]` key's page — the LFO4 work starts here |
+| `12ModSetupView`, `15ModDestListView`, `22GroupedModDestListView` | modulation destination UI |
+| `9ModConfig`, `12SoundModConf`, `14ModulationCopy` | modulation configuration and copying |
+| `17SoundParameterSet`, `12ParameterSet`, `17ParameterPageView` | the parameter model |
+| `N9Digisharc17soundStorage_v2_tE` | the persisted sound object |
+| `15ValueWithMirrorIA4_N9Digisharc11modTarget_tE…` | a **four**-element array of `modTarget_t` |
+
+**The DN2's internal namespace is `Digisharc`; the DN1's is `Digitone`.**
+Useful for telling the two apart in shared code, and a reminder that names do
+not always match the product.
+
+That `A4_` — an array of four `modTarget_t` — is noted because four is the
+number in question. It has **not** been established that it has anything to do
+with the LFO slots. Do not build on it until something confirms it.
+
+### The symbol finder has false positives, by construction
+
+`image/symbols.py` accepts a length-prefixed identifier whose prefix matches
+the identifier's length. Real strings sometimes satisfy that by accident —
+`3VVE` and `4Hfc7` are both in the DN2 results and neither is a class. There is
+no way to separate them without cross-referencing the vtables that point at
+them, which is a later job. Treat the list as candidates.
+
+## The string pool
+
+UI strings live around file offset `0x1F7000`–`0x202000`, load address
+`0x401F7400`+. The LFO parameter names are there in one run:
+
+```
+Speed.LFO1.SPD.Multiplier.MULT.Fade In/Out.FADE.Destination.Start Phase.SPH.Trig Mode.LFO2.
+```
+
+and `LFO3` appears separately at `0x40201cb0`. **There are exactly three LFO
+page labels in the image** — `LFO1`, `LFO2`, `LFO3` — and no fourth.
+
+The SETTINGS menu block is at `0x40200b09`:
+
+```
+MANAGE PROJECTS.ProjectMenuView.MIDI CONFIG.SYSEX DUMP.AUDIO ROUTING.PERSONALIZE.DigisharcSettingsMenu
+```
+
+`PERSONALIZE` at `0x40200b2e` is the Gate E patch target — unique in the image,
+NUL-terminated, cosmetic, and two button presses from the front panel.
+
+---
+
+## Stock Ghidra stops dead at `movclr`, and we did not know
+
+**2026-09-15, from `m-dwyer/digikit` PR #13.** Gate F cleared Ghidra against
+objdump over a span and this project has trusted it since. That was right as far
+as it went, and it missed something a span comparison cannot catch.
+
+**Stock Ghidra 12.1.3's `68000:BE:32:Coldfire` has no constructor for
+`movclr.l ACCy,Rx`.** The words `a1c0 a3c1 a5c2 a7c3` decode as bad
+instructions, and **Ghidra's flow analysis stops there** rather than erroring.
+
+Those words are not rare in this image. They are in **interrupt handler
+prologues**, and `movclrl %acc0,%dN` appears throughout the modulation kernel at
+`0x400db1dc` and its driver `0x400db22c` -- the EMAC code this project spent
+2026-09-15 reading. So **every Ghidra decompilation of the frame ISR and the
+modulation module has been silently truncated**, with nothing on screen to say
+so.
+
+That is very likely why the LFO tick was never found by decompiling: the
+analysis was stopping before it got there, and a hand disassembly of the same
+region is exactly what did make progress.
+
+### What digikit fixed
+
+`68000:BE:32:ColdfireEMAC` -- stock 12.1.3 plus:
+
+- `movclr.l ACCy,Rx`, added;
+- `move.l ACCy,ACCx`, which copied from the destination into the source;
+- **MAC and MSAC with load selecting the wrong accumulator** (CFPRM p.6-4: bit 7
+  is the inverse of the lsb for the load forms);
+- operand order on `move.l Ry,ACCx` / `ACCext01` / `ACCext23`.
+
+Not modelled: `movclr`'s saturation and rounding (a pcodeop, `emacSaturate`) and
+its clearing of `ACCext` and `MACSR[PAVx]`.
+
+The MSAC-with-load fix matters directly here. `0x400db1f6` is
+`msacw %d1l,%d2u,%a1@+,%d2,%acc0` -- a MSAC **with load** -- and it is the
+instruction that applies every modulator to every destination. Stock Ghidra was
+naming the wrong accumulator for it.
+
+### Installing it on Windows
+
+`ghidra/install-coldfire-emac.bat` is the Windows half of digikit's
+`install-coldfire-emac.sh`, which assumes Homebrew paths and a symlink. It
+compiles the `.sla` with `sleigh.bat`, writes `extension.properties` for the
+installed version, and **copies** the module into
+`%APPDATA%\ghidra\ghidra_<ver>_<rel>\Extensions`.
+
+**The module is digikit's and is not vendored here** -- the script reads it from
+a digikit checkout. Both projects are on Ghidra **12.1.3**, which is what makes
+the module load without rebuilding.
+
+`ghidra/analyze.bat` already honours a `PROCESSOR` environment variable:
+
+```
+set PROCESSOR=68000:BE:32:ColdfireEMAC
+ghidranalyze.bat <projdir> mainos_111_emac <mainos.bin> 0x40000400
+```
+
+**Re-import rather than switching an existing program's language.** Changing it
+on a program that is already disassembled does not re-disassemble what the old
+language got wrong.
+
+### What this obliges us to re-check
+
+Any conclusion in this repository that came from a **Ghidra decompilation** of
+the frame ISR (`0x40025e0a`) or the modulation module
+(`0x400daed2`-`0x400db32e`) was produced by an analysis that may have stopped
+early. Conclusions from **objdump** or from hand-reading bytes are unaffected --
+and most of 2026-09-15's modulation work was hand-read for exactly the reason
+that Ghidra was unhelpful there, which now has an explanation.
+
+This is `docs/PRINCIPLES.md` §19 again, in its most expensive form: the negative
+"decompiling the ISR does not show an LFO tick" was only ever as good as a
+disassembler that was silently giving up.

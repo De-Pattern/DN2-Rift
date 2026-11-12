@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DN2 Sample Import</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="apple-touch-icon" href="icons/dn2-import-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111214">
+<style>
+:root {
+  --bg: #111214; --panel: #1a1c1f; --line: #2c2f34; --text: #e8e6e1; --dim: #8d9096;
+  --accent: #ff8a3d; --ok: #63c27a; --warn: #e8c14a; --bad: #e5604f; --rec: #6aa8e8;
+  --yours: #ff8a3d; --new: #ffd0ad;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f2ee; --panel: #ffffff; --line: #dcd8d0; --text: #1d1d1f; --dim: #6b6b70;
+    --accent: #d9661c; --ok: #2f8a48; --warn: #a77f00; --bad: #c23a2b; --rec: #2f6db0;
+    --yours: #d9661c; --new: #f2b98f;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+h1 { font: 600 20px/1.2 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: .04em; margin: 0 0 4px; }
+.sub { color: var(--dim); margin: 0 0 18px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+section h2 { font: 600 12px/1 ui-monospace, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+select, button, input[type=text], input[type=number] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; }
+button { cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+.pill.ok { color: var(--ok); border-color: var(--ok); } .pill.bad { color: var(--bad); border-color: var(--bad); } .pill.warn { color: var(--warn); border-color: var(--warn); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--line); }
+th { color: var(--dim); font-weight: 500; font-size: 12px; }
+/* each list its own scrolling box inside its section, its header row kept in view */
+.scrollbox { max-height: 340px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.scrollbox table { margin: 0 !important; }
+.scrollbox thead th { position: sticky; top: 0; z-index: 1; background: var(--bg); box-shadow: inset 0 -1px 0 var(--line); }
+.scrollbox tr:last-child td { border-bottom: 0; }
+.scrollbox:has(tbody:empty) { display: none; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+td input[type=number] { padding: 3px 6px; font-family: ui-monospace, Consolas, monospace; }
+td input[type=text] { width: 7.5em; padding: 3px 6px; font-family: ui-monospace, Consolas, monospace; text-transform: uppercase; }
+tr[draggable=true] { cursor: grab; }
+tr.dragging { opacity: .4; }
+.slot { font-family: ui-monospace, Consolas, monospace; }
+.bar { position: relative; height: 22px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; display: flex; }
+.bar > div { height: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; color: var(--dim); font-size: 12px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.stat { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.stat b { display: block; font: 600 17px/1.3 ui-monospace, Consolas, monospace; }
+.stat span { color: var(--dim); font-size: 12px; }
+.note { color: var(--dim); font-size: 13px; margin: 10px 0 0; }
+.note.warn { color: var(--warn); } .note.bad { color: var(--bad); }
+progress { width: 100%; height: 12px; accent-color: var(--accent); }
+#log { font: 12px/1.5 ui-monospace, Consolas, monospace; color: var(--dim); white-space: pre-wrap; max-height: 160px; overflow: auto; margin: 10px 0 0; }
+.x { background: none; border: none; color: var(--dim); padding: 2px 6px; }
+.x:hover { color: var(--bad); }
+@media (max-width: 640px) { .hide-sm { display: none; } td input[type=text] { width: 6em; } }
+/* v0.34 page: Transfer-style, this computer on the left, the instrument on the right */
+main { max-width: 1240px; }
+.tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.tab { border: 0; border-radius: 0; background: var(--bg); color: var(--dim); padding: 7px 14px; }
+.tab + .tab { border-left: 1px solid var(--line); }
+.tab[aria-selected=true] { background: var(--accent); color: #111; font-weight: 600; }
+.panes { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; margin-top: 12px; align-items: stretch; }
+.pane { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); min-width: 0; transition: border-color .15s, background .15s; }
+.pane.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--bg)); }
+.pane-head, .pane-foot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; }
+.pane-head { border-bottom: 1px solid var(--line); }
+.pane-foot { border-top: 1px solid var(--line); min-height: 38px; }
+.pane-head b { font: 600 12px/1 ui-monospace, Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
+.pane-head button, .pane-foot button { padding: 4px 9px; font-size: 13px; }
+.spacer { flex: 1; }
+.pane-body { flex: none; overflow: auto; height: 420px; min-height: 200px; resize: vertical; }
+.pane-foot { margin-top: auto; }
+.pane-body table { margin: 0; }
+.navline { display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+.navline .x { color: var(--accent); padding: 0; font-size: 13px; }
+.navline .here { font: 600 13px/1.3 ui-monospace, Consolas, monospace; }
+.navline .note { margin: 0; }
+.pane-body thead th { position: sticky; top: 0; z-index: 1; background: var(--bg); box-shadow: inset 0 -1px 0 var(--line); }
+.pane-body .empty { color: var(--dim); text-align: center; padding: 60px 16px; }
+#drop .pane-body:has(#dropHint:not([style*="none"])) { border: 2px dashed var(--line); border-radius: 8px; margin: 8px; }
+.pane-foot .note { margin: 0; }
+.crumb { font: 600 12px/1 ui-monospace, Consolas, monospace; color: var(--text); }
+tr.up b.here { color: var(--text); font-family: ui-monospace, Consolas, monospace; }
+.crumb a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.mid { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; width: 120px; text-align: center; }
+.mid .note { margin: 0; font-size: 12px; }
+th.ck, td.ck { width: 28px; padding-right: 0; }
+tr.sel td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+tr.folder td { cursor: pointer; }
+tr.folder:hover td, tr.up:hover td { background: color-mix(in srgb, var(--text) 6%, transparent); }
+tr.up td { cursor: pointer; color: var(--dim); background: var(--bg); box-shadow: inset 0 -1px 0 var(--line); }
+.ico { display: inline-block; width: 1.3em; color: var(--accent); }
+#modeSel, #sliceSel { max-width: 100%; }
+label.proj-only { max-width: 100%; }
+#list td input.longIn { width: 100%; min-width: 9em; }
+#list td input.folderIn { width: 100%; min-width: 6em; }
+.lib-mode .proj-only, .proj-mode .lib-only { display: none !important; }
+.st-ok { color: var(--ok); } .st-bad { color: var(--bad); } .st-run { color: var(--accent); }
+@media (max-width: 860px) {
+  #list td input.longIn { min-width: 6em; } #list td input.folderIn { min-width: 4.5em; }
+  .panes { grid-template-columns: minmax(0, 1fr); }
+  .mid { flex-direction: row; width: auto; justify-content: flex-start; }
+  .pane-body { height: 300px; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>DN2 SAMPLE IMPORT</h1>
+  <p class="sub">For the Digitone II sampler mod (v0.22 or later; the +Drive library: v0.31 or later). Chrome or Edge; USB CONFIG on the instrument set to USB MIDI or Overbridge. Close Elektron Transfer first.</p>
+
+  <section>
+    <h2>1 · Instrument</h2>
+    <div class="row">
+      <label class="note" style="margin:0">to <select id="outSel" aria-label="MIDI output"></select></label>
+      <label class="note" style="margin:0">from <select id="inSel" aria-label="MIDI input"></select></label>
+      <button id="connectBtn" class="primary">Connect</button>
+      <span id="connState" class="pill">not connected</span>
+    </div>
+    <p id="devInfo" class="note">Allow MIDI (with SysEx) when the browser asks. Two ports, both named Digitone II: the one this page sends to, and the one it listens on (USB MIDI has one of each).</p>
+  </section>
+
+  <section id="xfer" class="lib-mode">
+    <h2>2 · Transfer</h2>
+    <div class="row">
+      <div class="tabs" role="tablist">
+        <button id="tabLib" class="tab" role="tab" aria-selected="true">+Drive library</button>
+        <button id="tabProj" class="tab" role="tab" aria-selected="false">Project slots (SAMP 1–122)</button>
+      </div>
+      <label class="proj-only">Slots:
+        <select id="modeSel">
+          <option value="fill">Replace all · SAMP 1, 2, 3… in list order</option>
+          <option value="pick">Replace all · choose each slot</option>
+          <option value="add">Add · keep what's on the instrument, choose each slot</option>
+        </select></label>
+      <label class="proj-only">Slices for SLICE:
+        <select id="sliceSel">
+          <option value="cue">the WAV's cue points</option>
+          <option value="grid:4">grid of 4</option><option value="grid:8">grid of 8</option>
+          <option value="grid:16">grid of 16</option><option value="grid:32">grid of 32</option>
+          <option value="onsets">hits (onsets)</option><option value="none">none</option>
+        </select></label>
+    </div>
+    <p id="modeNote" class="note"></p>
+    <div class="panes">
+      <div class="pane" id="drop">
+        <div class="pane-head"><b>This computer</b><span class="spacer"></span>
+          <button id="browseBtn">Add files…</button> <button id="folderBtn" title="Your system's folder dialog shows folders only; every audio file inside the one you pick is added, subfolders included">Add a folder…</button>
+          <input id="fileIn" type="file" accept="audio/*,.wav,.wave,.aif,.aiff,.aifc,.flac,.mp3,.ogg,.oga,.opus,.m4a,.aac,.caf" multiple hidden>
+          <input id="dirIn" type="file" webkitdirectory multiple hidden>
+        </div>
+        <div class="pane-body">
+          <table id="list">
+            <thead><tr><th class="ck"><input type="checkbox" id="listAll" aria-label="Select all"></th><th class="proj-only">Slot</th><th>Name</th><th>Folder</th><th class="num hide-sm">Length</th><th class="num proj-only hide-sm">Slices</th><th class="num">Size</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="empty" id="dropHint">Drop audio files or folders here<br><span style="font-size:12px">WAV, AIFF, FLAC, MP3, OGG, M4A</span></div>
+        </div>
+        <div class="pane-foot"><span id="listNote" class="note"></span><span class="spacer"></span>
+          <button id="removeSelBtn" disabled>Remove selected</button> <button id="clearBtn">Clear</button></div>
+      </div>
+      <div class="mid">
+        <button id="sendBtn" class="primary" disabled>Send →</button>
+        <p id="intoNote" class="note"></p>
+      </div>
+      <div class="pane" id="rightPane">
+        <div class="pane-head"><b>Digitone II</b> <span id="crumb" class="crumb"></span><span class="spacer"></span>
+          <button id="newFolderBtn" class="lib-only" disabled>New folder</button>
+          <button id="delSelBtn" class="lib-only" disabled>Delete selected</button>
+          <button id="reloadBtn" title="Read the instrument again" disabled>↻</button>
+        </div>
+        <div id="libNav" class="navline lib-only" style="display:none"><button id="upBtn" class="x" title="Back to all folders">‹ All folders</button><span class="note">/</span><b class="here"></b><span class="note" id="navCount"></span></div>
+        <div class="pane-body">
+          <table id="libT" class="lib-only"><thead><tr><th class="ck"><input type="checkbox" id="libAll" aria-label="Select all"></th><th>Name</th><th class="num">Size</th><th></th></tr></thead><tbody></tbody></table>
+          <table id="dev" class="proj-only"><thead><tr><th>Slot</th><th>Name</th><th class="num">Length</th><th>Kind</th></tr></thead><tbody></tbody></table>
+          <div class="empty" id="rightEmpty">Connect to see the instrument.</div>
+        </div>
+        <div class="pane-foot"><span id="libNote" class="note lib-only"></span><span id="devNote" class="note proj-only"></span></div>
+      </div>
+    </div>
+    <datalist id="folderList"></datalist>
+    <p class="note">Select samples on the left and press Send, or drag them onto the right; audio files dropped straight onto the +Drive go into the folder that is open. Names: the instrument's list shows the whole name (up to 35 characters); the seven letters under it are its short name. A dropped folder's samples get its name as their folder, and its folders stay folders inside it (v0.40 or later on the instrument; six levels at most, deeper files go into the sixth; before v0.40, each path is one folder). Ticked folders are deleted with their samples (v0.35 or later on the instrument; before that, empty folders go on the instrument: +DRIVE, RIGHT). Moving and renaming: on the instrument.</p>
+  </section>
+
+  <section>
+    <h2>3 · Memory</h2>
+    <div class="bar" id="bar"></div>
+    <div class="legend">
+      <span><i style="background:var(--rec)"></i>recordings (kept)</span>
+      <span><i style="background:var(--new)"></i>what you send</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sCap">–</b><span id="lCap">room for yours</span></div>
+      <div class="stat"><b id="sNow">–</b><span id="lNow">yours on it now</span></div>
+      <div class="stat"><b id="sSend">–</b><span>to send</span></div>
+      <div class="stat"><b id="sLeft">–</b><span>free after sending</span></div>
+      <div class="stat"><b id="sRec">–</b><span>recordings (kept)</span></div>
+      <div class="stat"><b id="sTime">–</b><span>transfer time (estimate)</span></div>
+    </div>
+    <p id="memNote" class="note"></p>
+  </section>
+
+  <section>
+    <h2>4 · Transfers</h2>
+    <div class="row"><span id="sendState" class="pill">idle</span></div>
+    <p id="sendNote" class="note"></p>
+    <progress id="prog" value="0" max="1"></progress>
+    <div class="scrollbox" style="margin-top:10px"><table id="queue"><thead><tr><th>Sample</th><th>Into</th><th class="num">Size</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+    <div id="log"></div>
+  </section>
+
+  <section>
+    <h2>5 · Firmware</h2>
+    <p class="note" style="margin-top:0">The mod itself (the sample machines, the recorder, PERC and the rest) is a Digitone II OS 1.11 update file, <span class="slot">DN2mod_vX.Y_NAME_OS1.11.syx</span>.
+      Every build is checked by the project's ship gate before it is published, and only that exact file (its sha256) is cleared.
+      Flash it as any Digitone II OS update (Elektron Transfer, or the instrument's SysEx receive), after backing up the +Drive.
+      <b><a href="patcher.html" style="color:var(--accent)">The DN2 Mod Patcher</a></b> builds it in your browser from your own copies of Elektron's stock OS files (Digitone II 1.11, Digitakt II 1.17, Machinedrum UW 1.63), and lets you save it only if it is byte for byte the cleared file.
+      Each version's notes and tests: <a href="https://github.com/De-Pattern/dn2mk2-firmware/blob/builds/README.md" target="_blank" rel="noopener" style="color:var(--accent)">FIRMWARE.md</a>.</p>
+  </section>
+
+  <section>
+    <h2>6 · Diagnostics</h2>
+    <p class="note" style="margin-top:0">For bug reports: asks the instrument what its DSP has seen (needs v0.34 or later, connected above). It only reads. Run it right after power-on, again right after a note goes silent, and once more after a minute with nothing playing; press Copy each time and paste the results into your report.</p>
+    <div class="row"><button id="diagBtn" disabled>Run diagnostics</button> <button id="diagCopy" disabled>Copy</button> <span id="diagState" class="pill">idle</span></div>
+    <pre id="diagOut" class="scrollbox" style="white-space:pre-wrap;min-height:3em;margin-top:10px"></pre>
+  </section>
+
+  <section>
+    <h2>7 · Erase mod data</h2>
+    <p class="note" style="margin-top:0">Before going back to stock firmware (needs v0.39 or later, connected above): erases everything the mod keeps on the +Drive (the samples in the pool, the projects' sample lists, the +Drive library, the mod's settings) and nothing of Elektron's (projects, sounds, presets are untouched). Then restart the instrument. The same is on the instrument: in the sample browser, +DRIVE, RIGHT, ERASE MOD DATA.</p>
+    <div class="row"><button id="eraseBtn" disabled>Erase mod data…</button> <span id="eraseState" class="pill">idle</span></div>
+  </section>
+</main>
+
+<script id="core">
+/* The pool image, as tools/dn2samples.py and dnfw.sampler.live.pool_bytes build it.
+ * Kept free of the page so a test can run it under node (test/test_web_tool.py). */
+const DN2 = (() => {
+  const C = {
+    POOL_MAGIC: 0x31504D53, POOL_SLOTS: 128, USER_SLOTS: 122, ENTRY_WORDS: 4,
+    NAMES_OFFSET: 8 + 128 * 16, NAME_BYTES: 8, DATA_OFFSET: 0x1000, FMT_I16: 1,
+    MAX_SLICES: 64, REC_OFFSET: 96 << 20, REC_END: 128 << 20, POOL_BYTES: 400 << 20,
+    DSP_RATE: 48000, POOL_DDR: 0x84000000,
+    HEADER: [0xF0, 0x00, 0x20, 0x3C, 0x7D, 0x01],
+    CMD: { HELLO: 1, WRITE: 2, STATUS: 3, BEGIN: 8, END: 9, DIR: 10, DIAG: 24, SCAN: 25, ENTRY: 27 },
+    /* v0.31 (sample link 5): the +Drive's library, little-endian (csrc/sampler/lib.c) */
+    LIB: { INFO: 16, FOLDER: 17, BEGIN: 18, WRITE: 19, END: 20, LIST: 21, DELETE: 22, FOLDERS: 23, DROP: 26,
+           FOLDER_IN: 30, TREE: 31 }, LIB_CAP: 2048,
+    /* v0.40 (sample link 7): folders inside folders, six levels at most (lib.c LIB_DEPTH,
+     * dnfw.sampler.libtree); a dropped folder's path kept whole until it is sent */
+    LIB_DEPTH: 6, PATH_MAX: 200,
+    /* v0.25: long names and folders (dnfw.sampler.machines META_*) */
+    META_PTR: 0xC08, META_PTR_MAGIC: 0x52544D53, META_MAGIC: 0x54454D53, META_FOLDERS: 64,
+    META_FOLDER_BYTES: 32, META_SLOT_BYTES: 40, META_NAME_BYTES: 36, LONG_MAX: 35, FOLDER_MAX: 31,
+  };
+  C.META_BYTES = 12 + C.META_FOLDERS * C.META_FOLDER_BYTES + C.POOL_SLOTS * C.META_SLOT_BYTES;
+  C.HOLE_BYTES = C.REC_END - C.REC_OFFSET;           /* what a send skips */
+  C.SLICE_AREA = C.REC_END - (128 << 10);           /* v0.23: slices made on the instrument */
+  C.TABLE_AREA = C.SLICE_AREA - (512 << 10);         /* v0.26: the machines' tables, before the slices */
+  C.REC_BYTES = C.TABLE_AREA - C.REC_OFFSET;
+
+  function pack7(data) {
+    const out = [];
+    for (let i = 0; i < data.length; i += 7) {
+      const g = data.slice(i, i + 7);
+      let h = 0;
+      g.forEach((b, k) => { if (b & 0x80) h |= 1 << (6 - k); });
+      out.push(h, ...Array.from(g, b => b & 0x7F));
+    }
+    return out;
+  }
+  function unpack7(data) {
+    const out = [];
+    let i = 0;
+    while (i < data.length) {
+      const h = data[i++];
+      for (let k = 1; k < 8 && i < data.length; k++) out.push(data[i++] | ((h << k) & 0x80));
+    }
+    return out;
+  }
+  function request(seq, cmd, payload = []) {
+    const body = [(seq >> 8) & 0xFF, seq & 0xFF, cmd, ...payload];
+    return Uint8Array.from([...C.HEADER, ...pack7(body), 0xF7]);
+  }
+  function parse(sx) {
+    sx = Array.from(sx);
+    if (sx.length < 8 || C.HEADER.some((b, k) => sx[k] !== b) || sx[sx.length - 1] !== 0xF7) return null;
+    const m = unpack7(sx.slice(C.HEADER.length, -1));
+    if (m.length < 4) return null;
+    return { seq: (m[0] << 8) | m[1], cmd: m[2], status: m[3], payload: Uint8Array.from(m.slice(4)) };
+  }
+  const be32 = v => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+  const rd32 = (p, o) => ((p[o] << 24) | (p[o + 1] << 16) | (p[o + 2] << 8) | p[o + 3]) >>> 0;
+
+  /* a WAV -> {frames: Float32Array mono, rate, cues: [frame offsets]} (PCM 8/16/24/32, float 32/64) */
+  function readWav(buf) {
+    const d = new DataView(buf);
+    const tag = (o) => String.fromCharCode(d.getUint8(o), d.getUint8(o + 1), d.getUint8(o + 2), d.getUint8(o + 3));
+    if (buf.byteLength < 12 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new Error("not a WAV file");
+    let at = 12, fmt = null, data = null; const cues = [];
+    while (at + 8 <= buf.byteLength) {
+      const id = tag(at), size = d.getUint32(at + 4, true), body = at + 8;
+      if (id === "fmt ") fmt = { tag: d.getUint16(body, true), ch: d.getUint16(body + 2, true),
+        rate: d.getUint32(body + 4, true), bits: d.getUint16(body + 14, true),
+        ext: size >= 26 ? d.getUint16(body + 24, true) : 0 };
+      else if (id === "data") data = { at: body, size: Math.min(size, buf.byteLength - body) };
+      else if (id === "cue ") { const n = d.getUint32(body, true); for (let k = 0; k < n; k++) cues.push(d.getUint32(body + 4 + 24 * k + 20, true)); }
+      at = body + size + (size & 1);
+    }
+    if (!fmt || !data) throw new Error("no fmt or data chunk");
+    const tagv = fmt.tag === 0xFFFE ? fmt.ext : fmt.tag, bps = fmt.bits / 8, ch = fmt.ch;
+    const n = Math.floor(data.size / (bps * ch)), out = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let c = 0; c < ch; c++) {
+        const o = data.at + (i * ch + c) * bps; let x;
+        if (tagv === 3) x = bps === 8 ? d.getFloat64(o, true) : d.getFloat32(o, true);
+        else if (bps === 1) x = (d.getUint8(o) - 128) / 128;
+        else if (bps === 2) x = d.getInt16(o, true) / 32768;
+        else if (bps === 3) { let v = d.getUint8(o) | (d.getUint8(o + 1) << 8) | (d.getUint8(o + 2) << 16); if (v & 0x800000) v -= 0x1000000; x = v / 8388608; }
+        else if (bps === 4) x = d.getInt32(o, true) / 2147483648;
+        else throw new Error(`${fmt.bits}-bit samples are not read here`);
+        s += x;
+      }
+      out[i] = s / ch;
+    }
+    return { frames: out, rate: fmt.rate, cues: [...new Set(cues)].sort((a, b) => a - b) };
+  }
+  /* an AIFF or AIFF-C (NONE, sowt, fl32, fl64) -> as readWav; its markers are the cues */
+  function readAiff(buf) {
+    const d = new DataView(buf);
+    const tag = (o) => String.fromCharCode(d.getUint8(o), d.getUint8(o + 1), d.getUint8(o + 2), d.getUint8(o + 3));
+    if (buf.byteLength < 12 || tag(0) !== "FORM" || (tag(8) !== "AIFF" && tag(8) !== "AIFC")) throw new Error("not an AIFF file");
+    let at = 12, comm = null, ssnd = null; const cues = [];
+    const ext80 = o => {                       /* the 80-bit extended sample rate */
+      const e = d.getUint16(o) & 0x7FFF, hi = d.getUint32(o + 2), lo = d.getUint32(o + 6);
+      return e === 0 && hi === 0 && lo === 0 ? 0 : (hi * 2 ** 32 + lo) * 2 ** (e - 16383 - 63);
+    };
+    while (at + 8 <= buf.byteLength) {
+      const id = tag(at), size = d.getUint32(at + 4), body = at + 8;
+      if (id === "COMM") comm = { ch: d.getInt16(body), frames: d.getUint32(body + 2), bits: d.getInt16(body + 6), rate: ext80(body + 8),
+                                  comp: tag(8) === "AIFC" && size >= 22 ? tag(body + 18).toLowerCase() : "none" };
+      else if (id === "SSND") ssnd = { at: body + 8 + d.getUint32(body), size: Math.min(size - 8, buf.byteLength - body - 8) };
+      else if (id === "MARK") { const n = d.getUint16(body); let m = body + 2; for (let k = 0; k < n; k++) { cues.push(d.getUint32(m + 2)); m += 6; const l = d.getUint8(m); m += 1 + l + ((l + 1) & 1); } }
+      at = body + size + (size & 1);
+    }
+    if (!comm || !ssnd) throw new Error("no COMM or SSND chunk");
+    const fl = comm.comp === "fl32" || comm.comp === "fl64", little = comm.comp === "sowt";
+    if (!fl && !little && comm.comp !== "none") throw new Error(`compressed AIFF-C (${comm.comp}) is not read here`);
+    const bps = fl ? (comm.comp === "fl64" ? 8 : 4) : Math.ceil(comm.bits / 8), ch = comm.ch;
+    const n = Math.min(comm.frames, Math.floor(ssnd.size / (bps * ch))), out = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let c = 0; c < ch; c++) {
+        const o = ssnd.at + (i * ch + c) * bps; let x;
+        if (fl) x = bps === 8 ? d.getFloat64(o) : d.getFloat32(o);
+        else if (bps === 1) x = d.getInt8(o) / 128;
+        else if (bps === 2) x = d.getInt16(o, little) / 32768;
+        else if (bps === 3) { let v = little ? d.getUint8(o) | d.getUint8(o + 1) << 8 | d.getUint8(o + 2) << 16 : d.getUint8(o) << 16 | d.getUint8(o + 1) << 8 | d.getUint8(o + 2); if (v & 0x800000) v -= 0x1000000; x = v / 8388608; }
+        else if (bps === 4) x = d.getInt32(o, little) / 2147483648;
+        else throw new Error(`${comm.bits}-bit samples are not read here`);
+        s += x;
+      }
+      out[i] = s / ch;
+    }
+    return { frames: out, rate: Math.round(comm.rate), cues: [...new Set(cues)].filter(c => c < n).sort((a, b) => a - b) };
+  }
+
+  function onsets(s, rate, most = 64) {
+    const hop = Math.max(64, Math.floor(rate * 0.005)), env = [];
+    for (let i = 0; i < s.length; i += hop) { let e = 0; const m = Math.min(s.length, i + hop); for (let j = i; j < m; j++) e += s[j] * s[j]; env.push(e / hop); }
+    const gap = Math.max(1, Math.floor(0.05 * rate / hop)), floor = env.length ? Math.max(...env) * 1e-4 : 0;
+    const out = [0]; let last = -gap;
+    for (let k = 1; k < env.length; k++) {
+      const lo = Math.max(0, k - 4); let p = 0; for (let j = lo; j < k; j++) p += env[j]; p /= Math.min(4, k);
+      if (env[k] > floor && env[k] > 4 * (p + 1e-12) && k - last >= gap && k * hop - out[out.length - 1] >= 0.05 * rate) { out.push(k * hop); last = k; }
+    }
+    return out.slice(0, most);
+  }
+  function slicesFrom(starts, frames) {
+    const s = [...new Set(starts.filter(x => x >= 0 && x < frames))].sort((a, b) => a - b).slice(0, C.MAX_SLICES);
+    return s.map((a, k) => [a, k + 1 < s.length ? s[k + 1] : frames, a]);
+  }
+  function slicing(mode, w) {
+    const n = w.frames.length;
+    if (mode === "none") return [];
+    if (mode.startsWith("grid:")) { const g = Math.max(1, Math.min(64, parseInt(mode.slice(5), 10))); return slicesFrom(Array.from({ length: g }, (_, k) => Math.floor(n * k / g)), n); }
+    if (mode === "onsets") return slicesFrom(onsets(w.frames, w.rate), n);
+    return w.cues.length ? slicesFrom(w.cues, n) : [];
+  }
+  function itemBytes(frames, nslices) {               /* a sample's frames and slice table, padded */
+    let b = frames * 2;
+    if (nslices) b += (4 - b % 4) % 4 + 12 * nslices;
+    return b + (0x40 - b % 0x40) % 0x40;
+  }
+
+  /* items: [{frames: Float32Array, rate, name, slices: [[a,b,loop]]}] in slot order;
+   * hole (bytes into the pool) skipped as dn2samples.py does -> Uint8Array */
+  /* one sample's bytes as the pool holds them: int16 frames (normalised if over 1), then
+   * its slice table on a word, padded to 0x40 */
+  function itemData(it) {
+    const f = it.frames, out = new Uint8Array(itemBytes(f.length, it.slices.length)), dv = new DataView(out.buffer);
+    let peak = 0; for (let i = 0; i < f.length; i++) peak = Math.max(peak, Math.abs(f[i]));
+    const g = peak > 1 ? 1 / peak : 1;
+    for (let i = 0; i < f.length; i++) dv.setInt16(2 * i, Math.max(-32768, Math.min(32767, Math.round(f[i] * g * 32768))), true);
+    if (it.slices.length) {
+      let t = 2 * f.length; t += (4 - t % 4) % 4;
+      it.slices.forEach(([a, b, lp], j) => { dv.setUint32(t + 12 * j, a, true); dv.setUint32(t + 12 * j + 4, b, true); dv.setUint32(t + 12 * j + 8, lp, true); });
+    }
+    return out;
+  }
+  function putEntry(dir, k, addr, it) {
+    const dv = new DataView(dir.buffer, dir.byteOffset), e = 8 + 16 * k;
+    dv.setUint32(e, addr, true); dv.setUint32(e + 4, it.frames.length, true);
+    dv.setFloat32(e + 8, it.rate / C.DSP_RATE, true); dv.setUint32(e + 12, C.FMT_I16 | (it.slices.length << 8), true);
+    const nm = (it.name || "").toUpperCase().slice(0, C.NAME_BYTES - 1);
+    for (let j = 0; j < C.NAME_BYTES; j++) { const c = j < nm.length ? nm.charCodeAt(j) : 0; dir[C.NAMES_OFFSET + C.NAME_BYTES * k + j] = c < 128 ? c : 63; }
+  }
+
+  /* items: [{frames: Float32Array, rate, name, slices: [[a,b,loop]]} or null (an empty
+   * slot)], slot 0 first; hole (bytes into the pool) skipped as dn2samples.py does -> Uint8Array */
+  function poolBytes(items, hole = [C.REC_OFFSET, C.REC_END], base = C.POOL_DDR) {
+    const place = []; let len = 0;
+    for (const it of items) {
+      if (!it) { place.push(0); continue; }
+      const sz = itemBytes(it.frames.length, it.slices.length);
+      if (hole && C.DATA_OFFSET + len < hole[1] && C.DATA_OFFSET + len + sz > hole[0]) len = hole[1] - C.DATA_OFFSET;
+      place.push(C.DATA_OFFSET + len); len += sz;
+    }
+    const out = new Uint8Array(C.DATA_OFFSET + len), dv = new DataView(out.buffer);
+    dv.setUint32(0, C.POOL_MAGIC, true); dv.setUint32(4, items.length, true);
+    items.forEach((it, k) => {
+      if (!it) return;
+      putEntry(out, k, base + place[k], it);
+      out.set(itemData(it), place[k]);
+    });
+    return out;
+  }
+
+  /* v0.24 tool, ADD: new samples into chosen slots, the instrument's others kept where they
+   * are. The link writes the +Drive's image in 64 KB blocks, each from its start, and only
+   * the blocks a send touches (link.c: up_flush): so the directory page alone (block 0,
+   * DATA_OFFSET bytes), then the new samples from the first whole block after the kept
+   * ones' data. kept: [{k, entry: 16 bytes, name}] (as this tool last sent them, checked
+   * against the instrument), keptEnd: the end of their data; adds: [{k, frames, rate, name,
+   * slices}] -> {dir: the directory page, at: where the new data goes, data, end: the image} */
+  const BLOCK = 0x10000;
+  function addPlan(kept, keptEnd, adds, hole = [C.REC_OFFSET, C.REC_END], base = C.POOL_DDR, meta = null) {
+    const dir = new Uint8Array(C.DATA_OFFSET), dv = new DataView(dir.buffer);
+    const taken = new Set(adds.map(a => a.k));
+    let count = 0;
+    for (const s of kept) {
+      if (taken.has(s.k)) continue;                 /* an add in its slot replaces it */
+      dir.set(s.entry, 8 + 16 * s.k);
+      const nm = (s.name || "").slice(0, C.NAME_BYTES - 1);
+      for (let j = 0; j < nm.length; j++) dir[C.NAMES_OFFSET + C.NAME_BYTES * s.k + j] = nm.charCodeAt(j) & 0x7F;
+      count = Math.max(count, s.k + 1);
+    }
+    let at = Math.ceil(Math.max(keptEnd, C.DATA_OFFSET) / BLOCK) * BLOCK;
+    if (hole && at >= hole[0] && at < hole[1]) at = hole[1];
+    const start = at, parts = [];
+    for (const a of [...adds].sort((x, y) => x.k - y.k)) {
+      const d = itemData(a);
+      if (hole && at < hole[1] && at + d.length > hole[0]) {      /* across the recordings: past them */
+        parts.push(new Uint8Array(hole[1] - at)); at = hole[1];      /* (the send skips the hole) */
+      }
+      putEntry(dir, a.k, base + at, a);
+      parts.push(d); at += d.length;
+      count = Math.max(count, a.k + 1);
+    }
+    dv.setUint32(0, C.POOL_MAGIC, true); dv.setUint32(4, count, true);
+    if (meta) {                                       /* v0.25: the names and folders after them */
+      const m = metaAt(at, meta.length, hole);
+      if (m > at) parts.push(new Uint8Array(m - at));
+      parts.push(meta); putMetaPtr(dir, m, meta.length); at = m + meta.length;
+    }
+    const data = new Uint8Array(at - start); let o = 0;
+    for (const p of parts) { data.set(p, o); o += p.length; }
+    return { dir, at: start, data, end: at };
+  }
+  function payloadBytes(len) {                      /* what a send moves: all but the hole */
+    return len > C.REC_END ? len - C.HOLE_BYTES : Math.min(len, C.REC_OFFSET);
+  }
+  function short(long) {                         /* v0.25: the instrument's seven letters of a long name */
+    return long.toUpperCase().replace(/[^A-Z0-9 _#-]/g, "").slice(0, 7) || "SAMPLE";
+  }
+  function stem(name) {
+    return name.replace(/\.[^.]*$/, "").toUpperCase().replace(/[^A-Z0-9 _#-]/g, "").slice(0, 7) || "SAMPLE";
+  }
+  /* v0.25: the meta block for SLOTS ([{long, folder}] or null, slot 0 first) -> bytes,
+   * 512-padded; folders in order of first use, at most META_FOLDERS (the rest: none) */
+  function metaBytes(slots) {
+    const out = new Uint8Array(Math.ceil(C.META_BYTES / 512) * 512), dv = new DataView(out.buffer);
+    const folders = [];
+    const ascii = (str, max) => Array.from(str.slice(0, max), ch => { const c = ch.charCodeAt(0); return c >= 32 && c < 127 ? c : 63; });
+    slots.forEach((m, k) => {
+      const rec = 12 + C.META_FOLDERS * C.META_FOLDER_BYTES + C.META_SLOT_BYTES * k;
+      out[rec] = 0xFF;
+      if (!m) return;
+      const f = (m.folder || "").trim().slice(0, C.FOLDER_MAX);
+      if (f) {
+        let i = folders.indexOf(f);
+        if (i < 0 && folders.length < C.META_FOLDERS) { folders.push(f); i = folders.length - 1; }
+        if (i >= 0) out[rec] = i;
+      }
+      out.set(ascii(m.long || "", C.LONG_MAX), rec + 4);
+    });
+    for (let k = slots.length; k < C.POOL_SLOTS; k++) out[12 + C.META_FOLDERS * C.META_FOLDER_BYTES + C.META_SLOT_BYTES * k] = 0xFF;
+    dv.setUint32(0, C.META_MAGIC, true); dv.setUint32(4, 1, true); dv.setUint32(8, folders.length, true);
+    folders.forEach((f, i) => out.set(ascii(f, C.META_FOLDER_BYTES - 1), 12 + C.META_FOLDER_BYTES * i));
+    return out;
+  }
+  /* where a block of BYTES goes after an image of LEN: the next 512, past the recordings */
+  function metaAt(len, bytes, hole = [C.REC_OFFSET, C.REC_END]) {
+    let at = Math.ceil(len / 512) * 512;
+    if (hole && at < hole[1] && at + bytes > hole[0]) at = hole[1];
+    return at;
+  }
+  function putMetaPtr(dir, at, bytes) {
+    const dv = new DataView(dir.buffer, dir.byteOffset);
+    dv.setUint32(C.META_PTR, C.META_PTR_MAGIC, true); dv.setUint32(C.META_PTR + 4, at, true); dv.setUint32(C.META_PTR + 8, bytes, true);
+  }
+  /* POOL (poolBytes') with META after it, the directory pointing at it -> a new image */
+  function attachMeta(pool, meta, hole = [C.REC_OFFSET, C.REC_END]) {
+    const at = metaAt(pool.length, meta.length, hole), out = new Uint8Array(at + meta.length);
+    out.set(pool); out.set(meta, at); putMetaPtr(out, at, meta.length);
+    return out;
+  }
+  /* v0.31: one sample for the +Drive's library: int16 mono, as the pool holds it, no slices */
+  function libSample(it) { return itemData({ frames: it.frames, slices: [] }).slice(0, 2 * it.frames.length); }
+  function le32(v) { return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; }
+  function libBegin(frames, folder, rate, name) {
+    const r = new DataView(new ArrayBuffer(4)); r.setFloat32(0, rate / C.DSP_RATE, true);
+    const nm = [...String(name).toUpperCase().slice(0, C.LONG_MAX)].map(ch => { const c = ch.charCodeAt(0); return c >= 32 && c < 127 ? c : 63; });
+    return [...le32(frames), C.FMT_I16, folder, ...new Uint8Array(r.buffer), ...nm];
+  }
+  function adler(b, s = 1) {
+    let a = s & 0xFFFF, h = s >>> 16;
+    for (let i = 0; i < b.length; i++) { a = (a + b[i]) % 65521; h = (h + a) % 65521; }
+    return ((h << 16) | a) >>> 0;
+  }
+  function libList(p) {                          /* a LIST reply -> {count, rows: [{k, frames, folder, name}]} */
+    const dv = new DataView(p.buffer, p.byteOffset, p.length), rows = [];
+    for (let j = 0; j < 4; j++) {
+      const o = 4 + 31 * j; let name = "";
+      for (let c = 0; c < 24; c++) { const b = p[o + 7 + c]; if (!b) break; name += String.fromCharCode(b); }
+      rows.push({ k: dv.getUint16(o, true), frames: dv.getUint32(o + 2, true), folder: p[o + 6], name });
+    }
+    return { count: dv.getUint32(0, true), rows };
+  }
+  /* v0.40: a dropped folder's path as the instrument's folders (dnfw.sampler.libtree.levels,
+   * upper-cased as every name sent): '/' between levels, the spaces next to a '/' and empty
+   * levels dropped, each cut to its record (31 at the top, 30 inside), LIMIT levels at most */
+  function folderLevels(path, limit = C.LIB_DEPTH) {
+    const parts = String(path).toUpperCase().replace(/[^ -~]/g, "").split("/"), out = [];
+    parts.forEach((x, i) => {
+      if (i > 0) x = x.replace(/^ +/, "");
+      x = x.slice(0, C.FOLDER_MAX);
+      if (i < parts.length - 1) x = x.replace(/ +$/, "");
+      if (x) out.push(out.length ? x.slice(0, C.FOLDER_MAX - 1) : x);
+    });
+    return out.slice(0, limit);
+  }
+  /* v0.40: a TREE reply (31) -> {depth, parents: each folder's parent, -1 the top} */
+  function libTree(p) { return { depth: p[0], parents: [...p.subarray(1, 65)].map(b => b === 0xFF ? -1 : b) }; }
+  return { C, BLOCK, readAiff, libSample, le32, libBegin, adler, libList, folderLevels, libTree, metaBytes, metaAt, putMetaPtr, attachMeta, short, pack7, unpack7, request, parse, be32, rd32, readWav, onsets, slicesFrom, slicing, itemBytes, itemData, putEntry, poolBytes, addPlan, payloadBytes, stem };
+})();
+if (typeof module !== "undefined") module.exports = DN2;
+</script>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const C = DN2.C;
+  const MB = 1 << 20;
+  const fmtMB = b => (b / MB).toFixed(b < 10 * MB ? 2 : 1) + " MB";
+  const fmtSize = b => b >= 1024 * MB ? (b / (1024 * MB)).toFixed(2) + " GB" : fmtMB(b);
+  const fmtS = f => (f / C.DSP_RATE).toFixed(2) + " s";
+  const log = t => { const l = $("log"); l.textContent += t + "\n"; l.scrollTop = l.scrollHeight; };
+
+  let midi = null, out = null, inp = null, seq = 0x300, waiting = null;
+  let dev = null;           /* {proto, room, ram, slots: [{k, off, frames, name}], lib: {rows, folders} | null} */
+  let items = [];           /* [{file, name, w, slices, slot}] (slot: 0-based, for pick and add) */
+  let mode = "lib";         /* lib (the +Drive library) | fill | pick | add (the project's slots) */
+  let libAt = null;         /* the +Drive folder open on the right (its index), null: the folders */
+  const libSel = new Set(); /* ticked on the right: entry numbers, and "f<N>" for whole folders */
+  let queue = [];           /* the last send: [{name, into, bytes, st, cls}] */
+  const esc = v => String(v).replace(/[<&>"]/g, ch => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;", '"': "&quot;" })[ch]);
+  /* into the library: the ticked samples, or all of them when none is ticked */
+  const toSend = () => mode !== "lib" ? items : (items.some(it => it.sel) ? items.filter(it => it.sel) : items);
+  const libFolder = f => (dev && dev.lib && dev.lib.folders[f]) || `FOLDER ${f + 1}`;
+  /* v0.40: folders inside folders: F's parent (-1 the top), its path, whether G is F or inside it */
+  const libParent = f => (dev && dev.lib && dev.lib.parents && dev.lib.parents[f] != null ? dev.lib.parents[f] : -1);
+  const libChain = f => { const c = []; for (let g = f, n = 0; g >= 0 && n < 8; g = libParent(g), n++) c.unshift(g); return c; };
+  const libPath = f => libChain(f).map(libFolder).join("/");
+  const libUnder = (g, f) => libChain(g).includes(f);
+  let keep = null;          /* add: {kept: [{k, entry, name}], end} once checked, else {why} */
+  const MEM_KEY = "dn2.sent.v1";      /* what this browser last sent (the directory, for Add) */
+  function memRead() { try { return JSON.parse(localStorage.getItem(MEM_KEY) || "null"); } catch (e) { return null; } }
+  function memWrite(m) { try { localStorage.setItem(MEM_KEY, JSON.stringify(m)); } catch (e) { /* no storage: Add stays off */ } }
+  function memFromDir(dir, end, metas = []) {      /* the directory page we sent -> what to remember */
+    const dv = new DataView(dir.buffer, dir.byteOffset), entries = [];
+    for (let k = 0; k < C.POOL_SLOTS; k++) {
+      const addr = dv.getUint32(8 + 16 * k, true), fr = dv.getUint32(12 + 16 * k, true);
+      if (!fr || addr < C.POOL_DDR + C.DATA_OFFSET) continue;
+      let name = ""; for (let c = 0; c < C.NAME_BYTES; c++) { const b = dir[C.NAMES_OFFSET + C.NAME_BYTES * k + c]; if (!b) break; name += String.fromCharCode(b); }
+      const m = metas[k] || {};
+      entries.push({ k, e: Array.from(dir.subarray(8 + 16 * k, 24 + 16 * k)), name, off: addr - C.POOL_DDR, frames: fr,
+                     long: m.long || "", folder: m.folder || "" });
+    }
+    return { entries, end, date: new Date().toISOString() };
+  }
+  /* Add is safe only if the instrument holds exactly what this browser last sent (its
+   * recordings aside): every slot's place, length and name */
+  function checkKeep() {
+    if (!dev) return { why: "Connect first." };
+    const m = memRead();
+    if (!m || !Array.isArray(m.entries)) return { why: "This browser has not sent samples to this instrument yet: use Replace all once, then Add works from here." };
+    const mine = dev.slots.filter(s => !s.rec), byK = new Map(m.entries.map(e => [e.k, e]));
+    const same = mine.length === m.entries.length && mine.every(s => { const e = byK.get(s.k); return e && e.off === s.off && e.frames === s.frames && e.name === s.name; });
+    if (!same) return { why: "The instrument's samples are not what this browser last sent (trimmed, renamed or recorded over there, or sent from elsewhere). Use Replace all once; Add works from then on." };
+    return { kept: m.entries.map(e => ({ k: e.k, entry: Uint8Array.from(e.e), name: e.name, long: e.long || "", folder: e.folder || "" })), end: m.end };
+  }
+  function usedSlots() {               /* slots the list must not take by default */
+    const u = new Set();
+    if (dev) dev.slots.forEach(s => { if (s.rec || mode === "add") u.add(s.k); });
+    return u;
+  }
+  function assignSlots() {
+    if (mode === "lib") { items.forEach(it => { it.slot = null; }); return; }
+    if (mode === "fill") { items.forEach((it, k) => { it.slot = k; }); return; }
+    const used = usedSlots(), taken = new Set(items.filter(it => it.slot != null).map(it => it.slot));
+    let next = 0;
+    for (const it of items) {
+      if (it.slot != null) continue;
+      while (next < C.USER_SLOTS && (used.has(next) || taken.has(next))) next++;
+      it.slot = next < C.USER_SLOTS ? next : null; taken.add(it.slot); next++;
+    }
+  }
+  function slotProblems() {
+    if (mode === "lib") return dev && dev.lib && toSend().length + dev.lib.rows.length > dev.lib.cap ? `The library holds ${dev.lib.cap.toLocaleString()} samples.` : "";
+    if (mode === "fill") return items.length > C.USER_SLOTS ? `Only ${C.USER_SLOTS} slots.` : "";
+    const seen = new Map();
+    for (const it of items) {
+      if (it.slot == null || it.slot < 0 || it.slot >= C.USER_SLOTS) return `Every sample needs a slot from 1 to ${C.USER_SLOTS}.`;
+      if (seen.has(it.slot)) return `Two samples are on SAMP ${it.slot + 1}.`;
+      seen.set(it.slot, it);
+    }
+    return "";
+  }
+  let rate = 40000;         /* bytes a second, measured as we go */
+
+  /* -- MIDI -- */
+  function fillPorts() {
+    const os = $("outSel"), is = $("inSel");
+    const pick = (sel, ports) => {
+      const prev = sel.value; sel.innerHTML = "";
+      for (const p of ports.values()) { const o = document.createElement("option"); o.value = p.id; o.textContent = p.name; sel.append(o); }
+      const want = [...sel.options].find(o => o.value === prev) || [...sel.options].find(o => /digitone/i.test(o.textContent));
+      if (want) sel.value = want.value;
+    };
+    pick(os, midi.outputs); pick(is, midi.inputs);
+  }
+  async function connect() {
+    try {
+      if (!navigator.requestMIDIAccess) throw new Error("this browser has no Web MIDI: use Chrome or Edge");
+      if (!midi) { midi = await navigator.requestMIDIAccess({ sysex: true }); midi.onstatechange = fillPorts; fillPorts(); }
+      out = midi.outputs.get($("outSel").value); inp = midi.inputs.get($("inSel").value);
+      if (!out || !inp) throw new Error("pick the Digitone II's ports");
+      inp.onmidimessage = e => {
+        const r = DN2.parse(e.data);
+        if (r && waiting && r.seq === waiting.seq && r.cmd === (waiting.cmd | 0x80)) { const w = waiting; waiting = null; clearTimeout(w.timer); w.resolve(r); }
+      };
+      const p = (await call(C.CMD.HELLO)).payload;
+      const proto = (p[0] << 8) | p[1];
+      dev = { proto, room: DN2.rd32(p, 2), ram: p.length >= 22 ? DN2.rd32(p, 18) : null, slots: [] };
+      if (proto < 4) throw new Error(`sample link ${proto}: flash v0.22 or later for this tool (or use dn2samples.py)`);
+      $("connState").textContent = "connected"; $("connState").className = "pill ok";
+      const ram = { 0: ["RAM check not run yet", "warn"], 1: ["RAM check passed: all 400 MB load", "ok"], 2: ["RAM check FAILED: only the first 128 MB load", "bad"] }[dev.ram] || ["", ""];
+      $("devInfo").textContent = `Sample link ${proto}. ${ram[0]}.`;
+      $("devInfo").className = "note " + (ram[1] === "bad" ? "bad" : ram[1] === "warn" ? "warn" : "");
+      await readDir();
+      await readLib();
+    } catch (e) {
+      $("connState").textContent = "not connected"; $("connState").className = "pill bad";
+      $("devInfo").textContent = String(e.message || e); $("devInfo").className = "note bad";
+    }
+    refresh();
+  }
+  function call(cmd, payload = [], timeout = 3000, tries = 3) {
+    return new Promise((resolve, reject) => {
+      const go = (left) => {
+        seq = ((seq + 1) & 0xFFFF) || 1;
+        const s = seq;
+        const timer = setTimeout(() => { waiting = null; left > 1 ? go(left - 1) : reject(new Error("no answer from the instrument (USB CONFIG: USB MIDI or Overbridge?)")); }, timeout);
+        waiting = { seq: s, cmd, timer, resolve: r => r.status ? reject(new Error(`command ${cmd}: ${["ok", "refused", "unknown command", "the +Drive refused the write"][r.status] || r.status}`)) : resolve(r) };
+        out.send(DN2.request(s, cmd, payload));
+      };
+      go(tries);
+    });
+  }
+  async function readDir() {
+    const slots = [];
+    for (let k0 = 0; k0 < C.POOL_SLOTS; k0 += 5) {
+      const p = (await call(C.CMD.DIR, [k0])).payload;
+      for (let j = 0; j < 5 && k0 + j < C.POOL_SLOTS; j++) {
+        const off = DN2.rd32(p, 4 + 16 * j), fr = DN2.rd32(p, 8 + 16 * j);
+        if (!fr) continue;
+        let name = ""; for (let c = 0; c < 8; c++) { const b = p[12 + 16 * j + c]; if (!b) break; name += String.fromCharCode(b); }
+        slots.push({ k: k0 + j, off, frames: fr, name, rec: off >= C.REC_OFFSET && off < C.REC_END });
+      }
+    }
+    dev.slots = slots;
+  }
+  /* v0.31: the +Drive library's folders and entries (link 5 and later) */
+  async function readLib() {
+    dev.lib = null;
+    if (dev.proto < 5) return;
+    const folders = [];
+    /* INFO first: v0.43's sixth word is how many folders the library holds (128; 64 before) */
+    const ip = (await call(C.LIB.INFO, [])).payload, iw = o => ip[o] | ip[o + 1] << 8 | ip[o + 2] << 16 | (ip[o + 3] << 24 >>> 0);
+    const nf = ip.length >= 24 && iw(20) > 64 && iw(20) <= 255 ? iw(20) : 64;
+    /* v0.45: the second word is how many samples it holds (16,384; 2,048 before) */
+    const cap = ip.length >= 8 && iw(4) >= 2048 && iw(4) <= 65536 ? iw(4) : 2048;
+    for (let f0 = 0; f0 < nf; f0 += 4) {
+      const p = (await call(C.LIB.FOLDERS, [f0])).payload;
+      for (let j = 0; j < 4; j++) { let s = ""; for (let c = 0; c < 24; c++) { const b = p[24 * j + c]; if (!b) break; s += String.fromCharCode(b); } folders.push(s); }
+    }
+    const rows = [];
+    let count = Infinity;
+    for (let k0 = 0; k0 < cap && rows.length < count; k0 += 4) {
+      const r = DN2.libList((await call(C.LIB.LIST, [k0 & 255, k0 >> 8])).payload);
+      count = r.count;
+      r.rows.forEach(e => { if (e.frames) rows.push(e); });
+    }
+    /* INFO: state, capacity, count, the +Drive's sectors, the library's first data sector: its room */
+    const sectors = iw(12) >>> 0, first = iw(16) >>> 0;
+    const room = sectors > first ? (sectors - first) * 512 : null;
+    const used = rows.reduce((a, e) => a + Math.ceil(2 * e.frames / 512) * 512, 0);   /* whole sectors each */
+    /* v0.40 (link 7): each folder's parent; before, every folder is at the top */
+    let parents = folders.map(() => -1);
+    if (dev.proto >= 7)                          /* v0.43: 64 a reply, from the folder asked for */
+      for (let f0 = 0, all = []; f0 < nf; f0 += 64) {
+        all.push(...DN2.libTree((await call(C.LIB.TREE, f0 ? [f0] : [])).payload).parents);
+        parents = all.slice(0, nf);
+      }
+    dev.lib = { rows, folders, room, used, parents, nf, cap };
+  }
+
+  /* -- files -- */
+  /* v0.25: a dropped folder: its WAVs, each with the folder's path (below the drop) */
+  async function entriesOf(entry, path, out) {
+    if (entry.isFile) {
+      const f = await new Promise((res, rej) => entry.file(res, rej));
+      f.folder = path; out.push(f);
+    } else if (entry.isDirectory) {
+      const rd = entry.createReader(), sub = path ? path + "/" + entry.name : entry.name;
+      for (;;) {
+        const batch = await new Promise((res, rej) => rd.readEntries(res, rej));
+        if (!batch.length) break;
+        for (const e of batch) await entriesOf(e, sub, out);
+      }
+    }
+  }
+  async function dropped(dt) {
+    const out = [], plain = [];
+    const ents = [...dt.items || []].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    if (!ents.length) return addFiles([...dt.files]);
+    for (const e of ents) { if (e.isDirectory) await entriesOf(e, "", out); else plain.push(e); }
+    for (const e of plain) await entriesOf(e, "", out);
+    out.sort((a, b) => (a.folder + "/" + a.name).localeCompare(b.folder + "/" + b.name, undefined, { numeric: true }));
+    return addFiles(out);
+  }
+  let loading = null;             /* {done, total, skipped} while a batch of files is read */
+  async function addFiles(files) {
+    files = [...files];
+    const audio = files.filter(f => AUDIO.test(f.name));
+    const other = files.filter(f => !AUDIO.test(f.name) && !/^\./.test(f.name));
+    other.forEach(f => log(`${f.name}: not an audio file, skipped`));
+    loading = { done: 0, total: audio.length, skipped: other.length, bad: 0 };
+    refresh();
+    for (const f of audio) {
+      if (mode !== "lib" && items.length >= C.USER_SLOTS) { log(`${f.name}: all ${C.USER_SLOTS} slots are taken`); break; }
+      try {
+        const w = await readAudio(await f.arrayBuffer());
+        if (!w.frames.length) throw new Error("no frames");
+        const long = f.name.replace(/\.[^.]*$/, "").slice(0, C.LONG_MAX);
+        items.push({ file: f.name, long, name: DN2.short(long), folder: (f.folder || "").slice(0, C.PATH_MAX), w,
+                     slices: DN2.slicing($("sliceSel").value, w), slot: null, sel: false });
+      } catch (e) { loading.bad++; log(`${f.name}: ${e.message || e}`); }
+      loading.done++;
+      if (loading.done % 8 === 0) refresh();   /* a big folder shows up as it loads, not at the end */
+    }
+    const l = loading; loading = null;
+    log(`${l.total} audio file(s) read${l.bad ? `, ${l.bad} could not be` : ""}${l.skipped ? `, ${l.skipped} other file(s) skipped` : ""}`);
+    refresh();
+  }
+  /* WAV and AIFF read here (their own rate, cue points kept); FLAC, MP3, OGG, M4A and the
+   * rest through the browser's decoder, at the DSP's 48 kHz */
+  const AUDIO = /\.(wav|wave|aif|aiff|aifc|flac|mp3|ogg|oga|opus|m4a|aac|caf)$/i;
+  async function readAudio(buf) {
+    const m = String.fromCharCode(...new Uint8Array(buf, 0, Math.min(12, buf.byteLength)));
+    if (m.startsWith("RIFF") && m.slice(8) === "WAVE") return DN2.readWav(buf);
+    if (m.startsWith("FORM") && /AIF[FC]/.test(m.slice(8))) return DN2.readAiff(buf);
+    const ctx = new OfflineAudioContext(1, 1, C.DSP_RATE);
+    let ab;
+    try { ab = await ctx.decodeAudioData(buf); } catch (e) { throw new Error("this browser cannot decode it"); }
+    const n = ab.length, out = new Float32Array(n);
+    for (let c = 0; c < ab.numberOfChannels; c++) { const x = ab.getChannelData(c); for (let i = 0; i < n; i++) out[i] += x[i] / ab.numberOfChannels; }
+    return { frames: out, rate: ab.sampleRate, cues: [] };
+  }
+  function reslice() { items.forEach(it => { it.slices = DN2.slicing($("sliceSel").value, it.w); }); refresh(); }
+
+  /* -- the page -- */
+  function plan() {             /* -> {len: the image's end, send: bytes sent} without the audio */
+    if (!items.length) return { len: 0, send: 0 };
+    if (mode === "lib") { const b = toSend().reduce((a, it) => a + 2 * it.w.frames.length, 0); return { len: 0, send: b }; }
+    if (mode === "add" && keep && keep.kept) {
+      let at = Math.ceil(Math.max(keep.end, C.DATA_OFFSET) / DN2.BLOCK) * DN2.BLOCK, sent = 0;
+      if (at >= C.REC_OFFSET && at < C.REC_END) at = C.REC_END;
+      for (const it of [...items].sort((a, b) => a.slot - b.slot)) {
+        const sz = DN2.itemBytes(it.w.frames.length, it.slices.length);
+        if (at < C.REC_END && at + sz > C.REC_OFFSET) { sent += Math.max(0, C.REC_OFFSET - at); at = C.REC_END; }
+        at += sz; sent += sz;
+      }
+      return { len: at, send: sent + C.DATA_OFFSET };
+    }
+    let len = 0;
+    const order = mode === "pick" ? [...items].sort((a, b) => a.slot - b.slot) : items;
+    for (const it of order) {
+      const sz = DN2.itemBytes(it.w.frames.length, it.slices.length);
+      if (C.DATA_OFFSET + len < C.REC_END && C.DATA_OFFSET + len + sz > C.REC_OFFSET) len = C.REC_END - C.DATA_OFFSET;
+      len += sz;
+    }
+    return { len: C.DATA_OFFSET + len, send: DN2.payloadBytes(C.DATA_OFFSET + len) };
+  }
+  function refresh() {
+    if (mode === "add") keep = checkKeep();
+    assignSlots();
+    const lib = mode === "lib";
+    $("xfer").className = lib ? "lib-mode" : "proj-mode";
+    $("tabLib").setAttribute("aria-selected", lib); $("tabProj").setAttribute("aria-selected", !lib);
+    const tb = $("list").tBodies[0]; tb.innerHTML = "";
+    const devAt = new Map(dev ? dev.slots.map(s => [s.k, s]) : []);
+    items.forEach((it, k) => {
+      const tr = document.createElement("tr"); tr.draggable = mode === "fill" || lib; tr.dataset.k = k;
+      if (it.sel) tr.className = "sel";
+      const sz = DN2.itemBytes(it.w.frames.length, it.slices.length);
+      const slotCell = lib ? `<td class="slot proj-only"></td>` : mode === "fill" ? `<td class="slot">SAMP ${k + 1}</td>`
+        : `<td class="slot">SAMP <input type="number" class="slotIn" min="1" max="${C.USER_SLOTS}" value="${it.slot == null ? "" : it.slot + 1}" style="width:4.5em"></td>`;
+      const over = mode !== "fill" && !lib && it.slot != null && devAt.get(it.slot);
+      tr.innerHTML = `<td class="ck"><input type="checkbox" class="selIn" ${it.sel ? "checked" : ""} aria-label="Select"></td>${slotCell}<td title="${esc(it.file)}"><input type="text" class="longIn" maxlength="${C.LONG_MAX}" value="${esc(it.long)}" style="text-transform:none"><div class="note slot" style="margin:2px 0 0">${esc(it.name)}${over ? ` <span class="pill warn">${over.rec ? "recording moves" : "replaces " + esc(over.name)}</span>` : ""}</div></td>
+        <td><input type="text" class="folderIn" list="folderList" maxlength="${C.PATH_MAX}" value="${esc(it.folder)}" placeholder="${lib ? "INCOMING" : "–"}" style="text-transform:none"></td>
+        <td class="num hide-sm">${(it.w.frames.length / it.w.rate).toFixed(2)} s</td>
+        <td class="num proj-only hide-sm">${it.slices.length || "–"}</td><td class="num">${fmtMB(lib ? 2 * it.w.frames.length : sz)}</td><td><button class="x" title="Remove from the list">✕</button></td>`;
+      tr.querySelector(".selIn").onchange = e => { it.sel = e.target.checked; refresh(); };
+      tr.querySelector(".longIn").oninput = e => { it.long = e.target.value.replace(/[^ -~]/g, "").slice(0, C.LONG_MAX); it.name = DN2.short(it.long); tr.querySelector(".note").textContent = it.name; };
+      tr.querySelector(".longIn").onchange = refresh;
+      tr.querySelector(".folderIn").onchange = e => { it.folder = e.target.value.replace(/[^ -~]/g, "").trim().slice(0, C.PATH_MAX); refresh(); };
+      const si = tr.querySelector(".slotIn");
+      if (si) si.onchange = e => { const v = parseInt(e.target.value, 10); it.slot = Number.isFinite(v) ? v - 1 : null; refresh(); };
+      tr.querySelector(".x").onclick = () => { items.splice(k, 1); refresh(); };
+      if (lib) {                     /* drag onto the instrument: this row, or the ticked ones with it */
+        tr.ondragstart = e => {
+          if (!it.sel) { items.forEach(x => { x.sel = false; }); it.sel = true; }
+          e.dataTransfer.setData("application/x-dn2-items", "1"); e.dataTransfer.effectAllowed = "copy";
+          tr.classList.add("dragging");
+        };
+        tr.ondragend = () => { tr.classList.remove("dragging"); refresh(); };
+      } else if (mode === "fill") {
+        tr.ondragstart = e => { tr.classList.add("dragging"); e.dataTransfer.setData("text/plain", String(k)); };
+        tr.ondragend = () => tr.classList.remove("dragging");
+        tr.ondragover = e => e.preventDefault();
+        tr.ondrop = e => { e.preventDefault(); e.stopPropagation(); const from = +e.dataTransfer.getData("text/plain"); if (Number.isFinite(from) && from !== k) { const [m] = items.splice(from, 1); items.splice(k, 0, m); refresh(); } };
+      }
+      tb.append(tr);
+    });
+    $("dropHint").style.display = items.length ? "none" : "";
+    const nSel = items.filter(it => it.sel).length;
+    $("listAll").checked = !!items.length && nSel === items.length;
+    $("listAll").indeterminate = nSel > 0 && nSel < items.length;
+    $("removeSelBtn").disabled = !nSel || busy;
+    $("clearBtn").disabled = !items.length || busy;
+    const fl = $("folderList"); fl.innerHTML = "";
+    [...new Set([...items.map(it => it.folder), ...(memRead()?.entries || []).map(e => e.folder || "")].filter(Boolean))].forEach(f => { const o = document.createElement("option"); o.value = f; fl.append(o); });
+    const prob = slotProblems();
+    $("listNote").textContent = loading ? `Reading ${loading.done} of ${loading.total} audio file(s)…`
+      : prob || (!items.length ? (lib ? "No samples yet." : `No samples yet. Slots 1–${C.USER_SLOTS} are yours.`)
+      : lib ? `${items.length} sample(s)` + (nSel ? `, ${nSel} ticked` : "")
+      : mode === "fill" ? `${items.length} sample(s) go to SAMP 1–${items.length}, in this order. Drag rows to change their slots.`
+      : `${items.length} sample(s), each to the slot beside it.`);
+    $("listNote").className = "note " + (prob ? "bad" : "");
+    $("modeNote").textContent = {
+      fill: "Everything of yours on the instrument is replaced by this list. Recordings stay.",
+      pick: "Everything of yours on the instrument is replaced by this list, each sample in the slot you give it; the other slots are left empty. Recordings stay.",
+      lib: dev && dev.proto < 5 ? "The library needs v0.31 or later on the instrument."
+        : "The +Drive library is shared by every project; the project's slots do not change. On the instrument: FUNC + YES in the sample list, +DRIVE, the sample, RIGHT, LOAD TO PROJ. Slices are not kept in the library.",
+      add: keep && keep.kept ? "Your samples on the instrument stay where they are; these go into the slots you give them (a slot that holds one of yours is replaced). Only the new samples are sent."
+        : (keep ? keep.why : ""),
+    }[mode];
+    $("modeNote").className = "note " + ((mode === "add" && keep && !keep.kept) || (mode === "lib" && dev && dev.proto < 5) ? "warn" : "");
+    $("sendNote").textContent = mode === "lib"
+      ? "Each sample goes into the +Drive library one at a time, each checked as it lands. The project's samples and their slots stay as they are."
+      : mode === "add"
+      ? "Sends the new samples and the slot list only. They go to the +Drive first, then everything loads into the DSP again; they load at every power-on. If a send is cut off, send again with Replace all."
+      : "Sending replaces your samples on the instrument with this list; recordings stay. The samples go to the +Drive first, then into the DSP; they load at every power-on.";
+
+    /* memory */
+    const ramOk = dev ? dev.ram === 1 : true;
+    const top = ramOk ? C.POOL_BYTES : C.REC_OFFSET;
+    const cap = (ramOk ? C.POOL_BYTES - C.HOLE_BYTES : C.REC_OFFSET) - C.DATA_OFFSET;
+    const pl = plan(), send = Math.max(0, pl.send - (mode === "add" ? 0 : C.DATA_OFFSET));
+    const now = dev ? dev.slots.filter(s => !s.rec).reduce((a, s) => a + s.frames * 2, 0) : null;
+    const recs = dev ? dev.slots.filter(s => s.rec).reduce((a, s) => a + s.frames * 2, 0) : null;
+    const kept = mode === "add" && keep && keep.kept ? Math.max(0, Math.min(keep.end, C.REC_OFFSET) - C.DATA_OFFSET) + Math.max(0, keep.end - C.REC_END) : 0;
+    const used = mode === "add" ? (pl.len ? Math.max(0, Math.min(pl.len, C.REC_OFFSET) - C.DATA_OFFSET) + Math.max(0, pl.len - C.REC_END) : kept) : send;
+    /* v0.31: into the +Drive library its room is the +Drive's, not the project pool's */
+    const lr = dev && dev.lib ? dev.lib : null;
+    const libSend = lib ? toSend().reduce((a, it) => a + Math.ceil(2 * it.w.frames.length / 512) * 512, 0) : 0;
+    const libFree = lr && lr.room != null ? Math.max(0, lr.room - lr.used) : null;
+    $("lCap").textContent = lib ? "room in the +Drive library" : "room for yours";
+    $("lNow").textContent = lib ? "in the library now" : "yours on it now";
+    $("sCap").textContent = lib ? (lr && lr.room != null ? fmtSize(lr.room) : "–") : fmtMB(cap);
+    $("sNow").textContent = lib ? (lr ? fmtSize(lr.used) : "–") : now == null ? "–" : fmtMB(now);
+    $("sSend").textContent = fmtSize(lib ? libSend : send);
+    $("sLeft").textContent = lib ? (libFree == null ? "–" : fmtSize(Math.max(0, libFree - libSend))) : fmtMB(Math.max(0, cap - used));
+    $("sRec").textContent = recs == null ? "–" : `${fmtMB(recs)} of ${fmtMB(C.REC_BYTES)}`;
+    const secs = pl.send ? (pl.send / rate) : 0;
+    $("sTime").textContent = pl.send ? (secs < 90 ? `${Math.ceil(secs)} s` : `${Math.round(secs / 60)} min`) : "–";
+    const bar = $("bar"); bar.innerHTML = "";
+    if (lib) {                                  /* the library's bar: what is in it, what you send */
+      const whole = lr && lr.room ? lr.room : 1;
+      const seg = (bytes, color, title) => { const d = document.createElement("div"); d.style.width = (100 * Math.min(bytes, whole) / whole) + "%"; d.style.background = color; d.title = title; bar.append(d); };
+      if (lr && lr.room) { seg(lr.used, "var(--yours)", "in the library: " + fmtSize(lr.used)); seg(libSend, "var(--new)", "what you send: " + fmtSize(libSend)); }
+    } else {
+    const seg = (bytes, color, title) => { const d = document.createElement("div"); d.style.width = (100 * bytes / (cap + C.HOLE_BYTES)) + "%"; d.style.background = color; d.title = title; bar.append(d); };
+    if (kept) seg(kept, "var(--yours)", "yours, kept: " + fmtMB(kept));
+    seg(Math.min(mode === "add" ? Math.max(0, used - kept) : send, cap), "var(--new)", "what you send: " + fmtMB(send));
+    if (recs) seg(recs, "var(--rec)", "recordings: " + fmtMB(recs));
+    }
+    const over = lib ? libFree != null && libSend > libFree : used > cap || pl.len > (ramOk ? C.POOL_BYTES : C.REC_OFFSET) || (!ramOk && pl.len > top);
+    $("memNote").textContent = over && lib ? `Too much: the library has ${fmtSize(libFree)} free. Remove some samples, or delete some from the library (on the right).`
+      : lib ? (lr && lr.room != null ? "The +Drive library, shared by every project. The project's own 400 MB (its slots) fills only when you load samples on the instrument." : "")
+      : over ? `Too much: there is room for ${fmtMB(cap)}. Remove some samples.`
+      : (!ramOk && dev ? "The instrument's RAM check did not pass this power-on, so only the first 128 MB load: room for 96 MB of yours." : "");
+    $("memNote").className = "note " + (over ? "bad" : (!ramOk && dev ? "warn" : ""));
+    document.querySelector(".legend").innerHTML = lib ? '<span><i style="background:var(--yours)"></i>in the library</span><span><i style="background:var(--new)"></i>what you send</span>' : (kept ? '<span><i style="background:var(--yours)"></i>yours, kept</span>' : "")
+      + '<span><i style="background:var(--rec)"></i>recordings (kept)</span><span><i style="background:var(--new)"></i>what you send</span>';
+
+    /* the right pane: the instrument's slots, or its +Drive library */
+    const db = $("dev").tBodies[0]; db.innerHTML = "";
+    if (dev) {
+      const mine = new Set(mode !== "fill" ? items.map(it => it.slot) : []);
+      dev.slots.forEach(s => {
+        const tr = document.createElement("tr");
+        const kind = s.rec ? "recording · kept" : mode === "add" ? (mine.has(s.k) ? "yours · replaced" : "yours · kept") : "yours · replaced by a send";
+        tr.innerHTML = `<td class="slot">SAMP ${s.k + 1}</td><td class="slot">${esc(s.name) || "–"}</td><td class="num">${fmtS(s.frames)}</td><td>${kind}</td>`;
+        db.append(tr);
+      });
+      $("devNote").textContent = dev.slots.length ? "Recordings stay where they are; a recording whose slot your list takes moves to the first empty slot." : "Nothing in the project's slots yet.";
+    } else $("devNote").textContent = "";
+    renderLib();
+    if (!lib) $("crumb").textContent = dev ? "PROJECT SLOTS" : "";
+    const ready = !!dev && !busy;
+    $("reloadBtn").disabled = !ready;
+    $("newFolderBtn").disabled = !ready || !lr;
+    $("delSelBtn").disabled = !ready || !lr || !libSel.size;
+    $("diagBtn").disabled = busy || !dev; $("eraseBtn").disabled = busy || !dev; $("diagCopy").disabled = !$("diagOut").textContent;
+    $("rightEmpty").style.display = !dev ? "" : lib && !lr ? "" : "none";
+    $("rightEmpty").textContent = !dev ? "Connect to see the instrument." : "The +Drive library needs v0.31 or later on the instrument.";
+    const n = toSend().length;
+    $("sendBtn").textContent = lib ? (n ? `Send ${n} →` : "Send →") : "Send →";
+    $("intoNote").textContent = !items.length ? "" : !lib ? (mode === "fill" ? (items.length > 1 ? `to SAMP 1–${items.length}` : "to SAMP 1") : "to the slots given")
+      : libAt != null ? `into ${libFolder(libAt)}` : "each into its folder";
+    $("sendBtn").disabled = !dev || !n || over || busy || !!prob || (mode === "add" && !(keep && keep.kept))
+      || (lib && (dev.proto < 5 || !lr));
+    renderQueue();
+  }
+
+  /* the +Drive library on the right: its folders, or one folder's samples */
+  function renderLib() {
+    const lt = $("libT").tBodies[0]; lt.innerHTML = "";
+    const lr = dev && dev.lib;
+    $("libT").style.display = lr ? "" : "none";
+    if (!lr) { $("crumb").textContent = ""; $("libNote").textContent = ""; return; }
+    while (libAt != null && !lr.folders[libAt] && !lr.rows.some(e => e.folder === libAt)) libAt = libParent(libAt) < 0 ? null : libParent(libAt);   /* gone: the nearest above */
+    const crumb = $("crumb"); crumb.innerHTML = "";
+    const top = document.createElement(libAt == null ? "span" : "a"); top.textContent = "+DRIVE"; crumb.append(top);
+    if (libAt != null) {                /* v0.40: each level of the path a link up to it */
+      top.onclick = () => openFolder(null);
+      libChain(libAt).forEach(g => { crumb.append(" / "); const a = document.createElement(g === libAt ? "span" : "a"); a.textContent = libFolder(g); if (g !== libAt) a.onclick = () => openFolder(g); crumb.append(a); });
+    }
+    const add = (html, cls, onopen) => { const tr = document.createElement("tr"); tr.innerHTML = html; if (cls) tr.className = cls; if (onopen) tr.onclick = e => { if (!e.target.closest("input,button")) onopen(); }; lt.append(tr); return tr; };
+    const tick = (key, tr) => { const c = tr.querySelector(".ck input"); if (!c) return; c.checked = libSel.has(key); if (c.checked) tr.classList.add("sel"); c.onchange = e => { e.target.checked ? libSel.add(key) : libSel.delete(key); refresh(); }; };
+    let keys = [];
+    const nav = $("libNav"); nav.style.display = "none";
+    /* the folders in the open one (v0.40: folders inside folders; the top: the top-level
+     * ones), each with all it holds; then, in a folder, its own samples */
+    const count = new Map(); lr.rows.forEach(e => count.set(e.folder, (count.get(e.folder) || 0) + 1));
+    const fs = [...new Set([...lr.folders.map((n, f) => n ? f : -1).filter(f => f >= 0), ...count.keys()])]
+      .filter(f => libParent(f) === (libAt == null ? -1 : libAt))
+      .sort((a, b) => a < 2 || b < 2 ? a - b : libFolder(a).localeCompare(libFolder(b), undefined, { numeric: true }));
+    fs.forEach(f => {
+      const held = lr.rows.filter(e => libUnder(e.folder, f)), n = held.length, bytes = held.reduce((a, e) => a + 2 * e.frames, 0);
+      const subs = lr.folders.filter((nm, g) => nm && g !== f && libUnder(g, f)).length;
+      const what = [n ? n + " sample" + (n > 1 ? "s" : "") : "", subs ? subs + " folder" + (subs > 1 ? "s" : "") : ""].filter(Boolean).join(", ") || "empty";
+      const tr = add(`<td class="ck">${n || (f >= 2 && dev.proto >= 6) ? `<input type="checkbox" aria-label="Select the folder">` : ""}</td><td><span class="ico">▸</span>${esc(libFolder(f))} <span class="note">${what}</span></td><td class="num">${n ? fmtSize(bytes) : ""}</td><td></td>`, "folder", () => openFolder(f));
+      tick("f" + f, tr); if (n || (f >= 2 && dev.proto >= 6)) keys.push("f" + f);
+    });
+    if (libAt == null) {
+      if (!fs.length) add(`<td></td><td class="note" colspan="3">The library is empty: send samples into it, or make a folder.</td>`);
+    } else {
+      const nIn = lr.rows.filter(e => e.folder === libAt).length;
+      nav.style.display = ""; nav.querySelector(".here").textContent = libPath(libAt);
+      $("upBtn").textContent = libParent(libAt) < 0 ? "‹ All folders" : "‹ " + libFolder(libParent(libAt));
+      $("navCount").textContent = `${nIn} sample${nIn === 1 ? "" : "s"}`;
+      const rows = lr.rows.filter(e => e.folder === libAt).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      const seen = new Map(); rows.forEach(e => seen.set(e.name, (seen.get(e.name) || 0) + 1));
+      rows.forEach(e => {
+        const tr = add(`<td class="ck"><input type="checkbox" aria-label="Select"></td><td class="slot" title="entry ${e.k}">${esc(e.name)}${seen.get(e.name) > 1 ? ` <span class="note">#${e.k}</span>` : ""}</td><td class="num">${fmtSize(2 * e.frames)}</td><td><button class="x" title="Delete from the +Drive">✕</button></td>`);
+        tick(e.k, tr); keys.push(e.k);
+        tr.querySelector(".x").onclick = () => libDelete([e.k]);
+      });
+      if (!rows.length && !fs.length) add(`<td></td><td class="note" colspan="3">Empty folder: drop audio files here, or select samples on the left and Send.</td>`);
+    }
+    const all = $("libAll"), nk = keys.filter(k => libSel.has(k)).length;
+    all.checked = !!keys.length && nk === keys.length; all.indeterminate = nk > 0 && nk < keys.length; all.disabled = !keys.length;
+    all.onchange = () => { keys.forEach(k => all.checked ? libSel.add(k) : libSel.delete(k)); refresh(); };
+    const free = lr.room != null ? Math.max(0, lr.room - lr.used) : null;
+    $("libNote").textContent = `${lr.rows.length} of ${(lr.cap || C.LIB_CAP).toLocaleString()} samples` + (free != null ? ` · ${fmtSize(free)} free` : "") + (libSel.size ? ` · ${selEntries().length} ticked` : "");
+  }
+  function openFolder(f) { libAt = f; libSel.clear(); refresh(); }
+  function selEntries() {             /* the ticked samples, whole folders' included */
+    const lr = dev && dev.lib; if (!lr) return [];
+    return lr.rows.filter(e => libSel.has(e.k) || libChain(e.folder).some(g => libSel.has("f" + g)));   /* v0.40: a folder's folders too */
+  }
+  function renderQueue() {
+    const qb = $("queue").tBodies[0]; qb.innerHTML = "";
+    queue.forEach(q => { const tr = document.createElement("tr"); tr.innerHTML = `<td class="slot">${esc(q.name)}</td><td>${esc(q.into)}</td><td class="num">${fmtSize(q.bytes)}</td><td class="${q.cls || ""}">${esc(q.st)}</td>`; qb.append(tr); });
+  }
+
+  /* -- sending -- */
+  let busy = false;
+  /* WRITE BUF (whose byte 0 is the image's AT) in order, the recordings' hole skipped */
+  async function writeOut(buf, at, progress) {
+    const chunk = 512, end = at + buf.length;
+    let p = at;
+    while (p < end) {
+      if (p >= C.REC_OFFSET && p < C.REC_END) { p = C.REC_END; continue; }
+      let q = Math.min(p + chunk, end);
+      if (p < C.REC_OFFSET && q > C.REC_OFFSET) q = C.REC_OFFSET;
+      await call(C.CMD.WRITE, [...DN2.be32(p), ...buf.subarray(p - at, q - at)], 5000, 2);
+      progress(q - p); p = q;
+    }
+  }
+  /* delete library entries KS (after asking) */
+  async function libDelete(ks, folders = []) {
+    const lr = dev && dev.lib; if (busy || !lr || (!ks.length && !folders.length)) return;
+    const rows = lr.rows.filter(e => ks.includes(e.k));
+    /* v0.35: ticked folders go too once they are empty (the instrument's DROP, 26); v0.40:
+     * with the folders inside them, the deepest first (the instrument refuses a folder that
+     * still holds a folder) */
+    folders = dev.proto >= 6 ? folders.filter(f => f >= 2) : [];
+    folders = [...new Set(folders.flatMap(f => lr.folders.map((nm, g) => g).filter(g => g >= 2 && (lr.folders[g] || g === f) && libUnder(g, f))))]
+      .sort((a, b) => libChain(b).length - libChain(a).length);
+    const what = rows.length === 1 && !folders.length ? rows[0].name
+      : [rows.length ? `${rows.length} sample${rows.length > 1 ? "s" : ""}` : "", folders.length ? `${folders.length} folder${folders.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ");
+    if (!confirm(`Delete ${what} from the +Drive library? This cannot be undone. Project slots already loaded from ${rows.length === 1 ? "it" : "them"} keep their copies.`)) return;
+    busy = true; refresh();
+    let gone = 0;
+    try {
+      for (const e of rows) {
+        $("sendState").textContent = `deleting ${gone + 1} of ${rows.length}`;
+        await call(C.LIB.DELETE, [e.k & 255, e.k >> 8], 10000); gone++;
+        log(`${e.name}: deleted from the +Drive`);
+      }
+      for (const f of folders) {
+        const r = await call(C.LIB.DROP, [f], 10000, 1).catch(() => null);
+        log(`${libPath(f)}: ${r ? "folder removed" : "folder kept (not empty?)"}`);
+      }
+      $("sendState").textContent = `deleted ${gone}`; $("sendState").className = "pill ok";
+    } catch (x) { log(String(x.message || x)); $("sendState").textContent = "delete failed"; $("sendState").className = "pill bad"; }
+    libSel.clear();
+    try { await readLib(); } catch (x) { log(String(x.message || x)); }
+    busy = false; refresh();
+  }
+  const folderBytes = name => [...String(name).toUpperCase()].map(ch => ch.charCodeAt(0)).filter(c => c >= 32 && c < 127).slice(0, C.FOLDER_MAX);
+  async function newFolder() {
+    if (busy || !dev || !dev.lib) return;
+    const inside = libAt != null && dev.proto >= 7;        /* v0.40: in the folder that is open */
+    const name = (prompt(inside ? `New folder in ${libPath(libAt)} (up to 30 letters):` : "New folder's name (up to 31 letters):", "") || "").trim();
+    const b = folderBytes(name).filter(c => !inside || c !== 47).slice(0, inside ? C.FOLDER_MAX - 1 : C.FOLDER_MAX);
+    if (!b.length) return;
+    busy = true; refresh();
+    try {
+      const f = inside ? (await call(C.LIB.FOLDER_IN, [libAt, ...b], 10000)).payload[0]
+                       : (await call(C.LIB.FOLDER, b, 10000)).payload[0];
+      if (f === 0xFF || (inside && f === libAt)) throw new Error(inside && f === libAt ? `the instrument keeps folders ${C.LIB_DEPTH} levels deep at most` : `the instrument refused the folder (${(dev.lib && dev.lib.nf) || 64} folders at most)`);
+      log(`folder ${String.fromCharCode(...b)} made`);
+      await readLib(); libAt = f; libSel.clear();
+    } catch (x) { log(String(x.message || x)); }
+    busy = false; refresh();
+  }
+  async function sendLib() {
+    const st = $("sendState"), list = [...toSend()], into = libAt != null ? libFolder(libAt) : null;
+    const total = list.reduce((a, it) => a + 2 * it.w.frames.length, 0);
+    /* v0.40 (link 7): a dropped folder's folders kept: each level made inside the one before
+     * (FOLDER_IN), under the open folder if one is; six levels at most (deeper files go into
+     * the sixth). Before: one flat folder per file, as it was */
+    const nested = dev.proto >= 7;
+    const levelsOf = it => DN2.folderLevels(it.folder || (libAt == null ? "INCOMING" : ""));
+    queue = list.map(it => ({ it, name: it.long || it.name,
+                              into: nested ? [...(libAt != null ? [libPath(libAt)] : []), ...levelsOf(it)].join("/") || "INCOMING"
+                                           : into || (it.folder || "INCOMING").toUpperCase(),
+                              bytes: 2 * it.w.frames.length, st: "waiting" }));
+    const made = new Map(), capped = new Set();
+    async function folderFor(it) {
+      let at = libAt == null ? -1 : libAt, key = String(at);
+      for (const lv of levelsOf(it)) {
+        key += "/" + lv;
+        if (!made.has(key)) {
+          // the instrument answers a folder it cannot make with status 1 (call() rejects it as
+          // "command 30: refused"): almost always the library's 64 folders (every level counts)
+          const p = (await call(C.LIB.FOLDER_IN, [at < 0 ? 0xFF : at, ...folderBytes(lv)], 10000).catch(e => {
+            throw new Error(/refused/.test(e.message) ? `folder ${lv}: the +Drive library has no room for another folder (${(dev.lib && dev.lib.nf) || 64} at most, every level counts): delete or merge some folders in the browser, then send again` : e.message); })).payload;
+          if (p[0] === 0xFF) throw new Error(`folder ${lv}: refused (${(dev.lib && dev.lib.nf) || 64} folders at most)`);
+          if (p[1] & 2 && !capped.has(at)) { capped.add(at); log(`${it.folder}: deeper than ${C.LIB_DEPTH} levels; the rest go into ${libFolder(p[0]) || "the sixth level"}`); }
+          made.set(key, p[0]);
+        }
+        at = made.get(key);
+      }
+      return at < 0 ? (await call(C.LIB.FOLDER, folderBytes("INCOMING"))).payload[0] : at;
+    }
+    renderQueue();
+    let done = 0; const t0 = performance.now();
+    st.textContent = "to the +Drive library"; st.className = "pill";
+    for (const q of queue) {
+      const it = q.it;
+      q.st = "sending"; q.cls = "st-run"; renderQueue();
+      try {
+        const fname = folderBytes(q.into);
+        const f = nested ? await folderFor(it) : (await call(C.LIB.FOLDER, fname.length ? fname : folderBytes("INCOMING"))).payload[0];
+        if (f === 0xFF) throw new Error(`folder ${q.into}: refused (${(dev.lib && dev.lib.nf) || 64} folders at most)`);
+        const data = DN2.libSample({ frames: it.w.frames });
+        const b = (await call(C.LIB.BEGIN, DN2.libBegin(it.w.frames.length, f, it.w.rate, it.long || it.name), 10000)).payload;
+        const k = new DataView(b.buffer, b.byteOffset, b.length).getUint32(0, true);
+        for (let o = 0; o < data.length; o += 512) {
+          await call(C.LIB.WRITE, [...DN2.le32(o), ...data.subarray(o, Math.min(o + 512, data.length))], 5000, 1);
+          done += Math.min(512, data.length - o);
+          if ((done & 0xFFFF) < 512) {
+            rate = done / Math.max((performance.now() - t0) / 1000, 0.001);
+            $("prog").value = done / total;
+            st.textContent = `to the +Drive library ${Math.floor(100 * done / total)} % · ${Math.ceil((total - done) / rate)} s left`;
+            q.st = `sending ${Math.floor(100 * Math.min(o + 512, data.length) / data.length)} %`; renderQueue();
+          }
+        }
+        await call(C.LIB.END, DN2.le32(DN2.adler(data)), 20000, 1);
+        q.st = "✓ in the library"; q.cls = "st-ok";
+        log(`${q.name}: in the library, ${q.into} (entry ${k})`);
+        items.splice(items.indexOf(it), 1);
+      } catch (e) {
+        q.st = "failed: " + (e.message || e); q.cls = "st-bad";
+        queue.filter(r => r.st === "waiting").forEach(r => { r.st = "not sent"; r.cls = "st-bad"; });
+        renderQueue();
+        throw e;
+      }
+      renderQueue();
+    }
+    await readLib();
+    st.textContent = "done"; st.className = "pill ok"; $("prog").value = 1;
+  }
+  async function send() {
+    busy = true; refresh();
+    const st = $("sendState");
+    if (mode === "lib") {
+      try { await sendLib(); } catch (e) { st.textContent = "failed"; st.className = "pill bad"; log(String(e.message || e)); try { await readLib(); } catch (x) { /* shown on the next refresh */ } }
+      busy = false; refresh(); return;
+    }
+    try {
+      st.textContent = "building"; st.className = "pill";
+      const audio = it => ({ frames: it.w.frames, rate: it.w.rate, name: it.name, slices: it.slices });
+      let parts, end, remember, total;
+      const metas = [];                       /* v0.25: each slot's long name and folder */
+      const meta = it => ({ long: it.long, folder: it.folder });
+      if (mode === "add") {
+        const kp = checkKeep();
+        if (!kp.kept) throw new Error(kp.why);
+        kp.kept.forEach(e => { metas[e.k] = { long: e.long, folder: e.folder }; });
+        items.forEach(it => { metas[it.slot] = meta(it); });
+        const pl = DN2.addPlan(kp.kept, kp.end, items.map(it => ({ k: it.slot, ...audio(it) })), undefined, undefined,
+                               DN2.metaBytes(Array.from({ length: C.POOL_SLOTS }, (_, k) => metas[k] || null)));
+        parts = [[pl.dir, 0], [pl.data, pl.at]]; end = pl.end;
+        remember = memFromDir(pl.dir, pl.end, metas);
+      } else {
+        let list;
+        if (mode === "fill") { list = items.map(audio); items.forEach((it, k) => { metas[k] = meta(it); }); }
+        else { list = []; items.forEach(it => { while (list.length <= it.slot) list.push(null); list[it.slot] = audio(it); metas[it.slot] = meta(it); }); }
+        const pool = DN2.attachMeta(DN2.poolBytes(list), DN2.metaBytes(Array.from({ length: C.POOL_SLOTS }, (_, k) => metas[k] || null)));
+        parts = [[pool, 0]]; end = pool.length;
+        remember = memFromDir(pool.subarray(0, C.DATA_OFFSET), pool.length, metas);
+      }
+      total = parts.reduce((a, [b, at]) => a + b.length - Math.max(0, Math.min(at + b.length, C.REC_END) - Math.max(at, C.REC_OFFSET)), 0);
+      log(`${items.length} sample(s), image to ${fmtMB(end)}, ${fmtMB(total)} to send`);
+      queue = items.map(it => ({ name: it.long || it.name, into: "SAMP " + (it.slot + 1), bytes: DN2.itemBytes(it.w.frames.length, it.slices.length), st: "in this send", cls: "st-run" })); renderQueue();
+      await call(C.CMD.BEGIN, DN2.be32(end), 10000);
+      st.textContent = "to the +Drive"; let done = 0; const t0 = performance.now();
+      for (const [buf, at] of parts) {
+        await writeOut(buf, at, n => {
+          done += n;
+          if ((done & 0xFFFF) < 512) {
+            const el = (performance.now() - t0) / 1000; rate = done / Math.max(el, 0.001);
+            $("prog").value = done / total;
+            st.textContent = `to the +Drive ${Math.floor(100 * done / total)} % · ${Math.ceil((total - done) / rate)} s left`;
+          }
+        });
+      }
+      await call(C.CMD.END, [], 20000);
+      memWrite(remember);
+      st.textContent = "into the DSP"; $("prog").value = 0;
+      for (;;) {
+        const p = (await call(C.CMD.STATUS)).payload;
+        const state = DN2.rd32(p, 4), loaded = DN2.rd32(p, 8);
+        $("prog").value = Math.min(1, loaded / Math.max(1, end));
+        if (state === 4) break;
+        if (state === 0) throw new Error("the load stopped: the samples are on the +Drive; power-cycle to load them again");
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      st.textContent = "done"; st.className = "pill ok"; $("prog").value = 1;
+      queue.forEach(q => { q.st = "✓ in the slot"; q.cls = "st-ok"; });
+      log(`done: ${mode === "fill" ? `SAMP 1–${items.length}` : items.map(it => "SAMP " + (it.slot + 1)).join(", ")}; they load at every power-on`);
+      await readDir();
+      if (mode === "add") items = [];        /* they are on it now: the list starts again */
+    } catch (e) {
+      st.textContent = "failed"; st.className = "pill bad"; log(String(e.message || e));
+      queue.forEach(q => { q.st = "failed: send again"; q.cls = "st-bad"; });
+    }
+    busy = false; refresh();
+  }
+
+  /* -- wiring -- */
+  $("connectBtn").onclick = connect;
+  /* v0.36: the diagnostics (link commands 24 DIAG, 25 SCAN, 27 ENTRY; tools/dn2diag.py does the same) */
+  const DIAG_KEYS = ["wipes", "info", "where", "mask", "since", "load", "loadPeak", "skipped", "periods", "frames",
+                     "scanCount", "scanFirst", "scanDone", "scanSeq"];
+  const SCANS = [["voice 1's P-I delay lines", 0x82200000, 2048], ["voice 4's P-I delay lines", 0x82206000, 2048],
+                 ["the 16 voices' Machinedrum state", 0x200A0000, 4096], ["the 16 voices' PERC state", 0x2DE180, 512]];
+  async function diag() {
+    const p = (await call(C.CMD.DIAG, [], 3000, 2)).payload, d = {};
+    DIAG_KEYS.forEach((k, i) => d[k] = DN2.rd32(p, 4 * i));
+    return d;
+  }
+  async function scan(addr, words) {
+    const be = v => [v >>> 24 & 255, v >>> 16 & 255, v >>> 8 & 255, v & 255];
+    const p = (await call(C.CMD.SCAN, [...be(addr), ...be(words)], 3000, 2)).payload;
+    const seq = (p[0] << 8) | p[1], t0 = Date.now();
+    while (Date.now() - t0 < 5000) {
+      const d = await diag();
+      if (d.scanSeq === seq && d.scanDone === (seq & 0xFFFF)) return { n: d.scanCount, first: d.scanFirst === 0xFFFFFFFF ? -1 : d.scanFirst };
+      await new Promise(r => setTimeout(r, 60));
+    }
+    throw new Error("a memory scan did not finish");
+  }
+  function entryVerdict(base, frames, fmt, pool) {
+    const off = base - pool, f = fmt & 255;
+    if (off < C.DATA_OFFSET) return "plays as empty (its start is before the pool's data)";
+    if (off >= C.POOL_BYTES) return "plays as empty (its start is past the pool)";
+    if (!frames || frames > C.POOL_BYTES / 4) return `plays as empty (${frames} frames)`;
+    if (f > 1) return `plays as empty (format ${f})`;
+    if (off + frames * (f ? 2 : 4) > C.POOL_BYTES) return "plays as empty (it runs past the pool)";
+    return "plays";
+  }
+  async function runDiag() {
+    if (busy || !dev) return;
+    busy = true; refresh();
+    const out = [], say = s => { out.push(s); $("diagOut").textContent = out.join("\n"); };
+    $("diagState").textContent = "running"; $("diagState").className = "pill";
+    $("diagOut").textContent = "";
+    try {
+      say(`DN2 diagnostics, ${new Date().toLocaleString()}, sample link ${dev.proto}`);
+      const d = await diag();
+      say(`DSP load ${d.load} % (peak ${(d.loadPeak / 10).toFixed(1)} %), ${d.frames.toLocaleString()} audio frames since power-on`);
+      if (d.wipes) {
+        const slot = (d.info & 255) + 1, type = d.info >>> 8, w = d.where;
+        const where = w !== 0xFFFF && (w & 0x8000) ? `its delay lines, word ${w & 0x7FFF}` : "not its delay lines (its own state, its input or the effects)";
+        const ago = d.since === 0xFFFFFFFF ? "" : `, the last ${(d.since / 1500).toFixed(1)} s ago`;
+        say(`The output guard silenced a bad voice ${d.wipes} time(s)${ago}: last voice ${slot}, machine type ${type}, the bad value in ${where}`);
+      } else say("The output guard has silenced no voice since power-on");
+      if (d.skipped) say(`Voices left out for DSP time: ${[...Array(16).keys()].filter(t => d.skipped >> t & 1).map(t => t + 1).join(", ")}`);
+      say("Memory scans (bad values: not-a-number or infinite words):");
+      for (const [name, addr, words] of SCANS) {
+        const r = await scan(addr, words);
+        say(`  ${name}: ${r.n ? `${r.n} bad word(s), the first at index ${r.first}` : "clean"}`);
+      }
+      if (dev.proto >= 6) {
+        say("Project slots (what the DSP makes of each):");
+        for (const sl of dev.slots) {
+          const p = (await call(C.CMD.ENTRY, [sl.k], 3000, 2)).payload;
+          const dv = new DataView(Uint8Array.from(p).buffer);
+          const base = dv.getUint32(0, true), frames = dv.getUint32(4, true), fmt = dv.getUint32(12, true), pool = DN2.rd32(p, 24);
+          say(`  slot ${sl.k + 1} ${sl.name || "(no name)"}${sl.rec ? " (recording)" : ""}: ${entryVerdict(base, frames, fmt, pool)}`);
+        }
+      }
+      $("diagState").textContent = "done"; $("diagState").className = "pill ok";
+    } catch (x) {
+      const m = String(x.message || x);
+      say(/unknown command/.test(m) ? "This firmware has no diagnostics: v0.34 or later is needed." : `Stopped: ${m}`);
+      $("diagState").textContent = "failed"; $("diagState").className = "pill bad";
+    }
+    busy = false; refresh();
+  }
+  /* v0.39: ERASE MOD DATA (link commands 28 ERASE, 29 its status; docs/erase-mod-data.md) */
+  const ERASE_WHY = ["", "refused (outside the mod's regions)", "the card's erase failed 5 times", "a read failed 5 times", "a sector did not erase", "the +Drive is not ready", "the card stayed busy"];
+  async function runErase() {
+    if (busy || !dev) return;
+    if (!confirm("Erase ALL samples and mod data on the instrument's +Drive?\n\nThe pool, every project's sample list, the +Drive library and the mod's settings. Elektron's projects, sounds and presets are not touched.")) return;
+    if (!confirm("Are you sure? This cannot be undone.")) return;
+    busy = true; refresh();
+    const st = $("eraseState"), say = (t, c) => { st.textContent = t; st.className = "pill" + (c ? " " + c : ""); };
+    try {
+      await call(28, [69, 82, 65, 83, 69], 3000, 2);                  // "ERASE"
+      for (;;) {
+        await new Promise(r => setTimeout(r, 500));
+        const p = (await call(29, [], 3000, 3)).payload;
+        const state = p[0], err = p[1], done = DN2.rd32(p, 4), total = DN2.rd32(p, 8), sector = DN2.rd32(p, 12);
+        const checks = DN2.rd32(p, 28), nchecks = DN2.rd32(p, 32);
+        if (state === 1) say(`erasing ${total ? Math.floor(100 * done / total) : 0} %`);
+        else if (state === 2) say(`verifying ${nchecks ? Math.floor(100 * checks / nchecks) : 0} %`);
+        else if (state === 3) { say("ERASED: restart the instrument", "ok"); break; }
+        else if (state === 4 || err) {
+          const goOn = p.length > 52 && p[52];                           // v0.41: asking again carries on
+          say(`${goOn ? "paused" : "failed"}: ${ERASE_WHY[err] || err} at sector 0x${sector.toString(16)}${goOn ? " (press Erase again to continue)" : ""}`, "bad"); break;
+        }
+      }
+    } catch (x) {
+      const m = String(x.message || x);
+      say(/unknown command/.test(m) ? "this firmware cannot erase: v0.39 or later is needed" : `stopped: ${m}`, "bad");
+    }
+    busy = false; refresh();
+  }
+  $("eraseBtn").onclick = runErase;
+  $("diagBtn").onclick = runDiag;
+  $("diagCopy").onclick = () => { try { navigator.clipboard.writeText($("diagOut").textContent); $("diagState").textContent = "copied"; } catch (e) {} };
+  $("browseBtn").onclick = () => $("fileIn").click();
+  $("fileIn").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+  const drop = $("drop"), right = $("rightPane");
+  const isItems = e => [...e.dataTransfer.types].includes("application/x-dn2-items");
+  ["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { if (isItems(e)) return; e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => { if (!isItems(e)) dropped(e.dataTransfer); });
+  /* onto the instrument: rows from the left, or WAVs straight from the computer (into the open folder) */
+  const canTake = () => mode === "lib" && dev && dev.lib && !busy;
+  ["dragenter", "dragover"].forEach(t => right.addEventListener(t, e => { if (!canTake()) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; right.classList.add("over"); }));
+  right.addEventListener("dragleave", e => { if (!right.contains(e.relatedTarget)) right.classList.remove("over"); });
+  right.addEventListener("drop", async e => {
+    e.preventDefault(); right.classList.remove("over");
+    if (!canTake()) return;
+    if (!isItems(e)) {
+      const before = new Set(items);
+      await dropped(e.dataTransfer);
+      const fresh = items.filter(it => !before.has(it));
+      if (!fresh.length) return;
+      items.forEach(it => { it.sel = fresh.includes(it); });
+    }
+    refresh();
+    if (!$("sendBtn").disabled) send();
+  });
+  $("folderBtn").onclick = () => $("dirIn").click();
+  $("dirIn").onchange = e => {
+    const fs = [...e.target.files].map(f => { const p = (f.webkitRelativePath || "").split("/"); f.folder = p.slice(0, -1).join("/"); return f; });
+    fs.sort((a, b) => (a.folder + "/" + a.name).localeCompare(b.folder + "/" + b.name, undefined, { numeric: true }));
+    addFiles(fs); e.target.value = "";
+  };
+  $("sliceSel").onchange = reslice;
+  $("modeSel").onchange = e => { mode = e.target.value; items.forEach(it => { if (mode === "fill") it.slot = null; }); refresh(); };
+  $("tabLib").onclick = () => { if (busy) return; mode = "lib"; refresh(); };
+  $("tabProj").onclick = () => { if (busy) return; mode = $("modeSel").value; items.forEach(it => { if (mode === "fill") it.slot = null; }); refresh(); };
+  $("clearBtn").onclick = () => { items = []; refresh(); };
+  $("removeSelBtn").onclick = () => { items = items.filter(it => !it.sel); refresh(); };
+  $("listAll").onchange = e => { items.forEach(it => { it.sel = e.target.checked; }); refresh(); };
+  $("newFolderBtn").onclick = newFolder;
+  $("upBtn").onclick = () => openFolder(libAt == null || libParent(libAt) < 0 ? null : libParent(libAt));   /* v0.40: up a level */
+  $("delSelBtn").onclick = () => libDelete(selEntries().map(e => e.k), [...libSel].filter(k => typeof k === "string" && k[0] === "f").map(k => +k.slice(1)));
+  $("reloadBtn").onclick = async () => { if (busy || !dev) return; busy = true; refresh(); try { await readDir(); await readLib(); } catch (x) { log(String(x.message || x)); } busy = false; refresh(); };
+  $("sendBtn").onclick = send;
+  if (navigator.requestMIDIAccess) navigator.requestMIDIAccess({ sysex: true }).then(m => { midi = m; m.onstatechange = fillPorts; fillPorts(); }).catch(() => {});
+  else { $("devInfo").textContent = "This browser has no Web MIDI: use Chrome or Edge."; $("devInfo").className = "note bad"; }
+  refresh();
+})();
+</script>
+</body>
+</html>

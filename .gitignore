@@ -1,0 +1,43 @@
+# Firmware, corpus and reference clones. This repository holds code and
+# documentation only — no Elektron firmware, original or modified, ever.
+00_Resources/
+
+# Firmware artefacts anywhere else, in case one escapes 00_Resources/
+*.syx
+*.bin
+
+# Scratch output from scans and emulator runs — regenerate it, don't commit it.
+out/
+
+# Ghidra
+ghidra/*.gpr
+ghidra/*.rep/
+ghidra/*.lock*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# Claude Code session tooling -- local only, not part of the project
+.claude/
+# ...except the tooling hook, which is part of how this project works
+!.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+out/
+
+# the code generator's temporary header folder (cpage.compile_page), while a build or the gate compiles
+csrc/waverider/wr_gen_*/

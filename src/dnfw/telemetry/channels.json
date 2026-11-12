@@ -1,0 +1,174 @@
+{
+  "comment": "One CC assignment per line of telemetry. BOTH the firmware header and the host decoder are generated from this file, so they cannot drift apart -- the failure that made a day of page readings meaningless on 2026-09-23.",
+  "channel": 16,
+  "signals": [
+    {
+      "cc": 20,
+      "name": "track",
+      "width": 7,
+      "note": "the row this burst reports"
+    },
+    {
+      "cc": 21,
+      "name": "own_lo",
+      "width": 7,
+      "note": "this row's own mirror slot, low 7"
+    },
+    {
+      "cc": 22,
+      "name": "own_hi",
+      "width": 7,
+      "note": "this row's own mirror slot, high 7"
+    },
+    {
+      "cc": 23,
+      "name": "sfrm_hi",
+      "width": 7,
+      "note": "scanned frame record's word, high 7"
+    },
+    {
+      "cc": 24,
+      "name": "dest",
+      "width": 7,
+      "note": "the destination code in the row"
+    },
+    {
+      "cc": 25,
+      "name": "smir_hi",
+      "width": 7,
+      "note": "scanned mirror block's slot, high 7"
+    },
+    {
+      "cc": 26,
+      "name": "probe_a",
+      "width": 7,
+      "note": "the calibration constant, always 99"
+    },
+    {
+      "cc": 27,
+      "name": "sfrm_lo",
+      "width": 7,
+      "note": "scanned frame record's word, low 7"
+    },
+    {
+      "cc": 28,
+      "name": "scan_idx",
+      "width": 7,
+      "note": "which of the 16 blocks/records this burst scanned"
+    },
+    {
+      "cc": 29,
+      "name": "smir_lo",
+      "width": 7,
+      "note": "scanned mirror block's slot, low 7"
+    },
+    {
+      "cc": 30,
+      "name": "marker",
+      "width": 7,
+      "note": "burst counter"
+    },
+    {
+      "cc": 31,
+      "name": "frame_st",
+      "width": 7,
+      "note": "0 read, 1 destination never copied to the frame, 2 no destination"
+    },
+    {
+      "cc": 32,
+      "name": "owner",
+      "width": 7,
+      "note": "track whose live sound owns this voice via 0x80005308; 126 empty, 127 not a live sound"
+    },
+    {
+      "cc": 33,
+      "name": "sv_carry",
+      "width": 7,
+      "note": "saves that wrote a non-zero LFO4, since boot, mod 128"
+    },
+    {
+      "cc": 34,
+      "name": "ld_carry",
+      "width": 7,
+      "note": "loads that brought a non-zero LFO4 back, since boot, mod 128"
+    },
+    {
+      "cc": 35,
+      "name": "ext_live",
+      "width": 7,
+      "note": "live LFO4 table entries, capped at 127"
+    },
+    {
+      "cc": 36,
+      "name": "ext_drop",
+      "width": 7,
+      "note": "table entries dropped since boot, mod 128"
+    },
+    {
+      "cc": 37,
+      "name": "saves",
+      "width": 7,
+      "note": "every sound SAVE since boot, mod 128"
+    },
+    {
+      "cc": 41,
+      "name": "wr_frame",
+      "width": 7,
+      "note": "Waverider M0: the probe's frame, 0..15"
+    },
+    {
+      "cc": 42,
+      "name": "wr_idx_lo",
+      "width": 7,
+      "note": "Waverider M0: the probe's sample index, low 7"
+    },
+    {
+      "cc": 43,
+      "name": "wr_idx_hi",
+      "width": 7,
+      "note": "Waverider M0: the probe's sample index, high 7"
+    },
+    {
+      "cc": 44,
+      "name": "wr_val_lo",
+      "width": 7,
+      "note": "Waverider M0: the int16 read at the probe, bits 0-6"
+    },
+    {
+      "cc": 45,
+      "name": "wr_val_mid",
+      "width": 7,
+      "note": "Waverider M0: the int16 read at the probe, bits 7-13"
+    },
+    {
+      "cc": 46,
+      "name": "wr_val_hi",
+      "width": 7,
+      "note": "Waverider M0: the int16 read at the probe, bits 14-15"
+    },
+    {
+      "cc": 47,
+      "name": "wr_sum_lo",
+      "width": 7,
+      "note": "Waverider M0: whole-table checksum computed on the instrument, bits 0-6"
+    },
+    {
+      "cc": 48,
+      "name": "wr_sum_mid",
+      "width": 7,
+      "note": "Waverider M0: whole-table checksum, bits 7-13"
+    },
+    {
+      "cc": 49,
+      "name": "wr_sum_hi",
+      "width": 7,
+      "note": "Waverider M0: whole-table checksum, bits 14-15"
+    },
+    {
+      "cc": 50,
+      "name": "wr_passes",
+      "width": 7,
+      "note": "Waverider M0: whole-table checksum passes completed, mod 128; 0 means the sum is not yet valid"
+    }
+  ]
+}
