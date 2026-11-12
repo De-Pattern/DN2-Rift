@@ -3,7 +3,8 @@ perfect ... that will be the new engine, exactly as you made it"). This writes e
 audition patch's first second, as the design model renders it, to int16 .npy files and an
 index; test/test_fascia_golden.py holds the model to them (2 LSB), so no later change
 moves the approved sound by accident. The goldens live in the private bench repo
-(dn2mk2-bench, goldens/fascia; setup.sh installs them at ../fascia-golden).
+(DN2-Rift-bench, goldens/fascia: the pass-3 set; its setup.sh installs them at
+../fascia-golden).
 
     PYTHONPATH=src python3 scripts/fascia_golden.py OUTDIR
 """

@@ -1,7 +1,7 @@
-"""FASCIA's approved sound (owner, 2026-11-07, the pass-3 tour): the design model still
+"""FASCIA's approved sound, RIFT's reference (owner, 2026-11-07, the pass-3 tour; chosen for RIFT 2026-11-12): the design model still
 renders every audition patch's first second within 2 LSB of the goldens
-(scripts/fascia_golden.py; the private bench's goldens/fascia, installed by its setup.sh
-at ../fascia-golden or FASCIA_GOLDEN). A missing golden is a failure, not a skip."""
+(scripts/fascia_golden.py; the private bench DN2-Rift-bench's goldens/fascia, installed by
+its setup.sh at ../fascia-golden or FASCIA_GOLDEN). A missing golden is a failure, not a skip."""
 
 import json
 import os

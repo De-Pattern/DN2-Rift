@@ -1,3 +1,11 @@
+# RIFT
+
+This is RIFT (De-Pattern/DN2-Rift, public), the FASCIA-first Digitone II firmware; the
+private bench is De-Pattern/DN2-Rift-bench. The plan and its state: docs/rift.md. The rules
+below came over from the DN2 mk2 mod and all apply; where they name dn2mk2, dn2mk2-bench or
+the mod's site, RIFT's own repositories take their place as docs/rift.md moves each over.
+Nothing public may show the owner's name or email.
+
 # Rules for this repository
 
 ## The shipping rule — no exceptions
