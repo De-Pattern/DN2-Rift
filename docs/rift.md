@@ -39,6 +39,34 @@ De-Pattern/DN2-Rift-bench. Start from docs/HANDOFF-second-firmware.md for the ba
 - `test_fascia_program` needs the MD ROM: it reaches the DSP image builder, which imports
   every engine of the mod (next section).
 
+## Work in progress: branch `v0.1-wip` (2026-11-12)
+
+- **FASCIA's integration is in**: dn2mk2-firmware's v0.47 change (eb6b911, gated on v0.45 and
+  v0.47, then reverted there) and the runner's clock hook (f063559), merged onto v0.51 here.
+  Conflicts resolved by hand: the MACHINE SEL names (FLEX and FASCIA), the SHARC runner's
+  parts (FLEX's level and FASCIA's five), and fmt.c (v0.48's fine STRT/LEN/LOOP, then
+  FASCIA's formatters last; its TYPA rides record 239, STRT's, which smp_fine restores to
+  stock before FASCIA's are applied). perc.asm, smp.asm, fascia.asm, the SHARC objects and
+  waverider_code.json regenerated; the code replays byte for byte.
+- **MACHINE SEL**: the stock machines and FASCIA only (`coldfire.LIST_NEW`; the mod's list
+  kept as `LIST_DN2MK2`). VERSION 0.1.
+- **The build is refused by the preflight, rightly**: 2,098,982 of 2,097,152 bytes (1,830
+  over the USB upgrade buffer), and the DSP program at 1,047,592 of 1,048,575 unpacked.
+  Hiding the mod's engines is not enough: their code must come out.
+- **The next piece**: PERC's program heads the DSP chain (the register save, the guard's
+  frame bookkeeping, the jump to smp.asm, then FASCIA, then the shared tail). Removing PERC,
+  the Machinedrum and the Monomachine (about 139 KB of L2 code, their tables and state)
+  needs a small head program in its place, the lookup mapping their types to FM Tone, and
+  the ColdFire's LOAD keeping only 0..4 and 18, so a DN2 mk2 project with a PERC or
+  Monomachine track opens as FM Tone (as stock opens it) instead of reaching code that is
+  gone. Then the sampler's machines (smp.asm also carries the ColdFire-DSP link and the
+  recorder; FASCIA is chained after it), then the ColdFire side (pages, formatters, md_page.c).
+- **Pass 3's panel needs 32 records.** v2's 24 ride WaveTone's records (12 full-range, 5 of
+  its 0..100/0..120 records for the choices) and 7 of FM Tone's spare slots 50..56. Pass 3's
+  26 continuous controls fit only if 14 of the 15 FM Tone spares are used (227..237,
+  208..211); 235..237 have no modulation mask, so the controls on them could not be LFO
+  destinations unless the mask is opened. Its sixth choice (CTYP) fits on OFS2.
+
 ## Next, in order
 
 1. **Stand FASCIA on its own.** `waverider/dsp.py` (the DSP image), `waverider/pages.py`,
