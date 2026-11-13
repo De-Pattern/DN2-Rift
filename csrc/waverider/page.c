@@ -97,6 +97,12 @@ u32 wr_lfo_mask(u32 rec)
         const char *sh = NAME_SHORT(rec);
         if (sh && sh[0] == '-' && sh[1] == 0)
             return 0;
+        /* RIFT: FASCIA's controls on records with no modulation (ATK, FDBK, VARY on FM Tone's
+         * 235..237) are not offered as LFO destinations */
+        if (wr_active() == FSC_KIND)
+            for (int j = 0; j < FSC_NOLFO_N; j++)
+                if (rec == fsc_nolfo[j])
+                    return 0;
     }
     return STOCK_MASK(rec);
 }

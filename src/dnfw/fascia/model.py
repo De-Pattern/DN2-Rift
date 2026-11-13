@@ -18,7 +18,16 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from scipy.signal import hilbert, lfilter
+
+
+def hilbert(*a, **k):        # scipy on first use, so PyPy (the gate's SHARC runner, no scipy)
+    from scipy.signal import hilbert as _h   # noqa: PLC0415   can import the model's constants
+    return _h(*a, **k)
+
+
+def lfilter(*a, **k):
+    from scipy.signal import lfilter as _l   # noqa: PLC0415
+    return _l(*a, **k)
 
 RATE = 48000.0
 BLOCK = 32
@@ -37,22 +46,18 @@ BODIES = ("MEMB", "PLATE", "BAR", "VIBE", "CHIME", "BELL", "GLASS", "TUBE", "STR
 
 # v2 (owner, 2026-11-08: "fold in the 4 pages to 3"): 24 controls, the rest folded into them
 # as macros (expand()). The engine below still runs on the 32 internal controls (INTERNAL).
-XMODS_PANEL = XMODS + ("RING",)
+# RIFT (owner, 2026-11-12): the panel is pass 3's, the engine's own 32 controls on four pages of
+# eight, as the owner approved them on 2026-11-07. (dn2mk2-firmware's v2 put a 24-control panel
+# with macros in front of the same engine; it is not RIFT's.)
 PAGES = {
-    "SYN1 EXCITE": ("TYPA", "TYPB", "HARD", "DUST", "TZFM", "BEND", "MIX", "DEC"),
-    "SYN2 BODY": ("BODA", "BODB", "TUNE", "GEOM", "MATL", "POS", "COUP", "DAMP"),
-    "SYN3 SPECTRAL": ("MORPH", "SKIN", "SHIFT", "CLIK", "XMOD", "BUZZ", "LPG", "DRIVE"),
+    "SYN1 EXCITERS": ("TYPA", "TYPB", "HARD", "DUST", "TZFM", "BEND", "MIX", "DEC"),
+    "SYN2 RESONATORS": ("BODA", "BODB", "TUNE", "GEOM", "MATL", "POS", "COUP", "DAMP"),
+    "SYN3 SPECTRAL": ("MORPH", "FORM", "SHIFT", "RING", "SIDE", "FOLD", "LPG", "CHAR"),
+    "SYN4 ONSET/INTERACT": ("ATK", "CLIK", "CTYP", "XMOD", "FDBK", "BUZZ", "WATR", "VARY"),
 }
-CHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "XMOD": XMODS_PANEL}
+CHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES,
+           "CTYP": CLICKS, "XMOD": XMODS}
 
-DEFAULTS = {
-    "TYPA": 0, "TYPB": 1, "HARD": 90, "DUST": 20, "TZFM": 0, "BEND": 10, "MIX": 30, "DEC": 20,
-    "BODA": 0, "BODB": 121, "TUNE": 64, "GEOM": 64, "MATL": 50, "POS": 40, "COUP": 0, "DAMP": 60,
-    "MORPH": 0, "SKIN": 64, "SHIFT": 64, "CLIK": 0, "XMOD": 0, "BUZZ": 0, "LPG": 40, "DRIVE": 0,
-}
-EXTRA = ()                       # controls not on a page (none)
-
-# the engine's own controls (the approved v1 set), and how the panel's 24 make them
 INTERNAL = {
     "TYPA": 0, "TYPB": 1, "HARD": 90, "DUST": 20, "TZFM": 0, "BEND": 10, "MIX": 30, "DEC": 20,
     "BODA": 0, "BODB": 121, "TUNE": 64, "GEOM": 64, "MATL": 50, "POS": 40, "COUP": 0, "DAMP": 60,
@@ -60,6 +65,7 @@ INTERNAL = {
     "ATK": 0, "CLIK": 0, "CTYP": 0, "XMOD": 0, "FDBK": 0, "BUZZ": 0, "WATR": 0, "VARY": 40,
 }
 ICHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "CTYP": CLICKS, "XMOD": XMODS}
+DEFAULTS = dict(INTERNAL)
 
 
 def _span(names, k: int) -> int:
@@ -68,42 +74,9 @@ def _span(names, k: int) -> int:
 
 
 def expand(panel: dict) -> dict:
-    """the panel's 24 controls -> the engine's 32:
-    HARD   its soft end (under 32) also slows the onset: swell, soft mallet, hard strike (ATK)
-    TZFM   the sideband ratio climbs with the depth (SIDE)
-    CLIK   four zones, SNAP / TICK / NOISE / THUMP, each louder across its span (CTYP, level)
-    XMOD   + RING: A x B (or a sine when B is off), COUP its depth; TRADE also feeds B back
-           into A by COUP (FDBK); EXCITE, BEND, CHOKE as before
-    SKIN   bipolar: under 64 the vowel formants (FORM), over 64 the water (WATR)
-    DRIVE  saturation (CHAR) to the middle, then folding on top (FOLD)
-    VARY   fixed at its default (40): every hit still a little different"""
-    p = {**DEFAULTS, **panel}
-    q = {k: p[k] for k in ("TYPA", "TYPB", "DUST", "BEND", "MIX", "DEC", "BODA", "BODB", "TUNE",
-                           "GEOM", "MATL", "POS", "DAMP", "MORPH", "SHIFT", "BUZZ", "LPG")}
-    q = {**INTERNAL, **q}
-    h = p["HARD"]
-    q["HARD"] = h
-    q["ATK"] = (32 - h) * 4 if h < 32 else 0
-    q["TZFM"] = p["TZFM"]
-    q["SIDE"] = int(16 + 0.75 * p["TZFM"])
-    c = p["CLIK"]
-    if c > 0:
-        z = min((c - 1) * 4 // 127, 3)
-        within = (c - 1) - z * 127 / 4
-        q["CTYP"] = _span(CLICKS, z)
-        q["CLIK"] = int(32 + 95 * min(max(within / (127 / 4), 0.0), 1.0))
-    x = XMODS_PANEL[choice("XMOD", p["XMOD"])]
-    if x == "RING":
-        q["XMOD"], q["COUP"], q["RING"] = _span(XMODS, 0), 0, p["COUP"]
-    else:
-        q["XMOD"], q["COUP"] = _span(XMODS, XMODS.index(x)), p["COUP"]
-    sk = p["SKIN"]
-    q["FORM"] = min((64 - sk) * 2, 127) if sk < 64 else 0
-    q["WATR"] = min((sk - 64) * 2, 127) if sk > 64 else 0
-    d = p["DRIVE"]
-    q["CHAR"] = min(d * 2, 127)
-    q["FOLD"] = (d - 64) * 2 if d > 64 else 0
-    return q
+    """the panel's controls -> the engine's: RIFT's panel is the engine's 32 (pass 3), so this
+    is the panel over the defaults (as `_internal`)"""
+    return {**INTERNAL, **{k: v for k, v in panel.items() if k in INTERNAL}}
 
 
 

@@ -1,4 +1,5 @@
-"""FASCIA on the ColdFire: its machine type, its names, and where its 24 controls sit
+"""FASCIA on the ColdFire: its machine type, its names, and where its 32 controls sit
+(RIFT: pass 3's four pages; the text below describes v2's 24 where it says so)
 (docs/fascia.md, "The ColdFire side"). The one table both the ColdFire's generated C
 header (dnfw.waverider.pages) and the FASCIA DSP program read.
 
@@ -36,74 +37,99 @@ LONG, SHORT = "Fascia", "FSC"             # MACHINE SEL's names (as "Perc"/"PRC"
 LISTED = True
 
 # -- the panel, as dnfw.fascia.model has it (held equal by test_fascia_coldfire) -------------
+# RIFT (owner, 2026-11-12): pass 3's four pages, the engine's own 32 controls
 TYPES = ("STRIKE", "BLOW", "BOW", "DUST", "PULSE", "TZFM")
 BODIES = ("MEMB", "PLATE", "BAR", "VIBE", "CHIME", "BELL", "GLASS", "TUBE", "STRING", "OFF")
-XMODS_PANEL = ("EXCITE", "BEND", "CHOKE", "TRADE", "RING")
+CLICKS = ("SNAP", "TICK", "NOISE", "THUMP")
+XMODS = ("EXCITE", "BEND", "CHOKE", "TRADE")
 PAGES = {
-    "SYN1 EXCITE": ("TYPA", "TYPB", "HARD", "DUST", "TZFM", "BEND", "MIX", "DEC"),
-    "SYN2 BODY": ("BODA", "BODB", "TUNE", "GEOM", "MATL", "POS", "COUP", "DAMP"),
-    "SYN3 SPECTRAL": ("MORPH", "SKIN", "SHIFT", "CLIK", "XMOD", "BUZZ", "LPG", "DRIVE"),
+    "SYN1 EXCITERS": ("TYPA", "TYPB", "HARD", "DUST", "TZFM", "BEND", "MIX", "DEC"),
+    "SYN2 RESONATORS": ("BODA", "BODB", "TUNE", "GEOM", "MATL", "POS", "COUP", "DAMP"),
+    "SYN3 SPECTRAL": ("MORPH", "FORM", "SHIFT", "RING", "SIDE", "FOLD", "LPG", "CHAR"),
+    "SYN4 ONSET/INTERACT": ("ATK", "CLIK", "CTYP", "XMOD", "FDBK", "BUZZ", "WATR", "VARY"),
 }
-CHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "XMOD": XMODS_PANEL}
+CHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "CTYP": CLICKS, "XMOD": XMODS}
 DEFAULTS = {
     "TYPA": 0, "TYPB": 1, "HARD": 90, "DUST": 20, "TZFM": 0, "BEND": 10, "MIX": 30, "DEC": 20,
     "BODA": 0, "BODB": 121, "TUNE": 64, "GEOM": 64, "MATL": 50, "POS": 40, "COUP": 0, "DAMP": 60,
-    "MORPH": 0, "SKIN": 64, "SHIFT": 64, "CLIK": 0, "XMOD": 0, "BUZZ": 0, "LPG": 40, "DRIVE": 0,
+    "MORPH": 0, "FORM": 0, "SHIFT": 64, "RING": 0, "SIDE": 40, "FOLD": 0, "LPG": 40, "CHAR": 0,
+    "ATK": 0, "CLIK": 0, "CTYP": 0, "XMOD": 0, "FDBK": 0, "BUZZ": 0, "WATR": 0, "VARY": 40,
 }
 
 # -- the slot table: control -> (record id, frame slot, low, top) -----------------------------
 # The stock record's own range (0x401f7f94 + 60 id: +4 slot, +8 min, +12 max): value =
 # clamp((word >> 8) - low, 0, top); on the DSP the frame word is at 168 + 2 slot + 146 t.
+# RIFT: the 16 continuous and 5 choice controls v2 shared with pass 3 keep v2's records; the
+# rest: FORM, CLIK, CHAR on WaveTone's DEC, BASE, CHAR (freed by v2's SKIN, CLIK, DRIVE);
+# CTYP on OFS2 (0..100); RING on FM Tone's 234; ATK, FDBK, VARY on FM Tone's 235..237 (their
+# modulation scale made FM Tone's, coldfire.FSC_MOD_RECORDS); WATR, FOLD, SIDE on FM Tone's
+# 208..210 (0..0x7ffe: word >> 8 is 0..127).
 SLOTS = {
-    # SYN1 EXCITE
+    # SYN1 EXCITERS
     "TYPA": (239, 26, 0, 120),           # WAV1  CC 41
     "TYPB": (243, 32, 0, 120),           # WAV2  CC 45
     "HARD": (241, 30, 0, 127),           # LEV1  CC 43
-    "DUST": (227, 50, 0, 127),           # FM Tone's Pitch All, no CC
-    "TZFM": (228, 51, 0, 127),           # FM Tone's P2A4, no CC
-    "BEND": (229, 52, 0, 127),           # FM Tone's RALL, no CC
-    "MIX": (230, 53, 0, 127),            # FM Tone's LVAB, no CC
+    "DUST": (227, 50, 0, 127),           # FM Tone's, no CC
+    "TZFM": (228, 51, 0, 127),           # FM Tone's, no CC
+    "BEND": (229, 52, 0, 127),           # FM Tone's, no CC
+    "MIX": (230, 53, 0, 127),            # FM Tone's, no CC
     "DEC": (253, 40, 0, 127),            # ATK   CC 56
-    # SYN2 BODY
+    # SYN2 RESONATORS
     "BODA": (240, 29, 0, 100),           # PD1   CC 42
     "BODB": (244, 35, 0, 100),           # PD2   CC 46
     "TUNE": (245, 36, 0, 127),           # LEV2  CC 47
     "GEOM": (261, 48, 0, 127),           # MAST, no CC
-    "MATL": (231, 54, 0, 127),           # FM Tone's ATAB, no CC
-    "POS": (232, 55, 0, 127),            # FM Tone's DCAB, no CC
-    "COUP": (233, 56, 0, 127),           # FM Tone's EDAB, no CC
+    "MATL": (231, 54, 0, 127),           # FM Tone's, no CC
+    "POS": (232, 55, 0, 127),            # FM Tone's, no CC
+    "COUP": (233, 56, 0, 127),           # FM Tone's, no CC
     "DAMP": (254, 41, 0, 127),           # HOLD  CC 57
     # SYN3 SPECTRAL
     "MORPH": (252, 38, 0, 127),          # DRIF  CC 55
-    "SKIN": (255, 42, 0, 127),           # DEC   CC 58
+    "FORM": (255, 42, 0, 127),           # DEC   CC 58
     "SHIFT": (258, 45, 0, 127),          # WDTH  CC 61
-    "CLIK": (257, 44, 0, 127),           # BASE  CC 60
-    "XMOD": (246, 28, 0, 100),           # OFS1  CC 48
-    "BUZZ": (262, 49, 0, 127),           # FINE, no CC
+    "RING": (234, 57, 0, 127),           # FM Tone's, no CC
+    "SIDE": (210, 60, 0, 127),           # FM Tone's (0..0x7ffe), no CC
+    "FOLD": (209, 59, 0, 127),           # FM Tone's (0..0x7ffe), no CC
     "LPG": (256, 43, 0, 127),            # NLEV  CC 59
-    "DRIVE": (260, 47, 0, 127),          # CHAR  CC 63
+    "CHAR": (260, 47, 0, 127),           # CHAR  CC 63
+    # SYN4 ONSET/INTERACT
+    "ATK": (235, 62, 0, 127),            # FM Tone's, no CC
+    "CLIK": (257, 44, 0, 127),           # BASE  CC 60
+    "CTYP": (250, 34, 0, 100),           # OFS2  CC 52
+    "XMOD": (246, 28, 0, 100),           # OFS1  CC 48
+    "FDBK": (236, 63, 0, 127),           # FM Tone's, no CC
+    "BUZZ": (262, 49, 0, 127),           # FINE, no CC
+    "WATR": (208, 58, 0, 127),           # FM Tone's (0..0x7ffe), no CC
+    "VARY": (237, 64, 0, 127),           # FM Tone's, no CC
 }
 CC = {"TYPA": 41, "TYPB": 45, "HARD": 43, "DEC": 56, "BODA": 42, "BODB": 46, "TUNE": 47,
-      "DAMP": 57, "MORPH": 55, "SKIN": 58, "SHIFT": 61, "CLIK": 60, "XMOD": 48, "LPG": 59,
-      "DRIVE": 63}                       # the stock records' MIDI CC; the rest have none
+      "DAMP": 57, "MORPH": 55, "FORM": 58, "SHIFT": 61, "LPG": 59, "CHAR": 63, "CLIK": 60,
+      "CTYP": 52, "XMOD": 48,
+      "WATR": 70, "FOLD": 71, "SIDE": 72, "ATK": 75, "FDBK": 76, "VARY": 77}  # the stock records' MIDI CC; the rest have none
+# RIFT: ATK, FDBK and VARY ride FM Tone's 235..237, whose modulation mask is 0: p-lockable and
+# slid, not LFO destinations (set-and-forget controls; opening the mask is a follow-up)
+NO_LFO = ("ATK", "FDBK", "VARY")
 
 CONTROLS = tuple(c for page in PAGES.values() for c in page)          # page order, 24
 PAGE_TITLES = tuple(PAGES)                                             # "SYN1 EXCITE", ...
 # the header's line (the descriptor's subtitle, shown with the page's number): the machine
 # and the page's name, as stock shows "WaveTone (1/3)"
 PAGE_SUBTITLES = tuple(f"{LONG} {t.split(' ', 1)[1].capitalize()}" for t in PAGES)
-BIPOLAR = ("TUNE", "GEOM", "SKIN", "SHIFT")                            # shown -64..+63, 0 at 64
+BIPOLAR = ("TUNE", "GEOM", "SHIFT")                            # shown -64..+63, 0 at 64
 # a choice's name in its box: four characters fit inside it in the grid's label font (five
 # touched its border in the emulator); the header and SYN held show the whole name
 BOX = {"STRIKE": "STRK", "PULSE": "PULS", "PLATE": "PLAT", "CHIME": "CHIM", "GLASS": "GLAS",
-       "STRING": "STRG", "EXCITE": "EXCT", "CHOKE": "CHOK", "TRADE": "TRAD"}
+       "STRING": "STRG", "EXCITE": "EXCT", "CHOKE": "CHOK", "TRADE": "TRAD", "NOISE": "NOIS",
+       "THUMP": "THMP"}
 LONG_NAMES = {
     "TYPA": "Exciter A", "TYPB": "Exciter B", "HARD": "Hardness", "DUST": "Dust",
     "TZFM": "Thru-Zero FM", "BEND": "Bend", "MIX": "Exciter Mix", "DEC": "Exciter Decay",
     "BODA": "Body A", "BODB": "Body B", "TUNE": "Tune", "GEOM": "Geometry",
     "MATL": "Material", "POS": "Position", "COUP": "Coupling", "DAMP": "Damping",
-    "MORPH": "Morph", "SKIN": "Skin", "SHIFT": "Freq Shift", "CLIK": "Click",
-    "XMOD": "Cross Mod", "BUZZ": "Buzz", "LPG": "Low Pass Gate", "DRIVE": "Drive",
+    "MORPH": "Morph", "FORM": "Formant", "SHIFT": "Freq Shift", "RING": "Ring Mod",
+    "SIDE": "Sideband", "FOLD": "Fold", "LPG": "Low Pass Gate", "CHAR": "Character",
+    "ATK": "Attack", "CLIK": "Click", "CTYP": "Click Type", "XMOD": "Cross Mod",
+    "FDBK": "Feedback", "BUZZ": "Buzz", "WATR": "Water", "VARY": "Variation",
 }
 
 # the records FASCIA's sound owns beyond WaveTone's: FM Tone's on slots 50..64 (page 0).
@@ -187,5 +213,7 @@ def c_header() -> str:
         f"static const unsigned char fsc_bipolar[FSC_N] = {{{arr(int(c in BIPOLAR) for c in CONTROLS)}}};",
         f"static const char fsc_label[FSC_N][6] = {{{', '.join(q + c + q for c in CONTROLS)}}};",
         f"static const unsigned short fsc_default[FSC_N] = {{{arr(dw[c] for c in CONTROLS)}}};",
+        f"#define FSC_NOLFO_N {len(NO_LFO)}",
+        f"static const unsigned short fsc_nolfo[FSC_NOLFO_N] = {{{arr(SLOTS[c][0] for c in NO_LFO)}}};",
         "",
     ])

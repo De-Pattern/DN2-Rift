@@ -37,9 +37,6 @@ def test_expand_is_the_models_for_every_value():
     for k in R.DEFAULTS:
         for v in range(128):
             assert L.expand({k: v}) == R.expand({k: v}), (k, v)
-    for x in range(128):
-        for cp in range(0, 128, 7):
-            assert L.expand({"XMOD": x, "COUP": cp}) == R.expand({"XMOD": x, "COUP": cp})
     rnd = random.Random(5)
     for _ in range(500):
         p = {k: rnd.randint(0, 127) for k in R.DEFAULTS}
@@ -84,7 +81,7 @@ def test_approximations():
 def test_float32_throughout():
     v = L.Voice(seed=2)
     v.note_on(60, 1.0)
-    p = dict(BODB=C("BODB", "BELL"), SKIN=120, SHIFT=90, DRIVE=100, XMOD=C("XMOD", "RING"), COUP=60)
+    p = dict(BODB=C("BODB", "BELL"), WATR=112, SHIFT=90, CHAR=127, FOLD=72, RING=60)
     for _ in range(20):
         y = v.block(p)
         assert y.dtype == F
@@ -301,7 +298,7 @@ def _model_wet(z, amt, f0):
 def test_water_level_match_converges_on_the_models(patch, note):
     """WATR's causal level match (running sums since the strike) reaches the model's
     whole-signal gain; early it is lower (the documented onset deviation, bounded here)"""
-    p = dict(A.PATCHES[patch][0], SKIN=64)
+    p = dict(A.PATCHES[patch][0], FORM=0, WATR=0)
     z = R.Voice(p, note, 0.8, seed=1).render(1.5)
     f0 = R.mtof(note)
     skin, wet = _model_wet(z, 1.0, f0)
@@ -429,7 +426,7 @@ def test_choices_latch_at_the_strike_and_xmod_steps():
     v.block(dict(BODA=C("BODA", "BELL"), BODB=C("BODB", "OFF"), XMOD=C("XMOD", "EXCITE")))
     v.block(dict(BODA=C("BODA", "MEMB"), BODB=C("BODB", "PLATE"), TYPA=C("TYPA", "BOW")))
     assert v.a.kind == "BELL" and v.b is None and v.ea.kind == "STRIKE"
-    q = L.engine(dict(XMOD=C("XMOD", "RING"), COUP=80))
+    q = L.engine(dict(RING=80))
     assert L.block_controls(q, 1.0)["ring"] == 80        # XMOD is read every block
 
 
@@ -443,7 +440,7 @@ def test_no_denormals_anywhere():
     """every state is flushed under FLOOR each block (the SHARC flushes denormals), so none is
     ever held; checked every block of long tails, quiet hits and every post stage"""
     for p, vel in ((dict(DAMP=0, MATL=127, BODA=C("BODA", "GLASS")), 1e-6),
-                   (dict(DAMP=127, LPG=127, SKIN=120, SHIFT=20, DRIVE=127, XMOD=C("XMOD", "RING"), COUP=70), 0.3),
+                   (dict(DAMP=127, LPG=127, WATR=112, SHIFT=20, CHAR=127, FOLD=126, RING=70), 0.3),
                    (dict(HARD=5, DUST=127, TYPB=C("TYPB", "BOW"), MIX=60, BODB=C("BODB", "BELL"), BUZZ=90), 1.0)):
         v = L.Voice(seed=2)
         v.note_on(30, vel)
@@ -561,10 +558,11 @@ def test_cost_estimate():
     worst = L.cost_estimate({**{k: 127 for k in R.DEFAULTS}, "TYPA": C("TYPA", "BOW"),
                              "TYPB": C("TYPB", "BLOW"), "MIX": 64, "BODA": C("BODA", "BELL"),
                              "BODB": C("BODB", "GLASS"), "XMOD": C("XMOD", "TRADE"),
-                             "SKIN": 127, "SHIFT": 0})
+                             "SHIFT": 0})
     assert typical["ring"] < typical["attack"] < worst["attack"]
     assert worst["modes"] == (24, 24)
-    off = L.cost_estimate({"SKIN": 64, "SHIFT": 64, "DRIVE": 0, "BUZZ": 0, "CLIK": 0, "LPG": 0, "BODB": C("BODB", "OFF")})
+    off = L.cost_estimate({"FORM": 0, "WATR": 0, "SHIFT": 64, "CHAR": 0, "FOLD": 0, "BUZZ": 0, "CLIK": 0, "LPG": 0,
+                           "BODB": C("BODB", "OFF")})
     assert "watr" not in off["parts"] and "shift" not in off["parts"]
     # the voice's own tally agrees in kind: an attack block costs more than a ringing one
     v = L.Voice(seed=1)

@@ -64,6 +64,8 @@ WHERE_NONE = 0xFFFF              # the voice's delay lines held nothing non-fini
 WHERE_DELAY = 0x8000             # | the first non-finite delay-line word's index (0..2047)
 LIMIT_DEFAULT = 400_000          # until a frame has been measured: 0.6 of 666,667 (1 GHz, 1,500 frames a second)
 FLOOR = 60_000                   # what a voice is expected to cost at least
+COST_CAP = 200_000               # RIFT: a slot's cost word read as this at most (one voice's
+                                 # measured worst is far below; 1.5 x this is under LIMIT_DEFAULT)
 PERIOD_MIN, PERIOD_MAX = 300_000, 3_000_000
 
 
@@ -308,6 +310,13 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.iop(9, 10, "+", 9)
     p.seti(5, 9)
     p.ldi(9, 0, 5, "this slot's last cost")
+    # RIFT (2026-11-13): a cost word no voice measured (garbage, a stale one past any voice's
+    # cost) is read as COST_CAP at most and never negative: otherwise the guard could leave the
+    # slot out every block, so never measure it again (fgarbage)
+    p.iconst(10, 0)
+    p.iop(9, 9, "MAX", 10)
+    p.iconst(10, COST_CAP)
+    p.iop(9, 9, "MIN", 10)
     p.lsh(10, 9, -1)
     p.iop(9, 9, "+", 10)                       # x 1.5
     p.iconst(10, FLOOR)

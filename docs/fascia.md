@@ -187,6 +187,10 @@ only (`dnfw.waverider.coldfire` `slot_shim`, `canon_valid`). FM Tone's 235..237 
 their modulation mask is 0. Every other record the sound has on our slots is named `-` while a
 FASCIA track is active, and so left out of the LFO destination list (`wr_lfo_mask`).
 
+RIFT (2026-11-13): pass 3's 32 controls on four pages. ATK, FDBK and VARY ride FM Tone's
+235..237, whose modulation mask is 0: p-lockable and slid, not LFO destinations. WATR, FOLD and
+SIDE ride FM Tone's 208..210 (0..0x7ffe, so word >> 8 is 0..127; MIDI CC 70..72; 235..237 have CC 75..77).
+
 | control | slot | record | range | stock record | CC | kind | DSP frame offset (+146 t) |
 |---|---|---|---|---|---|---|---|
 | TYPA | 26 | 239 | 0..120 | WaveTone WAV1 | 41 | choice, 6 | 220 |
@@ -206,16 +210,24 @@ FASCIA track is active, and so left out of the LFO destination list (`wr_lfo_mas
 | COUP | 56 | 233 | 0..127 | FM Tone EDAB | - | knob | 280 |
 | DAMP | 41 | 254 | 0..127 | WaveTone HOLD | 57 | knob | 250 |
 | MORPH | 38 | 252 | 0..127 | WaveTone DRIF | 55 | knob | 244 |
-| SKIN | 42 | 255 | 0..127 | WaveTone DEC | 58 | bipolar | 252 |
+| FORM | 42 | 255 | 0..127 | WaveTone DEC | 58 | knob | 252 |
 | SHIFT | 45 | 258 | 0..127 | WaveTone WDTH | 61 | bipolar | 258 |
-| CLIK | 44 | 257 | 0..127 | WaveTone BASE | 60 | knob | 256 |
-| XMOD | 28 | 246 | 0..100 | WaveTone OFS1 | 48 | choice, 5 | 224 |
-| BUZZ | 49 | 262 | 0..127 | WaveTone FINE | - | knob | 266 |
+| RING | 57 | 234 | 0..127 | FM Tone 234 | - | knob | 282 |
+| SIDE | 60 | 210 | 0..127 | FM Tone 210 | 72 | knob | 288 |
+| FOLD | 59 | 209 | 0..127 | FM Tone 209 | 71 | knob | 286 |
 | LPG | 43 | 256 | 0..127 | WaveTone NLEV | 59 | knob | 254 |
-| DRIVE | 47 | 260 | 0..127 | WaveTone CHAR | 63 | knob | 262 |
+| CHAR | 47 | 260 | 0..127 | WaveTone CHAR | 63 | knob | 262 |
+| ATK | 62 | 235 | 0..127 | FM Tone 235 | 75 | knob, no LFO | 292 |
+| CLIK | 44 | 257 | 0..127 | WaveTone BASE | 60 | knob | 256 |
+| CTYP | 34 | 250 | 0..100 | WaveTone OFS2 | 52 | choice, 4 | 236 |
+| XMOD | 28 | 246 | 0..100 | WaveTone OFS1 | 48 | choice, 4 | 224 |
+| FDBK | 63 | 236 | 0..127 | FM Tone 236 | 76 | knob, no LFO | 294 |
+| BUZZ | 49 | 262 | 0..127 | WaveTone FINE | - | knob | 266 |
+| WATR | 58 | 208 | 0..127 | FM Tone 208 | 70 | knob | 284 |
+| VARY | 64 | 237 | 0..127 | FM Tone 237 | 77 | knob, no LFO | 296 |
 
-**Pages.** Three descriptors (`SYN1 EXCITE`, `SYN2 BODY`, `SYN3 SPECTRAL`; the header reads
-"Fascia Excite (1/3)" ...), drawn by `fsc_page_draw` (`csrc/sampler/smp_page.c`) in the Elektron
+**Pages.** Four descriptors (RIFT, pass 3: `SYN1 EXCITERS`, `SYN2 RESONATORS`, `SYN3 SPECTRAL`,
+`SYN4 ONSET/INTERACT`; the header reads "Fascia Exciters (1/4)" ...), drawn by `fsc_page_draw` (`csrc/sampler/smp_page.c`) in the Elektron
 grid of the DT2 machines' pages: eight cells at the DT2's centres, a knob for a continuous
 control, the option's name in a box for a choice (four letters in the box: STRK, PULS, PLAT,
 CHIM, GLAS, STRG, EXCT, CHOK, TRAD; the header and SYN held show the whole name), the label under

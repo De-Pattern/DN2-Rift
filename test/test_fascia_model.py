@@ -19,34 +19,24 @@ def render(p, note=48, vel=1.0, secs=0.3, seed=1):
     return R.Voice(p, note, vel, seed=seed).render(secs)
 
 
-def test_pages_are_three_by_eight_and_defaults_cover_them():
+def test_pages_are_four_by_eight_and_defaults_cover_them():
+    """RIFT (2026-11-12): pass 3's panel, the engine's own 32 controls on four pages of eight"""
     names = [n for page in R.PAGES.values() for n in page]
-    assert [len(p) for p in R.PAGES.values()] == [8, 8, 8]          # v2: three pages (owner, 2026-11-08)
-    assert len(set(names)) == 24 and set(names) | set(R.EXTRA) == set(R.DEFAULTS)
+    assert [len(p) for p in R.PAGES.values()] == [8, 8, 8, 8]
+    assert len(set(names)) == 32 and set(names) == set(R.DEFAULTS) == set(R.INTERNAL)
+    assert R.DEFAULTS == R.INTERNAL and R.CHOICES == R.ICHOICES
 
 
-def test_expand_makes_every_engine_control():
-    """the panel's 24 make all 32 of the engine's, inside 0..127, for any panel"""
+def test_expand_is_the_panel_over_the_defaults():
+    """the panel is the engine's: expand keeps every value and fills the rest from INTERNAL,
+    exactly as `_internal` does"""
     import random
     rnd = random.Random(3)
     for _ in range(200):
-        q = R.expand({k: rnd.randint(0, 127) for k in R.DEFAULTS})
-        assert set(q) == set(R.INTERNAL) and all(0 <= v <= 127 for v in q.values()), q
-
-
-def test_macros():
-    e = R.expand
-    assert e({"HARD": 0})["ATK"] > 0 and e({"HARD": 40})["ATK"] == 0          # HARD's soft end swells
-    assert e({"SKIN": 0})["FORM"] > 0 and e({"SKIN": 0})["WATR"] == 0         # SKIN: vowels left
-    assert e({"SKIN": 127})["WATR"] > 0 and e({"SKIN": 127})["FORM"] == 0     # water right
-    assert e({"SKIN": 64})["FORM"] == e({"SKIN": 64})["WATR"] == 0
-    assert e({"DRIVE": 60})["FOLD"] == 0 and e({"DRIVE": 120})["FOLD"] > 0    # DRIVE folds past the middle
-    ring = e({"XMOD": 127, "COUP": 90})
-    assert ring["RING"] == 90 and ring["COUP"] == 0                            # XMOD RING: COUP its depth
-    for z, kind in enumerate(R.CLICKS):                                        # CLIK's four zones
-        v = int(1 + z * 127 / 4 + 5)
-        assert R.ICHOICES["CTYP"][R.ichoice("CTYP", e({"CLIK": v})["CTYP"])] == kind
-    assert e({"CLIK": 0})["CLIK"] == 0
+        p = {k: rnd.randint(0, 127) for k in rnd.sample(sorted(R.DEFAULTS), 12)}
+        q = R.expand(p)
+        assert q == {**R.INTERNAL, **p}
+    assert R.expand({"FDBK": 40, "VARY": 110})["FDBK"] == 40 and R.expand({})["VARY"] == 40
 
 
 @pytest.mark.parametrize("name", list(R.CHOICES))

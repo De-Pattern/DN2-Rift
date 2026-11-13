@@ -84,22 +84,23 @@ def dt2_section7(data: bytes) -> bytes:
     return body
 
 
-def build(dn2: str, dt2: str, md: str, out: str, mnm: str | None = None) -> str:
+def build(dn2: str, dt2: str, md: str | None, out: str, mnm: str | None = None) -> str:
     WORK.mkdir(parents=True, exist_ok=True)
     d = WORK / "dn2.syx"
     d.write_bytes(unzip(pathlib.Path(dn2).read_bytes(), (".syx",)))
     dn2 = str(d)
     s7 = WORK / "dt2_section7.bin"
     s7.write_bytes(dt2_section7(unzip(pathlib.Path(dt2).read_bytes(), (".syx",))))
-    mdb = WORK / "md_os163.bin"
-    mdb.write_bytes(md_image(unzip(pathlib.Path(md).read_bytes(), (".syx", ".bin"))))
     os.environ["DT2_SECTION7"] = str(s7)
-    os.environ["MD_OS_BIN"] = str(mdb)
-    from dnfw.md import rom
-    try:
-        rom.blocks()
-    except Exception as e:                       # noqa: BLE001
-        raise PatchError(f"that is not the Machinedrum UW OS 1.63 ({e})") from None
+    if md is not None:                           # RIFT: not needed (no Machinedrum engine)
+        mdb = WORK / "md_os163.bin"
+        mdb.write_bytes(md_image(unzip(pathlib.Path(md).read_bytes(), (".syx", ".bin"))))
+        os.environ["MD_OS_BIN"] = str(mdb)
+        from dnfw.md import rom
+        try:
+            rom.blocks()
+        except Exception as e:                   # noqa: BLE001
+            raise PatchError(f"that is not the Machinedrum UW OS 1.63 ({e})") from None
     if mnm is not None:                          # v0.26: the Monomachine machines' tables
         mb = WORK / "mnm_os132b.syx"
         mb.write_bytes(unzip(pathlib.Path(mnm).read_bytes(), (".syx",)))

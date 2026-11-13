@@ -374,8 +374,8 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
          SMP_POOL_DDR, _smp_pool()[:8]),
         ("sample pool: the rest of its directory and names (zeros)", SMP_POOL_DDR + 8,
          bytes(len(_smp_pool()) - 8))]
-    if _pp.RIFT:                                # RIFT: no Machinedrum or Monomachine engine
-        out = [x for x in out if not x[0].startswith(("PERC tables", "Machinedrum"))]
+    if _pp.RIFT:   # RIFT: no Machinedrum engine (PERC's tables stay: the sample machines read them)
+        out = [x for x in out if not x[0].startswith("Machinedrum")]
     return out
 
 

@@ -355,36 +355,8 @@ def _span(n: int, k: int) -> int:
 
 
 def expand(panel: dict) -> dict:
-    """model.expand in integer maths (equal for every input, test_fascia_live): the panel's 24
-    controls -> the engine's 32. The DSP can hold the (95 w) // 127 as a 128-byte table."""
-    p = {k: clamp_ctl(panel.get(k, d)) for k, d in M.DEFAULTS.items()}
-    q = dict(M.INTERNAL)
-    for k in ("TYPA", "TYPB", "DUST", "BEND", "MIX", "DEC", "BODA", "BODB", "TUNE",
-              "GEOM", "MATL", "POS", "DAMP", "MORPH", "SHIFT", "BUZZ", "LPG"):
-        q[k] = p[k]
-    h = p["HARD"]
-    q["HARD"] = h
-    q["ATK"] = (32 - h) * 4 if h < 32 else 0
-    q["TZFM"] = p["TZFM"]
-    q["SIDE"] = 16 + (3 * p["TZFM"]) // 4
-    c = p["CLIK"]
-    if c > 0:
-        z = min(((c - 1) * 4) // 127, 3)
-        w4 = 4 * (c - 1) - 127 * z                       # 4 x within, 0..127
-        q["CTYP"] = _span(len(M.CLICKS), z)
-        q["CLIK"] = 32 + (95 * min(max(w4, 0), 127)) // 127
-    x = M.XMODS_PANEL[choice("XMOD", p["XMOD"])]
-    if x == "RING":
-        q["XMOD"], q["COUP"], q["RING"] = _span(len(M.XMODS), 0), 0, p["COUP"]
-    else:
-        q["XMOD"], q["COUP"] = _span(len(M.XMODS), M.XMODS.index(x)), p["COUP"]
-    sk = p["SKIN"]
-    q["FORM"] = min((64 - sk) * 2, 127) if sk < 64 else 0
-    q["WATR"] = min((sk - 64) * 2, 127) if sk > 64 else 0
-    d = p["DRIVE"]
-    q["CHAR"] = min(d * 2, 127)
-    q["FOLD"] = (d - 64) * 2 if d > 64 else 0
-    return q
+    """model.expand: RIFT's panel is the engine's 32 controls (pass 3), each clamped to 0..127"""
+    return {k: clamp_ctl(panel.get(k, d)) for k, d in M.INTERNAL.items()}
 
 
 def engine(controls) -> dict:

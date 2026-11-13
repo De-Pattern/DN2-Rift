@@ -103,6 +103,35 @@ De-Pattern/DN2-Rift-bench. Start from docs/HANDOFF-second-firmware.md for the ba
   table chunk the sample link sends at power-on, which still needs the owner's MD and MnM
   images to build) and the gate's MnM steps.
 
+### 2026-11-13: pass 3 on the ColdFire and the DSP, the SHARC runner moved over
+
+- **Pass 3's panel**: four pages of 8 (SYN1 EXCITERS, SYN2 RESONATORS, SYN3 SPECTRAL,
+  SYN4 ONSET/INTERACT), 32 controls on WaveTone's records and 14 of FM Tone's spares
+  (`fascia/machines.py`). ATK, FDBK and VARY sit on records 235..237, which have no
+  modulation scale, so they are not offered as LFO destinations (`NO_LFO`, hidden from
+  DEST by `wr_lfo_mask`); the gate expects exactly that.
+- **The DSP program reads the 32 controls straight into its `Q_` words** through a table of
+  offsets (no `P_` copy: the scratch fits its L1 room again). FDBK and VARY live again
+  (v2 had fixed them). Bit-exact to `live.py` on patches 07, 13, 16 (VARY 110), 22, 27
+  (FDBK 40) and 28.
+- **27_trade_bar_bell's 7 cents**: the model is 11.7 cents from itself across a note's
+  spread; the pitch limit now allows the base spread (`fascia_live_compare.py`). The `det`
+  limits are unchanged.
+- **The guard** clamps a voice's cost word to 0..200,000 before it judges it (a garbage
+  word could leave a voice out for good; `fgarbage` found it).
+- **No tables chunk**: the sample link no longer reads TABLE_LOAD (`WR_NO_TABLES`); RIFT
+  sends no MD/MnM tables, and ERASE MOD DATA faulted there.
+- **The SHARC runner's PERC/MnM parts** (`voice`, `guard`, `wipe`, `mnm`, `garbage`,
+  `frame`, `cost`) are gone with their engines; `rstress` puts FASCIA and ONESHOT through
+  the stress scenarios on the memory clock, `chords`/`fchords` run the sample machines and
+  FASCIA, `map` checks PERC's and the Monomachine's types reach the record as 0.
+- **Cost** (memory clock, 0.6 of the frame = 400,000 cycles): a FASCIA voice takes 69,867
+  cycles at the median of the 30 patches, about 5.7 voices; 09_kalimba about 8.2,
+  29_water_droplet_vibe and 20_snare_wires about 3.2. The guard drops voices past that.
+- **The site** (`site/`): RIFT Sample Import (`index.html`) and RIFT Patcher
+  (`patcher.html`), deployed by `.github/workflows/pages.yml` (Settings > Pages > Source:
+  "GitHub Actions"). The patcher needs no Machinedrum file.
+
 ## Next, in order
 
 1. **Stand FASCIA on its own.** `waverider/dsp.py` (the DSP image), `waverider/pages.py`,

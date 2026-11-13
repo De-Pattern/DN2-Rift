@@ -166,8 +166,8 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
     # v0.45: PING's tables went with PING
     from dnfw.perc import program as PP
     if PP.RIFT:   # RIFT: no PERC or Machinedrum tables, no P-I lines; FASCIA's sine stays
-        assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR, dsp.SMP_TABLES_DDR, dsp.FSC_TABLES_DDR,
-                                          dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
+        assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR, dsp.PERC_TABLES_DDR, dsp.SMP_TABLES_DDR,
+                                          dsp.FSC_TABLES_DDR, dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         assert not any(ddr[-1][2])
         assert struct.unpack_from("<II", ddr[-2][2]) == (0x31504D53, 0)
         l2 = {a: p for _, a, p in dsp.l2_spans()}
@@ -431,9 +431,8 @@ def test_every_table_perc_reads_is_loaded_by_a_span():
     sdata, at = SL.tables_bytes()
     assert loaded(L.sin, sdata[at["sin"]:at["pow2"]]), "PERC's sine (AMD) is not loaded"
     from dnfw.perc import program as PP
-    if PP.RIFT:   # RIFT: PERC's program is the chain's head and reads no table; FASCIA reads the sine above
-        assert not any(x[0].startswith("PERC tables") for x in dsp.ddr_spans())
-        return
+    if PP.RIFT:   # RIFT: the head reads no table, but the sample machines read PERC's: they stay
+        assert any(x[0].startswith("PERC tables") for x in dsp.ddr_spans())
     pdata, _ = PM.tables_bytes()
     assert loaded(L.tables, pdata), "PERC's tables are not loaded"
 

@@ -66,7 +66,8 @@ OFF = len(KINDS)                                 # BODB's OFF: 9
 MODES, TWINS, NMAX = 16, 8, 24
 BLOCK = 32
 RATE = 48000.0
-VARY_INTERNAL = 40                               # model.INTERNAL: VARY and FDBK are fixed
+# RIFT: VARY and FDBK are controls (pass 3's panel): VARY scales the strike's draws at strike
+# time (c_vary), FDBK feeds body B back into A every block (c_fdbk), as live.py does
 NEG0 = 0x80000000                                # -0.0: a sum's start (x + -0 = x for every x)
 
 
@@ -137,16 +138,13 @@ SC_WORDS = (
     # the slot, its pointers, the routines' return words
     "t", "k146", "vbase", "idx", "tmp0", "tmp1", "tmp2", "tmp3", "tmp4", "tmp5", "tmp6",
     "cnt0", "cnt1", "cnt2", "cnt3", "trig",
-    # the panel (24) and the engine (32)
-    *[f"P_{c}" for c in CONTROLS],
-    "Q_TYPA", "Q_TYPB", "Q_HARD", "Q_DUST", "Q_TZFM", "Q_BEND", "Q_MIX", "Q_DEC", "Q_BODA", "Q_BODB",
-    "Q_TUNE", "Q_GEOM", "Q_MATL", "Q_POS", "Q_COUP", "Q_DAMP", "Q_MORPH", "Q_FORM", "Q_SHIFT",
-    "Q_RING", "Q_SIDE", "Q_FOLD", "Q_LPG", "Q_CHAR", "Q_ATK", "Q_CLIK", "Q_CTYP", "Q_XMOD",
-    "Q_BUZZ", "Q_WATR",
+    # the engine's 32 controls, read straight from the frame (RIFT: the panel is pass 3's, the
+    # engine's own controls, so there is no P_ copy and no expand step; QOFF says where each sits)
+    *[f"Q_{c}" for c in CONTROLS],
     # block_controls
     "c_hard", "c_uhard", "c_tilt", "c_geom_e", "c_inv_t60", "c_matl", "c_pos", "c_bend", "c_ubend",
     "c_chirp", "c_lpg", "c_ulpg", "c_coup", "c_xmod", "c_buzz", "c_morph", "c_ga", "c_gb", "c_dec",
-    "c_udust", "c_utz", "c_side", "c_uring", "c_uwatr", "c_ufold", "c_uchar",
+    "c_udust", "c_utz", "c_side", "c_uring", "c_uwatr", "c_ufold", "c_uchar", "c_fdbk", "c_vary",
     # the block
     "f0", "l2f0", "hasx", "excdone", "ch", "bend", "loss", "back", "retune", "mexp", "ramp",
     "fcount", "drv", "hasxb", "bzon", "invtb", "bb", "first", "kv", "lv0", "lv1", "pon",
@@ -206,7 +204,7 @@ class Layout:
 
 # -- tables (DDR) ---------------------------------------------------------------------------
 TABLE_SPEC = (("LOG2R", 9 * MODES), ("JSV", MODES), ("KIND", 9 * len(("spatial", "split", "beat", "bias", "bratio"))),
-              ("A2", 4), ("B2", 4), ("VOW", 10), ("TG", 6), ("WK", 6), ("SLOT", 24))
+              ("A2", 4), ("B2", 4), ("VOW", 10), ("TG", 6), ("WK", 6), ("SLOT", len(CONTROLS)), ("QOFF", len(CONTROLS)))
 TABLE_AT = {}
 _o = 0
 for _n, _k in TABLE_SPEC:
@@ -224,8 +222,8 @@ def table_values() -> dict[str, list[float]]:
     F = np.float32
     out = {}
     out["LOG2R"] = [float(x) for k in KINDS for x in LV.LOG2R[k]]
-    vary = LV.u(VARY_INTERNAL) * F(3.2)
-    js = np.array([math.sqrt(3.0) * 0.0012 * (1.0 + 0.15 * k) for k in range(MODES)], F) * F(vary)
+    # RIFT: js without VARY's factor (c_vary multiplies it at strike, as live.py's js x vary)
+    js = np.array([math.sqrt(3.0) * 0.0012 * (1.0 + 0.15 * k) for k in range(MODES)], F)
     out["JSV"] = [float(x) for x in js]
     kt = []
     for k in KINDS:
@@ -240,6 +238,9 @@ def table_values() -> dict[str, list[float]]:
     out["WK"] = [float(F(k / 7.0)) for k in LV.WATER_USE]
     # the panel's frame words (offset 168 + 2 slot) and their tops, ints
     out["SLOT"] = [(FRAME + 168 + 2 * FM.SLOTS[c][1]) | FM.SLOTS[c][3] << 24 for c in CONTROLS]   # address | top << 24
+    # RIFT: each control's Q_ word, in bytes from the scratch's start (the hot ones sit early)
+    order = _sc_order()
+    out["QOFF"] = [4 * order.index(f"Q_{c}") for c in CONTROLS]
     return out
 
 
@@ -289,9 +290,7 @@ def _consts() -> dict:
         "SQH": F(math.sqrt(0.5)), "OUT4": F(4.0 / MD.OUT), "I15": F(1.0 / 1.5),
         "FOLDK": F(1.0 / (2 * math.pi)), "HANN": F(LV.HANN_VAR),
     }
-    vary = LV.u(VARY_INTERNAL) * F(3.2)
-    c["CAJ"] = F(F(0.10) * F(vary)) * LV.LOG2E
-    c["DSIG"] = F(math.sqrt(3.0) * 1.5e-5) * F(vary)
+    c["DSIG0"] = F(math.sqrt(3.0) * 1.5e-5)      # RIFT: x c_vary at strike
     for k in range(7):
         c[f"WK{k}"] = F(k / 7.0)
     for k, (n, lo, hi) in {"DEC": (0, 0.004, 2.0), "ATK": (0, 0.0002, 0.5), "DDUST": (0, 5.0, 3000.0),
@@ -1115,13 +1114,14 @@ class FP(Gen):
 
     # -- the frame --------------------------------------------------------------------------
     def read_frame(self) -> None:
-        """the panel's 24 knobs (P_*), the trig, the note and the velocity"""
+        """the panel's 32 knobs, straight into Q_* (RIFT: the panel is the engine's), the trig, the
+        note and the velocity"""
         p, C = self.p, self.L.C
         p.ld(9, C["t"])
         PP.t146(p, 10, 9)
         p.st(C["k146"], 10)
         assert all(FM.SLOTS[c][2] == 0 for c in CONTROLS)
-        assert [SC_WORDS.index(f"P_{c}") for c in CONTROLS] == list(range(SC_WORDS.index("P_TYPA"), SC_WORDS.index("P_TYPA") + 24))
+        assert all(f"Q_{c}" in SC_WORDS for c in CONTROLS)
         p.iconst(0, 0)
         p.st(C["idx"], 0)
 
@@ -1164,10 +1164,10 @@ class FP(Gen):
                 p.trunc(4, 4)
             p.iconst(12, 127)
             p.if_(5, "NE", 12, knob, kind="i")
-            # P_[idx] = R4
+            # Q_<control idx> = R4 (its place from the QOFF table: the Q_ words are not contiguous)
             p.ld(0, C["idx"])
-            p.lsh(0, 0, 2)
-            p.iconst(12, C["P_TYPA"])
+            self.tabv(0, "QOFF", 0)
+            p.iconst(12, self.L.scratch)
             p.iop(0, 12, "+", 0)
             p.seti(1, 0)
             p.sti(0, 1, 4)
@@ -1175,7 +1175,7 @@ class FP(Gen):
             p.iconst(12, 1)
             p.iop(0, 12, "+", 0)
             p.st(C["idx"], 0)
-        self.sloop("cnt0", 24, one)
+        self.sloop("cnt0", len(CONTROLS), one)
         assert {FM.SLOTS[c][3] for c in CONTROLS} == {100, 120, 127}
 
     def read_note(self) -> None:
@@ -1213,130 +1213,8 @@ class FP(Gen):
         p.st(C["nn"], 8)
 
     def expand(self) -> None:
-        """live.expand, in integers: P_* -> Q_*"""
-        p, C = self.p, self.L.C
-
-        def cp(src, dst=None):
-            p.ld(0, C[f"P_{src}"])
-            p.st(C[f"Q_{dst or src}"], 0)
-        for k in ("TYPA", "TYPB", "DUST", "BEND", "MIX", "DEC", "BODA", "BODB", "TUNE", "GEOM",
-                  "MATL", "POS", "DAMP", "MORPH", "SHIFT", "BUZZ", "LPG", "HARD", "TZFM"):
-            cp(k)
-        # ATK = (32 - h) 4 if h < 32
-        p.ld(0, C["P_HARD"])
-        p.iconst(1, 32)
-        p.iop(2, 1, "-", 0)
-        p.lsh(2, 2, 2)
-        p.iconst(3, 0)
-        p.if_(0, "LT", 1, lambda: p.st(C["Q_ATK"], 2), lambda: p.st(C["Q_ATK"], 3), kind="i")
-        # SIDE = 16 + (3 TZFM) // 4
-        p.ld(8, C["P_TZFM"])
-        p.iop(0, 8, "+", 8)
-        p.iop(0, 8, "+", 0)
-        p.lsh(0, 0, -2)
-        p.iconst(12, 16)
-        p.iop(0, 12, "+", 0)
-        p.st(C["Q_SIDE"], 0)
-        # CLIK: four zones
-        p.iconst(0, 0)
-        p.st(C["Q_CTYP"], 0)
-        p.st(C["Q_CLIK"], 0)
-        p.ld(0, C["P_CLIK"])
-
-        def clik():
-            p.ld(0, C["P_CLIK"])
-            p.iconst(12, -1)
-            p.iop(0, 12, "+", 0)
-            p.lsh(8, 0, 2)                      # R8 = 4 (c - 1)
-            p.iconst(9, 16)                     # CTYP = (2 z + 1) 16
-            for thr in (127, 254, 381):
-                p.iconst(1, thr)
-
-                def up():
-                    p.iconst(12, -127)
-                    p.iop(8, 12, "+", 8)
-                    p.iconst(12, 32)
-                    p.iop(9, 12, "+", 9)
-                # compare against the ORIGINAL 4 (c - 1): R0 still holds c - 1
-                p.lsh(2, 0, 2)
-                p.if_(2, "GE", 1, up, kind="i")
-            p.st(C["Q_CTYP"], 9)
-            p.iconst(12, 0)
-            p.iop(8, 8, "MAX", 12)
-            p.iconst(12, 127)
-            p.iop(8, 8, "MIN", 12)
-            p.iconst(12, 0)
-            p.float_(8, 8, 12)
-            p.fconst(1, 95.0 / 127.0)
-            p.fop(8, 8, "*", 1)
-            p.fconst(1, 0.002)
-            p.fop(8, 8, "+", 1)
-            p.trunc(8, 8)
-            p.iconst(12, 32)
-            p.iop(8, 12, "+", 8)
-            p.st(C["Q_CLIK"], 8)
-        p.iconst(1, 0)
-        p.if_(0, "GT", 1, clik, kind="i")
-        # XMOD: the panel's five (RING the fifth)
-        p.ld(0, C["P_XMOD"])
-        p.lsh(8, 0, 2)
-        p.iop(0, 8, "+", 0)                     # 5 v
-        p.lsh(0, 0, -7)
-        p.iconst(12, 4)
-        p.iop(0, 0, "MIN", 12)
-        p.ld(2, C["P_COUP"])
-        p.iconst(3, 0)
-
-        def ring():
-            p.iconst(1, 16)
-            p.st(C["Q_XMOD"], 1)
-            p.st(C["Q_COUP"], 3)
-            p.st(C["Q_RING"], 2)
-
-        def other():
-            p.lsh(0, 0, 5)
-            p.iconst(12, 16)
-            p.iop(0, 12, "+", 0)
-            p.st(C["Q_XMOD"], 0)
-            p.st(C["Q_COUP"], 2)
-            p.st(C["Q_RING"], 3)
-        p.iconst(1, 4)
-        p.if_(0, "EQ", 1, ring, other, kind="i")
-        # SKIN: FORM under 64, WATR over
-        p.ld(0, C["P_SKIN"])
-        p.iconst(1, 64)
-        p.iconst(3, 0)
-        p.st(C["Q_FORM"], 3)
-        p.st(C["Q_WATR"], 3)
-
-        def form():
-            p.iop(2, 1, "-", 0)
-            p.lsh(2, 2, 1)
-            p.iconst(12, 127)
-            p.iop(2, 2, "MIN", 12)
-            p.st(C["Q_FORM"], 2)
-
-        def watr():
-            p.iop(2, 0, "-", 1)
-            p.lsh(2, 2, 1)
-            p.iconst(12, 127)
-            p.iop(2, 2, "MIN", 12)
-            p.st(C["Q_WATR"], 2)
-        p.if_(0, "LT", 1, form, kind="i")
-        p.if_(0, "GT", 1, watr, kind="i")
-        # DRIVE: CHAR to the middle, FOLD on top
-        p.ld(0, C["P_DRIVE"])
-        p.lsh(2, 0, 1)
-        p.iconst(12, 127)
-        p.iop(2, 2, "MIN", 12)
-        p.st(C["Q_CHAR"], 2)
-        p.st(C["Q_FOLD"], 3)
-
-        def fold():
-            p.iop(2, 0, "-", 1)
-            p.lsh(2, 2, 1)
-            p.st(C["Q_FOLD"], 2)
-        p.if_(0, "GT", 1, fold, kind="i")
+        """live.expand: RIFT's panel is the engine's 32 controls, read_frame wrote them to Q_*
+        already (clamped to each record's 0..top): nothing to do"""
 
     def ichoice(self, d: int, word: str, n: int) -> None:
         """Rd = min((v n) >> 7, n - 1) for the int word (0..127)"""
@@ -1356,7 +1234,7 @@ class FP(Gen):
         C = self.L.C
         c, ci, V = self.c, self.ci, self.V
         U = {k: u_of(ci(f"Q_{k}")) for k in ("HARD", "DAMP", "MIX", "SIDE", "GEOM", "MATL", "POS", "BEND",
-                                             "LPG", "COUP", "BUZZ", "MORPH", "DUST", "TZFM")}
+                                             "LPG", "COUP", "BUZZ", "MORPH", "DUST", "TZFM", "FDBK")}
         vel = V("vel")
         self.set(c("c_hard"), U["HARD"] * (Kc(0.5) + Kc(0.5) * vel))
         self.set(c("c_uhard"), U["HARD"])
@@ -1377,6 +1255,7 @@ class FP(Gen):
         self.set(c("c_lpg"), U["LPG"] * Kc(6.0))
         self.set(c("c_ulpg"), U["LPG"])
         self.set(c("c_coup"), U["COUP"])
+        self.set(c("c_fdbk"), U["FDBK"])               # RIFT: live's c["fdbk"] = u(FDBK)
         self.ichoice(0, "Q_XMOD", 4)
         p.st(C["c_xmod"], 0)
         self.set(c("c_buzz"), U["BUZZ"])
@@ -1526,6 +1405,8 @@ class FP(Gen):
         p.fop(0, 0, "MIN", 1)
         self.st(V("vel"), 0)
         self.iset(V("pending"), 0)
+        # RIFT: VARY at the strike (live: vary = u(q["VARY"]) x 3.2), scaling the draws below
+        self.set(c("c_vary"), u_of(ci("Q_VARY")) * Kc(3.2))
         # the voice's generator: seed t + 1 (live: Voice(seed))
         p.ld(8, C["t"])
         p.iconst(12, 1)
@@ -1635,8 +1516,7 @@ class FP(Gen):
         p.fconst(0, float(MODES))
         self.st(bd("nfull"), 0)
         self.cmp(bd("split"), "NE", 0.0, lambda: (self.iset(bd("n"), MODES + TWINS), self.set(bd("nfull"), Kc(2.0 * MODES))))
-        p.fconst(0, kf("DSIG"))
-        self.st(bd("dsig"), 0)
+        self.set(bd("dsig"), Kc(kf("DSIG0")) * c("c_vary"))      # RIFT: live's dsig = DSIG0 x vary
         p.fconst(0, 1e-9)
         self.st(bd("peak"), 0)
         p.fconst(0, 1.0)
@@ -1681,6 +1561,7 @@ class FP(Gen):
             p.ld(0, C["idx"])
             self.tabv(0, "JSV", 0)
             p.st(C["tmp1"], 0)
+            self.set(c("tmp1"), c("tmp1") * c("c_vary"))       # RIFT: live's js = JS0 x vary
             self.set(c("tmp0"), c("tmp0") * c("tmp1"))
             self.icmp(self.ci("idx"), "EQ", 0, lambda: self.set(c("tmp0"), c("tmp0") * Kc(0.2)))
             p.ld(0, C["q4"])
@@ -1692,7 +1573,8 @@ class FP(Gen):
         # aj = exp2(g2 (0.1 vary log2e)); a chime's lowest three weighted
         def aj():
             self.set(c("tmp0"), rnd("vgauss"))
-            self.set(md("aj"), exp2(c("tmp0") * Kc(kf("CAJ"))))
+            self.set(c("tmp1"), (Kc(0.10) * c("c_vary")) * Kc(kf("LOG2E")))   # RIFT: live's 0.1 vary log2e
+            self.set(md("aj"), exp2(c("tmp0") * c("tmp1")))
 
             def chime():
                 for i, wgt in enumerate((0.08, 0.18, 0.45)):
@@ -2516,9 +2398,9 @@ class FP(Gen):
         self.set(V("lenv"), V("lenv") * onepole(mn(c("c_inv_t60") * Kc(4.0), 100.0), blocks=True))
         self.flushw(V("lenv"))
         self.set(c("loss"), c("c_lpg") * (Kc(1.0) - c("tmp0")))
-        # FDBK (fixed 0) + COUP under TRADE: B back into A, a block late, bounded
-        self.fz(c("back"))
-        self.icmp(ci("c_xmod"), "EQ", XMODS.index("TRADE"), lambda: self.set(c("back"), Kc(0.0) + c("c_coup")))
+        # FDBK + COUP under TRADE: B back into A, a block late, bounded (live: fdbk + (coup | 0))
+        self.set(c("back"), c("c_fdbk") + Kc(0.0))
+        self.icmp(ci("c_xmod"), "EQ", XMODS.index("TRADE"), lambda: self.set(c("back"), c("c_fdbk") + c("c_coup")))
 
         def fdbk():
             def mixb():

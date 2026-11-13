@@ -392,7 +392,9 @@ canon_valid:
 # mvz.b %d1,%d1; cmp.l %d1,%d2; shi %d1`, 10 bytes) becomes a jsr to load_keep, which
 # answers d1 = 0xff for a type RIFT has (-1..4, the sample machines, FASCIA) and 0 for any
 # other, so a DN2 mk2 sound with a PERC or Monomachine machine loads as FM Tone, as stock
-# loads any type it lacks. d2 is free: the next instruction loads it (moveb #7).
+# loads any type it lacks. d2 is kept: the next instruction (`moveb #7,%d2`, the filter
+# type's bound) sets only its low byte, so a d2 left holding the mask widened the filter
+# bound (the gate's engine step: filter types 6..8 kept).
 LOAD_KEEP_SITE = 0x400DD2B2
 LOAD_KEEP_STOCK = bytes.fromhex("220052817381b48152c1")
 LOAD_KEEP_LAST = TYPES_LAST
@@ -400,8 +402,10 @@ LOAD_KEEP_MASK = sum(1 << (t + 1) for t in range(-1, TYPES_LAST + 1) if t not in
 assert TYPES_LAST + 1 < 32
 SHIMS2 += f"""
 | RIFT: the stored-sound LOAD's keep test, from {LOAD_KEEP_SITE:#010x} by jsr: d0 the stored type
-| byte; d1 = 0xff if the type is kept, else 0; d2 clobbered (reloaded by the caller).
+| byte; d1 = 0xff if the type is kept, else 0; d2 as it came (the caller's filter bound
+| is a moveb into it).
 load_keep:
+    move.l  %d2,%sp@-
     move.l  %d0,%d1
     addq.l  #1,%d1
     mvz.b   %d1,%d1
@@ -410,8 +414,10 @@ load_keep:
     move.l  #{LOAD_KEEP_MASK:#x},%d2
     btst    %d1,%d2
     sne     %d1
+    move.l  %sp@+,%d2
     rts
 1:  moveq   #0,%d1
+    move.l  %sp@+,%d2
     rts
 """
 SHIM2_LABELS = ("canon_valid",) + (("load_keep",) if GONE_TYPES else ())

@@ -36,28 +36,29 @@ def record(stock, rid):
 def test_the_panel_is_the_models():
     from dnfw.fascia import model as M
     assert F.PAGES == M.PAGES and F.CHOICES == M.CHOICES and F.DEFAULTS == M.DEFAULTS
-    assert len(F.CONTROLS) == 24 and set(F.CONTROLS) == set(M.DEFAULTS) == set(F.SLOTS)
+    assert len(F.CONTROLS) == 32 and set(F.CONTROLS) == set(M.DEFAULTS) == set(F.SLOTS)
     assert set(F.LONG_NAMES) == set(F.CONTROLS)
 
 
 def test_each_control_on_its_own_stock_record(stock):
     rids = [F.SLOTS[c][0] for c in F.CONTROLS]
     slots = [F.SLOTS[c][1] for c in F.CONTROLS]
-    assert len(set(rids)) == 24 and len(set(slots)) == 24
+    assert len(set(rids)) == 32 and len(set(slots)) == 32
     for c in F.CONTROLS:
         rid, slot, lo, top = F.SLOTS[c]
         page, rslot, rmin, rmax, _df, cc, mask = record(stock, rid)
         assert rslot == slot, c                            # the record's own slot
         assert (rmin >> 8, (rmax >> 8) - (rmin >> 8)) == (lo, top), c
-        assert mask != 0, f"{c}: its record is no LFO destination"
+        assert (mask == 0) == (c in F.NO_LFO), f"{c}: LFO destination {mask != 0}"   # RIFT: three are not
         assert cc == F.CC.get(c), c                         # a CC exactly where the record has one
         if F.is_choice(c):
             assert page == 1 and top in (100, 120)          # WaveTone's partial-range records
         else:
-            assert (rmin, rmax) == (0, 0x7F00), c           # the DSP reads word >> 8 as the panel's 0..127
+            assert rmin == 0 and rmax in (0x7F00, 0x7FFE), c   # the DSP reads word >> 8 as the panel's 0..127
+            assert rmax >> 8 == 127, c
             assert page in (0, 1)
         if page == 0:
-            assert F.FM_SLOT_FIRST <= slot <= F.FM_SLOT_LAST and cc is None
+            assert F.FM_SLOT_FIRST <= slot <= F.FM_SLOT_LAST
             assert any(a <= rid <= b for a, b in F.FM_OWNED)
         else:
             assert 238 <= rid <= 262 and 25 <= slot <= 49
@@ -143,7 +144,7 @@ def test_dsp_silent_hook_and_lookup():
 def test_slides_rows():
     from dnfw import slides as SL
     assert set(SL.FASCIA_SLIDE) == {F.SLOTS[c][1] for c in F.CONTROLS if not F.is_choice(c)}
-    assert not set(SL.FASCIA_SLIDE) & set(SL.FASCIA_STEP) and len(SL.FASCIA_STEP) == 5
+    assert not set(SL.FASCIA_SLIDE) & set(SL.FASCIA_STEP) and len(SL.FASCIA_STEP) == 6
 
 
 def test_csrc_uses_four_detents_for_every_choice():

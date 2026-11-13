@@ -61,11 +61,14 @@ def test_applies_to_both_sections(applied, dn2_111):
     # there, the Machinedrum's screen graphics (copied to RAM, never run: no init entry);
     # v0.26: and the tables the ColdFire sends the DSP at power-on (dnfw.mods.waverider._tables)
     from dnfw.md import rom as md_rom
-    want = 5 if md_rom.available() else 3
+    from dnfw.perc import program as PPm
+    want = 3 if PPm.RIFT else 5 if md_rom.available() else 3   # RIFT: no MD graphics, no MD/MnM tables
     # v0.37: and the start-up animation: the stamp's code and its frames (ANIZ); v0.39: and
     # the mod's version label over its last frame (ANZL)
     kinds = [kind for kind, _ in chunks]
-    assert sorted(kinds) == sorted([platform.area.CODE] * (want + 1) + [b"ANIZ", b"ANZL"])
+    from dnfw.mods import waverider as W
+    anim = [b"ANIZ", b"ANZL"] if W.BOOTANIM else []        # RIFT: the stock start-up (no stamp, no frames)
+    assert sorted(kinds) == sorted([platform.area.CODE] * (want + int(W.BOOTANIM)) + anim)
     assert len(applied.payloads[7]) > len(dn2_111.container.find(7).unpack())
 
 
@@ -366,6 +369,9 @@ def test_v037_the_build_hooks_the_intro_once_with_the_stamp():
     stamp; the stamp's CODE chunk and the ANIZ chunk are in the platform area"""
     import struct
     from dnfw.mods import bootscreen as B, waverider as W
+    if not W.BOOTANIM:   # RIFT (owner, 2026-11-13): the stock start-up: no intro hook at all
+        assert not [e for e in W.extents() if "intro hook" in e.what]
+        return
     spec, aniz = W._boot()
     assert spec is B.SPEC and aniz.startswith(struct.pack(">I", 38))
     assert spec["aniz_chunk"] == "ANIZ"

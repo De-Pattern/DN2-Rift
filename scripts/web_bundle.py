@@ -109,13 +109,19 @@ def main() -> int:
     man = outdir / "builds.json"
     rows = json.loads(man.read_text()) if man.exists() else []
     rows = [r for r in rows if r["version"] != version]
-    row_inputs = ["dn2", "dt2", "md"]
+    # RIFT: the Elektron files the build actually read (traced): DN2 and DT2 always; the
+    # Machinedrum's and Monomachine's only while their engines were in
+    row_inputs = ["dn2", "dt2"]
+    md = sys.modules.get("dnfw.md.rom")
+    if md is not None and any(str(pathlib.Path(x).resolve()) in touched for x in getattr(md, "CANDIDATES", ())) \
+            or any(STOCK_FILES["md"] in t or "md_uw" in t or "sps1" in t.lower() for t in touched):
+        row_inputs.append("md")
     mnm = sys.modules.get("dnfw.mnm.rom")      # v0.26: the build read the Monomachine OS too
     if mnm is not None and str(mnm.path().resolve()) in touched:
         row_inputs.append("mnm")
     rows.insert(0, {"version": version, "name": name, "sha256": want, "zip": zname, "inputs": row_inputs,
                     "zip_sha256": hashlib.sha256(zbuf.getvalue()).hexdigest(),
-                    "file": f"DN2mod_v{version}_{name}_OS1.11.syx"})
+                    "file": f"RIFT_v{version}_{name}_OS1.11.syx"})
     man.write_text(json.dumps(rows, indent=1) + "\n")
     print(f"{zname}: {len(files)} files, {len(zbuf.getvalue())} bytes; rebuild matches {want[:12]}")
     return 0

@@ -41,10 +41,27 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           # v0.45: FASCIA (type 18): bit-exact to live.py (the audition, idle, a steal, p-locks);
           # chords and beside the other machines, untriggered silence; garbage; the stress test
           ("fascia",), ("fchords", "fsilence"), ("fgarbage",), ("fstress",))
+# RIFT (2026-11-13): no Machinedrum or Monomachine engine. The runner's parts that test only
+# them do not exist on RIFT (sharc_waverider_m5.py, RIFT_GONE); the rest run as before, with
+# rstress in place of the PERC/MnM stress scenarios.
+RIFT_GONE = ("voice", "guard", "wipe", "mnm", "garbage", "frame", "cost")
+
+
+def _rift() -> bool:
+    import sys as _s
+    _src = str(pathlib.Path(__file__).resolve().parents[1] / "src")
+    if _src not in _s.path:
+        _s.path.insert(0, _src)
+    from dnfw.perc import program as _pp       # noqa: PLC0415
+    return _pp.RIFT
+
+
+if _rift():
+    GROUPS = tuple(g for g in (tuple(x for x in grp if x not in RIFT_GONE) for grp in GROUPS) if g)
 
 
 def parts() -> list[list[str]]:
-    want = default_steps()
+    want = [x for x in default_steps() if not (_rift() and x in RIFT_GONE)]   # RIFT: the runner drops these
     out = [[s for s in g if s in want] for g in GROUPS]
     out = [g for g in out if g]
     left = [s for s in want if not any(s in g for g in out)]

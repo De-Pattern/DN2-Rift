@@ -39,7 +39,8 @@ def same(a, b) -> bool:
 def test_the_names_are_the_models():
     assert P.TYPES == MD.TYPES and P.BODIES == MD.BODIES and P.CLICKS == MD.CLICKS and P.XMODS == MD.XMODS
     assert P.MODES == MD.MODES == LV.MODES and P.TWINS == LV.TWINS and P.BLOCK == LV.BLOCK
-    assert MD.INTERNAL["VARY"] == P.VARY_INTERNAL and MD.INTERNAL["FDBK"] == 0
+    assert MD.INTERNAL["VARY"] == 40 and MD.INTERNAL["FDBK"] == 0          # RIFT: both controls (pass 3)
+    assert {"Q_VARY", "Q_FDBK", "c_vary", "c_fdbk"} <= set(P.SC_WORDS) and not any(w.startswith("P_") for w in P.SC_WORDS)
     assert P.POST == LV.POST_STAGES
 
 
@@ -97,7 +98,8 @@ QUICK = ("01_tubular_bell", "06_plasticine", "08_glass_harmonica", "12_gong_morp
 @pytest.mark.parametrize("name", QUICK)
 def test_audition_patch_bit_exact(name):
     p, evs, _secs, _trem = A.PATCHES[name]
-    got, want, first = B.compare_voice(p, [(0.0, evs[0][1], evs[0][2])], 40, slot=0)
+    n = 160 if name == "28_swell_attack_vibe" else 40      # RIFT: pass 3's ATK swell takes ~0.1 s to sound
+    got, want, first = B.compare_voice(p, [(0.0, evs[0][1], evs[0][2])], n, slot=0)
     assert first is None, (name, first)
     assert np.max(np.abs(want)) > 0.001
 
@@ -175,9 +177,10 @@ def test_garbage_state_stays_finite(fill):
             assert np.all(np.isfinite(out[t])) and np.max(np.abs(out[t])) <= 0.7, (fill, k, t)
 
 
-@pytest.mark.parametrize("ctl,a,b,at", [("SHIFT", 64, 90, 8), ("DRIVE", 0, 100, 8), ("DRIVE", 100, 0, 8),
-                                        ("LPG", 0, 60, 8), ("LPG", 60, 0, 1), ("SKIN", 20, 80, 8),
-                                        ("SKIN", 100, 20, 1), ("XMOD", 0, 120, 8), ("COUP", 0, 90, 2)])
+@pytest.mark.parametrize("ctl,a,b,at", [("SHIFT", 64, 90, 8), ("CHAR", 0, 100, 8), ("FOLD", 100, 0, 8),
+                                        ("LPG", 0, 60, 8), ("LPG", 60, 0, 1), ("FORM", 20, 80, 8),
+                                        ("WATR", 100, 20, 1), ("XMOD", 0, 120, 8), ("COUP", 0, 90, 2),
+                                        ("RING", 0, 90, 8), ("FDBK", 0, 80, 4), ("FDBK", 80, 0, 4)])   # RIFT: pass 3's
 def test_a_post_stage_switched_mid_note_bit_exact(ctl, a, b, at):
     """a stage turned on or off by a p-lock mid-note (on block 1 too): the crossfade, the drop"""
     sel = lambda k: {ctl: a if k < at else b, "BODA": 40, "XMOD": 120 if ctl == "COUP" else 0}

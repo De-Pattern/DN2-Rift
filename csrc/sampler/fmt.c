@@ -505,7 +505,7 @@ static void f_mtune(int v, char *buf)
 }
 
 /* v0.45: FASCIA's values in the header (and its page with SYN held): a knob 0..127, the
- * bipolar four (TUNE, GEOM, SKIN, SHIFT) -64..+63, a choice its option's name. One formatter
+ * bipolar three (TUNE, GEOM, SHIFT; v2's SKIN gone with v2) -64..+63, a choice its option's name. One formatter
  * a control: the stock formatter is handed the value only. */
 static void fsc_text(int j, int v, char *buf)
 {
@@ -527,9 +527,11 @@ static void fsc_text(int j, int v, char *buf)
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
+FSC_F(24) FSC_F(25) FSC_F(26) FSC_F(27) FSC_F(28) FSC_F(29) FSC_F(30) FSC_F(31)   /* RIFT: pass 3's 32 */
 static void (*const fsc_fns[])(int, char *) = {
     fsc_f0, fsc_f1, fsc_f2, fsc_f3, fsc_f4, fsc_f5, fsc_f6, fsc_f7, fsc_f8, fsc_f9, fsc_f10, fsc_f11,
-    fsc_f12, fsc_f13, fsc_f14, fsc_f15, fsc_f16, fsc_f17, fsc_f18, fsc_f19, fsc_f20, fsc_f21, fsc_f22, fsc_f23};
+    fsc_f12, fsc_f13, fsc_f14, fsc_f15, fsc_f16, fsc_f17, fsc_f18, fsc_f19, fsc_f20, fsc_f21, fsc_f22, fsc_f23,
+    fsc_f24, fsc_f25, fsc_f26, fsc_f27, fsc_f28, fsc_f29, fsc_f30, fsc_f31};
 _Static_assert(sizeof fsc_fns / sizeof fsc_fns[0] == FSC_N, "one formatter a FASCIA control");
 static void *fsc_stock_fmt[FSC_N] __attribute__((section(".data")));
 

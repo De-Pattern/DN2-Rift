@@ -570,6 +570,17 @@ def main(argv=None):
     if a.seconds < 2:
         raise SystemExit("--seconds must be at least 2")
     steps = set(a.steps.split(","))
+    from dnfw.perc import program as _PP
+    # RIFT (2026-11-13): the parts that test only the Machinedrum and Monomachine engines (gone
+    # from the image) do not run; their load and garbage coverage is rstress's and fgarbage's,
+    # the sample machines' chords chords', FASCIA's chords fchords'. Named on the command line,
+    # they are refused, not skipped silently.
+    RIFT_GONE = {"voice", "guard", "wipe", "mnm", "garbage", "frame", "cost"}
+    if _PP.RIFT:
+        asked = steps & RIFT_GONE
+        if asked and a.steps != p.get_default("steps"):
+            raise SystemExit(f"RIFT has no Machinedrum or Monomachine engine: {sorted(asked)} test only those")
+        steps -= RIFT_GONE
     OUT.mkdir(parents=True, exist_ok=True)
     t_start = time.perf_counter()
     dk = m1.Digikit(a.digikit)
@@ -687,7 +698,8 @@ def main(argv=None):
                 gc.collect()
         if "stress" in steps:
             print("\nstep 3s: the stress test (the clock made to move)")
-            results["3s_stress"] = step_stress(warm(), sound, machines)
+            results["3s_stress"] = (step_rstress(init, sound, machines) if _PP.RIFT
+                                    else step_stress(warm(), sound, machines))
             show(results["3s_stress"])
             gc.collect()
 
@@ -824,11 +836,14 @@ def step_map(dk, snap, m2mach, m5: Image, stock: bytes, init, sound, machines) -
         fx.run(r, 2_000_000, fixups(hooks), stop_at=[0x1C3044])
         return r
 
+    from dnfw.perc import program as _PP         # noqa: PLC0415
+    # RIFT: type 5 reads FM Tone now (no PERC); FASCIA's type takes the same engine slot (5)
+    MT = FSM.TYPE if _PP.RIFT else 5
     got = {}
     window = None
     for t, idx, val in ((0, WAV1, 0x7812), (0, TBL1, 0x0100), (1, WAV1, 0x1234), (3, TBL1, 0x0100),
                         (15, WAV1, 0x4321)):
-        f = base_frame(sound, machines, others={t: 5} if t else None,
+        f = base_frame(sound, machines, t0=MT, others={t: MT} if t else None,
                        overrides=None if t else {idx: val})
         if t:
             f.param(t, idx, val)
@@ -841,22 +856,22 @@ def step_map(dk, snap, m2mach, m5: Image, stock: bytes, init, sound, machines) -
             got[f"track 0 param {idx} = {val:#06x}: record machine window unchanged"] = (w == window, True)
     notes = {}
     for note in (0x3C00, 0x4800, 0x3C80):
-        r = unpack(init, base_frame(sound, machines, note=note).to_bytes())
+        r = unpack(init, base_frame(sound, machines, t0=MT, note=note).to_bytes())
         notes[hex(note)] = V.bits_f32(m2.word(r.state, NOTE_CELL) or 0)
     clamp = []
-    r = unpack(init, base_frame(sound, machines).to_bytes(),
+    r = unpack(init, base_frame(sound, machines, t0=MT).to_bytes(),
                {CLAMP_MIN: lambda rr: clamp.append((m2.word_reg(rr, "R2"), m2.word_reg(rr, "R0")))})
     type_m5 = m2.word(r.state, rec0 + V.TRACK_MACHINE)
     # field 84 + 2t is what the clamp sees: set it to 3 for track 0, and read R2 there
-    f = base_frame(sound, machines)
+    f = base_frame(sound, machines, t0=MT)
     f.header(84, 0, 3)
     seen = []
     unpack(init, f.to_bytes(), {CLAMP_MIN: lambda rr: seen.append(m2.word_reg(rr, "R2"))})
     # control: the same frame on an image without the lookup patch
     nolook = bytearray(m5.stream)
-    bootstream.write_span(nolook, dsp.dm_to_load(dsp.LOOKUP16_DM + 20), struct.pack("<I", 0))
+    bootstream.write_span(nolook, dsp.dm_to_load(dsp.LOOKUP16_DM + 4 * MT), struct.pack("<I", 0))   # MT's entry (5's: +20)
     ctl = init_on(snap, m2mach, Image(dk, bytes(nolook)))
-    type_ctl = m2.word(unpack(ctl, base_frame(sound, machines).to_bytes()).state, rec0 + V.TRACK_MACHINE)
+    type_ctl = m2.word(unpack(ctl, base_frame(sound, machines, t0=MT).to_bytes()).state, rec0 + V.TRACK_MACHINE)
     # our spans, as the runner's memory holds them after init
     spans = {}
     for what, at, payload in dsp.spans() + dsp.l2_spans():
@@ -865,15 +880,21 @@ def step_map(dk, snap, m2mach, m5: Image, stock: bytes, init, sound, machines) -
         want = [struct.unpack_from("<I", payload, 4 * k)[0] for k in range(len(payload) // 4)]
         spans[what] = sum(1 for x, y in zip(words, want) if x != y)
     clamp_imm = bootstream.read_span(m5.stream, dsp.sw_to_load(0x1C294A), 4).hex()
+    # RIFT: PERC's type and the Monomachine's reach the engine as FM Tone (0), as stock reads a type it lacks
+    gone_types = (5, *dsp.MNM_TYPES) if _PP.RIFT else ()
+    gone_seen = {t: m2.word(unpack(init, base_frame(sound, machines, t0=t).to_bytes()).state, rec0 + V.TRACK_MACHINE)
+                 for t in gone_types}
     checks = {
         "WAV1 and TBL1 are in the unpack's frame copy at 0x25c48c + 220/222 + 146t, verbatim; "
-        "a type-5 record's machine window does not carry them": all(v == w for v, w in got.values()),
+        f"a type-{MT} record's machine window does not carry them": all(v == w for v, w in got.values()),
         "the trig note lands in the note cell as float semitones (60, 72, 60.5)":
             notes == {"0x3c00": 60.0, "0x4800": 72.0, "0x3c80": 60.5},
-        "a type-5 frame reaches record +0x1b4 as 5, with the stock clamp": type_m5 == 5,
+        f"a type-{MT} frame reaches record +0x1b4 as 5 (our engine slot), with the stock clamp": type_m5 == 5,
         "the stock clamp min(R2, 4) reads frame field 84 + 2t, not the machine type (3 in -> R2 = 3)":
             bool(seen) and seen[0] == 3 and bool(clamp) and clamp[0] == (0, 4),
-        "control: without the lookup patch, type 5 is squashed to 0 (FM Tone)": type_ctl == 0,
+        f"control: without the lookup patch, type {MT} is squashed to 0 (FM Tone)": type_ctl == 0,
+        **({"RIFT: PERC's and the Monomachine's types reach the record as 0 (FM Tone)":
+            all(v == 0 for v in gone_seen.values())} if _PP.RIFT else {}),
         "every span we add reads back, after init, as the image put it": all(v == 0 for v in spans.values()),
     }
     return {"ok": all(checks.values()), "checks": checks,
@@ -1457,6 +1478,114 @@ def step_stress(init, sound, machines) -> dict:
     return {"ok": all(checks.values()), "checks": checks, "numbers": n}
 
 
+def _rift_on() -> bool:
+    from dnfw.perc import program as _pp          # noqa: PLC0415
+    return _pp.RIFT
+
+
+def step_rstress(init, sound, machines) -> dict:
+    """RIFT (2026-11-13): step 3s's load scenarios with FASCIA in place of PERC and the
+    Monomachine (gone), on the memory-cost clock (as F and G: cycles = instructions + S x
+    (4 L2 + 10 DDR), EMUCLK moved by it, so the frame guard decides as on the unit).
+    C: sixteen FASCIA voices, every control random every block (choices included), a new note
+    on the next track each block. E: fifteen FASCIA voices struck on block 1, track 0
+    retriggered every block. G (v0.49's, NiKo's): heavy FASCIA voices on tracks 0..12, a new
+    note each block, an ONESHOT (SAMP 4) on track 15; G0 the ONESHOT alone: the guard gives the
+    sample its time first, so its output is G0's, block for block. Each block must end, our
+    voices done by 0.8 of the frame, voices left out and counted when time is short, every
+    buffer finite. (Sixteen FASCIA voices on one patch, newest heard: fstress.)"""
+    import random as _rr
+    from dnfw.perc import guard as G             # noqa: PLC0415
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    P = 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    counts, undo_counts = _count_memory()
+    MEM_SCALE = float(os.environ.get("DNFW_MEM_SCALE", "0.9"))
+    pats = fsc_audition()
+    heavy = pats["29_water_droplet_vibe"][0]
+    rnd = _rr.Random(1813)
+    ctrls = list(FSM.SLOTS)
+
+    def scenario(blocks, frame_of):
+        b_now = {"b": 0}
+
+        def cycles(r):
+            return int(getattr(r, "steps_n", 0) + MEM_SCALE * (4 * counts["L2"] + 10 * counts["DDR"]))
+
+        def clock(r):
+            r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const(((b_now["b"] + 1) * P + cycles(r)) & 0xFFFFFFFF)
+
+        def at_dispatch(r):
+            for k in ("L1", "L2", "DDR"):
+                counts[k] = 0
+            counts["on"] = True
+
+        def at_perc(r):
+            base = (b_now["b"] + 1) * P
+            m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+            m2.poke(r.state, G.MARK, (base + cycles(r)) & 0xFFFFFFFF)
+        hooks = {dsp.PERC_SW: at_perc, m3.DISPATCH: at_dispatch}
+        hooks.update({x: clock for x in sites})
+
+        def fb(b):
+            b_now["b"] = b
+            return frame_of(b)
+        rr = run_blocks(init, fb, blocks, extra_hooks=hooks)
+        st = rr.get("state")
+        skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+        end = m2.word(st.state, G.OURS_END) if rr["ok"] else None
+        mark0 = m2.word(st.state, G.MARK0) if rr["ok"] else None
+        rr.pop("state", None)
+        over = ((end - mark0) & 0xFFFFFFFF) / P if end is not None else None
+        fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+        return rr, skips, over, fin
+
+    def rand_panel():
+        return {c: rnd.randrange(128) for c in ctrls}
+
+    def c_frame(b):
+        tracks = {t: (rand_panel(), 36 + rnd.randrange(48), 0.3 + 0.7 * rnd.random()) for t in range(16)}
+        return fsc_frame(sound, machines, tracks, trig=(b % 16,))
+
+    def e_frame(b):
+        tracks = {t: (heavy, 48 + (t * 7) % 24, 0.9) for t in range(16)}
+        return fsc_frame(sound, machines, tracks, trig=tuple(range(16)) if b == 1 else (0,))
+    one = SM.TYPE_OF["ONESHOT"]
+
+    def g_frame(b, alone=False):
+        tracks = {} if alone else {t: (heavy, 40 + (t * 5) % 30, 1.0) for t in range(13)}
+        others = {15: (one, smp_words({SM.SAMP_REC: 4}))}
+        trig = ((15,) if b == 1 else ()) + (() if alone else (b % 13,))
+        return fsc_frame(sound, machines, tracks, trig=trig, others=others)
+    try:
+        rc, sc, oc, fc = scenario(20, c_frame)
+        re_, se, oe, fe = scenario(16, e_frame)
+        rg, sg, og, fg = scenario(16, g_frame)
+        rg0, _, _, _ = scenario(16, lambda b: g_frame(b, alone=True))
+    finally:
+        undo_counts()
+
+    def smp_out(rr, t):
+        return [blk.get(t, {}).get("out") for blk in rr.get("smp", [])] if rr["ok"] else []
+    g_one, g0_one = smp_out(rg, 15), smp_out(rg0, 15)
+    g_same = bool(g_one) and len(g_one) == len(g0_one) and all(a == b for a, b in zip(g_one, g0_one))
+    g_heard = sum(1 for o in g0_one[2:] if o and V.peak(o) > 1e-5)
+    n = {"skips": {"C": sc, "E": se, "G": sg}, "our_end_over_P": {k: v and round(v, 3) for k, v in
+         (("C", oc), ("E", oe), ("G", og))}, "oneshot_same_as_alone": g_same, "oneshot_blocks_heard": g_heard,
+         "memory_clock_scale": MEM_SCALE}
+    print(f"    rstress: {n}", flush=True)
+    checks = {
+        "C (16 FASCIA voices, every control random every block), E (a retrigger every block beside 15 voices), "
+        "G and G0: every block returns": rc["ok"] and re_["ok"] and rg["ok"] and rg0["ok"],
+        "in C, E and G, our voices done by 0.8 of the frame (the guard leaves voices out instead)":
+            all(x is not None and x <= 0.8 for x in (oc, oe, og)),
+        "with time short, voices are left out and counted (C and G)": bool(sc) and bool(sg),
+        "every track buffer finite, no NaN, in C, E and G": fc and fe and fg,
+        "G: the ONESHOT's output is, block for block, its output alone (G0): never left out": g_same and g_heard >= 10,
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": n}
+
+
 def step_chords(init, sound, machines, need=4, cold=None) -> dict:
     """v0.36 (the owner and misterairplane: two voices at most on a Monomachine track, the
     oldest silenced). A chord: four notes of one Monomachine machine at once (four tracks,
@@ -1469,6 +1598,11 @@ def step_chords(init, sound, machines, need=4, cold=None) -> dict:
 
     v0.38: then the sample machines in chords (step_smp_chords, on COLD: the cold init, as
     the standalone check that passed on v0.37 ran)."""
+    from dnfw.perc import program as PP          # noqa: PLC0415
+    if PP.RIFT:   # RIFT: no Monomachine machine; the sample machines' chords (v0.38) as before
+        only = [x for x in os.environ.get("DNFW_CHORDS_ONLY", "").split(",") if x]
+        sres, snums = step_smp_chords(cold if cold is not None else init, sound, machines, only=only)
+        return {"ok": all(sres.values()), "checks": sres, "numbers": snums}
     from dnfw.perc import guard as G
     from dnfw.mnm import machines as MMx
     P = 666_667
@@ -2136,9 +2270,12 @@ def step_smp(init, sound, machines, blocks) -> dict:
         "snare, which starts at its quiet end, sounds (> 0.01) and grows":
             bool(n["peaks_mixed"]) and n["peaks_mixed"][1] > 0.05 and n["peaks_mixed"][4] > 0.05
             and n["peaks_mixed"][0] > 0.01 and rev_grows,
-        "PERC beside them is bit-exact to its model and sounds":
+        **({"RIFT: PERC's type beside them (read as FM Tone: no PERC engine) leaves the mixed run whole "
+            "(its sample tracks bit-exact, above)": mx["ok"]}
+           if _rift_on() else
+           {"PERC beside them is bit-exact to its model and sounds":
             mx["ok"] and perc_exact(mx)[0] > 0 and perc_exact(mx)[1:] == (0, 0)
-            and V.peak(perc_series(mx, 2)) > 0.05,
+            and V.peak(perc_series(mx, 2)) > 0.05}),
         "v0.15: WERP, STRETCH and REPITCH at 140 BPM sound (peak > 0.05), bit-exact (above)":
             runs["timed"]["ok"] and all(V.peak(smp_series(runs["timed"], t)) > 0.05 for t in (0, 1, 2)),
         "v0.18: CFAD is gone (the DT2's ONESHOT has no such control): its record changes nothing; the loop sounds":
@@ -3374,15 +3511,35 @@ def step_fchords(init, sound, machines, blocks=8) -> dict:
         a_ok = a_ok and lb == 0
     ea = fsc_exact(ra)
     a_ok = a_ok and ea[1:] == (0, 0) and ea[0] == 4 * n
-    sid = MMx.NAMES.index("SID 6581")
-    others = {1: (5, perc_words(0)), 2: (SM.TYPE_OF["ONESHOT"], smp_words({SM.SAMP_REC: 4})),
-              3: (MMx.TYPES[sid], mnm_words(sid))}
+    from dnfw.perc import program as PP          # noqa: PLC0415
+    if PP.RIFT:   # RIFT: no PERC or Monomachine; FASCIA beside ONESHOT and a second FASCIA voice
+        others = {2: (SM.TYPE_OF["ONESHOT"], smp_words({SM.SAMP_REC: 4}))}
+    else:
+        sid = MMx.NAMES.index("SID 6581")
+        others = {1: (5, perc_words(0)), 2: (SM.TYPE_OF["ONESHOT"], smp_words({SM.SAMP_REC: 4})),
+                  3: (MMx.TYPES[sid], mnm_words(sid))}
     pan = pats["13_tabla"][0]
-    rb = run_blocks(init, lambda b: fsc_frame(sound, machines, {0: (pan, 48, 1.0)}, trig=(0, 1, 2, 3) if b == 1 else (),
+    ftr = {0: (pan, 48, 1.0), **({3: (pats["07_glass_bowl"][0], 67, 0.8)} if PP.RIFT else {})}
+    rb = run_blocks(init, lambda b: fsc_frame(sound, machines, ftr, trig=(0, 1, 2, 3) if b == 1 else (),
                                               others=others), n)
     want = fsc_live(pan, {1: (48, 1.0)}, n, 0)
     lb, dmax = fsc_vs_live(rb, 0, want)
     eb = fsc_exact(rb)
+    if PP.RIFT:
+        lb3, dmax3 = fsc_vs_live(rb, 3, fsc_live(ftr[3][0], {1: (67, 0.8)}, n, 3))
+        se = smp_exact(rb)
+        heard2 = V.peak([x for blk in rb.get("smp", [])[2:] if 2 in blk for x in blk[2]["out"]]) if rb["ok"] else 0.0
+        checks = {
+            "A: four FASCIA voices at once (a chord): every block returns, each bit-exact to its model and live.py": a_ok,
+            "B (RIFT): two FASCIA voices beside ONESHOT: both FASCIA bit-exact to their model and live.py":
+                rb["ok"] and eb[1:] == (0, 0) and eb[0] == 2 * n and lb == 0 and lb3 == 0,
+            "B (RIFT): ONESHOT bit-exact to the sample machines' model, and heard": se[1:] == (0, 0) and heard2 > 1e-4,
+        }
+        return {"ok": all(checks.values()), "checks": checks,
+                "numbers": {"A": {"voices": a_n, "exact": ea},
+                            "B": {"fascia": {0: {"live_blocks_differing": lb, "max_abs_diff": dmax},
+                                             3: {"live_blocks_differing": lb3, "max_abs_diff": dmax3}},
+                                  "exact": eb, "smp_exact": se, "peak_ONESHOT": heard2}}}
     pe = perc_exact(rb)
     se = smp_exact(rb)
     # what each machine left in its slot at its program's tail (PERC's for 1 and 3, the sample

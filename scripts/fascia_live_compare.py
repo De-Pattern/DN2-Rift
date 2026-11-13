@@ -367,6 +367,14 @@ def limits(res: dict, name: str = "") -> dict:
     for i in range(2):
         c = [cc[i] for cc in h["cents"] if not math.isnan(cc[i])]
         lim[f"pitch{i}"] = max(PITCH_C, k * float(np.std(c, ddof=1))) if len(c) >= 2 else PITCH_C
+        # RIFT (2026-11-13): and, as the spectral limits above, at least the model's own spread
+        # measured against itself (base: other model hits against these). Three hits' std
+        # underestimates a patch whose partials the draws move: 27_trade_bar_bell's model is
+        # 11.7 cents from itself (FDBK 40 under TRADE), its det exact (0.00 c). Errors in the
+        # algorithm, float32 or DSP order show in det, whose limits this does not touch.
+        bp = base.get("pitch", [float("nan")] * 2)[i]
+        if not math.isnan(bp):
+            lim[f"pitch{i}"] = max(lim[f"pitch{i}"], SPEC_K * abs(bp) + PITCH_C)
     for kk, v in KNOWN.get(name, {}).items():
         lim[kk] = max(lim.get(kk, 0.0), v)
     return lim

@@ -674,6 +674,10 @@ def main() -> int:
         mtypes = sorted({5, 6, 7, 8, 12, 13, *range(14, last + 1), last + 1})
         types = ["--machine-type", "3"] + ([x for t in mtypes for x in ("--machine-type", str(t))]
                                            + ["--machine-max", str(last)]
+                                           # RIFT: PERC's and the Monomachine's types are still
+                                           # saved and loaded here, and must come back as FM Tone
+                                           + [x for t in getattr(_cf, "GONE_TYPES", ())
+                                              for x in ("--machine-gone", str(t))]
                                            if dsp_changed else [])
         # v0.27: SHFT (7) and GRAN (8) removed: 7 and 8 load as Multi-Mode now; v0.45: PING (6)
         # removed too, so the LOAD bound is stock again and every type above 5 loads as Multi-Mode
@@ -1944,8 +1948,11 @@ def main() -> int:
                   "func-src", "wait:20", "down", "wait:4", "yes", "wait:20",
                   f"call:{cm:#x}:arg1@{cm:#x}:0:{FSg.TYPE}:arg4@{cm:#x}:arg5@{cm:#x}", "wait:10", "types"]
             gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in FSg.CONTROLS]
-            gs += ["no", "wait:10", "png:p0", "tap:2", "wait:10", "png:p1", "tap:2", "wait:10", "png:p2",
-                   "tap:2", "wait:10", "png:r0"]
+            npg = len(FSg.PAGES)                         # RIFT: pass 3's four
+            gs += ["no", "wait:10", "png:p0"]
+            for k in range(1, npg):
+                gs += ["tap:2", "wait:10", f"png:p{k}"]
+            gs += ["tap:2", "wait:10", "png:r0"]
             # (as stock p-locks: RECORD on (grid recording), a trig placed on step 1, the locks
             # written into the playing pattern's table, then [TRIG 1] held; emu_slides' way)
             gs += ["tap:19", "wait:10", "tap:25", "wait:10", "mem:0x42c5a9a0:4",
@@ -2004,10 +2011,11 @@ def main() -> int:
                     masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
                     facts = {
                         "MACHINE SEL's commit to FASCIA: track 1 is FASCIA": types[0] == FSg.TYPE,
-                        "its 24 controls at its model's DEFAULTS": words == want,
-                        "three pages, each its own, none the stock grid": len({shots[n].tobytes() for n in ("p0", "p1", "p2")}) == 3
-                        and not any((shots[n] == shots["wt"]).all() for n in ("p0", "p1", "p2")),
-                        "the third page key comes back to the first page's cells":
+                        f"its {len(FSg.CONTROLS)} controls at its model's DEFAULTS": words == want,
+                        f"{npg} pages, each its own, none the stock grid":
+                        len({shots[f"p{k}"].tobytes() for k in range(npg)}) == npg
+                        and not any((shots[f"p{k}"] == shots["wt"]).all() for k in range(npg)),
+                        "the last page key comes back to the first page's cells":
                         all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
                         "[TRIG 1] held: HARD's and DUST's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
@@ -2016,7 +2024,9 @@ def main() -> int:
                         "the LFO list names each control (short)": shorts[:len(named)] == list(FSg.CONTROLS),
                         "... and long": longs == [FSg.LONG_NAMES[c] for c in FSg.CONTROLS],
                         "... and its unused records -": all(x == "-" for x in shorts[len(named):]),
-                        "every control an LFO destination": len(masks) == nn and all(x != 0 for x in masks[:len(named)]),
+                        "every control an LFO destination (RIFT: but ATK, FDBK, VARY, whose records have no "
+                        "modulation)": len(masks) == nn and all((x != 0) == (c not in FSg.NO_LFO)
+                                                                for c, x in zip(FSg.CONTROLS, masks[:len(named)])),
                         "... the unused records left out": all(x == 0 for x in masks[len(named):]),
                         "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),
                     }
@@ -2025,9 +2035,10 @@ def main() -> int:
                            f"{[hex(w) for w in words]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
                 return good, ("FASCIA: MACHINE SEL's commit gives it its model's defaults (the snapshot's list is "
                               "v0.14's: the real list is not driven here); its "
-                              "three pages drawn, each its own (labels, knobs, choice boxes); p-locked HARD and DUST lit "
-                              "as stock lights a lock, nothing else; SYN held shows values; its 24 records named and "
-                              "offered to the LFOs, the unused ones named - and left out" if good else why)
+                              f"{npg} pages drawn, each its own (labels, knobs, choice boxes); p-locked HARD and DUST lit "
+                              f"as stock lights a lock, nothing else; SYN held shows values; its {len(FSg.CONTROLS)} records "
+                              "named and offered to the LFOs (but the three with no modulation), the unused ones named - "
+                              "and left out" if good else why)
             later("fascia", "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire)",
                   "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
 

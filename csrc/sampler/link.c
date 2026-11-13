@@ -735,6 +735,9 @@ static int l_entry __attribute__((section(".data"))) = -1;       /* the entry du
 int smp_tables __attribute__((section(".data"))) = 0;   /* 0 not yet, 1 sending, 2 sent, -1 none */
 static u32 tbl_bytes(void)
 {
+#if WR_NO_TABLES
+    return 0;           /* RIFT: no tables chunk at TABLE_LOAD (no MD/MnM engine): never read there */
+#endif
     if (le32(TBL) != TABLE_MAGIC)
         return 0;
     u32 n = (le32(TBL + 4) + 511u) & ~511u;
