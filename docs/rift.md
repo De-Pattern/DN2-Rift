@@ -87,6 +87,18 @@ De-Pattern/DN2-Rift-bench. Start from docs/HANDOFF-second-firmware.md for the ba
 - **Tests**: seven unit tests asserted the mod's layout (PERC in the list, its tables, its
   140 KB span); each now asserts RIFT's exactly, the mod's assertions kept behind the flag.
   Unit tests: 670 passed before these seven were rewritten.
+- **Gate so far (2026-11-13, partial runs, not a gate pass)**: preflight, code current,
+  rebuild byte for byte, DSP identity, DSP hardware rules, symbols, ColdFire instruction set,
+  Overbridge untouched, the new stock start-up check (its negative control, the build with the
+  animation, fails it), the unit tests (after the seven RIFT rewrites), and the ColdFire
+  steps meter, keepsamp, functurn, recorder, mnmpages, question, mnmdefaults, fascia, alloc,
+  multisel, unused, hooks, boot from reset: all PASS.
+- **The SHARC runner needs RIFT's version of its PERC/MnM parts.** `wipe` (P-I's NaN wipe),
+  `voice` (every PERC machine), `mnm` and `chords`' Monomachine half test engines that are
+  gone; `guard`, `garbage`, `stress` and `fchords` put PERC or Monomachine voices beside the
+  ones that remain (the guard is tested on two PERC tracks). Each gets the remaining machines
+  (FASCIA, the sample machines) in place of the gone ones, so the guard, garbage and stress
+  coverage stays as strong; nothing is simply dropped.
 - **Not yet out**: the Machinedrum/Monomachine code on the ColdFire (pages, md_page.c, the
   table chunk the sample link sends at power-on, which still needs the owner's MD and MnM
   images to build) and the gate's MnM steps.

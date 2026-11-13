@@ -632,7 +632,9 @@ def main() -> int:
             sec3 = (bdir / "section_3_MAIN_OS.bin").read_bytes()
             at = Bs.SPEC["intro_va"] - Wb.BASE
             intro_ok = sec3[at:at + 8] == bytes.fromhex(Bs.SPEC["intro_stock"])
-            no_aniz = Bs.SPEC["aniz_chunk"].encode() not in sec3
+            from dnfw.mods import platform as Pf  # noqa: PLC0415
+            tags = [t for t, _ in Pf.split(sec3)[1]]
+            no_aniz = Bs.SPEC["aniz_chunk"].encode() not in tags and b"ANZL" not in tags   # the animation, its label
             gate("stock start-up", intro_ok and no_aniz,
                  "the intro routine is stock's and no animation chunk is in the image" if intro_ok and no_aniz
                  else f"intro stock: {intro_ok}; no animation chunk: {no_aniz}")
