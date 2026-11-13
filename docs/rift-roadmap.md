@@ -7,14 +7,21 @@ else, and any sound choice goes to the owner's ear first.
 
 ## 1. A per-track FX platform
 
-The base for most of the effects below: an effect slot per track, in the voice's chain, that
-our own effects can be loaded into.
+The base for most of the effects below: an insert effect per track, its own place in the
+voice's chain. **Not** a filter type: the DN2 mk2 mod's PING, grain and frequency-shift
+effects rode the filter slot; RIFT's effects do not (owner, 2026-11-13).
 
-- Reference: the Overtone DN2 mod's way of adding effects (its source or docs are still
-  needed from the owner).
-- Research: where in the stock per-track chain (after the filter, before the amp, or after
-  the amp) an insert can sit; its DSP cost per track; how its parameters reach the screen
-  and p-locks (records, as FASCIA's do) without taking slots from the machines.
+- **Reference: Overtone** (github.com/complex-ping/overtone, AGPL). Its repository holds the
+  patcher and a pack of bytes, not the insert's source, so it is a reference for the design,
+  not code to reuse. Its design: [FX] page 1 gains **M.SEL** (which insert: FLNG, PHSR, CHOR,
+  REVB) and **MOD** (dry/wet), both p-lockable, so one trig can switch effect; page 2 is the
+  insert's own eight knobs; a route knob puts it **PRE FLTR** (before the filter, in stereo,
+  the track then takes two voices per note) or **POST FLTR** (after the pan); a third page
+  moves the stock bit reduction and overdrive before or after the filter. LFOs and its
+  envelope followers modulate inserts; slides reach them. SETTINGS > SYSTEM > DSP LOAD shows
+  the engine's load.
+- Research: the records its pages use (the FX page's spare places), the DSP cost per track,
+  the stereo PRE FLTR path's two voices, and how it keeps the shared delay/reverb/chorus intact.
 
 Effects for it, in no fixed order:
 
@@ -27,6 +34,9 @@ Effects for it, in no fixed order:
   its code is a starting point, matched against the Tonverk manual (in the project).
 - **The Tonverk granular pitch effect.** Research: the Tonverk manual's description, then a
   model to the owner's ear.
+- (Tonverk OS 1.4.1's update, given 2026-11-13: its root and apps filesystems are encrypted
+  (no squashfs header, 8.0 bits a byte), so both Tonverk ports are made from the manual and by
+  ear, not from its code.)
 
 ## 2. A function-generator looping envelope
 
@@ -36,9 +46,8 @@ the stock LFO/envelope routing, or lives inside our own machines and effects fir
 
 ## 3. An LPG-style filter type
 
-A new filter type beside the stock ones. FASCIA already has an LPG (its model is the
-starting point). Research: how the DN2's per-track filter types are chosen and run on the DSP,
-and whether a new type can be added there without touching the stock types.
+A real new filter type beside the stock ones (the mod already added filter types, so the
+mechanism is known). FASCIA's LPG model is the starting point.
 
 ## 4. A Nebulae-style phase vocoder / granular machine
 
@@ -69,7 +78,15 @@ After Qu-Bit's Nebulae V2 and the owner's own mono port of it to a guitar pedal:
   resampling and recording.
 - The same sample import tool as the DN2 mk2 mod.
 
-## 6. Maybe
+## 6. Ideas to weigh
+
+- **Running FASCIA at a lower internal rate** (a tester, JEK, 2026-11-13: Mutable Instruments
+  ran Rings' resonator at 32 kHz in Elements to make room). 32 kHz saves about a third of
+  FASCIA's per-sample work, but costs a resampler on its output, moves the Nyquist to 16 kHz
+  (the bright partials of the glass, tick and bell patches sit up there), and changes the
+  approved sound, so it is weighed only after the voice count is measured, and only by ear.
+
+## 7. Maybe
 
 - **Syntakt digital drum machines** inside one PERC-style machine, its TYPE knob p-lockable to
   pick a different machine per step, as the DN2 mk2 mod's PERC did with the Machinedrum's.
