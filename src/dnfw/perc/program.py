@@ -27,6 +27,12 @@ TRIG_WORD = 0x25C4AC
 BUFFERS = 0x254A60
 RECORDS, RECORD_STRIDE = 0x2554B8, 0x234
 MACHINE_TYPE = 5
+# RIFT (owner, 2026-11-13: "remove md and mm"): no Machinedrum or Monomachine voice. This program
+# is only the DSP chain's head: the register save, the voice order (mnm_ages, which FASCIA and
+# the sample machines read), the guard's frame bookkeeping, then the jump to smp.asm. Their
+# code, tables and state are not in the image (dnfw.waverider.dsp). One constant: False puts
+# the mod's PERC loop back.
+RIFT = True
 # v0.26: the Monomachine's synth machines (docs/mnm.md), each its own machine type, in PERC's
 # voice: type -> index in dnfw.mnm.machines.MACHINES
 from ..mnm import machines as _mnm_types   # noqa: E402
@@ -135,14 +141,14 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
         half(p, 2, 148, 10)                    # the slot's machine type, as raw_type
         p.iconst(4, 0)
         p.iconst(14, 0)                        # R14: ours (PERC, Monomachine, a sample machine)
-        for typ, k in MNM_TYPES.items():
+        for typ, k in ({} if RIFT else MNM_TYPES).items():
             p.iconst(12, typ)
             p.if_(2, "EQ", 12, lambda c=MNM_COST[MNM.NAMES[k]]: (p.iconst(4, c), p.iconst(14, 1)), kind="i")
         from ..fascia import machines as FSx
         # PERC, the sample machines (v0.44: 8..13 and BOUNCE's 17), v0.45 FASCIA's 18: tested as
         # runs of consecutive types (5; 8..13; 17..18), a compare or two each, not one a type
         # (the loop is unrolled 16 times: the DSP's 1 MiB upload buffer)
-        for lo, hi in _runs((MACHINE_TYPE, *SMx.TYPES, FSx.TYPE)):
+        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE))):
             p.iconst(12, lo)
             if lo == hi:
                 p.if_(2, "EQ", 12, lambda: p.iconst(14, 1), kind="i")
@@ -721,10 +727,11 @@ def program(L: M.Layout, rings_sw: int, prefix: str = "pk") -> str:
     p.raw("wr_perc.:")
     for k, r in enumerate(SAVE_REGS):
         p.e(f"DM({SAVE + 4 * k:#x}) = {r};")
-    from ..md import core as MDK
-    MDK.table_fill(p, L.md)                    # the Machinedrum's sine and tables, 1024 words a block until whole (v0.24: zpack)
-    from ..mnm import dpro as MNP
-    MNP.build(p, L.md.mnm)                     # v0.26: then DENS's and DDRW's Digibank stand-in, 8 words a block
+    if not RIFT:
+        from ..md import core as MDK
+        MDK.table_fill(p, L.md)                # the Machinedrum's sine and tables, 1024 words a block until whole (v0.24: zpack)
+        from ..mnm import dpro as MNP
+        MNP.build(p, L.md.mnm)                 # v0.26: then DENS's and DDRW's Digibank stand-in, 8 words a block
     p.iconst(0, 0)
     p.st(L.C["mcost"], 0)                      # v0.26: no Monomachine voice rendered yet this block
     mnm_ages(p, L)                             # v0.29: the newest Monomachine voices first
@@ -735,59 +742,60 @@ def program(L: M.Layout, rings_sw: int, prefix: str = "pk") -> str:
     from ..waverider import dsp as DSPx
     G.perc_limit(p, [SMx2.TYPE_OF[n] for n in SMx2.ENGINED], DSPx.SMP_STATE_DM, DSPx.SMP_STATE_STRIDE,
                  SV["on"], TRIG_WORD, lambda p, d, k: half(p, d, 148, k))   # v0.49: the samples' time first
-    p.iconst(0, 0)
-    p.st(L.md.mnm.scratch + PERC_I, 0)
-    top = p.label("slot")
-    nxt = p.label("next")
-    p.place(top)
-    order_slot(p, L.md.mnm.scratch + PERC_I)   # v0.29: the newest first
-    p.st(L.C["t"], 9)
-    p.lsh(12, 9, 9)
-    p.lsh(13, 9, 5)
-    p.iop(12, 12, "+", 13)
-    p.lsh(13, 9, 4)
-    p.iop(12, 12, "+", 13)
-    p.lsh(13, 9, 2)
-    p.iop(12, 12, "+", 13)
-    p.iconst(11, RECORDS)
-    p.iop(12, 11, "+", 12)
-    p.seti(4, 12, "record: 0x2554b8 + 0x234 t")
-    raw_type(p, 2)
-    for typ in MNM_TYPES:                     # v0.26: a Monomachine machine is PERC's voice too
-        p.iconst(12, typ)
-        p.if_(2, "EQ", 12, lambda: p.iconst(2, MACHINE_TYPE), kind="i")
-    p.ipass(0, 2)
-    p.iconst(12, MACHINE_TYPE)
-    p.e("COMP(R0, R12);")
-    other = p.label("other")
-    p.jump("NE", other)
-    p.ld(0, L.md.C["fill"])                   # v0.26: silent until the tables (sent by the
-    p.iconst(12, MDK.Z_N)                     # ColdFire at power-on) are decoded
-    p.e("COMP(R0, R12);")
-    p.jump("LT", other)
-    G.around(p, L.C["t"], G.COST_PERC, BUFFERS, lambda: voice(p, L),   # v0.27: if it fits in the frame
-             rests=L.md.mnm.scratch + RESTS_OFF, rest_blocks=MNM_QUIET_BLOCKS,   # v0.36: else, the second
-             strikes=L.md.mnm.scratch + STRIKES_OFF, steal_at=STEAL_STRIKES,       # time in a note, stolen
-             limit=G.LIMIT_PERC)                                                    # v0.49: after the samples' share
-    p.jump("", nxt)
-    # not PERC: its voice is silenced, so a track that comes back to PERC starts clean
-    # (v0.12: v0.11 resumed what it had left ringing)
-    p.place(other)
-    p.ld(9, L.C["t"])
-    p.lsh(12, 9, 7)
-    p.iconst(11, L.state)
-    p.iop(12, 11, "+", 12)
-    p.seti(2, 12)
-    p.iconst(0, 0)
-    M.vs(p, "on", 0)
-    p.place(nxt)
-    p.ld(0, L.md.mnm.scratch + PERC_I)
-    p.iconst(12, 1)
-    p.iop(0, 12, "+", 0)
-    p.st(L.md.mnm.scratch + PERC_I, 0)
-    p.iconst(12, 16)
-    p.e("COMP(R0, R12);")
-    p.jump("LT", top)
+    if not RIFT:                               # the mod's PERC loop: every slot's Machinedrum/Monomachine voice
+        p.iconst(0, 0)
+        p.st(L.md.mnm.scratch + PERC_I, 0)
+        top = p.label("slot")
+        nxt = p.label("next")
+        p.place(top)
+        order_slot(p, L.md.mnm.scratch + PERC_I)   # v0.29: the newest first
+        p.st(L.C["t"], 9)
+        p.lsh(12, 9, 9)
+        p.lsh(13, 9, 5)
+        p.iop(12, 12, "+", 13)
+        p.lsh(13, 9, 4)
+        p.iop(12, 12, "+", 13)
+        p.lsh(13, 9, 2)
+        p.iop(12, 12, "+", 13)
+        p.iconst(11, RECORDS)
+        p.iop(12, 11, "+", 12)
+        p.seti(4, 12, "record: 0x2554b8 + 0x234 t")
+        raw_type(p, 2)
+        for typ in MNM_TYPES:                     # v0.26: a Monomachine machine is PERC's voice too
+            p.iconst(12, typ)
+            p.if_(2, "EQ", 12, lambda: p.iconst(2, MACHINE_TYPE), kind="i")
+        p.ipass(0, 2)
+        p.iconst(12, MACHINE_TYPE)
+        p.e("COMP(R0, R12);")
+        other = p.label("other")
+        p.jump("NE", other)
+        p.ld(0, L.md.C["fill"])                   # v0.26: silent until the tables (sent by the
+        p.iconst(12, MDK.Z_N)                     # ColdFire at power-on) are decoded
+        p.e("COMP(R0, R12);")
+        p.jump("LT", other)
+        G.around(p, L.C["t"], G.COST_PERC, BUFFERS, lambda: voice(p, L),   # v0.27: if it fits in the frame
+                 rests=L.md.mnm.scratch + RESTS_OFF, rest_blocks=MNM_QUIET_BLOCKS,   # v0.36: else, the second
+                 strikes=L.md.mnm.scratch + STRIKES_OFF, steal_at=STEAL_STRIKES,       # time in a note, stolen
+                 limit=G.LIMIT_PERC)                                                    # v0.49: after the samples' share
+        p.jump("", nxt)
+        # not PERC: its voice is silenced, so a track that comes back to PERC starts clean
+        # (v0.12: v0.11 resumed what it had left ringing)
+        p.place(other)
+        p.ld(9, L.C["t"])
+        p.lsh(12, 9, 7)
+        p.iconst(11, L.state)
+        p.iop(12, 11, "+", 12)
+        p.seti(2, 12)
+        p.iconst(0, 0)
+        M.vs(p, "on", 0)
+        p.place(nxt)
+        p.ld(0, L.md.mnm.scratch + PERC_I)
+        p.iconst(12, 1)
+        p.iop(0, 12, "+", 0)
+        p.st(L.md.mnm.scratch + PERC_I, 0)
+        p.iconst(12, 16)
+        p.e("COMP(R0, R12);")
+        p.jump("LT", top)
     p.e(f"JUMP {rings_sw:#x};", "smp.asm's wr_smp, then PING (which restores)")
     p.emit_subs()
     p.raw(".wr_perc..end:")

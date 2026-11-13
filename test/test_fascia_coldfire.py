@@ -103,7 +103,11 @@ def test_coldfire_type_18():
     if not F.LISTED:
         assert F.TYPE not in lst
         return
-    assert lst.index(F.TYPE) == lst.index(MM.TYPES[-1]) + 1 == lst.index(8) - 1   # after the MnM's, before the samples
+    from dnfw.perc import program as PP
+    if PP.RIFT:   # RIFT: after the stock four, before the samples
+        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(8) - 1
+    else:
+        assert lst.index(F.TYPE) == lst.index(MM.TYPES[-1]) + 1 == lst.index(8) - 1   # after the MnM's, before the samples
     assert not CF.SAMPLER_FIRST <= F.TYPE <= CF.SAMPLER_LAST                   # the synth group: no divider
     assert f"cmpi.l  #{F.TYPE},%d0" in CF.SHIMS and f"cmpi.l  #{F.TYPE},%d3" in CF.SHIMS2
 

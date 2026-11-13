@@ -173,6 +173,11 @@ def test_the_program_assembles_from_the_model():
     from dnfw.waverider import dsp
     text = PP.program(PL.layout(), dsp.SMP_SW)
     lines = [ln for ln in text.splitlines() if ln.startswith("      ") and not ln.strip().startswith("//")]
+    if PP.RIFT:   # RIFT: the chain's head only (the save, the voice order, the guard), no voice
+        assert 1000 < len(lines) < 5000 and "table" not in text.lower().split("wr_perc.:", 1)[1].split("jump", 1)[0]
+        code = [ln for ln in lines if not ln.strip().startswith(".")]
+        assert code[-1].strip().startswith(f"JUMP {dsp.SMP_SW:#x};")   # nothing after the jump: no voice, no subroutine
+        return
     assert 5000 < len(lines) < 34000          # (v0.29: the voice order and resting took it past 30,000; the L2 span is the real bound, test_waverider_dsp)
     assert f"JUMP {dsp.SMP_SW:#x};" in text
 

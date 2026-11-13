@@ -622,9 +622,20 @@ def main() -> int:
         # v0.37: the build plays the start-up animation (dnfw.bootanim): every frame the stamp
         # shows during the boot, checked bit for bit against his (s!Rwa²'s), all of them shown
         from dnfw.mods import waverider as Wb   # noqa: PLC0415
-        anim = hasattr(Wb, "_boot")
+        anim = hasattr(Wb, "_boot") and getattr(Wb, "BOOTANIM", True)
         if anim:
             boot_cmd.append("--aniz")
+        else:
+            # RIFT (owner, 2026-11-13): the stock start-up, so the intro routine must be stock's,
+            # byte for byte, and no animation chunk may ride along
+            from dnfw.mods import bootscreen as Bs   # noqa: PLC0415
+            sec3 = (bdir / "section_3_MAIN_OS.bin").read_bytes()
+            at = Bs.SPEC["intro_va"] - Wb.BASE
+            intro_ok = sec3[at:at + 8] == bytes.fromhex(Bs.SPEC["intro_stock"])
+            no_aniz = Bs.SPEC["aniz_chunk"].encode() not in sec3
+            gate("stock start-up", intro_ok and no_aniz,
+                 "the intro routine is stock's and no animation chunk is in the image" if intro_ok and no_aniz
+                 else f"intro stock: {intro_ok}; no animation chunk: {no_aniz}")
 
         def boot_body(tdir):
             rc, out = run("boot_check", boot_cmd, logs, trace=tdir)

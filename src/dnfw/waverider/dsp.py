@@ -244,7 +244,10 @@ def lookup16() -> bytes:
     and above would read past them). PERC and the sample machines tell themselves apart by
     the frame's own type word; one whose machine has no renderer yet stays silent on that
     slot. Any other type reads 0 (FM Tone), as stock answers 5-7."""
-    table = [t if t < 5 or t in ENGINES and t < 8 else
+    from ..perc import program as _pp
+    gone = {5, *MNM_TYPES} if _pp.RIFT else set()     # RIFT: no Machinedrum or Monomachine engine
+    table = [0 if t in gone else
+             t if t < 5 or t in ENGINES and t < 8 else
              SMP_ENGINE_SLOT if t in SMP_TYPES or t in MNM_TYPES or t in FASCIA_TYPES else 0
              for t in range(MACHINE_TYPES)]
     return struct.pack(f"<{1 + MACHINE_TYPES}I", 0, *table)
@@ -348,7 +351,8 @@ def _perc_tables() -> bytes:
 def ddr_spans() -> list[tuple[str, int, bytes]]:
     """(what, load address, payload) of each DDR span (load address = address): the
     machines' and filters' state (zeros, so fill blocks) and tables."""
-    return [
+    from ..perc import program as _pp
+    out = [
         # (v0.45: "PING tables" at PING_TABLES_DDR dropped with PING)
         # v0.31: PERC's amp modulation (AMD) reads SHFT's sine here (dnfw.perc.live.layout).
         # v0.28 dropped this span with SHFT, so AMD read whatever the DDR held: on the
@@ -370,6 +374,9 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
          SMP_POOL_DDR, _smp_pool()[:8]),
         ("sample pool: the rest of its directory and names (zeros)", SMP_POOL_DDR + 8,
          bytes(len(_smp_pool()) - 8))]
+    if _pp.RIFT:                                # RIFT: no Machinedrum or Monomachine engine
+        out = [x for x in out if not x[0].startswith(("PERC tables", "Machinedrum"))]
+    return out
 
 
 def _perc_sine() -> bytes:
@@ -414,14 +421,21 @@ def l2_spans() -> list[tuple[str, int, bytes]]:
             continue
         if span - len(code) < 64:
             raise DspError(f"{name}.asm ({len(code)} bytes) leaves fewer than 64 bytes of its L2 span")
+        from ..perc import program as _pp
+        if name == "perc" and _pp.RIFT:          # RIFT: the head only, then 128 bytes of NOPs
+            out.append(("perc.asm (wr_perc: RIFT's chain head), in L2", at, code + bytes(128)))   # BRANCH-12: 12 instructions (72 B) after its last JUMP
+            continue
         out.append((what, at, code + bytes(span - len(code))))
     # v0.32: the voices' working state (zeros)
-    out.append(("Machinedrum voices: 16 slots x 1 KB, in L2 (zeros; v0.32)", MD_STATE_L2,
-                bytes(16 * _md_core().MD_STRIDE)))
+    from ..perc import program as _pp
+    if not _pp.RIFT:                            # RIFT: no Machinedrum voices, no DPRO tables
+        out.append(("Machinedrum voices: 16 slots x 1 KB, in L2 (zeros; v0.32)", MD_STATE_L2,
+                    bytes(16 * _md_core().MD_STRIDE)))
     out.append(("Monomachine scratch and the voice order, in L2 (zeros; v0.32)", MNM_SCRATCH_L2,
                 bytes(MNM_SCRATCH_BYTES)))
-    out.append(("the DPRO tables' room in L2 (zeros, filled by the build; v0.36)", MNM_DT_L2,
-                bytes(MNM_DT_BYTES)))
+    if not _pp.RIFT:
+        out.append(("the DPRO tables' room in L2 (zeros, filled by the build; v0.36)", MNM_DT_L2,
+                    bytes(MNM_DT_BYTES)))
     out.append(("the main mix's tap for the recorder's MAIN, in L2 (zeros; v0.37)", MAIN_TAP_L2,
                 bytes(MAIN_TAP_BYTES)))
     # v0.45: FASCIA: its voices' state (zeros: every voice off) and its code

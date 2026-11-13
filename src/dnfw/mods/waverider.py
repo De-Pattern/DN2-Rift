@@ -43,6 +43,10 @@ DEVICE = 0x15                      # Digitone II
 MAIN_OS, DSP_STREAM = 3, 7
 BASE = 0x40000400
 SPEC = json.loads((pathlib.Path(__file__).with_name("waverider_code.json")).read_text())
+# RIFT (owner, 2026-11-13: "new loader, we will make one later, use stock for now"): the DN2 mk2
+# start-up animation is not in RIFT; the stock start-up runs. The version stays readable at the
+# +Drive browser's top (smp_page.c, MOD_VERSION). One constant: True puts the animation back.
+BOOTANIM = False
 
 
 def _boot():
@@ -64,7 +68,8 @@ def _label():
 def extents(firmware=None, area_length: int = 0) -> list[Extent]:
     out = [Extent(MAIN_OS, e["va"] - BASE, len(e["new"]) // 2, e["what"]) for e in SPEC["edits"]]
     from . import bootscreen as B
-    out.append(Extent(MAIN_OS, B.SPEC["intro_va"] - BASE, 8, "v0.37: the intro hook (the start-up animation)"))
+    if BOOTANIM:
+        out.append(Extent(MAIN_OS, B.SPEC["intro_va"] - BASE, 8, "v0.37: the intro hook (the start-up animation)"))
     out += platform.extents(area_length)
     size = None
     if firmware is not None:
@@ -166,16 +171,17 @@ def apply(firmware) -> Result:
         raise ModError(f"the DSP boot stream: {exc}") from exc
     codes = [(platform.area.CODE, platform.area.CodeChunk(load, code).pack())
              for load, code, _ in _chunks()]
-    # v0.37: the start-up animation: the intro routine's first 8 bytes jump to the stamp
-    bspec, aniz = _boot()
     base_os = bytearray(_main_os(main_os))
-    at, stock = bspec["intro_va"] - BASE, bytes.fromhex(bspec["intro_stock"])
-    if bytes(base_os[at:at + 8]) != stock:
-        raise ModError(f"0x{bspec['intro_va']:08x} (the intro routine) is not stock; this mod is "
-                       "for unmodified Digitone II 1.11")
-    base_os[at:at + 8] = b"\x4e\xf9" + struct.pack(">I", bspec["stamp"]) + b"\x4e\x71"
-    codes += [(platform.area.CODE, platform.area.CodeChunk(bspec["load"], bytes.fromhex(bspec["code"])).pack()),
-              (bspec["aniz_chunk"].encode(), aniz), _label()]
+    if BOOTANIM:
+        # v0.37: the start-up animation: the intro routine's first 8 bytes jump to the stamp
+        bspec, aniz = _boot()
+        at, stock = bspec["intro_va"] - BASE, bytes.fromhex(bspec["intro_stock"])
+        if bytes(base_os[at:at + 8]) != stock:
+            raise ModError(f"0x{bspec['intro_va']:08x} (the intro routine) is not stock; this mod is "
+                           "for unmodified Digitone II 1.11")
+        base_os[at:at + 8] = b"\x4e\xf9" + struct.pack(">I", bspec["stamp"]) + b"\x4e\x71"
+        codes += [(platform.area.CODE, platform.area.CodeChunk(bspec["load"], bytes.fromhex(bspec["code"])).pack()),
+                  (bspec["aniz_chunk"].encode(), aniz), _label()]
     content = platform.join(bytes(base_os), others + codes)
     area_length = len(content) - platform.STOCK_LENGTH
     return Result(payloads={MAIN_OS: content, DSP_STREAM: section7},

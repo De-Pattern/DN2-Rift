@@ -109,12 +109,17 @@ def test_the_five_patches_and_nothing_else_in_the_stock_blocks(stock7, built):
     n = dsp.MACHINE_TYPES                                        # 16 (v0.26: 17 with a type 16)
     lookup = struct.unpack(f"<{n + 1}I", bootstream.read_span(built, dsp.dm_to_load(dsp.LOOKUP16_DM - 4), 4 * n + 4))
     assert lookup[0] == struct.unpack("<I", bootstream.read_span(stock7, dsp.dm_to_load(dsp.LOOKUP_DM - 4), 4))[0] == 0
-    assert lookup[1:7] == (0, 1, 2, 3, 4, 5)
+    from dnfw.perc import program as PP
+    if PP.RIFT:   # RIFT: PERC's type (5) and the Monomachine's read FM Tone, as stock answers a type it lacks
+        assert lookup[1:7] == (0, 1, 2, 3, 4, 0)
+        assert all(lookup[1 + t] == 0 for t in dsp.MNM_TYPES)
+    else:
+        assert lookup[1:7] == (0, 1, 2, 3, 4, 5)
     # the sample machines (8..13) and the Monomachine's (6, 7, 14..) borrow PERC's engine
     # slot; nothing reads past slot 7
     assert dsp.SMP_ENGINE_SLOT == 5
     # v0.45: FASCIA (18) too (its program: dnfw.fascia.program, chained after smp.asm)
-    assert all(lookup[1 + t] == 5 for t in (*dsp.SMP_TYPES, *dsp.MNM_TYPES, *dsp.FASCIA_TYPES))
+    assert all(lookup[1 + t] == 5 for t in (*dsp.SMP_TYPES, *(() if PP.RIFT else dsp.MNM_TYPES), *dsp.FASCIA_TYPES))
     assert all(v in (0, k) for k, v in enumerate(lookup[1:])
                if k not in dsp.SMP_TYPES and k not in dsp.MNM_TYPES and k not in dsp.FASCIA_TYPES) and max(lookup) <= 7
     assert bootstream.read_span(built, dsp.sw_to_load(dsp.LOOKUP_SITE_SW), 6) == dsp.objects()["lookup_ptr"]
@@ -159,16 +164,26 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
     # Waverider's wavetables went in v0.11. v0.26: the Machinedrum's shipped tables (the
     # host's pitch table, zpack) are not in the image: the ColdFire sends them at power-on.
     # v0.45: PING's tables went with PING
-    assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR,                      # v0.31: AMD's sine
-                                      dsp.PERC_TABLES_DDR,
-                                      dsp.SMP_TABLES_DDR,                       # v0.18: the DT2 reader's
-                                      dsp.FSC_TABLES_DDR,                       # v0.45: FASCIA's
-                                      dsp.MD_TABLES_DDR,
-                                      dsp.MD_DELAY_DDR,                         # v0.32: P-I's lines, zeroed
-                                      dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]   # v0.17: the MD's
-    assert not any(ddr[-1][2])
-    assert not any(ddr[4][2]) and not any(ddr[5][2])      # the MD's tables (the DSP fills them), P-I's lines
-    assert dsp.MD_TABLES_DDR + len(ddr[4][2]) <= dsp.MD_DELAY_DDR
+    from dnfw.perc import program as PP
+    if PP.RIFT:   # RIFT: no PERC or Machinedrum tables, no P-I lines; FASCIA's sine stays
+        assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR, dsp.SMP_TABLES_DDR, dsp.FSC_TABLES_DDR,
+                                          dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
+        assert not any(ddr[-1][2])
+        assert struct.unpack_from("<II", ddr[-2][2]) == (0x31504D53, 0)
+        l2 = {a: p for _, a, p in dsp.l2_spans()}
+        assert dsp.MD_STATE_L2 not in l2 and dsp.MNM_DT_L2 not in l2
+        assert not any(l2[dsp.MNM_SCRATCH_L2])            # the voice order's and FASCIA's bookkeeping
+        return
+        assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR,                      # v0.31: AMD's sine
+                                          dsp.PERC_TABLES_DDR,
+                                          dsp.SMP_TABLES_DDR,                       # v0.18: the DT2 reader's
+                                          dsp.FSC_TABLES_DDR,                       # v0.45: FASCIA's
+                                          dsp.MD_TABLES_DDR,
+                                          dsp.MD_DELAY_DDR,                         # v0.32: P-I's lines, zeroed
+                                          dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]   # v0.17: the MD's
+        assert not any(ddr[-1][2])
+        assert not any(ddr[4][2]) and not any(ddr[5][2])      # the MD's tables (the DSP fills them), P-I's lines
+        assert dsp.MD_TABLES_DDR + len(ddr[4][2]) <= dsp.MD_DELAY_DDR
     # v0.32: the voices' working state in L2 (zeros), inside the room proven on units
     from dnfw.perc import live as PL
     L = PL.layout()
@@ -205,8 +220,11 @@ def test_perc_code_is_in_l2_above_the_stock_image_and_below_the_uncached_window(
     spans = dsp.l2_spans()
     data = spans[2:]                             # v0.32: the voices' state, zeros, below the code
     spans = spans[:2]
-    assert [(at, len(pl)) for _, at, pl in spans] == [(dsp.PERC_L2_LOAD, dsp.PERC_L2_SPAN),
+    from dnfw.perc import program as PP
+    perc_len = len(dsp.objects()["perc"]) + 128 if PP.RIFT else dsp.PERC_L2_SPAN   # RIFT: the head, then 128 B of NOPs
+    assert [(at, len(pl)) for _, at, pl in spans] == [(dsp.PERC_L2_LOAD, perc_len),
                                                       (dsp.SMP_L2_LOAD, dsp.SMP_L2_SPAN)]
+    assert dsp.PERC_L2_LOAD + perc_len <= dsp.SMP_L2_LOAD
     for _w, at, payload in data:
         assert dsp.L2_IMAGE_END + 0x10000 <= at and at + len(payload) <= dsp.PERC_L2_LOAD
         assert bootstream.read_span(built, at, len(payload)) == payload
@@ -412,6 +430,10 @@ def test_every_table_perc_reads_is_loaded_by_a_span():
         return False
     sdata, at = SL.tables_bytes()
     assert loaded(L.sin, sdata[at["sin"]:at["pow2"]]), "PERC's sine (AMD) is not loaded"
+    from dnfw.perc import program as PP
+    if PP.RIFT:   # RIFT: PERC's program is the chain's head and reads no table; FASCIA reads the sine above
+        assert not any(x[0].startswith("PERC tables") for x in dsp.ddr_spans())
+        return
     pdata, _ = PM.tables_bytes()
     assert loaded(L.tables, pdata), "PERC's tables are not loaded"
 

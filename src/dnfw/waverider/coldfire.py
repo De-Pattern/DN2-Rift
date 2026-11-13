@@ -78,7 +78,12 @@ LIST_STOCK = (0, 2, 1, 3, 4)
 # offers the stock machines and FASCIA only. The mod's list, kept for the removals that follow
 # (docs/rift.md): one constant, so it comes out (or back) cleanly.
 LIST_DN2MK2 = (0, 2, 1, 3, 5, *_mnm.TYPES, *((_fsc.TYPE,) if _fsc.LISTED else ()), 8, 9, 10, 11, 13, 12, *((_smpm.BOUNCE_TYPE,) if _smpm.BOUNCE_LISTED else ()), 4)   # v0.19: SLICE before GRID, the DT2's order; v0.44 BOUNCE after them (group 3: its own divider); v0.45 FASCIA after the Monomachine's (group 3, no divider)
-LIST_NEW = (0, 2, 1, 3, _fsc.TYPE, 4)
+# RIFT (owner, 2026-11-13: "remove md and mm. maybe not a good idea to remove sample machines yet"):
+# the mod's list less PERC and the Monomachine machines; FASCIA after the stock four.
+from ..perc import program as _pp           # noqa: E402
+GONE_TYPES = (5, *_mnm.TYPES) if _pp.RIFT else ()
+LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
+    (0, 2, 1, 3, _fsc.TYPE, *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
 LIST_CAP = 0x4004D906                   # lea %a0@(20),%a0 -- the vector's capacity
@@ -383,7 +388,33 @@ canon_valid:
     move.l  %d2,%sp@-
     jmp     %a1@
 """
-SHIM2_LABELS = ("canon_valid",)
+# RIFT: the stored-sound LOAD's keep test (0x400dd2b2, `move.l %d0,%d1; addq.l #1,%d1;
+# mvz.b %d1,%d1; cmp.l %d1,%d2; shi %d1`, 10 bytes) becomes a jsr to load_keep, which
+# answers d1 = 0xff for a type RIFT has (-1..4, the sample machines, FASCIA) and 0 for any
+# other, so a DN2 mk2 sound with a PERC or Monomachine machine loads as FM Tone, as stock
+# loads any type it lacks. d2 is free: the next instruction loads it (moveb #7).
+LOAD_KEEP_SITE = 0x400DD2B2
+LOAD_KEEP_STOCK = bytes.fromhex("220052817381b48152c1")
+LOAD_KEEP_LAST = TYPES_LAST
+LOAD_KEEP_MASK = sum(1 << (t + 1) for t in range(-1, TYPES_LAST + 1) if t not in GONE_TYPES)
+assert TYPES_LAST + 1 < 32
+SHIMS2 += f"""
+| RIFT: the stored-sound LOAD's keep test, from {LOAD_KEEP_SITE:#010x} by jsr: d0 the stored type
+| byte; d1 = 0xff if the type is kept, else 0; d2 clobbered (reloaded by the caller).
+load_keep:
+    move.l  %d0,%d1
+    addq.l  #1,%d1
+    mvz.b   %d1,%d1
+    cmpi.l  #{LOAD_KEEP_LAST + 2},%d1
+    bcc.s   1f
+    move.l  #{LOAD_KEEP_MASK:#x},%d2
+    btst    %d1,%d2
+    sne     %d1
+    rts
+1:  moveq   #0,%d1
+    rts
+"""
+SHIM2_LABELS = ("canon_valid",) + (("load_keep",) if GONE_TYPES else ())
 
 # -- 7. getMachineType(track): WaveTone for the UI, the real type for identity ----------
 TRACK_TYPE_READ = 0x4004B816            # mvs.b %a0@(222),%d0 ; bra.s exit
@@ -664,6 +695,12 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
     # 5. the stored-sound LOAD keeps type 5 (stock turns it into FM Tone)
     edit(LOAD_BOUND, bytes([0x74, top + 2]), f"stored-sound LOAD: machine types -1..{top} are "
          "kept (stock keeps -1..4; anything else loads as FM Tone)", bytes.fromhex("7406"))
+
+    # 5b. RIFT: the keep test reads a set, not a bound (the gone engines load as FM Tone)
+    if GONE_TYPES:
+        edit(LOAD_KEEP_SITE, bytes.fromhex("4eb9") + _long(layout["load_keep"]) + bytes.fromhex("4e714e71"),
+             "stored-sound LOAD: the keep test is load_keep's set (RIFT: PERC and the Monomachine "
+             "machines load as FM Tone)", LOAD_KEEP_STOCK)
 
     # 4. slot_to_id
     edit(SLOT_HOOK, bytes.fromhex("4ef9") + _long(layout["slot_shim"]) + bytes.fromhex("4e71"),

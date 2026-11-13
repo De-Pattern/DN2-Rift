@@ -67,6 +67,30 @@ De-Pattern/DN2-Rift-bench. Start from docs/HANDOFF-second-firmware.md for the ba
   208..211); 235..237 have no modulation mask, so the controls on them could not be LFO
   destinations unless the mask is opened. Its sixth choice (CTYP) fits on OFS2.
 
+### 2026-11-13: the Machinedrum and Monomachine engines out (owner: "remove md and mm. maybe not a good idea to remove sample machines yet")
+
+- **DSP**: `perc.program.RIFT` (one constant). PERC's program is now only the chain's head:
+  the register save, the voice order (`mnm_ages`, read by FASCIA and the sample machines), the
+  guard's frame bookkeeping, then the jump to smp.asm. 7.7 KB where it was about 138 KB. The
+  Machinedrum's and PERC's tables, P-I's delay lines, the Machinedrum's voice state and the
+  DPRO room are no longer in the image. The lookup sends PERC's type and the Monomachine's to
+  FM Tone, as stock answers any type it lacks. Its last JUMP is followed by 128 bytes of NOPs
+  (BRANCH-12: 12 instructions after a branch).
+- **Size**: 2,059,895 of 2,097,152 bytes (37,257 to spare); the DSP program 912,278 of 1,048,575.
+- **ColdFire**: MACHINE SEL is the stock four, FASCIA, the sample machines (ONESHOT..SLICE, FLEX),
+  MIDI. A stored sound's LOAD keeps a set of types, not a bound (`load_keep`, a jsr from
+  0x400dd2b2): a DN2 mk2 sound with a PERC or Monomachine machine loads as FM Tone (owner: yes).
+- **Start-up**: stock (owner: "new loader, we will make one later, use stock for now";
+  `mods.waverider.BOOTANIM`). The gate's animation step becomes a check that the intro routine
+  is stock's and no animation chunk rides along. The version reads "RIFT v0.1" at the +Drive
+  browser's top.
+- **Tests**: seven unit tests asserted the mod's layout (PERC in the list, its tables, its
+  140 KB span); each now asserts RIFT's exactly, the mod's assertions kept behind the flag.
+  Unit tests: 670 passed before these seven were rewritten.
+- **Not yet out**: the Machinedrum/Monomachine code on the ColdFire (pages, md_page.c, the
+  table chunk the sample link sends at power-on, which still needs the owner's MD and MnM
+  images to build) and the gate's MnM steps.
+
 ## Next, in order
 
 1. **Stand FASCIA on its own.** `waverider/dsp.py` (the DSP image), `waverider/pages.py`,
