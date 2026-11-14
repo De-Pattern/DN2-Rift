@@ -1,7 +1,12 @@
-"""ORGAN, float32: Ravel's organ_note / organ_render (rv_synth.c, Ravel_FM1 b71fde1) operation for
+"""ORGAN's reference, float32: Ravel's organ_note / organ_render (rv_synth.c, Ravel_FM1 b71fde1) operation for
 operation, with Ravel's own maths (rv_math.h fm_exp2f, fm_sin_turns, fm_tanf, fm_sqrtf...), at
 the DN2's 48 kHz and 32-sample blocks. It must equal Ravel's C compiled at that rate bit for bit
-(scripts/organ_ref.py and its harness.c); the SHARC program is then made bit-exact to it, as FASCIA's.
+(scripts/organ_ref.py and its harness.c).
+
+The SHARC has no exact divide (FASCIA's recip: a seed and three Newton steps, about 4e-8), and
+Ravel divides about a dozen times a block (never per sample), so the SHARC's contract is live.py:
+this, with the SHARC's divide and square root, held to this within a tolerance; the program is
+then bit-exact to live.py, as FASCIA's is to its live.py.
 
 Everything is np.float32, and every expression keeps the C's order (float maths is not
 associative): a change of order here is a change of sound, however small.

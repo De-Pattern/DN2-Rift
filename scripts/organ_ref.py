@@ -5,7 +5,7 @@
 Builds scripts/organ_ref/harness.c around Ravel's organ_note/organ_render (rv_synth.c, copied
 unchanged from RAVEL_CHECKOUT) and rv_math.h / rv_dsp.h / rv_organ.h (RV_DT and RV_NYQ set to
 48 kHz), renders CASES and prints each output's sha256; --write records them in
-src/dnfw/organ/reference.json, which test_organ_live checks live.py against, bit for bit.
+src/dnfw/organ/reference.json, which test_organ_ref checks ref.py against, bit for bit.
 """
 from __future__ import annotations
 
