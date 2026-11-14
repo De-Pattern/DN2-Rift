@@ -1,0 +1,14 @@
+{
+ "ravel": "b71fde1",
+ "seed": 19088743,
+ "seconds": 0.25,
+ "sha256": {
+  "INFINITE": "52018092528e26c980d543aeea456cbe5a4f592c239fdda43bf2e379c71dc6d5",
+  "PLENUM": "2a862946218f278adf13877271a729000b33888748e17c6d0bbf33b65491fa73",
+  "VOX CELESTE": "a26d8e44a997ef96549a8ad82a89c1494f3e57585811c3d51ee38e7de322d76b",
+  "FLUTE 4'": "e15fe6a9a397882a1f862261b66ad2784e43faa9716bf96075650cd1b73f2f28",
+  "TROMPETTE": "27cfa3c8e91a741aa12bb425cd1292204ae4ebd7d9edee898e2b1efccbbed9fa",
+  "extremes": "321fef7ee581e1cebdea2314b59e1c072387f4d1791a4d44c8499b5e606ac49e",
+  "low": "09323d641d7df2d93fda62288433274a3abff835afcdda75ef134bca9ed51a4e"
+ }
+}
