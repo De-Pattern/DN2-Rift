@@ -69,23 +69,24 @@ When a build prints `CLEARED TO FLASH`, in the same session:
    and a section: file name, sha256, gate date, source commit, what it adds, numbered
    tests, known issues).
 2. Copy it and its `.gate.json` to the `builds` branch as
-   `vX.Y-NAME/DN2mod_vX.Y_NAME_OS1.11.syx` (a worktree), with `FIRMWARE.md` as that
+   `vX.Y-NAME/RIFT_vX.Y_NAME_OS1.11.syx` (a worktree), with `FIRMWARE.md` as that
    branch's `README.md`, and push. Renaming keeps the sha256, so the gate record holds.
-3. Bundle it for the in-browser patcher (`docs/patcher.md`):
-   `python scripts/web_bundle.py BUILD.syx X.Y NAME ../../dn2mk2/patcher`, then commit and
-   push dn2mk2 (github.com/De-Pattern/dn2mk2, the site at de-pattern.github.io/dn2mk2; it
-   replaced the older dn2-tools site on 2026-10-27). Its commits are signed
-   `De-Pattern <239624238+De-Pattern@users.noreply.github.com>`, never with the owner's
-   name or email (owner: the site must not link to his name). It refuses a build whose
-   gate record does not clear it. **Then confirm GitHub Pages deployed it** (owner,
-   2026-11-06, after v0.41's deploy failed and its re-run stuck in the queue):
+3. Bundle it for the in-browser patcher (`docs/patcher.md`), in both places (owner,
+   2026-11-14: RIFT is served from the DN2 mk2 patcher page, its own section at the bottom):
+   `python scripts/web_bundle.py BUILD.syx X.Y NAME ../dn2mk2/patcher/rift` (the DN2 mk2
+   site, github.com/De-Pattern/dn2mk2: section 6 of patcher.html, its own list, bundles and
+   `patcher-rift-worker.js`) and `... site/patcher` (RIFT's own Pages site). Commit and push
+   both. dn2mk2's commits are signed `De-Pattern <239624238+De-Pattern@users.noreply.github.com>`,
+   never with the owner's name or email. The bundler refuses a build whose gate record does
+   not clear it. **Then confirm GitHub Pages deployed it:**
    `gh api "repos/De-Pattern/dn2mk2/actions/runs?per_page=3"` until the run for that commit
-   is `completed success`; if it fails or sits queued, push an empty commit to dn2mk2 (a fresh
-   run) and check again. A release is not published until the patcher serves it.
+   is `completed success`; if it fails or sits queued, push an empty commit (a fresh run) and
+   check again. A release is not published until the patcher serves it.
 4. Firmware never goes on `main` (`.gitignore`); only the `builds` branch carries it.
 5. Announce it: commit its Discord announcement as `releases/vX.Y.md` on `main`
    (`releases/README.md`: first line `# vX.Y · NAME`, then the post, with a **Coming next
    (not available yet)** section) and push it: a new `releases/v*.md` on `main` is the
-   trigger (this session's git route cannot push tags). The workflow `discord-release.yml`
-   makes the release and its tag from that file and posts it to Discord's #announcements as
-   De-Pattern. Never attach firmware to a release.
+   trigger (this session's git route cannot push tags). The workflow `release.yml`
+   makes the release and its tag from that file and posts it to Discord's RIFT ANNOUNCEMENTS
+   as De-Pattern (secret `DISCORD_WEBHOOK_URL`). Owner, 2026-11-14: announce every cleared
+   release this way, with the back-up and DN2 mk2 -> RIFT notes in the post. Never attach firmware to a release.
