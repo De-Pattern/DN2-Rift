@@ -264,6 +264,9 @@ def build() -> str:
     emit("")
     emit(".GLOBAL wr_ping.;")
     emit("wr_ping.:")
+    from dnfw.fx import platform as FXP
+    if FXP.ON:
+        insert_loop(FXP)
     # restore what PERC (dnfw.perc.program, SAVE) saved, and rejoin the chain
     regs = [f"R{k}" for k in range(16)] + ["I0", "I1", "I2", "I3", "I4", "I5", "I12",
                                           "M0", "M1", "M2", "M3", "M4"]
@@ -276,6 +279,51 @@ def build() -> str:
     emit(".wr_ping..end:")
     emit("      .type wr_ping.,STT_FUNC;")
     return "\n".join(lines) + "\n"
+
+
+def insert_loop(FXP) -> None:
+    """The FX platform's stage (docs/fx-platform.md, dnfw.fx.platform): for each voice, its
+    insert word picks what runs on its buffer, in place, before the stock filter. Every
+    register here is the tail's to use: the restore below reloads them all."""
+    emit("      // the insert stage (docs/fx-platform.md): each voice's word at")
+    emit(f"      // {FXP.INSERT_DM:#x} + {FXP.INSERT_STRIDE} v picks its insert (0: none)")
+    emit("      R0 = R0 - R0;")
+    emit(f"      DM({FXP.INSERT_T_DM:#x}) = R0;".ljust(40) + "// v = 0")
+    place("wr_i_voice")
+    emit(f"      R9 = DM({FXP.INSERT_T_DM:#x});".ljust(40) + "// v")
+    emit("      R12 = LSHIFT R9 BY 5;".ljust(40) + "// 32 bytes a voice")
+    emit(f"      R11 = {FXP.INSERT_DM:#x};")
+    emit("      R12 = R11 + R12;")
+    emit("      I2 = R12;".ljust(40) + "// this voice's insert words")
+    emit("      R0 = DM(0, I2);".ljust(40) + "// type")
+    emit(f"      R1 = {FXP.TYPES['GAIN']};")
+    emit("      COMP(R0, R1);")
+    jump("NE", "wr_i_next")
+    emit("      R12 = LSHIFT R9 BY 2;")
+    emit(f"      R11 = {FXP.VOICE_BUFS:#x};".ljust(40) + "// the voice buffers' pointers")
+    emit("      R12 = R11 + R12;")
+    emit("      I1 = R12;")
+    emit("      R0 = DM(0, I1);")
+    emit("      I0 = R0;".ljust(40) + "// this voice's samples")
+    emit(f"      R2 = DM({FXP.BLOCK_SIZE_DM:#x});".ljust(40) + "// the block size")
+    emit("      R2 = PASS R2;")
+    jump("LE", "wr_i_next")
+    emit("      R4 = DM(1, I2);".ljust(40) + "// GAIN's factor, float32")
+    place("wr_i_sample")
+    emit("      R8 = DM(0, I0);")
+    emit("      F8 = F8 * F4;")
+    emit("      DM(I0, M6) = R8;".ljust(40) + "// back in place, on to the next")
+    emit("      R12 = 1;")
+    emit("      R2 = R2 - R12;")
+    jump("NE", "wr_i_sample")
+    place("wr_i_next")
+    emit(f"      R0 = DM({FXP.INSERT_T_DM:#x});")
+    emit("      R12 = 1;")
+    emit("      R0 = R12 + R0;")
+    emit(f"      DM({FXP.INSERT_T_DM:#x}) = R0;")
+    emit("      R12 = 16;")
+    emit("      COMP(R0, R12);")
+    jump("LT", "wr_i_voice")
 
 
 def sld(reg: int, word: str) -> None:

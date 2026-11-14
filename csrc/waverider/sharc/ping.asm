@@ -11,6 +11,48 @@
 
 .GLOBAL wr_ping.;
 wr_ping.:
+      // the insert stage (docs/fx-platform.md): each voice's word at
+      // 0x2e1d00 + 32 v picks its insert (0: none)
+      R0 = R0 - R0;
+      DM(0x2e1f00) = R0;                // v = 0
+.GLOBAL wr_i_voice.;
+wr_i_voice.:
+      R9 = DM(0x2e1f00);                // v
+      R12 = LSHIFT R9 BY 5;             // 32 bytes a voice
+      R11 = 0x2e1d00;
+      R12 = R11 + R12;
+      I2 = R12;                         // this voice's insert words
+      R0 = DM(0, I2);                   // type
+      R1 = 1;
+      COMP(R0, R1);
+      IF NE JUMP 0x1702ba;                   // -> wr_i_next.
+      R12 = LSHIFT R9 BY 2;
+      R11 = 0x254a60;                   // the voice buffers' pointers
+      R12 = R11 + R12;
+      I1 = R12;
+      R0 = DM(0, I1);
+      I0 = R0;                          // this voice's samples
+      R2 = DM(0x2dde24);                // the block size
+      R2 = PASS R2;
+      IF LE JUMP 0x1702ba;                   // -> wr_i_next.
+      R4 = DM(1, I2);                   // GAIN's factor, float32
+.GLOBAL wr_i_sample.;
+wr_i_sample.:
+      R8 = DM(0, I0);
+      F8 = F8 * F4;
+      DM(I0, M6) = R8;                  // back in place, on to the next
+      R12 = 1;
+      R2 = R2 - R12;
+      IF NE JUMP 0x1702b0;                   // -> wr_i_sample.
+.GLOBAL wr_i_next.;
+wr_i_next.:
+      R0 = DM(0x2e1f00);
+      R12 = 1;
+      R0 = R12 + R0;
+      DM(0x2e1f00) = R0;
+      R12 = 16;
+      COMP(R0, R12);
+      IF LT JUMP 0x170284;                   // -> wr_i_voice.
       R0 = DM(0x2dde00);
       R1 = DM(0x2dde04);
       R2 = DM(0x2dde08);

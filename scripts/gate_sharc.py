@@ -24,7 +24,7 @@ def default_steps() -> list[str]:
     import re
     src = (HERE / "sharc_waverider_m5.py").read_text(encoding="utf-8")
     m = re.search(r'add_argument\("--steps", default="([^"]+)"', src)
-    return m.group(1).split(",")
+    return [x for x in m.group(1).split(",") if x != "insert" or _insert_on()]
 
 
 # v0.28: the runner in parts, each a step of its own with its own reuse record, so a gate cut
@@ -40,7 +40,8 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           ("recwhole",),          # v0.39: whole takes with the link at work (about 70 min)
           # v0.45: FASCIA (type 18): bit-exact to live.py (the audition, idle, a steal, p-locks);
           # chords and beside the other machines, untriggered silence; garbage; the stress test
-          ("fascia",), ("fchords", "fsilence"), ("fgarbage",), ("fstress",))
+          ("fascia",), ("fchords", "fsilence"), ("fgarbage",), ("fstress",),
+          ("insert",))            # RIFT: the FX insert stage (docs/fx-platform.md), when it is built in
 # RIFT (2026-11-13): no Machinedrum or Monomachine engine. The runner's parts that test only
 # them do not exist on RIFT (sharc_waverider_m5.py, RIFT_GONE); the rest run as before, with
 # rstress in place of the PERC/MnM stress scenarios.
@@ -56,8 +57,16 @@ def _rift() -> bool:
     return _pp.RIFT
 
 
+def _insert_on() -> bool:
+    _rift()                                     # (puts src on the path)
+    from dnfw.fx import platform as _fxp        # noqa: PLC0415
+    return _fxp.ON
+
+
 if _rift():
     GROUPS = tuple(g for g in (tuple(x for x in grp if x not in RIFT_GONE) for grp in GROUPS) if g)
+if not _insert_on():
+    GROUPS = tuple(g for g in GROUPS if g != ("insert",))
 
 
 def parts() -> list[list[str]]:

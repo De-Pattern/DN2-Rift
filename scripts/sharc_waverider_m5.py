@@ -564,12 +564,17 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,insert")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
         raise SystemExit("--seconds must be at least 2")
     steps = set(a.steps.split(","))
+    # RIFT: the insert stage's step runs by default only on an image built with it
+    # (dnfw.fx.platform.ON); named explicitly on an image without it, it fails (step_insert)
+    from dnfw.fx import platform as _fxp
+    if not _fxp.ON and a.steps == p.get_default("steps"):
+        steps.discard("insert")
     from dnfw.perc import program as _PP
     # RIFT (2026-11-13): the parts that test only the Machinedrum and Monomachine engines (gone
     # from the image) do not run; their load and garbage coverage is rstress's and fgarbage's,
@@ -690,7 +695,9 @@ def main(argv=None):
                                ("fstress", "sixteen FASCIA voices, the clock made to move (v0.45)",
                                 lambda: step_fstress(warm(), sound, machines)),
                                ("fcost", "a FASCIA voice's cost, each audition patch (v0.45)",
-                                lambda: step_fcost(warm(), sound, machines))):
+                                lambda: step_fcost(warm(), sound, machines)),
+                               ("insert", "RIFT's insert stage: GAIN exact, every other voice untouched",
+                                lambda: step_insert(warm(), sound, machines))):
             if key in steps:
                 print(f"\nstep 3{key}: {title}")
                 results[f"3_{key}"] = fn()
@@ -3625,6 +3632,62 @@ def step_fsilence(init, sound, machines) -> dict:
               "and the whole FASCIA loop costs under 16,000 instructions a block (1,000 a slot)": per < 16_000}
     return {"ok": all(checks.values()), "checks": checks,
             "numbers": {"instructions_per_block": per, "exact": fsc_exact(rr)}}
+
+
+def step_insert(init, sound, machines, blocks=6) -> dict:
+    """RIFT's insert stage (docs/fx-platform.md, dnfw.fx.platform), before any effect: four
+    FASCIA voices playing, once with every insert word zero and once with the test effect
+    GAIN on voices 0 (x0.5) and 2 (x-1.25) and an unknown type on voice 5. At the per-track
+    chain's entry (0x1c944c) voices 0 and 2 must be the zero run's samples times their factor,
+    exactly in float32, and every other voice bit-identical to the zero run."""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.fx import platform as FXP          # noqa: PLC0415
+    if not FXP.ON:
+        return {"ok": False, "checks": {"the insert stage is in this image (dnfw.fx.platform.ON)": False}}
+    tracks = {t: ({}, 48 + 5 * t, 0.9) for t in range(4)}
+    gains = {0: 0.5, 2: -1.25}
+
+    def frames(b):
+        return fsc_frame(sound, machines, tracks, trig=tuple(tracks) if b == 1 else ())
+
+    def poke_words(words):
+        done = {"n": 0}
+
+        def poke(r):
+            if done["n"]:
+                return
+            done["n"] = 1
+            for a, v in words.items():
+                m2.poke(r.state, a, v)
+        return {dsp.PERC_SW: poke}
+    zero = run_blocks(init, frames, blocks)
+    words = {}
+    for v, g in gains.items():
+        words[FXP.INSERT_DM + FXP.INSERT_STRIDE * v] = FXP.TYPES["GAIN"]
+        words[FXP.INSERT_DM + FXP.INSERT_STRIDE * v + 4] = bits_of(g)
+    words[FXP.INSERT_DM + FXP.INSERT_STRIDE * 5] = 7
+    on = run_blocks(init, frames, blocks, extra_hooks=poke_words(words))
+    exact, others, heard = True, True, set()
+    for b in range(min(len(zero["machine"]), len(on["machine"]))):
+        for t in range(16):
+            a = np.array([bits_of(x) for x in zero["machine"][b][t]], np.uint32).view(np.float32)
+            got = np.array([bits_of(x) for x in on["machine"][b][t]], np.uint32)
+            if t in gains:
+                want = (a * np.float32(gains[t])).view(np.uint32)
+                exact &= bool(np.array_equal(got, want))
+                if np.any(a != 0):
+                    heard.add(t)
+            else:
+                others &= bool(np.array_equal(got, a.view(np.uint32)))
+    print("  insert runs:", [(r["ok"], len(r["machine"]), r.get("halt")) for r in (zero, on)])
+    checks = {
+        "both runs complete": zero["ok"] and on["ok"] and len(zero["machine"]) == len(on["machine"]) == blocks,
+        "GAIN's voices are the zero run's samples times their factor, bit-exact in float32": exact,
+        "both GAIN voices sounded (the check is not over silence)": heard == set(gains),
+        "every other voice, the unknown type's included, bit-identical to the zero run": others,
+    }
+    return {"ok": all(checks.values()), "checks": checks,
+            "numbers": {"heard": sorted(heard), "runs": [(r["ok"], len(r["machine"]), r.get("halt")) for r in (zero, on)]}}
 
 
 def step_fcost(init, sound, machines) -> dict:
