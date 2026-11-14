@@ -5,6 +5,21 @@ researched before each is designed. Nothing here is started before v0.1 (FASCIA)
 Every item is built to come out cleanly (one constant or one commit), gated like everything
 else, and any sound choice goes to the owner's ear first.
 
+## Status (2026-11-13, branch fx-platform)
+
+- **FX platform:** designed (`docs/fx-platform.md`); the DSP insert stage built and gated; the
+  ColdFire side (LFO4's side table merged into waverider, the INSERT page, the link's insert
+  words) next.
+- **Reference models and auditions, for the owner's ear** (`src/dnfw/fx`, `scripts/fx_audition.py`):
+  RESON (ported from Viscera), RSNTR (P-6 resonator), WARP (Frequency Warper), CHRONO (Chrono
+  Pitch), the LPG filter type, FUNC (the looping function generator). 40 tests.
+- **capicola:** read and costed (about 4,000-6,500 instructions a voice a block on the DT2, a
+  tenth of a FASCIA voice). heavylight asked that his code stay private until his green light, and
+  this repository is public: the notes are in the private bench (RESEARCH-capicola.md); nothing
+  derived from it comes here before that.
+- **Nebulae:** the pedal's vocoder does a whole 2048-point frame (3 FFTs) every 512 samples; on the
+  SHARC that work must be spread over the hop's 16 blocks (a design point before any model).
+
 ## 1. A per-track FX platform
 
 The base for most of the effects below: an insert effect per track, its own place in the

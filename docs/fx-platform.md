@@ -1,6 +1,9 @@
 # The FX insert platform: design
 
-**Status (2026-11-13): design and reference models; no firmware yet.** RIFT's roadmap item 1
+**Status (2026-11-13):** the reference models and auditions (`src/dnfw/fx`,
+`scripts/fx_audition.py`) and **the DSP stage, built and gated** (step 2 below: `fx.platform.ON`,
+runner step `insert`, its negative control failing). Not yet: the ColdFire store and pages, the
+link's insert words, any effect's DSP port (each waits for the owner's ear). Branch `fx-platform`. RIFT's roadmap item 1
 (`docs/rift-roadmap.md`). An insert effect per track, with its own controls, chosen per sound
 and p-lockable, on every machine (stock and ours). Not a filter type (owner, 2026-11-13: "this
 would be an actual filter and we are not implementing fx that way this time"): the filter stays
@@ -110,6 +113,8 @@ insert control is applied on the ColdFire before the send (LFO4's evaluator does
 1. Reference models and auditions (this commit): RESON (ported from Viscera's
    `vsc_engine.c`), RESONATOR (P-6), WARP (Tonverk Frequency Warper), CHRONO (Tonverk Chrono
    Pitch). The owner listens.
-2. The DSP stage with a pass-through and a gain test effect, gated (sound-neutral when off).
+2. **Done (2026-11-13):** the DSP stage with a gain test effect, gated (sound-neutral with every
+   word zero; `ON = False` restores v0.1's tail byte for byte). About 15 instructions a voice a
+   block when nothing is on.
 3. The ColdFire store and pages (the LFO4 merge), the link's insert words.
 4. Each approved effect's float32 live model and its bit-exact SHARC port, one at a time.
