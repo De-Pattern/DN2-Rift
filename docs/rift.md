@@ -130,7 +130,8 @@ De-Pattern/DN2-Rift-bench. Start from docs/HANDOFF-second-firmware.md for the ba
   29_water_droplet_vibe and 20_snare_wires about 3.2. The guard drops voices past that.
 - **The site** (`site/`): RIFT Sample Import (`index.html`) and RIFT Patcher
   (`patcher.html`), deployed by `.github/workflows/pages.yml` (Settings > Pages > Source:
-  "GitHub Actions"). The patcher needs no Machinedrum file.
+  "GitHub Actions"). The patcher still asks for the Machinedrum OS 1.63 file: the sample
+  machines read tables built from it (the PERC tables kept in the DSP image).
 
 ## Next, in order
 
