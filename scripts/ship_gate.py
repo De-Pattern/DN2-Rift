@@ -1845,7 +1845,17 @@ def main() -> int:
                        (ft, fsl["BODB"], frep("BODB", 9), 1, -1, True, 0x7F00), frep("BODB", 8)),
                       ("FASCIA's HARD (a knob), FUNC: it stays put", (ft, fsl["HARD"], 0x5000, 1, 1, True, 0x7F00), 0x5000),
                       ("FASCIA's DUST (FM Tone's record), FUNC: it stays put",
-                       (ft, fsl["DUST"], 0x2000, 1, 1, True, 0x4000), 0x2000)]
+                       (ft, fsl["DUST"], 0x2000, 1, 1, True, 0x4000), 0x2000),
+                      # RIFT v0.3 (owner): TUNE by octaves (+-24 semitones over the knob: 32 an
+                      # octave), FUNC + turn to the next of 0, 32, 64, 96, 127 the knob's way
+                      ("FASCIA's TUNE, FUNC right from 64: +1 octave (96)", (ft, fsl["TUNE"], 0x4000, 1, 1, True, 0x4100), 0x6000),
+                      ("FASCIA's TUNE, FUNC right from 70: the next octave up (96)", (ft, fsl["TUNE"], 0x4600, 1, 1, True, 0x4700), 0x6000),
+                      ("FASCIA's TUNE, FUNC left from 64: -1 octave (32)", (ft, fsl["TUNE"], 0x4000, 1, -1, True, 0x3F00), 0x2000),
+                      ("FASCIA's TUNE, FUNC left from 40: the next octave down (32)", (ft, fsl["TUNE"], 0x2800, 1, -1, True, 0x2700), 0x2000),
+                      ("FASCIA's TUNE, FUNC right from 96: the top (127)", (ft, fsl["TUNE"], 0x6000, 1, 1, True, 0x6100), 0x7F00),
+                      ("FASCIA's TUNE, FUNC right at the top: stays", (ft, fsl["TUNE"], 0x7F00, 1, 1, True, 0x7F00), 0x7F00),
+                      ("FASCIA's TUNE, FUNC left at 0: stays", (ft, fsl["TUNE"], 0x0000, 1, -1, True, 0x0000), 0x0000),
+                      ("FASCIA's TUNE without FUNC: as it is", (ft, fsl["TUNE"], 0x4000, 0, 1, True, 0x4100), 0x4100)]
             for c in (c for c in FSf.CONTROLS if FSf.is_choice(c)):
                 n = len(FSf.CHOICES[c])
                 lo_w, hi_w = frep(c, 0), frep(c, n - 1)
@@ -1879,7 +1889,7 @@ def main() -> int:
                               "stay put; choices step one a click either way (WPRS, PLAY); no change without FUNC, "
                               "with a stale knob, or on a stock machine; v0.45: FASCIA's choices one a click with "
                               "FUNC, its knobs stay put, and each of its five choices four detents a choice both "
-                              "ways, a jump landing in its choice" if good else why)
+                              "ways, a jump landing in its choice; RIFT v0.3: FASCIA's TUNE by octaves (0, 32, 64, 96, 127)" if good else why)
             later("functurn", "FUNC + turn (ColdFire)", "FUNC + turn (ColdFire)", [f_cmd, sorted(EMU_ENV.items())], f_body)
 
         # 6n. v0.32: the DSP load meter. smp_dsp_load gives the last half second's peak (the

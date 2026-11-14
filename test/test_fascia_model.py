@@ -24,7 +24,9 @@ def test_pages_are_four_by_eight_and_defaults_cover_them():
     names = [n for page in R.PAGES.values() for n in page]
     assert [len(p) for p in R.PAGES.values()] == [8, 8, 8, 8]
     assert len(set(names)) == 32 and set(names) == set(R.DEFAULTS) == set(R.INTERNAL)
-    assert R.DEFAULTS == R.INTERNAL and R.CHOICES == R.ICHOICES
+    # the panel starts from the engine's own values but CHAR 127 (owner, 2026-11-14)
+    assert R.DEFAULTS == {**R.INTERNAL, "CHAR": 127} and R.INTERNAL["CHAR"] == 0
+    assert R.CHOICES == R.ICHOICES
 
 
 def test_expand_is_the_panel_over_the_defaults():

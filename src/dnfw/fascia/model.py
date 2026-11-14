@@ -65,7 +65,10 @@ INTERNAL = {
     "ATK": 0, "CLIK": 0, "CTYP": 0, "XMOD": 0, "FDBK": 0, "BUZZ": 0, "WATR": 0, "VARY": 40,
 }
 ICHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "CTYP": CLICKS, "XMOD": XMODS}
-DEFAULTS = dict(INTERNAL)
+# the panel's start (what MACHINE SEL writes, dnfw.fascia.machines.DEFAULTS): INTERNAL but CHAR
+# 127 (owner, 2026-11-14: CHAR is hardly heard otherwise). The patches and the goldens render
+# from INTERNAL, so CHAR's start changes no approved sound.
+DEFAULTS = {**INTERNAL, "CHAR": 127}
 
 
 def _span(names, k: int) -> int:

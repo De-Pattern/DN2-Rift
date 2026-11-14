@@ -246,7 +246,7 @@ extern int smp_func_held;
 extern int smp_knob_d;
 extern u32 smp_knob_at;
 #define KNOB_FRESH 150u                         /* 100 ms: the turn this write comes from */
-enum { F_OFF, F_KEEP, F_CHOICE, F_NONE, F_TUNE };
+enum { F_OFF, F_KEEP, F_CHOICE, F_NONE, F_TUNE, F_OCT };
 #define OWN_REC_FIRST 238u                      /* our records (dnfw.perc / dnfw.sampler machines) */
 #define OWN_REC_LAST 260u
 
@@ -260,6 +260,8 @@ static int func_kind(u8 *s, int slot, u32 id)
      * owner and a tester: LFO DEPTH and SPEED snapped to nothing on our tracks in v0.32) */
     if (ty == FSC_TYPE) {                       /* v0.45: FASCIA's 24 (some on FM Tone's records): */
         int j = fsc_j(slot);                    /* a choice steps, a knob stays put */
+        if (j == FSC_TUNE_J && fsc_rid[j] == id)
+            return F_OCT;                       /* RIFT v0.3 (owner): TUNE by octaves, as fw1's tunes */
         return j < 0 || fsc_rid[j] != id ? F_OFF : fsc_choices[j] ? F_CHOICE : F_NONE;
     }
     if (id < OWN_REC_FIRST || id > OWN_REC_LAST)
@@ -300,6 +302,21 @@ int smp_quant(u8 *s, int slot, int value, u32 id)
         return old0;
     if (fk == F_TUNE)
         return mnm_tune_step(old0, smp_knob_d > 0 ? 1 : -1);
+    if (fk == F_OCT) {
+        /* RIFT v0.3: FASCIA's TUNE is +-24 semitones over the knob ((k - 64) x 24 / 64), so an
+         * octave is 32: FUNC + turn moves to the next of 0, 32, 64, 96, 127 the knob's way
+         * (-2, -1, 0, +1, +2 octaves; 127 is the knob's top, 23.6 semitones) */
+        static const unsigned char oct[5] = {0, 32, 64, 96, 127};
+        int k = old0 >> 8, n = k;
+        if (smp_knob_d > 0) {
+            for (int i = 0; i < 5; i++)
+                if (oct[i] > k) { n = oct[i]; break; }
+        } else {
+            for (int i = 4; i >= 0; i--)
+                if (oct[i] < k) { n = oct[i]; break; }
+        }
+        return n << 8;
+    }
     if (fk == F_CHOICE) {                       /* one choice a click, the knob's way: a */
         fq_click = smp_knob_d > 0 ? 1 : -1;     /* detent's worth past the old value, */
         int oc0 = old0 >> 8;                    /* each table's own step below */

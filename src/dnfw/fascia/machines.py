@@ -52,7 +52,7 @@ CHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "C
 DEFAULTS = {
     "TYPA": 0, "TYPB": 1, "HARD": 90, "DUST": 20, "TZFM": 0, "BEND": 10, "MIX": 30, "DEC": 20,
     "BODA": 0, "BODB": 121, "TUNE": 64, "GEOM": 64, "MATL": 50, "POS": 40, "COUP": 0, "DAMP": 28,
-    "MORPH": 0, "FORM": 0, "SHIFT": 64, "RING": 0, "SIDE": 40, "FOLD": 0, "LPG": 40, "CHAR": 0,
+    "MORPH": 0, "FORM": 0, "SHIFT": 64, "RING": 0, "SIDE": 40, "FOLD": 0, "LPG": 40, "CHAR": 127,
     "ATK": 0, "CLIK": 0, "CTYP": 0, "XMOD": 0, "FDBK": 0, "BUZZ": 0, "WATR": 0, "VARY": 40,
 }
 
@@ -202,6 +202,7 @@ def c_header() -> str:
         "/* FASCIA (dnfw.fascia.machines) */",
         f"#define FSC_TYPE {TYPE}", f"#define FSC_KIND {KIND}", f"#define FSC_N {len(CONTROLS)}",
         f"#define FSC_PAGES {len(PAGES)}",
+        f"#define FSC_TUNE_J {CONTROLS.index('TUNE')}",
         f"static const unsigned short fsc_rid[FSC_N] = {{{arr(r for r, _s, _l, _t in rows)}}};",
         f"static const unsigned char fsc_slot[FSC_N] = {{{arr(s for _r, s, _l, _t in rows)}}};",
         f"static const unsigned char fsc_lo[FSC_N] = {{{arr(lo for _r, _s, lo, _t in rows)}}};",
