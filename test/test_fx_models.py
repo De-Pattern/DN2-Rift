@@ -109,3 +109,71 @@ def test_chrono_feedback_is_bounded_and_mix_zero_is_dry():
     y = C.Chrono().process(_drums(), C.params(FDBK=127, TUNE=127, WIN=127, MIX=127))
     assert np.all(np.isfinite(y)) and np.max(np.abs(y)) < 6
     assert np.array_equal(C.Chrono().process(SINE, C.params(MIX=0)), SINE)
+
+
+# -- the LPG filter type and the function generator (roadmap §2, §3) ------------------------
+
+from dnfw.fx import funcgen as FG  # noqa: E402
+from dnfw.fx import lpg as L  # noqa: E402
+
+
+def _gate(n, on, off):
+    g = np.zeros(n)
+    g[on:off] = 1.0
+    return g
+
+
+def _bright(y):
+    Y = np.abs(np.fft.rfft(y * np.hanning(len(y)))) ** 2
+    f = np.fft.rfftfreq(len(y), 1 / SR)
+    return float((Y * f).sum() / Y.sum())
+
+
+def test_lpg_dies_darker_as_it_dies_quieter():
+    saw = 0.3 * ((T * 110) % 1 * 2 - 1)
+    y = L.LPG().process(saw, L.params(DEC=60, REL=60), _gate(SR, 0, 2400))
+    early, late = y[480:2880], y[9600:12000]
+    assert np.sqrt(np.mean(late ** 2)) < 0.5 * np.sqrt(np.mean(early ** 2))
+    assert _bright(late) < 0.7 * _bright(early)
+
+
+def test_lpg_types_and_env_zero():
+    saw = 0.3 * ((T * 110) % 1 * 2 - 1)
+    g = _gate(SR, 0, 2400)
+    lp = L.LPG().process(saw, L.params(TYPE="LP", DEC=40, REL=40), g)
+    vca = L.LPG().process(saw, L.params(TYPE="VCA", DEC=40, REL=40), g)
+    combo = L.LPG().process(saw, L.params(TYPE="COMBO", DEC=40, REL=40), g)
+    rms = lambda z: np.sqrt(np.mean(z[3000:9000] ** 2))  # noqa: E731
+    assert rms(lp) > 2 * rms(combo)                          # LP: no level gate, only darker
+    assert _bright(vca[200:2600]) > 1.3 * _bright(combo[200:2600])   # VCA: no darkening gate
+    open_ = L.LPG().process(saw, L.params(ENV=0, FREQ=127), np.zeros(SR))
+    assert np.sqrt(np.mean(open_[4800:] ** 2)) > 0.1          # ENV 0: a plain open low-pass
+
+
+@pytest.mark.parametrize("reso", [0, 64, 127])
+def test_lpg_is_bounded_at_any_resonance(reso):
+    y = L.LPG().process(_drums(), L.params(RESO=reso, FREQ=127, SUS=127), np.ones(SR))
+    assert np.all(np.isfinite(y)) and np.max(np.abs(y)) < 1.0
+
+
+def test_funcgen_rise_and_fall_take_their_times():
+    p = FG.params(RISE=60, FALL=80, RESP=64)
+    y = FG.FuncGen().process(SR * 4, p, _gate(SR * 4, 10, 20))
+    top = int(np.argmax(y))
+    assert abs((top - 10) / SR - FG.seconds(60)) < 0.002
+    end = top + int(np.argmax(y[top:] <= 0.0))
+    assert abs((end - top) / SR - FG.seconds(80)) < 0.002
+
+
+def test_funcgen_response_bends_both_ways_and_cycles():
+    lin, exp_, log_ = (FG.shape(0.5, r) for r in (64, 127, 0))
+    assert lin == 0.5 and exp_ < 0.2 and log_ > 0.8
+    y = FG.FuncGen().process(SR, FG.params(RISE=30, FALL=30, CYCL=127))
+    rises = np.sum((y[1:] > 0) & (y[:-1] == 0))
+    assert rises >= 5                                         # free-running, no note needed
+    assert y.min() >= 0.0 and y.max() <= 1.0
+
+
+def test_funcgen_hold_waits_at_the_top_while_the_note_is_held():
+    y = FG.FuncGen().process(SR, FG.params(RISE=10, FALL=40, HOLD=127), _gate(SR, 0, SR // 2))
+    assert np.all(y[SR // 4:SR // 2 - 1] == 1.0) and y[-1] < 1.0
