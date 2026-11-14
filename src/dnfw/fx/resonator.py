@@ -27,7 +27,7 @@ CHORDS = {                       # semitones from ROOT, at most six strings
 }
 CHORD_NAMES = tuple(CHORDS)
 PAGE = ("ROOT", "CHRD", "BRIT", "FDBK", "ENVM", "KEYT", "DTUN", "DRIV")
-DEFAULTS = dict(ROOT=48, CHRD=4, BRIT=80, FDBK=110, ENVM=40, KEYT=127, DTUN=10, DRIV=20, MIX=70)
+DEFAULTS = dict(ROOT=48, CHRD=4, BRIT=80, FDBK=90, ENVM=40, KEYT=127, DTUN=10, DRIV=20, MIX=70)
 MAXLEN = 4096                    # samples: down to about 12 Hz at 48 kHz
 
 
@@ -67,7 +67,9 @@ def _run(x, p, note, lines, f, iv, sr):
     root, chrd, brit, fdbk, envm, keyt, dtun, driv, mix = p
     c = int(chrd)
     base = root + (note - 60.0) * keyt / 127.0
-    fb0 = fdbk / 127.0 * 0.99                         # FEEDBACK: 0..99 %
+    # FEEDBACK as a ring time: 0 -> 10 ms .. 127 -> 20 s (T60), each string's loop gain from its
+    # own length, so a low string rings as long as a high one (a fixed gain per loop would not)
+    t60 = 0.01 * 2000.0 ** (fdbk / 127.0)
     # BRIGHT: the loop's one-pole lowpass, its cutoff relative to the string (dark .. open)
     damp = 0.05 + 0.95 * (brit / 127.0) ** 0.7
     drive = 1.0 + driv / 127.0 * 6.0
@@ -82,12 +84,16 @@ def _run(x, p, note, lines, f, iv, sr):
             lens[s] = sr / fr
             nstr += 1
     norm = 1.0 / math.sqrt(max(nstr, 1))
+    gs = np.zeros(6)
+    for s in range(6):
+        if lens[s] > 0.0:
+            gs[s] = 10.0 ** (-3.0 * lens[s] / (sr * t60))
     E = 18
     for k in range(len(x)):
         xin = x[k]
         a = abs(xin)
         f[E] += (a - f[E]) * (env_up if a > f[E] else env_dn)
-        g = min(fb0 + envm / 127.0 * min(f[E] * 2.0, 1.0) * (0.999 - fb0), 0.999)
+        boost = envm / 127.0 * min(f[E] * 2.0, 1.0)   # ENV MOD: a louder input, more feedback
         y = 0.0
         for s in range(6):
             L = lens[s]
@@ -102,8 +108,9 @@ def _run(x, p, note, lines, f, iv, sr):
             d = lines[s, i0 % MAXLEN] * (1.0 - fr) + lines[s, (i0 + 1) % MAXLEN] * fr
             lp = f[3 * s + 1] + (d - f[3 * s + 1]) * damp     # the loop's lowpass
             f[3 * s + 1] = lp
-            v = xin * 0.5 + g * lp
-            v = math.tanh(v * drive) / drive if driv > 0.0 else v
+            g = min(gs[s] + boost * (0.9995 - gs[s]), 0.9995)
+            v = xin * 2.0 + g * lp                     # struck hard: a short hit still rings
+            v = math.tanh(v * drive * 0.5) / (drive * 0.5)   # always bounded: a string at its own pitch grows
             lines[s, w] = v
             f[3 * s] = (w + 1) % MAXLEN
             dc = f[3 * s + 2] + (v - f[3 * s + 2]) * 0.002   # a DC blocker on the string's output
