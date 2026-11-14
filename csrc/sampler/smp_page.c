@@ -527,7 +527,11 @@ static void cell(void *c, void *view, int kind, u32 id, int x, int y, int labell
         }
     }
     extern int smp_values_held(void);
-    if (labelled && id && shows(cell_i)) {     /* v0.35: SYN held (v0.48: or just turned): the value, as the record's */
+    /* v0.54 (owner: BUF doesn't show its number when p-locked and highlighted): its dial says
+     * nothing about which buffer, so a locked BUF keeps its number (01..08) in the label's
+     * place for as long as it is shown locked, not only the second after a turn */
+    int buf_lock = labelled && id == SMP_BUF_ID && kind == SMP_BOUNCE_KIND && locked(view, id);
+    if (labelled && id && (shows(cell_i) || buf_lock)) {     /* v0.35: SYN held (v0.48: or just turned): the value, as the record's */
         char vb[32];                            /* formatter writes it for the header (O14) */
         u8 flag;
         vb[0] = 0;
@@ -2324,7 +2328,7 @@ static void recording_draw(void *c, int heard)
  * (filled a recorder trig, hatched a one-shot, struck a spent one, the playing step underlined),
  * and the legend. REC SETUP: the grid of eight, A SRC, B CHAN, C BUF (inverted, as the track's
  * BUF), D R.LEN, E ARM, F Q.REC, each a choice in its box, its name under it (four detents a
- * choice; G and H empty). Every value at its cell's place and baseline */
+ * choice; G GAIN, v0.52 H MUTE SRC, the meter in the left column). Every value at its cell's place and baseline */
 static void choice(void *c, int k, int y, const char *text, const char *name, int inverted)
 {
     int x = CELL_X(k), cx = x + 12;
@@ -2419,15 +2423,23 @@ static void bn_view_draw(void *c, int heard)
             gb[k++] = (char)('0' + m % 10);
             gb[k] = 0;
             choice(c, 2, BOT_Y, g ? gb : "0", "GAIN", 0);
-            int mx0 = CELL_X(3) + 1, mx1 = CELL_X(3) + 24, my0 = BOT_Y + 5, my1 = BOT_Y + 11, w = mx1 - mx0 - 2;
+            /* v0.52 (owner: MUTE SRC in the meter's place): the meter in the left column, its top level
+             * with the bottom row's boxes' (two rows clear of the arrow); CLIP over it in the 3x5
+             * glyphs when the take would clip, under the take's length */
+            int mx0 = 1, mx1 = 17, my0 = BOT_Y + 7, my1 = BOT_Y + 13, w = mx1 - mx0 - 2;
             box(c, mx0, my0, mx1, my1, 0);
             int lv = heard ? meter_x(rec_peak, w) : 0;
             if (lv > 0)
                 fill(c, mx0 + 1, my0 + 1, mx0 + lv, my1 - 1);
             if (heard && rec_peak >= 32700)     /* at full scale: the take clips */
-                LABEL(c, CELL_X(3) + 12, BOT_Y - 7, "%s", "CLIP");
-            else
-                LABEL(c, CELL_X(3) + 12, BOT_Y - 7, "%s", "LEVEL");
+                glyphs_at(c, 9, BOT_Y + 15, "CLIP");
+        }
+        /* v0.52 (owner, option B): H MUTE SRC: ON takes the SRC track out of the mix (LEVEL and the
+         * sends, rectrig.c ms_frame) while it is ON; "--" when SRC is IN or MAIN (nothing to mute) */
+        {
+            extern int bn_mute;
+            int trk = rec_src >= 2 && rec_src - 2 != (int)t;
+            choice(c, 3, BOT_Y, trk ? (bn_mute ? "ON" : "OFF") : "--", "MUTE", trk && bn_mute);
         }
         /* v0.49 (owner): the buffer's state, no box: a dot and REC while it records, WAIT while a
          * take waits for Q.REC, else READY and its length, or EMPTY. v0.50: in the title line's

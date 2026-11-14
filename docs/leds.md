@@ -77,3 +77,22 @@ So they follow at once, and go back to stock's the moment the panel closes.
 - closed, all 16 equal stock's from before the panel opened, and nothing more is claimed.
 
 Not verified on hardware: the colours as seen. The LED INTENSITY sets scale them.
+
+## The PAGE LEDs (v0.53, NiKo)
+
+Logical ids **42..49** are the eight page LEDs (two rows of four under FX and MOD). Measured in the
+emulator on stock's code (2026-11-13), mode 2 throughout:
+
+| state | palette |
+|---|---|
+| the page being edited, in grid recording | 33 (bright green) |
+| the pattern's other pages | 10 (dim red) |
+| pages past the pattern's length | 2 (near-off) |
+
+Outside grid recording no page is green. Stock moves the green with PAGE.
+
+FLEX REC's PAGE key turns its own page (`bn_page`) and is not passed to stock, so before v0.53
+stock's green stayed on its own page (NiKo's photos: RECORD lit, the screen 1/4 then 2/4, the green
+on page 4 throughout). From v0.53 `bn_led_walk` claims 42..49 while FLEX REC is up, in the same
+scheme: `bn_page` green, the pattern's other pages dim red, the rest near-off. Closed, they are
+stock's again. Gate: `flexcore` (64 steps, PAGE twice: page 3 green).

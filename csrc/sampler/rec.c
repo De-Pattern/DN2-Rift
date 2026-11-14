@@ -32,6 +32,8 @@ typedef unsigned char u8;
 #define FRAMES (*(volatile u32 *)0x4058E8D4u)                         /* frames since boot, 1,500 a second */
 #define REC_THR_FLOOR 33u                       /* v0.30: THRES 0's level, -60 dB, under any real input */
 #define CTL_FRAME ((volatile u16 *)0x80005E60u)
+#define FLEX_TRIG_LEN_AT 1153u                  /* v0.54: the pattern's per-track trig LEN byte (+1701 a track) */
+#define FLEX_TRIG_LEN 127u                      /* v0.54: INF, the TRIG page LEN knob's top (stock 1/16 is 14) */
 #define TEMPO_WORD 108                                               /* the frame's BPM x 120 (byte 216) */
 #define KEY_ORIG ((int (*)(void *, void *))0x40016480u)              /* the parameter page's key handler */
 /* the UI queue's receive: the item in d0. Declared as returning an integer: GCC takes a
@@ -184,7 +186,21 @@ static u32 rec_length(void)
     u32 bpm120 = CTL_FRAME[TEMPO_WORD];
     if (bpm120 < 1200)
         bpm120 = 14400;
-    u32 f = (u32)rec_rlen * (86400000u / bpm120);
+    /* v0.52 (impbox: "R.LEN 64 with R.STRT on PLAY: the take does not stop after 64 steps"): the
+     * steps at the pattern's scale, as the sequencer plays them (slide.c ticks_a_step: 6 ticks a
+     * step at 1x; 2x 3, 1/2x 12 ...). v0.15..v0.51 counted 1x sixteenths: at 2x, 64 steps took
+     * twice the pattern's 64 */
+    u32 ticks = 6;
+    const u8 *pat = (const u8 *)*(volatile u32 *)0x42C5A9A0u;   /* the pattern playing */
+    if (pat) {
+        signed char i = (signed char)pat[122202];
+        if (i >= 0 && i <= 6) {
+            u32 n = ((const u8 *)0x401F6B08u)[4 * i + 3];
+            if (n >= 3 && n <= 48)
+                ticks = n;
+        }
+    }
+    u32 f = (u32)rec_rlen * ticks * (86400000u / bpm120) / 6u;
     return f > full ? full : f;
 }
 
@@ -369,6 +385,13 @@ u32 bn_pages(void)
 #define LED_ONE 65u
 #define LED_SPENT 54u
 #define LED_HEAD 113u
+/* v0.53 (NiKo: FLEX REC's PAGE LED stayed on stock's page): the eight page LEDs, logical ids
+ * 42..49, as stock lights them in grid recording (measured, docs/leds.md): the page edited bright
+ * green (2, 33), the pattern's other pages dim red (2, 10), the pages past its length (2, 2) */
+#define LED_PAGE0 42u
+#define LED_PG_EDIT 33u
+#define LED_PG_ON 10u
+#define LED_PG_OFF 2u
 u32 bn_led_claims __attribute__((section(".data"))) = 0;      /* refreshes claimed (for the gate) */
 static u32 bn_led_sig __attribute__((section(".data"))) = 0xFFFFFFFFu;
 
@@ -401,6 +424,9 @@ void bn_led_walk(void *screen)
                 u32 mode, val = bn_led_val(k, &mode);
                 LED_SET(lm, LED_TRIG0 + k, mode, val);
             }
+            for (u32 p = 0, n = bn_pages(); p < 8; p++)
+                LED_SET(lm, LED_PAGE0 + p, 2u,
+                        p == (u32)bn_page ? LED_PG_EDIT : p < n ? LED_PG_ON : LED_PG_OFF);
             bn_led_claims++;
         }
     }
@@ -416,7 +442,7 @@ void bn_led_poll(void)
     extern void *wr_screen_obj;
     u32 sig = 0x5EEDu;
     if (bn_active()) {
-        sig = 0x1000000u | (u32)bn_page << 16;
+        sig = 0x1000000u | (u32)bn_page << 16 | bn_pages() << 8;
         for (u32 k = 0; k < 16; k++) {
             u32 mode, val = bn_led_val(k, &mode);
             sig = sig * 31u + val * 4u + mode;
@@ -565,6 +591,7 @@ extern int fx_get(u32 t, int k);
 extern void fx_set(u32 t, int k, int v);
 extern int fx_valid(u32 t);
 extern int rt_qrec, rt_arm;
+int bn_mute __attribute__((section(".data"))) = 0;     /* v0.52: H MUTE SRC (FX_MUTE) as the panel shows it */
 static void fx_load(void)
 {
     u32 t = UI_TRACK_B;
@@ -574,11 +601,12 @@ static void fx_load(void)
     rec_gain = fx_get(t, FX_GAIN);
     rt_qrec = fx_get(t, FX_QREC);
     rt_arm = fx_get(t, FX_ARM);
+    bn_mute = fx_get(t, FX_MUTE);
 }
 static void fx_save(void)
 {
     u32 t = UI_TRACK_B;
-    int v[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm};
+    int v[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm, bn_mute};
     for (int k = 0; k < FX_N; k++)
         if (!fx_valid(t) || fx_get(t, k) != v[k])
             fx_set(t, k, v[k]);
@@ -605,9 +633,9 @@ void rec_poll(void)
     extern void rt_poll(void);
     extern int rt_manual, rt_q_waiting(void);
     if (bn_active()) {                          /* v0.51: FLEX REC shows the track's own settings */
-        int was[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm};
+        int was[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm, bn_mute};
         fx_load();
-        int now[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm};
+        int now[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm, bn_mute};
         for (int k = 0; k < FX_N; k++)
             if (was[k] != now[k]) {
                 smp_overlay_dirty = 1;
@@ -747,7 +775,7 @@ __attribute__((optimize("no-jump-tables"))) static void knob(int index, int delt
     extern void rt_knob(int index, int delta);
     if (index == 8 && sl_rec_knob(delta))
         return;
-    if (bn_active()) {                          /* v0.49 FLEX REC (both pages): A SRC, B CHAN, D R.LEN, E ARM, F Q.REC */
+    if (bn_active()) {                          /* v0.49 FLEX REC (both pages): A SRC, B CHAN, D R.LEN, E ARM, F Q.REC; v0.52 H MUTE SRC */
         fx_load();                              /* v0.51: the track's own, then kept in its sound */
         if (index == 1)
             rec_src = clamp(rec_src + rec_choice_step(1, delta), 0, SMP_REC_SOURCES - 1);
@@ -758,13 +786,23 @@ __attribute__((optimize("no-jump-tables"))) static void knob(int index, int delt
             rt_knob(5, delta);                  /* Q.REC: four detents a choice */
         else if (index == 5)
             rt_knob(7, delta);                  /* ARM: four detents a choice */
-        else if (index == 4)
-            rec_rlen = clamp(rec_rlen + delta, 0, 128);
-        else if (index == 3)
+        else if (index == 4) {
+            /* v0.54 (owner): FUNC + turn moves R.LEN a bar (16 steps) a detent, onto the bars:
+             * 0 (MAX), 16, 32 .. 128; from 20, up is 32 and down 16 */
+            extern int smp_func_held;
+            if (smp_func_held && delta)
+                rec_rlen = clamp(delta > 0 ? (rec_rlen / 16 + delta) * 16
+                                           : ((rec_rlen + 15) / 16 + delta) * 16, 0, 128);
+            else
+                rec_rlen = clamp(rec_rlen + delta, 0, 128);
+        } else if (index == 3)
             buf_turn(delta);                    /* v0.50: C BUF, the SYN page's (record 244) */
         else if (index == 7) {
             rec_gain = clamp(rec_gain + delta, -24, 38);   /* v0.50: G GAIN, a dB a detent */
             mon_known = 0;                      /* the meter's MONITOR again, with it */
+        } else if (index == 8) {
+            extern int rt_mute_knob(int delta);
+            bn_mute = rt_mute_knob(delta);      /* v0.52: H MUTE SRC, OFF / ON, four detents a choice */
         }
         fx_save();
         return;
@@ -922,6 +960,14 @@ u32 smp_machine_commit(u32 model, u32 track, u32 type, u32 a, u32 b)
          * the words held) */
         volatile unsigned short *src = (volatile unsigned short *)(KIT + 52u + 1163u * track + 20u + 2u * 38u);
         *src = (unsigned short)(*src & 0xFF00u);
+        /* v0.54 (owner: "so the user hears the playback trig playing by default"): the track's
+         * trig LEN (TRIG page 1, the pattern's per-track byte stock's setter 0x4004eecc writes:
+         * pattern + 1153 + 1701 x track; stock's default 14 is 1/16) at INF (127, the knob's
+         * top), so a note plays the whole take. Only here, on a switch to FLEX: a loaded
+         * pattern, an existing FLEX track and a trig's own LEN lock are left as they are */
+        u32 pat = *(volatile u32 *)0x42C5A9A0u;
+        if (pat)
+            *(volatile unsigned char *)(pat + FLEX_TRIG_LEN_AT + 1701u * track) = FLEX_TRIG_LEN;
     }
     /* v0.33: a Monomachine machine starts as its own (dnfw.mnm DEFAULTS: SID on a square
      * wave), not at the shared records' defaults (the owner: SID silent at first, on MIX) */

@@ -198,6 +198,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("aniz", "start-up animation, every frame"),
        ("recorder", "recorder screen (ColdFire)"),
        ("mnmpages", "Monomachine pages and detents (ColdFire)"),
+       ("playdet", "PLAY two detents a choice (ColdFire)"),
        ("question", "stock questions and held keys (ColdFire)"),
        ("mnmdefaults", "Monomachine start values (ColdFire)"),
        ("fascia", "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire)"),
@@ -219,6 +220,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("kbrec", "KEYBOARD kept through grid recording (ColdFire)"),
        ("thres", "THRES on both processors (coupled)"),
        ("flex", "FLEX: a recorder trig's take played by a note, on both processors (coupled)"),
+       ("mute", "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)"),
        ("fineswap", "STRT/LEN/LOOP fine records swapped in and out (ColdFire)"),
        ("fineknob", "STRT's knob against stock's fine FREQ (ColdFire)"),
        ("link16", "sample link (ColdFire)"),
@@ -1670,6 +1672,35 @@ def main() -> int:
                               "four detents a choice" if good else why)
             later("mnmpages", "Monomachine pages and detents (ColdFire)", "Monomachine pages and detents (ColdFire)", [mp_cmd, sorted(EMU_ENV.items())], mp_body)
 
+            # 6h2. v0.53 (owner: PLAY's four choices took too much turning): PLAY two detents a
+            # choice, through smp_quant as the stock setter calls it (sound, slot 41, the value, its
+            # record 254): an ONESHOT sound on FWD, one detent keeps FWD, the second gives FFWD loop
+            # (32); MODE, a four-choice control too, keeps four (two detents: nothing)
+            from dnfw.sampler import machines as SMq    # noqa: PLC0415
+            pslot = SMq.RECORDS[SMq.PLAY_REC][0]
+            mrec = SMq.MODE_REC
+            mslot = SMq.RECORDS[mrec][0]
+            pst = ["wait:2", f"poke:{snd0 + 0xDE:#x}:{SMq.TYPE_OF['ONESHOT']:02x}",
+                   f"poke:{snd0 + 0x14 + 2 * pslot:#x}:0000", "wait:4"]
+            pst += [f"call:{lay['smp_quant']:#x}:sound0:{pslot}:0x100:{SMq.PLAY_REC}"] * 2
+            pst += [f"poke:{snd0 + 0xDE:#x}:{SMq.TYPE_OF['WERP']:02x}",
+                    f"poke:{snd0 + 0x14 + 2 * mslot:#x}:0000", "wait:4"]
+            pst += [f"call:{lay['smp_quant']:#x}:sound0:{mslot}:0x100:{mrec}"] * 2
+            pjs = work / "playdet.json"
+            pd_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", ",".join(pst), "--png-dir", work / "playdet", "--json", pjs]
+
+            def pd_body(tdir):
+                rc, out = run("play detents", pd_cmd, logs, env=EMU_ENV, trace=tdir)
+                if rc != 0 or not pjs.exists():
+                    return False, out[-800:]
+                d0 = [c["d0"] for c in json.loads(pjs.read_text())["direct_calls"]]
+                good = d0 == [0, 32 << 8, 0, 0]
+                return good, ("PLAY: one detent keeps FWD, the second moves on (two a choice); MODE keeps four"
+                              if good else f"d0 {d0}, want [0, {32 << 8}, 0, 0]")
+            later("playdet", "PLAY two detents a choice (ColdFire)", "PLAY two detents a choice (ColdFire)",
+                  [pd_cmd, sorted(EMU_ENV.items())], pd_body)
+
         # 6j. v0.30: a stock question's keys are stock's (a user's report: on a sample track, the
         # OS update's "UPGRADE OS NOW?" answered by our page; v0.29's save question), and a YES
         # with another key held (TRIG + YES) is stock's. On a GRID track's page: TRIG 1 held,
@@ -2439,6 +2470,27 @@ def main() -> int:
         later("flex", "FLEX: a recorder trig's take played by a note, on both processors (coupled)",
               "FLEX: a recorder trig's take played by a note, on both processors (coupled)",
               [fx_cmd, sorted(EMU_ENV.items())], fx_body)
+
+        # v0.52 FLEX MUTE SRC (owner, option B): knob H on REC SETUP turns it ON; a note on the SRC
+        # track: its voices' frame LEVEL and FX sends 0 (the DSP's LEVEL too), the other voices' as
+        # unmuted, its block after the chain (the TRK source) as loud; OFF gives them back
+        if "ms_frame" in lay:
+            mu_js = work / "mute.json"
+            mu_cmd = [a.coupled_py, "-u", "scripts/emu_coupled_mute.py", "--build", a.build, "--stock", a.stock,
+                      "--snapshot", snap, "--json", mu_js]
+
+            def mu_body(tdir):
+                rc, out = run("mute coupled", mu_cmd, logs, env=EMU_ENV, trace=tdir)
+                last = out.strip().splitlines()[-1] if out.strip() else ""
+                if rc != 0 or not last.startswith("PASS"):
+                    return False, out[-900:]
+                return True, ("on the ColdFire and the DSP together: knob H on FLEX REC SETUP turns MUTE ON; the "
+                              "SRC track's voices get LEVEL and FX sends 0 in the frame and the DSP, the other "
+                              "voices' LEVEL unchanged, its block after the chain (the TRK source) as loud; OFF "
+                              "gives LEVEL and the sends back")
+            later("mute", "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)",
+                  "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)",
+                  [mu_cmd, sorted(EMU_ENV.items())], mu_body)
 
         # v0.48 (impbox, the owner: "exact dt2"): STRT, LEN, LOOP's fine records (fmt.c
         # smp_fine), on the ColdFire emulator: swapped in on ONESHOT/STRETCH/REPITCH/BOUNCE,
