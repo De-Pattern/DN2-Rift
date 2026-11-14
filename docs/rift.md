@@ -5,6 +5,17 @@ RIFT is the owner's second Digitone II firmware (named 2026-11-12): no MD or MNM
 This repository is public; the bench (emulators, snapshots, goldens) is the private
 De-Pattern/DN2-Rift-bench. Start from docs/HANDOFF-second-firmware.md for the background.
 
+## Status (2026-11-13): v0.1 · FASCIA cleared and published, not yet announced
+
+- `RIFT_v0.1_FASCIA_OS1.11.syx`, sha256 `dc2b9f7c64c01d214df30dd600a99bc787a4ce16d4e54c40534cd346e2b05462`:
+  `ship_gate.py` printed CLEARED TO FLASH (2026-11-13). Source: DN2-Rift `eeb191d` (rebuilds it byte
+  for byte). On the `builds` branch (`v0.1-FASCIA/`) with its gate record.
+- The patcher serves it: de-pattern.github.io/DN2-Rift/ (Pages deploys main's root; the tools are
+  under `site/`, the root forwards to the patcher). It asks for the DN2 1.11, DT2 1.17 and
+  Machinedrum UW 1.63 files (the sample machines still read tables built from the Machinedrum's).
+- The announcement waits in `releases/drafts/v0.1.md`; moving it to `releases/v0.1.md` on main
+  makes the GitHub release and the RIFT ANNOUNCEMENTS post.
+
 ## Decisions (owner, 2026-11-12)
 
 - **Reference sound: FASCIA pass 3**, the four-page, 32-control engine of the 2026-11-07
