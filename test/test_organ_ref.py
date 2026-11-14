@@ -1,4 +1,4 @@
-"""ORGAN's float32 contract (src/dnfw/organ/live.py) against Ravel's own C at 48 kHz: every
+"""ORGAN's reference (src/dnfw/organ/ref.py) against Ravel's own C at 48 kHz: every
 case's output must hash to what scripts/organ_ref.py recorded from the compiled C, bit for bit."""
 import hashlib
 import importlib.util
@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from dnfw.organ import live as L
+from dnfw.organ import ref as L
 
 ROOT = Path(__file__).resolve().parent.parent
 REF = json.loads((ROOT / "src" / "dnfw" / "organ" / "reference.json").read_text())
@@ -27,7 +27,7 @@ def _render(eff, note, secs, seed):
 
 
 @pytest.mark.parametrize("name", list(OR.CASES))
-def test_live_is_ravels_organ_bit_for_bit(name):
+def test_ref_is_ravels_organ_bit_for_bit(name):
     eff, note = OR.CASES[name]
     y = _render(eff, note, REF["seconds"], REF["seed"])
     assert hashlib.sha256(y.astype("<f4").tobytes()).hexdigest() == REF["sha256"][name]

@@ -10,16 +10,21 @@ the knobs in `rv_params.c` (SRC_ORGAN), the presets in `rv_presets.c`. Its own d
 
 ## The chain of exactness
 
-1. **Done:** `src/dnfw/organ/live.py`, float32, Ravel's C operation for operation with Ravel's
+1. **Done:** `src/dnfw/organ/ref.py`, float32, Ravel's C operation for operation with Ravel's
    own maths (fm_exp2f, fm_sin_turns, fm_tanf, fm_sqrtf, xorshift32, the TPT SVF). It equals the C
    compiled at 48 kHz and 32-sample blocks **bit for bit** on Ravel's five presets, every knob at
    127 and a low 16' (`scripts/organ_ref.py` builds the C and records its hashes;
-   `test/test_organ_live.py`).
-2. The SHARC program (`src/dnfw/organ/program.py`, the perc DSL, as FASCIA's), bit-exact to
+   `test/test_organ_ref.py`).
+2. `src/dnfw/organ/live.py`: the same with the SHARC's arithmetic. The SHARC has no exact
+   divide (FASCIA's `recip`: a seed and three Newton steps, about 4e-8 relative), and Ravel
+   divides about a dozen times a block (never per sample: `-age / sp`, the room, the level's
+   square root, the SVF's coefficients, tan's sin / cos). live.py is held to ref.py within a
+   tolerance (a difference far below hearing, measured and fixed in its test).
+3. The SHARC program (`src/dnfw/organ/program.py`, the perc DSL, as FASCIA's), bit-exact to
    `live.py` in run mode; then on the SHARC runner, beside FASCIA and the sample machines.
-3. The machine on the ColdFire.
+4. The machine on the ColdFire.
 
-So the DN2's ORGAN is the FM-1's at 48 kHz (Ravel runs at 44.1 kHz and 128-sample blocks: the
+So the DN2's ORGAN is the FM-1's at 48 kHz, to the last bits of a few per-block coefficients (Ravel runs at 44.1 kHz and 128-sample blocks: the
 per-sample constants Ravel's notes list, the chiff's 0.9992 and the air's 0.08, are kept as they
 are, so the chiff is about 9 % shorter and the air a little brighter, as the notes say; the
 speech, wind and tremulant run per 32-sample block, smoother than per 128).
