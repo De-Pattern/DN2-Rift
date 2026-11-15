@@ -40,7 +40,8 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           ("recwhole",),          # v0.39: whole takes with the link at work (about 70 min)
           # v0.45: FASCIA (type 18): bit-exact to live.py (the audition, idle, a steal, p-locks);
           # chords and beside the other machines, untriggered silence; garbage; the stress test
-          ("fascia",), ("fchords", "fsilence"), ("fgarbage",), ("fstress",))
+          ("fascia",), ("fchords", "fsilence"), ("fgarbage",), ("fstress",),
+          ("organ",))             # RIFT: ORGAN (type 19) bit-exact, beside FASCIA, a machine switch
 # RIFT (2026-11-13): no Machinedrum or Monomachine engine. The runner's parts that test only
 # them do not exist on RIFT (sharc_waverider_m5.py, RIFT_GONE); the rest run as before, with
 # rstress in place of the PERC/MnM stress scenarios.

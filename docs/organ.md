@@ -20,8 +20,15 @@ the knobs in `rv_params.c` (SRC_ORGAN), the presets in `rv_presets.c`. Its own d
    divides about a dozen times a block (never per sample: `-age / sp`, the room, the level's
    square root, the SVF's coefficients, tan's sin / cos). live.py is held to ref.py within a
    tolerance (a difference far below hearing, measured and fixed in its test).
-3. The SHARC program (`src/dnfw/organ/program.py`, the perc DSL, as FASCIA's), bit-exact to
-   `live.py` in run mode; then on the SHARC runner, beside FASCIA and the sample machines.
+3. **Done:** the SHARC program (`src/dnfw/organ/program.py`, the perc DSL on FASCIA's expression
+   compiler, Ravel's maths as leaves), bit-exact to `live.Voice` in run mode (test_organ_program:
+   Ravel's cases, every stop, random panels with p-locks and steals, garbage state) and, assembled,
+   on the SHARC runner (part `organ`: two presets, a steal with knobs moving, beside FASCIA, a track
+   switched from FASCIA to ORGAN). It runs inside FASCIA's walk (fascia.asm), under the same guard:
+   8.6 KB of code, one routine per rank and one for the block. The walk clears a slot whose
+   machine type changed (LASTTYPE), since the two share the slot's state. The contract adds one
+   thing to Ravel: the chiff's decay ends at 1e-30 (about 2.3 s), where the SHARC would meet
+   denormals.
 4. The machine on the ColdFire.
 
 So the DN2's ORGAN is the FM-1's at 48 kHz, to the last bits of a few per-block coefficients (Ravel runs at 44.1 kHz and 128-sample blocks: the

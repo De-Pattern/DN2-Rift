@@ -27,6 +27,7 @@ NYQ = F(24000.0)
 SUB = 32
 LOG2E = F(1.44269504088896)
 TWO_PI = F(6.28318530717958647692)    # FM_TWO_PI
+CHIFF_FLOOR = F(1e-30)               # the chiff's decay is ended here (the SHARC flushes denormals)
 
 
 # -- rv_math.h ------------------------------------------------------------------------------------
@@ -295,5 +296,84 @@ class Organ:
                         + F(F(self.air_lp * air) * F(F(0.3) + F(F(0.7) * ons)))))
             out[i] = F(y * tot)
             self.chiff = F(self.chiff * F(0.9992))
+            if self.chiff < CHIFF_FLOOR:       # past it the SHARC would meet denormals (about 2.3 s)
+                self.chiff = F(0.0)
         self.t = F(self.t + dt)
         return out
+
+
+# -- the DN2's voice (the SHARC program's contract, dnfw.organ.program) --------------------------
+# ORGAN's sixteen controls ride FASCIA's records (a track is one machine or the other; docs/organ.md):
+# STOP on WAV1's 0..120 choice record (FASCIA's TYPA), the fifteen others on 0..127 records with a
+# stock CC where one is free (FASCIA's HARD, TUNE, DAMP, DEC, MORPH, FORM, SHIFT, LPG, CHAR, CLIK,
+# WATR, FOLD, SIDE) and FM Tone's DUST, TZFM. The panel's order is Ravel's knob order.
+CONTROLS = ("STOP", "R16", "R8", "R4", "R223", "R2", "R135", "R1",
+            "CHIFF", "SPEECH", "SPREAD", "AIR", "WIND", "TREM", "TRATE", "CELESTE")
+RIDES = ("TYPA", "HARD", "TUNE", "DAMP", "DEC", "MORPH", "FORM", "SHIFT",
+         "LPG", "CHAR", "CLIK", "WATR", "FOLD", "SIDE", "DUST", "TZFM")     # FASCIA's control each rides
+TRIM = F(0.519)                       # Ravel's per-engine trim (rv_synth.c): ORGAN at FASCIA's level
+MAGIC = 0x4F524721                    # 'ORG!': the voice's state was written by a strike
+
+
+def knob_of(word: int, top: int) -> int:
+    """a record word -> 0..127, as FASCIA's read_frame (dnfw.fascia.machines.knob)"""
+    v = min(max(((word & 0xFFFF) >> 8), 0), top)
+    if top == 127:
+        return v
+    return int(F(F(F(v) * F(254.0 / (200 if top == 100 else 240))) + F(0.502)))
+
+
+def eff_of(knobs) -> list:
+    """the 16 knobs (0..127 ints) -> Ravel's eff: STOP is its option 0..4 ((k 5) >> 7), the rest
+    the knob itself"""
+    e = [F(int(k)) for k in knobs]
+    e[0] = F(min((int(knobs[0]) * 5) >> 7, 4))
+    return e
+
+
+def fade_ramp() -> np.ndarray:
+    """a steal's fade over one block: 1 - (i + 1) / 32"""
+    return np.array([F(F(1.0) - F(F(i + 1) * F(1.0 / SUB))) for i in range(SUB)], dtype=np.float32)
+
+
+class Voice:
+    """one slot's ORGAN voice, block by block: a trig arms it, a sounding voice fades over one
+    block first (the steal), the strike is Ravel's organ_note, and it plays until the next note
+    (as the Monomachine's machines: the DN2's amp envelope shapes what is heard). A non-finite
+    output rests the voice and clears its state (it is written again at the next strike)."""
+
+    def __init__(self, tables: np.ndarray, slot: int):
+        self.tab, self.slot = tables, slot
+        self.on = self.pending = self.fading = 0
+        self.pnote = F(0.0)
+        self.f = F(0.0)
+        self.org = None
+
+    def block(self, knobs, trig: bool, note: float) -> np.ndarray:
+        e = eff_of(knobs)
+        if trig:
+            self.pnote = F(note)
+            self.pending = 1
+            self.fading = self.on
+        if self.fading and self.on:
+            y = F(self.org.render(e, self.f) * TRIM) * fade_ramp()
+            self.fading = self.on = 0
+            return self._check(y.astype(np.float32))
+        if self.pending:
+            self.pending = 0
+            n = self.pnote if np.isfinite(self.pnote) else F(0.0)
+            self.f = note_hz(n)
+            if self.org is None:
+                self.org = Organ(self.tab, 0x2545F491 + self.slot)
+            self.org.note(e)
+            self.on = 1
+        if not self.on:
+            return np.zeros(SUB, dtype=np.float32)
+        return self._check((self.org.render(e, self.f) * TRIM).astype(np.float32))
+
+    def _check(self, y):
+        if not np.all(np.isfinite(y)):
+            self.on = self.fading = 0
+            self.org = None
+            return np.zeros(SUB, dtype=np.float32)
+        return y

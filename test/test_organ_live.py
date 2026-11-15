@@ -34,7 +34,7 @@ def test_the_sharcs_divide_is_inaudible(name):
 
 def test_only_the_divides_differ():
     src = (ROOT / "src" / "dnfw" / "organ" / "live.py").read_text()
-    body = src[src.index("# -- rv_math.h"):]
+    body = src[src.index("# -- rv_math.h"):src.index("# -- the DN2's voice")]   # Ravel's engine (the voice after it divides only constants)
     import re
     divs = [ln for ln in body.splitlines() if re.search(r"[^/]/ [^/]", ln) and "F(1.0 / 2147483648.0)" not in ln
             and not re.search(r"F\(F?\(?[0-9.]+\)? / F\(", ln) and not ln.strip().startswith(("#", '"'))]

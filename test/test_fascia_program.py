@@ -68,7 +68,7 @@ def test_the_layout_fits():
     assert L.scratch == dsp.FSC_SCRATCH_DM and L.scratch_end <= dsp.REGION[1]  # L1, in the region's padding
     # the bookkeeping, in the Monomachine scratch after PERC's (keys .. strikes end at 0x3180)
     from dnfw.perc import program as PP
-    assert PP.STRIKES_OFF + 0x40 <= P.MISC_OFF and P.MISC_OFF + 0x180 <= dsp.MNM_SCRATCH_BYTES
+    assert PP.STRIKES_OFF + 0x40 <= P.MISC_OFF and P.MISC_OFF + 0x1C0 <= dsp.MNM_SCRATCH_BYTES   # RIFT: + LASTTYPE (16 words)
     assert L.order == PP.ORDER
     for t in range(16):
         base = (L.state if t < 8 else L.state2) + P.STRIDE * (t & 7)

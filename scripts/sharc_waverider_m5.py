@@ -76,6 +76,7 @@ from dnfw.md import core as MDK                                 # noqa: E402
 from dnfw.waverider import frame as FR                         # noqa: E402
 from dnfw.waverider import voice as V                          # noqa: E402
 from dnfw.fascia import program as FSP                          # noqa: E402  (v0.45: FASCIA's DSP program)
+from dnfw.organ import program as OGP                           # noqa: E402  (RIFT: ORGAN's, in FASCIA's walk)
 from dnfw.fascia import machines as FSM                         # noqa: E402
 
 OUT = ROOT / "out" / "waverider"
@@ -96,6 +97,7 @@ PERC_L = PL.layout()            # where the build puts PERC (dnfw.waverider.dsp)
 SMP_L = SL.layout()             # and the sample machines (v0.13)
 SMP_RENDERED = tuple(SM.TYPE_OF[n] for n in SM.ENGINED)
 FSC_L = FSP.layout()            # v0.45: and FASCIA
+OG_L = OGP.layout()             # RIFT: ORGAN (type 19), in FASCIA's walk
 
 
 def fsc_base(t: int) -> int:
@@ -312,14 +314,30 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
             mem = _Mem(lambda a, st=st: m2.word(st, a) or 0)
             order = [(m2.word(st, PP.ORDER + 4 * k) or 0) & 15 for k in range(16)]
             model = {}
+            seen = set()
             for t in order:
-                if t in model or frame_word(st, FR.header_offset(FR.MACHINE, t)) != FSM.TYPE:
+                if t in seen:
                     continue
-                p_, mem = FSP.run_voice(FSC_L, None, t, mem)
+                seen.add(t)
+                ty = frame_word(st, FR.header_offset(FR.MACHINE, t))
+                # RIFT: the walk's type-change reset (fascia.program LASTTYPE), as the DSP does it
+                lt = FSC_L.lasttype + 4 * t
+                if mem.get(lt) != ty:
+                    mem.put(lt, ty)
+                    for k_ in (0, 1, 2, OGP.VOICE["magic"]):
+                        mem.put(fsc_base(t) + 4 * k_, 0)
+                if ty == FSM.TYPE:
+                    p_, mem = FSP.run_voice(FSC_L, None, t, mem)
+                    nw = FSP.VOICE_WORDS
+                elif ty == OGP.TYPE:                 # RIFT: ORGAN (dnfw.organ.program), in the same walk
+                    p_, mem = OGP.run_voice(OG_L, None, t, mem)
+                    nw = OGP.VOICE_WORDS
+                else:
+                    continue
                 buf = m2.word(st, PP.BUFFERS + 4 * t) or 0
                 model[t] = {"out": [mem.get(buf + 4 * k) for k in range(BLOCK)],
-                            "state": [mem.get(fsc_base(t) + 4 * k) for k in range(FSP.VOICE_WORDS)],
-                            "steps": p_.steps}
+                            "state": [mem.get(fsc_base(t) + 4 * k) for k in range(nw)],
+                            "steps": p_.steps, "nw": nw, "type": ty}
             tap["fsc_model"] = model
 
         def at_after_fsc(r):
@@ -328,8 +346,8 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 return
             tap["fsc_dsp"] = {t: {"out": [m2.word(r.state, tap["bufs"][t] + 4 * k) or 0 for k in range(BLOCK)],
                                   "state": [m2.word(r.state, fsc_base(t) + 4 * k) or 0
-                                            for k in range(FSP.VOICE_WORDS)]}
-                              for t in tap.get("fsc_model", {})}
+                                            for k in range(m_["nw"])]}
+                              for t, m_ in tap.get("fsc_model", {}).items()}
 
         def at_resume(r):
             tap["machine"] = [m2.floats(r.state, tap["bufs"][t], BLOCK) for t in range(16)]
@@ -395,7 +413,8 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
         out["fsc"].append({t: {"out_mismatches": sum(1 for x, y in zip(model[t]["out"], got.get(t, {}).get("out", [])) if x != y)
                                + (0 if t in got else BLOCK),
                                "state_mismatches": sum(1 for x, y in zip(model[t]["state"], got.get(t, {}).get("state", [])) if x != y)
-                               + (0 if t in got else FSP.VOICE_WORDS),
+                               + (0 if t in got else model[t]["nw"]),
+                               "type": model[t]["type"],
                                "out": [V.bits_f32(x) for x in got.get(t, {}).get("out", [])],
                                "bits": list(got.get(t, {}).get("out", [])),
                                "model_steps": model[t]["steps"]} for t in model})
@@ -564,7 +583,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,organ")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -690,7 +709,9 @@ def main(argv=None):
                                ("fstress", "sixteen FASCIA voices, the clock made to move (v0.45)",
                                 lambda: step_fstress(warm(), sound, machines)),
                                ("fcost", "a FASCIA voice's cost, each audition patch (v0.45)",
-                                lambda: step_fcost(warm(), sound, machines))):
+                                lambda: step_fcost(warm(), sound, machines)),
+                               ("organ", "ORGAN bit-exact to live.Voice, in FASCIA's walk (RIFT)",
+                                lambda: step_organ(warm(), sound, machines))):
             if key in steps:
                 print(f"\nstep 3{key}: {title}")
                 results[f"3_{key}"] = fn()
@@ -3488,6 +3509,127 @@ def step_fascia(init, sound, machines, blocks=8) -> dict:
     }
     return {"ok": all(checks.values()), "checks": checks,
             "numbers": {"patches": res, "idle": idle, "steal": steal, "failing": bad}}
+
+
+# -- RIFT: ORGAN (type 19, docs/organ.md), in FASCIA's walk --------------------------------------
+
+def og_frame(sound, machines, organs: dict, trig=(), fascias=None) -> bytes:
+    """a frame: ORGANS = {t: (panel, note)} on ORGAN, FASCIAS = {t: (panel, note, vel)} on FASCIA;
+    TRIG the tracks triggered this block"""
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.organ import bench as OB, live as OL   # noqa: PLC0415
+    t0 = OGP.TYPE if 0 in organs else FSM.TYPE
+    f = base_frame(sound, machines, t0=t0, trigger=False)
+    for t, (panel, note) in organs.items():
+        f.header(FR.MACHINE, t, OGP.TYPE)
+        for w, ride in zip(OB.knobs_words(panel), OL.RIDES):
+            f.param(t, FSM.SLOTS[ride][1], w)
+        f.header(FR.NOTE, t, FB.note_word(note))
+    for t, (panel, note, vel) in (fascias or {}).items():
+        f.header(FR.MACHINE, t, FSM.TYPE)
+        for c, word in FB.panel_words(panel).items():
+            f.param(t, FSM.SLOTS[c][1], word)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
+    for t in trig:
+        f.trigger(t)
+    return f.to_bytes()
+
+
+def og_live(panel_of, notes: dict, blocks: int, slot: int):
+    """live.Voice for SLOT: PANEL_OF(b), NOTES = {block: note} -> 32 float32 a block"""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.organ import bench as OB, live as OL   # noqa: PLC0415
+    v = OL.Voice(OL.tables(), slot)
+    out = []
+    for b in range(blocks):
+        out.append(np.asarray(v.block(OB.knobs_seen(OB.knobs_words(panel_of(b))), b in notes,
+                                      FB.note_seen(notes.get(b, 60.0))), np.float32))
+    return out
+
+
+def step_organ(init, sound, machines, blocks=8) -> dict:
+    """RIFT: ORGAN's assembled code against live.Voice, bit for bit, in FASCIA's walk. Two of Ravel's
+    presets struck on block 1 (their pipes speaking over the blocks after); a steal (a second note:
+    the fade, then the strike) with knobs moving mid-note (a rank drawn, the stop changed, the
+    celeste on); ORGAN on track 0 beside FASCIA on track 1, both exact; and track 0 switched from
+    FASCIA to ORGAN mid-run (the walk's type-change reset: the organ starts clean at its trig)."""
+    import importlib.util                        # noqa: PLC0415
+    import numpy as np                           # noqa: PLC0415
+    spec = importlib.util.spec_from_file_location("organ_ref", ROOT / "scripts" / "organ_ref.py")
+    OR = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(OR)
+    from dnfw.organ import live as OL            # noqa: PLC0415
+    res, bad = {}, []
+
+    def judge(name, rr, want, t=0, extra=True):
+        ex = fsc_exact(rr)
+        lb, dmax = fsc_vs_live(rr, t, want)
+        got = [np.array(b_, np.uint32).view(np.float32) for b_ in fsc_bits(rr, t) if b_ is not None]
+        pk = float(max((np.max(np.abs(g)) for g in got), default=0.0))
+        ok = bool(rr["ok"] and ex[1:] == (0, 0) and lb == 0 and extra)
+        res[name] = {"ok": ok, "model_mismatch": ex[1:], "live_blocks_differing": lb, "max_abs_diff": dmax,
+                     "peak": pk, "halt": rr.get("halt")}
+        if not ok:
+            bad.append(name)
+        print(f"    organ {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
+        return pk
+    n = blocks + 2
+    for name in ("INFINITE", "TROMPETTE"):
+        eff, note = OR.CASES[name]
+        panel = {c: int(v) for c, v in zip(OL.CONTROLS, eff)}
+        rr = run_blocks(init, lambda b, panel=panel, note=note: og_frame(
+            sound, machines, {0: (panel, float(note))}, trig=(0,) if b == 1 else ()), n)
+        want = og_live(lambda b, panel=panel: panel, {1: float(note)}, n, 0)
+        pk = judge(name, rr, want)
+        res[name]["ok"] = res[name]["ok"] and pk > 0.001
+    # a steal and moving knobs
+    def moving(b):
+        q = {"STOP": 2, "R8": 100, "R4": 80}
+        if b >= 6:
+            q["R16"] = 90
+        if b >= 8:
+            q["STOP"], q["CELESTE"], q["TREM"] = 4, 80, 60
+        return q
+    n_st = 14
+    rr = run_blocks(init, lambda b: og_frame(sound, machines, {0: (moving(b), 60.0 if b < 4 else 67.0)},
+                                             trig=(0,) if b in (1, 4) else ()), n_st)
+    judge("steal and moving knobs", rr, og_live(moving, {1: 60.0, 4: 67.0}, n_st, 0))
+    # beside FASCIA
+    fpanel = fsc_audition()["01_tubular_bell"][0]
+    rr = run_blocks(init, lambda b: og_frame(sound, machines, {0: ({}, 55.0)}, trig=(0, 1) if b == 1 else (),
+                                             fascias={1: (fpanel, 72, 1.0)}), n)
+    judge("ORGAN beside FASCIA (ORGAN)", rr, og_live(lambda b: {}, {1: 55.0}, n, 0))
+    judge("ORGAN beside FASCIA (FASCIA)", rr, fsc_live(fpanel, {1: (72, 1.0)}, n, 1), t=1)
+    # FASCIA, then the same track on ORGAN: the walk's reset
+    n_sw = 12
+
+    def sw(b):
+        if b < 5:
+            return og_frame(sound, machines, {}, trig=(0,) if b == 1 else (), fascias={0: (fpanel, 60, 1.0)})
+        return og_frame(sound, machines, {0: ({"STOP": 0}, 62.0)}, trig=(0,) if b == 7 else ())
+    rr = run_blocks(init, sw, n_sw)
+    want_o = og_live(lambda b: {"STOP": 0}, {7 - 5: 62.0}, n_sw - 5, 0)
+    ex = fsc_exact(rr)
+    got = fsc_bits(rr, 0)
+    quiet = all(not any(got[b] or [0]) for b in range(5, 7)) if len(got) >= 7 else False
+    exact_o = len(got) == n_sw and all(np.array_equal(np.array(got[b], np.uint32), want_o[b - 5].view(np.uint32))
+                                         for b in range(5, n_sw))
+    ok_sw = bool(rr["ok"] and ex[1:] == (0, 0) and quiet and exact_o and np.max(np.abs(want_o[-1])) > 0.001)
+    res["FASCIA -> ORGAN on one track"] = {"ok": ok_sw, "model_mismatch": ex[1:], "quiet_until_trig": quiet,
+                                          "organ_exact": exact_o}
+    if not ok_sw:
+        bad.append("switch")
+    print(f"    organ FASCIA -> ORGAN: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    checks = {
+        "two of Ravel's presets: the strike and the pipes speaking, bit-exact to the model and live.Voice":
+            all(res[k]["ok"] for k in ("INFINITE", "TROMPETTE")),
+        "a steal (the fade, then the strike) and knobs moving mid-note: bit-exact": res["steal and moving knobs"]["ok"],
+        "ORGAN beside FASCIA: both bit-exact": res["ORGAN beside FASCIA (ORGAN)"]["ok"] and res["ORGAN beside FASCIA (FASCIA)"]["ok"],
+        "a track switched from FASCIA to ORGAN: quiet until its trig, then bit-exact": ok_sw,
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
 
 
 def step_fchords(init, sound, machines, blocks=8) -> dict:

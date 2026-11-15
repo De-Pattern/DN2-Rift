@@ -217,6 +217,8 @@ FSC_L2_SPAN = PERC_L2_LOAD - FSC_L2_LOAD       # to 0x200c0000: 60 KB
 FSC_SW = 0xB80000 + (FSC_L2_LOAD - 0x20000000) // 2
 FSC_SCRATCH_DM = MNM_RENDER_DM + MNM_RENDER_BYTES          # 0x2e6400 .. REGION's end 0x2e7000
 FSC_TABLES_DDR = 0x81220000
+# ORGAN (type 19, dnfw.organ.program): its pipes (5 stops x 3 tables x 256 floats), gains and ramp
+ORGAN_TABLES_DDR = 0x81222000
 
 IDLE_SITE_SW = 0xB88ABB                      # prvIdleTask's back edge: jump (pc,-0x10)
 IDLE_SITE_STOCK = bytes.fromhex("3e07ff00f0ff")
@@ -364,6 +366,7 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("the DT2 sample reader's coefficients (from the owner's DT2 image; v0.18)", SMP_TABLES_DDR,
          _smp_tables()),
         ("FASCIA's tables (dnfw.fascia.program.tables_bytes; v0.45)", FSC_TABLES_DDR, _fsc_tables()),
+        ("ORGAN's pipes, gains and ramp (dnfw.organ.program.tables_bytes; RIFT)", ORGAN_TABLES_DDR, _organ_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -383,6 +386,11 @@ def _perc_sine() -> bytes:
     from ..shft import live as SL
     data, at = SL.tables_bytes()
     return data[at["sin"]:at["pow2"]]
+
+
+def _organ_tables() -> bytes:
+    from ..organ import ddr
+    return ddr.tables_bytes()
 
 
 def _fsc_tables() -> bytes:

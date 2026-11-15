@@ -37,6 +37,8 @@ def main(argv=None) -> int:
     ap.add_argument("--no-resolve", action="store_true")
     a = ap.parse_args(argv)
     P.write_tables_json()
+    from dnfw.organ import program as OP   # noqa: PLC0415
+    OP.write_ddr_json()                     # RIFT: ORGAN (type 19) runs in the same program
     text = build()
     if not a.no_resolve:
         import sharc_resolve_jumps as R  # noqa: PLC0415  (selas)
