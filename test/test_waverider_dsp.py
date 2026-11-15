@@ -167,7 +167,11 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
     from dnfw.perc import program as PP
     if PP.RIFT:   # RIFT: no PERC or Machinedrum tables, no P-I lines; FASCIA's sine stays
         assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR, dsp.PERC_TABLES_DDR, dsp.SMP_TABLES_DDR,
-                                          dsp.FSC_TABLES_DDR, dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
+                                          dsp.FSC_TABLES_DDR, dsp.ORGAN_TABLES_DDR,       # RIFT v0.4: ORGAN's
+                                          dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
+        sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
+        assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)
+        assert sp[0][0] >= dsp.DDR_FLOOR > 0x80530BE8
         assert not any(ddr[-1][2])
         assert struct.unpack_from("<II", ddr[-2][2]) == (0x31504D53, 0)
         l2 = {a: p for _, a, p in dsp.l2_spans()}
