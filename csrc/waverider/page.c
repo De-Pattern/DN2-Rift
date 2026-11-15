@@ -99,9 +99,10 @@ u32 wr_lfo_mask(u32 rec)
             return 0;
         /* RIFT: FASCIA's controls on records with no modulation (ATK, FDBK, VARY on FM Tone's
          * 235..237) are not offered as LFO destinations */
-        if (wr_active() == FSC_KIND)
-            for (int j = 0; j < FSC_NOLFO_N; j++)
-                if (rec == fsc_nolfo[j])
+        const wr_mach_t *M = wr_mach_kind(wr_active());   /* (ORGAN: none) */
+        if (M)
+            for (int j = 0; j < M->nolfo_n; j++)
+                if (rec == M->nolfo[j])
                     return 0;
     }
     return STOCK_MASK(rec);
@@ -508,7 +509,8 @@ void wr_page_draw(void *view, void *canvas)
     int mi = mnm_index(kind);                   /* v0.26: a Monomachine machine's: one page */
     int mnm = mi >= 0;
     int smp = SMP_IDX(kind) >= 0;   /* a sample machine's (v0.44: BOUNCE's kind 13 too) */
-    if (page < 0 || page >= (smp ? 2 : mnm ? 1 : kind == FSC_KIND ? FSC_PAGES : WR_PAGES))
+    const wr_mach_t *fm = wr_mach_kind(kind);   /* v0.45: FASCIA; RIFT: ORGAN */
+    if (page < 0 || page >= (smp ? 2 : mnm ? 1 : fm ? fm->pages : WR_PAGES))
         page = 0;
     if (kind == 1) {                            /* PERC: the names TYPE has now */
         u8 flag;
@@ -530,11 +532,11 @@ void wr_page_draw(void *view, void *canvas)
             PAGE_DOTS(view, canvas, n, page, 7);
         return;
     }
-    if (kind == FSC_KIND) {                     /* v0.45: FASCIA, the DT2/Elektron grid (smp_page.c) */
-        extern void fsc_page_draw(void *view, void *canvas, int page);
-        if (page >= FSC_PAGES)
+    if (fm) {                                   /* v0.45: FASCIA, the DT2/Elektron grid (smp_page.c); RIFT: ORGAN */
+        extern void fsc_page_draw(void *view, void *canvas, int page, int kind);
+        if (page >= fm->pages)
             page = 0;
-        fsc_page_draw(view, canvas, page);
+        fsc_page_draw(view, canvas, page, kind);
         ((void (*)(void *, void *, int))method(view, 184))(view, canvas, 0);
         int n = PAGE_COUNT(view);
         if (n > 1)

@@ -70,7 +70,7 @@ wr_pk_else_2.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe009c;                   // -> wr_pk_else_4.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe009c;                   // -> wr_pk_else_5.
       R14 = 0x1;
@@ -190,7 +190,7 @@ wr_pk_else_17.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe0164;                   // -> wr_pk_else_19.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe0164;                   // -> wr_pk_else_20.
       R14 = 0x1;
@@ -310,7 +310,7 @@ wr_pk_else_32.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe022c;                   // -> wr_pk_else_34.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe022c;                   // -> wr_pk_else_35.
       R14 = 0x1;
@@ -430,7 +430,7 @@ wr_pk_else_47.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe02f4;                   // -> wr_pk_else_49.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe02f4;                   // -> wr_pk_else_50.
       R14 = 0x1;
@@ -550,7 +550,7 @@ wr_pk_else_62.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe03bc;                   // -> wr_pk_else_64.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe03bc;                   // -> wr_pk_else_65.
       R14 = 0x1;
@@ -670,7 +670,7 @@ wr_pk_else_77.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe0484;                   // -> wr_pk_else_79.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe0484;                   // -> wr_pk_else_80.
       R14 = 0x1;
@@ -790,7 +790,7 @@ wr_pk_else_92.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe054c;                   // -> wr_pk_else_94.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe054c;                   // -> wr_pk_else_95.
       R14 = 0x1;
@@ -910,7 +910,7 @@ wr_pk_else_107.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe0614;                   // -> wr_pk_else_109.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe0614;                   // -> wr_pk_else_110.
       R14 = 0x1;
@@ -1030,7 +1030,7 @@ wr_pk_else_122.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe06dc;                   // -> wr_pk_else_124.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe06dc;                   // -> wr_pk_else_125.
       R14 = 0x1;
@@ -1150,7 +1150,7 @@ wr_pk_else_137.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe07a4;                   // -> wr_pk_else_139.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe07a4;                   // -> wr_pk_else_140.
       R14 = 0x1;
@@ -1270,7 +1270,7 @@ wr_pk_else_152.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe086c;                   // -> wr_pk_else_154.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe086c;                   // -> wr_pk_else_155.
       R14 = 0x1;
@@ -1390,7 +1390,7 @@ wr_pk_else_167.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe0934;                   // -> wr_pk_else_169.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe0934;                   // -> wr_pk_else_170.
       R14 = 0x1;
@@ -1510,7 +1510,7 @@ wr_pk_else_182.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe09fc;                   // -> wr_pk_else_184.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe09fc;                   // -> wr_pk_else_185.
       R14 = 0x1;
@@ -1630,7 +1630,7 @@ wr_pk_else_197.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe0ac4;                   // -> wr_pk_else_199.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe0ac4;                   // -> wr_pk_else_200.
       R14 = 0x1;
@@ -1750,7 +1750,7 @@ wr_pk_else_212.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe0b8c;                   // -> wr_pk_else_214.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe0b8c;                   // -> wr_pk_else_215.
       R14 = 0x1;
@@ -1870,7 +1870,7 @@ wr_pk_else_227.:
       R12 = 0x11;
       COMP(R2, R12);
       IF LT JUMP 0xbe0c54;                   // -> wr_pk_else_229.
-      R12 = 0x12;
+      R12 = 0x13;
       COMP(R2, R12);
       IF GT JUMP 0xbe0c54;                   // -> wr_pk_else_230.
       R14 = 0x1;

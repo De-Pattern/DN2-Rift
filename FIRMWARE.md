@@ -31,6 +31,52 @@ Every flash, every version:
 | **v0.3** | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
 
+## v0.4 · ORGAN
+
+- **File:** `RIFT_v0.4_ORGAN_OS1.11.syx` (`builds/v0.4-ORGAN/`)
+- **sha256:** `SHA256`
+- **Gated:** GATEDATE, `CLEARED TO FLASH`
+- **Source:** `COMMIT` (this repository)
+
+**Adds**
+
+- **ORGAN** (MACHINE SEL, after FASCIA), RIFT's second original machine: the pipe organ of the
+  owner's Ravel firmware for the M-VAVE FM-1, the same engine at 48 kHz (its samples equal Ravel's
+  own C to within the SHARC's divide, far below hearing). Five stops (FLUTE, NACHTHORN, PRINCIPAL,
+  GAMBA, TRUMPET), each a set of pipe tables that change with pitch as real ranks do; seven
+  drawbar ranks; the pipes' speech, chiff, wind and air; a tremulant and a celeste.
+  - **SYN1 RANKS:** STOP; 16FT, 8FT, 4FT, NAZ (the Nazard, 2 2/3 ft), 2FT, TIER (the Tierce,
+    1 3/5 ft), 1FT: each rank's level.
+  - **SYN2 PIPES:** CHIFF (the pipe's breathy onset), SPCH (speech: how slowly the pipes speak,
+    the lower ranks slower), SPRD (spread: the ranks speak one after another), AIR (wind noise
+    in the pipes), WIND (an unsteady wind: pitch and level), TREM and RATE (the tremulant),
+    CELST (a celeste rank beside the 8', detuned up).
+  - It starts at Ravel's own sound: NACHTHORN, 8FT 110, 4FT 70, 2FT 40, CHIFF 40, SPCH 50,
+    SPRD 40, AIR 25, WIND 30, RATE 60.
+  - Every control is p-lockable, an LFO destination and slides (STOP steps, as a choice).
+  - An organ plays until the next note on its track, as the Monomachine's machines did: the
+    DN2's AMP envelope shapes what is heard (set a release).
+  - ORGAN runs in FASCIA's program, under the same DSP-time guard; it costs much less than a
+    FASCIA voice.
+
+**Tests**
+
+1. MACHINE SEL -> ORGAN on an empty track (after FASCIA in the list): SYN1 shows STOP NACH and
+   the ranks; a held note sounds an organ at once.
+2. Each STOP (FUNC + turn: one a click); each rank alone; the 16FT rank on a low note.
+3. SYN2: CHIFF and SPCH on fast notes; SPRD high (the ranks enter one by one); TREM with RATE;
+   CELST against the 8FT.
+4. A chord over four tracks or a fast arpeggio (the steal: no click on a retrigger).
+5. P-locks and an LFO on 8FT and on CELST; a slide.
+6. Switch a sounding track between FASCIA and ORGAN: each starts clean at its next note.
+7. SAVE PROJECT, power-cycle, reload: the organ track comes back the same.
+8. v0.3's tests, if v0.3 was never flashed.
+
+**Known issues**
+
+- As v0.3. ORGAN's presets (Ravel's INFINITE, PLENUM, VOX CELESTE, FLUTE 4', TROMPETTE) are
+  not shipped as sounds yet: their settings are in docs/organ.md.
+
 ## v0.3 · FLEX
 
 - **File:** `RIFT_v0.3_FLEX_OS1.11.syx` (`builds/v0.3-FLEX/`)

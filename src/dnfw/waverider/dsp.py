@@ -192,7 +192,7 @@ LOOKUP16_DM = 0x2DEE04                       # 16 words; 0x2dee00 is the [-1] gu
 from ..mnm import machines as _mnm_types    # noqa: E402
 from ..sampler import machines as _smp_types
 from ..fascia import machines as _fsc_types  # noqa: E402
-MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 1)   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
+MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 2)   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
 SMP_ENGINE_SLOT = 5                          # the engine slot the sample machines borrow
 SMP_TYPES = _smp_types.TYPES                 # ONESHOT WERP STRETCH REPITCH GRID SLICE (v0.19); v0.44 BOUNCE (17)
 ENGINES = {5: "PERC", 8: "ONESHOT", 12: "GRID"}   # types with an engine of ours
@@ -201,7 +201,8 @@ MNM_TYPES = _mnm_types.TYPES                 # v0.26: the Monomachine machines (
 # path; until its own program is chained in (fascia.asm), smp.asm writes its voices silence
 # (dnfw.sampler.program FASCIA_MUTE). Before this its lookup word was the span's zero padding:
 # FM Tone's engine, on FASCIA's records
-FASCIA_TYPES = (_fsc_types.TYPE,)
+from ..organ import machines as _org_types  # noqa: E402
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE)   # RIFT: ORGAN (19) borrows the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable

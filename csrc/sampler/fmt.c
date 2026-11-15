@@ -152,25 +152,25 @@ static int mnm_quant(int mi, int slot, int old, int value)
  * choice is written as the middle of its knob range; a jump lands in the choice it reaches. */
 #define FSC_DETENTS 4
 
-static int fsc_j(int slot)                      /* the control on SLOT, or -1 */
+static int fsc_j(const wr_mach_t *M, int slot)  /* the control on SLOT, or -1 */
 {
-    for (int j = 0; j < FSC_N; j++)
-        if (fsc_slot[j] == slot)
+    for (int j = 0; j < M->n; j++)
+        if (M->slot[j] == slot)
             return j;
     return -1;
 }
 
-static int fsc_kn(int j, int c)                 /* coarse value -> knob 0..127 */
+static int fsc_kn(const wr_mach_t *M, int j, int c)     /* coarse value -> knob 0..127 */
 {
-    int top = fsc_top[j];
-    c -= fsc_lo[j];
+    int top = M->top[j];
+    c -= M->lo[j];
     c = c < 0 ? 0 : c > top ? top : c;
     return top == 127 ? c : (c * 254 + top) / (2 * top);
 }
 
-static int fsc_rep(int j, int o)                /* the coarse value in the middle of choice O */
+static int fsc_rep(const wr_mach_t *M, int j, int o)    /* the coarse value in the middle of choice O */
 {
-    int n = fsc_choices[j], a = -1, b = -1;
+    int n = M->choices[j], a = -1, b = -1;
     for (int k = 0; k < 128; k++)
         if (((k * n) >> 7) == o) {
             if (a < 0)
@@ -179,9 +179,9 @@ static int fsc_rep(int j, int o)                /* the coarse value in the middl
         }
     if (a < 0)
         a = b = 0;
-    int k = (a + b) / 2, top = fsc_top[j];
+    int k = (a + b) / 2, top = M->top[j];
     if (top == 127)
-        return fsc_lo[j] + k;
+        return M->lo[j] + k;
     int best = 0, bd = 1000;                    /* the value whose knob is nearest k (as */
     for (int v = 0; v <= top; v++) {            /* dnfw.fascia.machines word_of) */
         int d = (v * 254 + top) / (2 * top) - k;
@@ -191,17 +191,18 @@ static int fsc_rep(int j, int o)                /* the coarse value in the middl
             best = v;
         }
     }
-    return fsc_lo[j] + best;
+    return M->lo[j] + best;
 }
 
 int fsc_q_off __attribute__((section(".data"))) = 0;   /* MACHINE SEL's defaults (rec.c): as written */
 
-static int fsc_quant(int slot, int old, int value)
+/* RIFT: FASCIA's and ORGAN's (the machine's descriptor, wr_gen.h wr_mach_t) */
+static int fsc_quant(const wr_mach_t *M, int slot, int old, int value)
 {
-    int j = fsc_j(slot);
-    if (fsc_q_off || j < 0 || !fsc_choices[j])
-        return value;                           /* not FASCIA's, or a knob */
-    int n = fsc_choices[j];
+    int j = fsc_j(M, slot);
+    if (fsc_q_off || j < 0 || !M->choices[j])
+        return value;                           /* not the machine's, or a knob */
+    int n = M->choices[j];
     int oc = old >> 8, nc = (value >> 8) & 0xFF, d = nc - oc;
     if (nc == oc)
         return value;
@@ -221,12 +222,12 @@ static int fsc_quant(int slot, int old, int value)
         if (f_acc > -need && f_acc < need)
             return old;                         /* not yet: the choice stays */
         f_acc = 0;
-        c = ((fsc_kn(j, oc) * n) >> 7) + dir;
+        c = ((fsc_kn(M, j, oc) * n) >> 7) + dir;
     } else
-        c = (fsc_kn(j, nc) * n) >> 7;           /* a jump: the choice it lands in */
+        c = (fsc_kn(M, j, nc) * n) >> 7;        /* a jump: the choice it lands in */
     if (c < 0) c = 0;
     if (c > n - 1) c = n - 1;
-    return fsc_rep(j, c) << 8;
+    return fsc_rep(M, j, c) << 8;
 }
 
 /* v0.32: FUNC + turn on our machines' controls (a tester's list, v0.30; the owner: a
@@ -246,7 +247,7 @@ extern int smp_func_held;
 extern int smp_knob_d;
 extern u32 smp_knob_at;
 #define KNOB_FRESH 150u                         /* 100 ms: the turn this write comes from */
-enum { F_OFF, F_KEEP, F_CHOICE, F_NONE, F_TUNE, F_OCT };
+enum { F_OFF, F_KEEP, F_CHOICE, F_NONE, F_TUNE, F_OCT, F_BIP };
 #define OWN_REC_FIRST 238u                      /* our records (dnfw.perc / dnfw.sampler machines) */
 #define OWN_REC_LAST 260u
 
@@ -258,11 +259,14 @@ static int func_kind(u8 *s, int slot, u32 id)
     /* v0.33: only our machines' own controls, records 238..260 (PERC's, the Monomachine's
      * and the sample machines' pages); LFO, filter, amp and FX keep stock's FUNC jumps (the
      * owner and a tester: LFO DEPTH and SPEED snapped to nothing on our tracks in v0.32) */
-    if (ty == FSC_TYPE) {                       /* v0.45: FASCIA's 24 (some on FM Tone's records): */
-        int j = fsc_j(slot);                    /* a choice steps, a knob stays put */
-        if (j == FSC_TUNE_J && fsc_rid[j] == id)
+    const wr_mach_t *M = wr_mach_type(ty);
+    if (M) {                                    /* v0.45: FASCIA's (some on FM Tone's records); RIFT: ORGAN's */
+        int j = fsc_j(M, slot);                 /* a choice steps, a knob stays put */
+        if (j >= 0 && j == M->tune_j && M->rid[j] == id)
             return F_OCT;                       /* RIFT v0.3 (owner): TUNE by octaves, as fw1's tunes */
-        return j < 0 || fsc_rid[j] != id ? F_OFF : fsc_choices[j] ? F_CHOICE : F_NONE;
+        if (j >= 0 && M->rid[j] == id && M->bipolar[j] && M->top[j] == 127 && M->lo[j] == 0)
+            return F_BIP;                       /* RIFT v0.4 (owner): a centre-zero knob: 0, then an end */
+        return j < 0 || M->rid[j] != id ? F_OFF : M->choices[j] ? F_CHOICE : F_NONE;
     }
     if (id < OWN_REC_FIRST || id > OWN_REC_LAST)
         return F_OFF;
@@ -317,6 +321,14 @@ int smp_quant(u8 *s, int slot, int value, u32 id)
         }
         return n << 8;
     }
+    if (fk == F_BIP) {
+        /* RIFT v0.4 (owner, 2026-11-15): FUNC + turn on a knob whose zero is its middle (64):
+         * toward the middle it lands on 0; from the middle (or past it) on the end that way */
+        int k = old0 >> 8;
+        if (smp_knob_d > 0)
+            return (k < 64 ? 64 : 127) << 8;
+        return (k > 64 ? 64 : 0) << 8;
+    }
     if (fk == F_CHOICE) {                       /* one choice a click, the knob's way: a */
         fq_click = smp_knob_d > 0 ? 1 : -1;     /* detent's worth past the old value, */
         int oc0 = old0 >> 8;                    /* each table's own step below */
@@ -327,8 +339,9 @@ int smp_quant(u8 *s, int slot, int value, u32 id)
         value = (oc0 + fq_click) << 8;
     } else
         fq_click = 0;
-    if ((signed char)s[SOUND_TYPE] == FSC_TYPE)             /* v0.45: FASCIA */
-        return fsc_quant(slot, *(volatile u16 *)(s + SOUND_VALUES + 2 * slot), value);
+    if (wr_mach_type((signed char)s[SOUND_TYPE]))           /* v0.45: FASCIA; RIFT: ORGAN */
+        return fsc_quant(wr_mach_type((signed char)s[SOUND_TYPE]), slot,
+                         *(volatile u16 *)(s + SOUND_VALUES + 2 * slot), value);
     if (id == SMP_BUF_ID && (signed char)s[SOUND_TYPE] == SMP_BOUNCE_KIND + 4) {
         /* v0.54 (owner: BUF's detents are right, but the knob should not be seen moving
          * through them until the next buffer): FLEX's BUF holds one value a buffer, the one
@@ -560,13 +573,13 @@ static void f_mtune(int v, char *buf)
 /* v0.45: FASCIA's values in the header (and its page with SYN held): a knob 0..127, the
  * bipolar three (TUNE, GEOM, SHIFT; v2's SKIN gone with v2) -64..+63, a choice its option's name. One formatter
  * a control: the stock formatter is handed the value only. */
-static void fsc_text(int j, int v, char *buf)
+static void fsc_text(const wr_mach_t *M, int j, int v, char *buf)
 {
-    int k = fsc_kn(j, (v >> 8) & 0xFF), n = fsc_choices[j];
+    int k = fsc_kn(M, j, (v >> 8) & 0xFF), n = M->choices[j];
     if (n) {
         int o = (k * n) >> 7;
-        put(buf, fsc_choice_name[fsc_choice_at[j] + (o > n - 1 ? n - 1 : o)], 7);
-    } else if (fsc_bipolar[j]) {
+        put(buf, M->choice_name[M->choice_at[j] + (o > n - 1 ? n - 1 : o)], 7);
+    } else if (M->bipolar[j]) {
         if (k == 64)
             put(buf, "0", 2);
         else {
@@ -576,7 +589,14 @@ static void fsc_text(int j, int v, char *buf)
     } else
         put_num(buf, k);
 }
-#define FSC_F(j) static void fsc_f##j(int v, char *b) { fsc_text(j, v, b); }
+#define FSC_F(j) static void fsc_f##j(int v, char *b) { fsc_text(&wr_mach_fsc, j, v, b); }
+#define ORG_F(j) static void org_f##j(int v, char *b) { fsc_text(&wr_mach_org, j, v, b); }
+ORG_F(0) ORG_F(1) ORG_F(2) ORG_F(3) ORG_F(4) ORG_F(5) ORG_F(6) ORG_F(7)
+ORG_F(8) ORG_F(9) ORG_F(10) ORG_F(11) ORG_F(12) ORG_F(13) ORG_F(14) ORG_F(15)   /* RIFT: ORGAN's 16 */
+static void (*const org_fns[])(int, char *) = {
+    org_f0, org_f1, org_f2, org_f3, org_f4, org_f5, org_f6, org_f7, org_f8, org_f9, org_f10, org_f11,
+    org_f12, org_f13, org_f14, org_f15};
+_Static_assert(sizeof org_fns / sizeof org_fns[0] == ORG_N, "one formatter an ORGAN control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -633,6 +653,9 @@ void smp_formats(int kind)
     if (kind == FSC_KIND)                       /* v0.45: FASCIA's, last */
         for (int j = 0; j < FSC_N; j++)
             RECORD_FMT(fsc_rid[j]) = (void *)fsc_fns[j];
+    if (kind == ORG_KIND)                       /* RIFT: ORGAN's (its records are FASCIA's: restored above) */
+        for (int j = 0; j < ORG_N; j++)
+            RECORD_FMT(org_rid[j]) = (void *)org_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.

@@ -612,6 +612,8 @@ static void fx_save(void)
             fx_set(t, k, v[k]);
 }
 
+
+
 void rec_poll(void)
 {
     /* v0.48: a turned control's value shows for a second (smp_page.c shows()); then its
@@ -847,6 +849,30 @@ static int closes(u32 code)
 #define KIT (*(volatile u32 *)0x800052A0u)
 #define SOUND_TYPE(t) (*(volatile signed char *)(KIT + 52u + 1163u * (u32)(t) + 0xDEu))
 
+/* RIFT: a machine of FASCIA's kind's own defaults written into track TRACK's sound (MACHINE SEL's
+ * commit; TRK + CLEAR's, fsc_cleared). The choices as written, not stepped to a detent. */
+static void fsc_write_defaults(const wr_mach_t *M, u32 track)
+{
+    extern int fsc_q_off;
+    u32 owner = UI_OWNER();
+    fsc_q_off = 1;
+    for (int j = 0; owner && j < M->n; j++) {
+        u32 ps = PARAM_SET(owner, M->rid[j], track);
+        if (ps)
+            SET_VALUE(ps, M->rid[j], (u32)M->def[j], track, 0, 0, 1);
+    }
+    fsc_q_off = 0;
+}
+
+/* RIFT v0.4: TRK + CLEAR has re-initialised TRACK's sound from stock's record defaults
+ * (hooks.S fsc_clear_hook): a FASCIA or ORGAN track gets its machine's own instead */
+void fsc_cleared(u32 track)
+{
+    const wr_mach_t *M = track < 16 && KIT ? wr_mach_type(SOUND_TYPE(track)) : 0;
+    if (M)
+        fsc_write_defaults(M, track);
+}
+
 /* v0.50 (impbox: "can't set the record buffer"): FLEX REC's C turns the track's BUF, the SYN page's
  * record 244, through the knob's own path (setValue: undo, the kit, the frame all see it), a
  * buffer per four detents as every choice knob (the owner, v0.26). BUF n is the value
@@ -982,17 +1008,10 @@ u32 smp_machine_commit(u32 model, u32 track, u32 type, u32 a, u32 b)
     }
     /* v0.45: FASCIA starts as its model's DEFAULTS (dnfw.fascia.machines), not at the records'
      * own defaults (WaveTone's and FM Tone's, for other machines' controls) */
-    if (track < 16 && KIT && (int)type == FSC_TYPE && SOUND_TYPE(track) == FSC_TYPE && was != FSC_TYPE) {
-        extern int fsc_q_off;                   /* the choices written as they are, not a detent */
-        u32 owner = UI_OWNER();
-        fsc_q_off = 1;
-        for (int j = 0; owner && j < FSC_N; j++) {
-            u32 ps = PARAM_SET(owner, fsc_rid[j], track);
-            if (ps)
-                SET_VALUE(ps, fsc_rid[j], (u32)fsc_default[j], track, 0, 0, 1);
-        }
-        fsc_q_off = 0;
-    }
+    /* RIFT: ORGAN as FASCIA, on the same records (from FASCIA to ORGAN, or back, too) */
+    const wr_mach_t *M = track < 16 ? wr_mach_type((int)type) : 0;
+    if (M && KIT && SOUND_TYPE(track) == M->type && was != M->type)
+        fsc_write_defaults(M, track);
     return r;
 }
 

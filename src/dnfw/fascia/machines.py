@@ -49,10 +49,13 @@ PAGES = {
     "SYN4 ONSET/INTERACT": ("ATK", "CLIK", "CTYP", "XMOD", "FDBK", "BUZZ", "WATR", "VARY"),
 }
 CHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "CTYP": CLICKS, "XMOD": XMODS}
+# RIFT v0.4 (owner, 2026-11-15: a new track must start from a musical place): MACHINE SEL and
+# TRK + CLEAR start FASCIA as the demo's vibraphone (fascia_audition 03_vibraphone): STRIKE alone
+# (MIX 0) into a VIBE bar over a TUBE resonator, CHAR 0. dnfw.fascia.model.DEFAULTS is the same.
 DEFAULTS = {
-    "TYPA": 0, "TYPB": 1, "HARD": 90, "DUST": 20, "TZFM": 0, "BEND": 10, "MIX": 30, "DEC": 20,
-    "BODA": 0, "BODB": 121, "TUNE": 64, "GEOM": 64, "MATL": 50, "POS": 40, "COUP": 0, "DAMP": 28,
-    "MORPH": 0, "FORM": 0, "SHIFT": 64, "RING": 0, "SIDE": 40, "FOLD": 0, "LPG": 40, "CHAR": 127,
+    "TYPA": 0, "TYPB": 1, "HARD": 42, "DUST": 20, "TZFM": 0, "BEND": 10, "MIX": 0, "DEC": 20,
+    "BODA": 49, "BODB": 96, "TUNE": 64, "GEOM": 64, "MATL": 96, "POS": 28, "COUP": 70, "DAMP": 34,
+    "MORPH": 0, "FORM": 0, "SHIFT": 64, "RING": 0, "SIDE": 40, "FOLD": 0, "LPG": 20, "CHAR": 0,
     "ATK": 0, "CLIK": 0, "CTYP": 0, "XMOD": 0, "FDBK": 0, "BUZZ": 0, "WATR": 0, "VARY": 40,
 }
 

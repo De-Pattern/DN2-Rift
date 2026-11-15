@@ -65,10 +65,13 @@ INTERNAL = {
     "ATK": 0, "CLIK": 0, "CTYP": 0, "XMOD": 0, "FDBK": 0, "BUZZ": 0, "WATR": 0, "VARY": 40,
 }
 ICHOICES = {"TYPA": TYPES, "TYPB": TYPES, "BODA": BODIES[:-1], "BODB": BODIES, "CTYP": CLICKS, "XMOD": XMODS}
-# the panel's start (what MACHINE SEL writes, dnfw.fascia.machines.DEFAULTS): INTERNAL but CHAR
-# 127 (owner, 2026-11-14: CHAR is hardly heard otherwise). The patches and the goldens render
-# from INTERNAL, so CHAR's start changes no approved sound.
-DEFAULTS = {**INTERNAL, "CHAR": 127}
+# the panel's start (what MACHINE SEL writes, dnfw.fascia.machines.DEFAULTS). RIFT v0.3 started CHAR
+# at 127 (owner, 2026-11-14: hardly heard otherwise); v0.4 puts it back to 0 (owner, 2026-11-15: the
+# bodies could not be heard as tones: CHAR 127 drives every sound about 21x into tanh, a fuzz over
+# all of them, where every approved patch has CHAR at 0). And v0.4 (owner, 2026-11-15: start from a
+# musical place): the demo's vibraphone (03_vibraphone over INTERNAL), as dnfw.fascia.machines
+DEFAULTS = {**INTERNAL, "HARD": 42, "MIX": 0, "BODA": 49, "BODB": 96, "MATL": 96, "POS": 28,
+            "COUP": 70, "DAMP": 34, "LPG": 20}
 
 
 def _span(names, k: int) -> int:

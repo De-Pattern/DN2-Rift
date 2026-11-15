@@ -50,7 +50,8 @@ from ..mnm import machines as _mnm           # noqa: E402
 # the Digitakt II's sample machines (docs/sampler.md, 8..13): all WaveTone clones
 from ..sampler import machines as _smpm         # noqa: E402
 from ..fascia import machines as _fsc           # noqa: E402  (v0.45: FASCIA, type 18)
-NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
+from ..organ import machines as _org            # noqa: E402  (RIFT: ORGAN, type 19)
+NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
 CLONE = 1                               # WaveTone
 LONG_NAME, SHORT_NAME = "Perc", "PRC"           # v0.11: PERC in Waverider's place
 MACHINE_NAMES = {5: ("Perc", "PRC"),
@@ -58,6 +59,7 @@ MACHINE_NAMES = {5: ("Perc", "PRC"),
                  11: ("Repitch", "RPT"), 12: ("Grid", "GRD"), 13: ("Slice", "SLC"),
                  _smpm.BOUNCE_TYPE: ("Flex", "FLX"),       # v0.44: a section of its own, after the sample machines
                  _fsc.TYPE: (_fsc.LONG, _fsc.SHORT),          # v0.45: FASCIA, in the synth section
+                 _org.TYPE: (_org.LONG, _org.SHORT),          # RIFT: ORGAN, after FASCIA
                  **{t: _mnm.LIST_NAMES[n] for t, n in zip(_mnm.TYPES, _mnm.NAMES)}}   # v0.26
 if set(MACHINE_NAMES) != set(NEW_TYPES):
     raise ImportError(f"machine types {sorted(set(NEW_TYPES) - set(MACHINE_NAMES))} have no machine")
@@ -83,7 +85,8 @@ LIST_DN2MK2 = (0, 2, 1, 3, 5, *_mnm.TYPES, *((_fsc.TYPE,) if _fsc.LISTED else ()
 from ..perc import program as _pp           # noqa: E402
 GONE_TYPES = (5, *_mnm.TYPES) if _pp.RIFT else ()
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
-    (0, 2, 1, 3, _fsc.TYPE, *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
+    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()),
+     *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
 LIST_CAP = 0x4004D906                   # lea %a0@(20),%a0 -- the vector's capacity
@@ -234,8 +237,10 @@ slot_shim:
     cmpi.l  #{TYPES_LAST},%d0
     bgt.s   1f
     cmpi.l  #{_fsc.TYPE},%d0
+    beq.s   3f
+    cmpi.l  #{_org.TYPE},%d0                    | RIFT: ORGAN rides FASCIA's records
     bne.s   2f
-    moveq   #{_fsc.FM_SLOT_FIRST},%d0
+3:  moveq   #{_fsc.FM_SLOT_FIRST},%d0
     cmp.l   %a0,%d0
     bgt.s   2f
     moveq   #{_fsc.FM_SLOT_LAST},%d0
@@ -373,8 +378,10 @@ canon_valid:
     cmpi.l  #{TYPES_LAST},%d3
     bgt.s   1f
     cmpi.l  #{_fsc.TYPE},%d3
+    beq.s   5f
+    cmpi.l  #{_org.TYPE},%d3                    | RIFT: ORGAN owns FASCIA's records
     bne.s   3f
-    moveq   #0,%d3
+5:  moveq   #0,%d3
     cmpi.l  #{_fsc.FM_OWNED[1][0]},%d2
     blt.s   4f
     cmpi.l  #{_fsc.FM_OWNED[1][1]},%d2
@@ -503,6 +510,7 @@ KEY_SLOT = 0x401D49A8                    # the parameter page view's key handler
 KEY_STOCK = 0x40016480                   # stock's: code 2 cycles the pages, the rest to its base
 QUANT_SITE = 0x40037BE6                  # the setter's write: movea.l %d0,%a0 ; move.w %d3,14(%a0,%d2.l*2)
 QUANT_STOCK = bytes.fromhex("204031832a14")
+CLEAR_SITE, CLEAR_STOCK = 0x40071F1E, "4fef001c4a00"   # RIFT v0.4: TRK + CLEAR, after 0x4004d5f0 re-inits the sound
 MUTE_SITE, MUTE_STOCK = 0x400275B0, "4eb940134490"   # v0.52: the frame ISR, after its voice loop: jsr 0x40134490 (a copy)
 TDM_SITE = 0x40026098                    # the SSI ISR, its transmit fill done: move.l %fp,%d2 ; addi.l #-72,%d2 (v0.16)
 TDM_STOCK = bytes.fromhex("240e0682ffffffb8")
@@ -896,6 +904,12 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
     # v0.52 MUTE SRC (rectrig.c ms_frame): the frame ISR's first copy after its voice loop (the
     # loop that writes each voice's LEVEL, slots and routing into the frame, 0x400274fa..0x4002759e)
     # through ms_frame: stock's copy, then the muted tracks' voices' LEVEL and FX sends faded to 0
+    # RIFT v0.4: TRK + CLEAR (0x40071e80): after 0x4004d5f0 has re-initialised the sound from stock's
+    # record defaults, a FASCIA or ORGAN track gets its own (hooks.S fsc_clear_hook, rec.c fsc_cleared)
+    _need(content, CLEAR_SITE - 6, bytes.fromhex("4eb94004d5f0"), "TRK + CLEAR's jsr 0x4004d5f0 (the sound re-initialised)")
+    edit(CLEAR_SITE, bytes.fromhex("4eb9") + _long(csyms["fsc_clear_hook"]),
+         "TRK + CLEAR: a cleared FASCIA or ORGAN track gets its machine's defaults, not stock's (fsc_clear_hook)",
+         bytes.fromhex(CLEAR_STOCK))
     _need(content, MUTE_SITE - 18, bytes.fromhex("6600ff5a4878000e486a0cf448798000685a"),
           "the voice loop's end, then the copy's three arguments")
     edit(MUTE_SITE, bytes.fromhex("4eb9") + _long(csyms["ms_frame"]),
@@ -934,7 +948,7 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
                  "rec_overlay", "rec_src", "rec_dest", "smp_ram", "rec_phase", "trim_slot",
                  "trim_n", "trim_s", "trim_e", "nm_cur", "nm_text", "slc_state", "slc_page_seen", "slc_seen_draw", "slc_letgo", "slc_open_track",
                  "smp_analyse", "smp_analysis", "smp_onsets", "smp_slices_set", "smp_slices_get",
-                 "slc_nfr", "slc_sl", "slc_ns", "slc_cur", "slc_grid_n", "smp_pos", "smp_pos_at", "smp_periods", "smp_dir_ok", "smp_meta_ok", "smp_lst_open", "smp_fb_open", "smp_fb_folder", "smp_fb_cur", "smp_fb_count", "smp_fb_mark_count", "smp_fb_mark_unused", "smp_fb_marked", "smp_fb_menu", "smp_mod_apply", "smp_quant", "smp_samp_turned", "smp_overlay_dirty", "rec_pv_on", "smp_func_held", "smp_question_up", "smp_machine_commit", "smp_rx", "smp_fb_store", "smp_lib_refresh", "smp_lib_pending", "smp_lp_queued", "smp_lib_state", "smp_lib_writes", "smp_lib_load", "smp_lib_slot_of", "smp_lib_preview", "smp_lib_preview_stop", "smp_fb_rowtext", "smp_mq_off", "smp_fb_mcur", "smp_lp_done", "smp_lp_full", "smp_rec_store_named", "smp_name_set", "smp_formats", "smp_rs_done", "smp_rs_last", "smp_trim", "smp_l_order", "smp_walk_total", "smp_held_lo", "smp_held_hi", "smp_knob_d", "smp_knob_at", "smp_dsp_load", "smp_load_peak", "smp_load_seen", "smp_load_at", "wr_screen_obj", "rec_state", "rec_heard", "slc_kb_c", "slc_alloc_n", "smp_tables", "smp_pv_state", "trim_zoom", "trim_head_x", "sl_ui_table_now", "smp_push_slot", "sl_rec_knob", "sl_rec_held", "sl_rec_table", "rec_view", "rec_rlen", "rec_link", "rec_room", "as_done", "rec_saved_slot", "rec_rstrt", "rec_thres", "rec_src", "rec_chan", "sl_rec_page", "smp_rec_place", "smp_slot_empty", "smp_pl_dirp", "rec_combo", "rec_overlay", "rt_on", "rt_play", "rt_rplace", "rt_rbytes", "rt_pend", "rt_cur", "rt_cur_end", "rt_manual", "rt_qrec", "rt_qplay", "rt_pos", "rt_steps", "rt_nx_place", "rt_nx_room", "rt_nx_need", "rt_w", "rt_gen", "q_gen", "q_fire", "q_cancel", "rt_fired", "rt_refused", "rt_swaps", "rt_qfired", "rt_why", "rt_why_at", "rt_trig", "rt_bounce_samp", "rt_is_bounce", "rt_buf_of", "rt_trig_get", "rt_trig_toggle", "rt_rearm", "rt_count", "rt_take_handover", "rt_regions", "rt_rsteps", "rt_last_step", "rt_used", "rt_fired_at", "rt_fired_trk", "rt_why_trk", "rt_last_key", "bn_page", "bn_yes_at", "bn_active", "bn_led_walk", "bn_led_poll", "bn_led_claims", "bn_open", "bn_save", "bn_pages", "bn_said_at", "bn_said_n", "bn_nothing_at", "rt_frame", "rt_poll", "rt_cut", "smp_rt_sent", "rec_rt_take", "rt_q_set", "rt_q_waiting", "rt_knob", "rt_state", "rt_arm", "rt_req", "bn_sub", "rt_flex_req", "rt_req_waiting", "rt_buf_value", "rec_gain", "sl_knob_push", "rt_clear", "bn_clear_ask", "bn_cleared", "bn_cleared_at", "fx_get", "fx_set", "fx_valid", "ms_frame", "ms_mask", "ms_frames", "rt_mute_knob", "bn_mute", "rec_peak",
+                 "slc_nfr", "slc_sl", "slc_ns", "slc_cur", "slc_grid_n", "smp_pos", "smp_pos_at", "smp_periods", "smp_dir_ok", "smp_meta_ok", "smp_lst_open", "smp_fb_open", "smp_fb_folder", "smp_fb_cur", "smp_fb_count", "smp_fb_mark_count", "smp_fb_mark_unused", "smp_fb_marked", "smp_fb_menu", "smp_mod_apply", "smp_quant", "smp_samp_turned", "smp_overlay_dirty", "rec_pv_on", "smp_func_held", "smp_question_up", "smp_machine_commit", "smp_rx", "smp_fb_store", "smp_lib_refresh", "smp_lib_pending", "smp_lp_queued", "smp_lib_state", "smp_lib_writes", "smp_lib_load", "smp_lib_slot_of", "smp_lib_preview", "smp_lib_preview_stop", "smp_fb_rowtext", "smp_mq_off", "smp_fb_mcur", "smp_lp_done", "smp_lp_full", "smp_rec_store_named", "smp_name_set", "smp_formats", "smp_rs_done", "smp_rs_last", "smp_trim", "smp_l_order", "smp_walk_total", "smp_held_lo", "smp_held_hi", "smp_knob_d", "smp_knob_at", "smp_dsp_load", "smp_load_peak", "smp_load_seen", "smp_load_at", "wr_screen_obj", "rec_state", "rec_heard", "slc_kb_c", "slc_alloc_n", "smp_tables", "smp_pv_state", "trim_zoom", "trim_head_x", "sl_ui_table_now", "smp_push_slot", "sl_rec_knob", "sl_rec_held", "sl_rec_table", "rec_view", "rec_rlen", "rec_link", "rec_room", "as_done", "rec_saved_slot", "rec_rstrt", "rec_thres", "rec_src", "rec_chan", "sl_rec_page", "smp_rec_place", "smp_slot_empty", "smp_pl_dirp", "rec_combo", "rec_overlay", "rt_on", "rt_play", "rt_rplace", "rt_rbytes", "rt_pend", "rt_cur", "rt_cur_end", "rt_manual", "rt_qrec", "rt_qplay", "rt_pos", "rt_steps", "rt_nx_place", "rt_nx_room", "rt_nx_need", "rt_w", "rt_gen", "q_gen", "q_fire", "q_cancel", "rt_fired", "rt_refused", "rt_swaps", "rt_qfired", "rt_why", "rt_why_at", "rt_trig", "rt_bounce_samp", "rt_is_bounce", "rt_buf_of", "rt_trig_get", "rt_trig_toggle", "rt_rearm", "rt_count", "rt_take_handover", "rt_regions", "rt_rsteps", "rt_last_step", "rt_used", "rt_fired_at", "rt_fired_trk", "rt_why_trk", "rt_last_key", "bn_page", "bn_yes_at", "bn_active", "bn_led_walk", "bn_led_poll", "bn_led_claims", "bn_open", "bn_save", "bn_pages", "bn_said_at", "bn_said_n", "bn_nothing_at", "rt_frame", "rt_poll", "rt_cut", "smp_rt_sent", "rec_rt_take", "rt_q_set", "rt_q_waiting", "rt_knob", "rt_state", "rt_arm", "rt_req", "bn_sub", "rt_flex_req", "rt_req_waiting", "rt_buf_value", "rec_gain", "sl_knob_push", "rt_clear", "bn_clear_ask", "bn_cleared", "bn_cleared_at", "fx_get", "fx_set", "fx_valid", "ms_frame", "fsc_clear_hook", "fsc_cleared", "ms_mask", "ms_frames", "rt_mute_knob", "bn_mute", "rec_peak",
                  "jmp_on", "jmp_armed", "jmp_pending", "jmp_count", "jmp_last", "jmp_loaded", "jmp_dirty",
                  "jmp_reads", "jmp_writes", "jmp_to", "jmp_from", "jmp_key", "jmp_poll", "jmp_forced",
                  # v0.38: per-project pools

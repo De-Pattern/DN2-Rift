@@ -148,7 +148,8 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
         # PERC, the sample machines (v0.44: 8..13 and BOUNCE's 17), v0.45 FASCIA's 18: tested as
         # runs of consecutive types (5; 8..13; 17..18), a compare or two each, not one a type
         # (the loop is unrolled 16 times: the DSP's 1 MiB upload buffer)
-        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE))):
+        from ..organ import machines as OGx    # RIFT: ORGAN (19), in FASCIA's walk: ours too
+        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE))):
             p.iconst(12, lo)
             if lo == hi:
                 p.if_(2, "EQ", 12, lambda: p.iconst(14, 1), kind="i")

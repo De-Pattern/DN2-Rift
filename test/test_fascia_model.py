@@ -24,8 +24,13 @@ def test_pages_are_four_by_eight_and_defaults_cover_them():
     names = [n for page in R.PAGES.values() for n in page]
     assert [len(p) for p in R.PAGES.values()] == [8, 8, 8, 8]
     assert len(set(names)) == 32 and set(names) == set(R.DEFAULTS) == set(R.INTERNAL)
-    # the panel starts from the engine's own values but CHAR 127 (owner, 2026-11-14)
-    assert R.DEFAULTS == {**R.INTERNAL, "CHAR": 127} and R.INTERNAL["CHAR"] == 0
+    # the panel starts from the engine's own values (v0.4: CHAR 0 again, as every approved patch)
+    assert R.INTERNAL["CHAR"] == 0 and R.DEFAULTS["CHAR"] == 0     # v0.4: CHAR starts at 0 again
+    import sys, pathlib                          # noqa: E401, PLC0415
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "scripts"))
+    import fascia_audition as A                  # noqa: PLC0415  (v0.4: the start is the demo vibraphone)
+    vib = {k: v for k, v in A.PATCHES["03_vibraphone"][0].items() if not k.startswith("_")}
+    assert R.DEFAULTS == {**R.INTERNAL, **vib}
     assert R.CHOICES == R.ICHOICES
 
 

@@ -150,3 +150,25 @@ kb_rec_hook:
         addq.l  #8, %sp
         moveq   #0, %d0                         | stock's answer: off
 1:      rts
+
+| RIFT v0.4: TRK + CLEAR (0x40071e80, "CLEAR TRK %d PRESET") re-initialises the track's sound
+| with 0x4004d5f0 (stock's record defaults: 0x400e7d4c). At 0x40071f1e (was: lea 28(%sp),%sp ;
+| tst.b %d0) the call has returned: d0.b its success, a3 the track (0..15). fsc_cleared(track)
+| (rec.c) then writes FASCIA's or ORGAN's own defaults over stock's, as MACHINE SEL's commit does
+| (the owner, 2026-11-15: a cleared FASCIA track started from WaveTone's and FM Tone's defaults).
+| Leaves as stock's two instructions leave: the caller's 28 bytes popped, d0 and the flags of
+| tst.b %d0 (rts keeps them); a2-a4 and d2-d7 as they came (callee-saved in C).
+        .globl  fsc_clear_hook
+fsc_clear_hook:
+        move.l  (%sp)+, %a1                     | the return address
+        lea     28(%sp), %sp                    | the caller's lea
+        move.l  %a1, -(%sp)
+        tst.b   %d0
+        beq.s   1f                              | refused: nothing more
+        move.l  %d0, -(%sp)
+        move.l  %a3, -(%sp)
+        jsr     fsc_cleared
+        addq.l  #4, %sp
+        move.l  (%sp)+, %d0
+1:      tst.b   %d0
+        rts
