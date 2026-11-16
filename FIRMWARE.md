@@ -28,15 +28,16 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.3** | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
+| **v0.4** | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
+| v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
 
 ## v0.4 · ORGAN
 
 - **File:** `RIFT_v0.4_ORGAN_OS1.11.syx` (`builds/v0.4-ORGAN/`)
-- **sha256:** `SHA256`
-- **Gated:** GATEDATE, `CLEARED TO FLASH`
-- **Source:** `COMMIT` (this repository)
+- **sha256:** `eaf9b205dc629cde303ae8a3c155e5a3b3e43995addfc9f9e1590221b3b1376a`
+- **Gated:** 2026-11-16, `CLEARED TO FLASH`
+- **Source:** `f6bb341` (this repository)
 
 **Adds**
 
@@ -58,6 +59,13 @@ Every flash, every version:
     DN2's AMP envelope shapes what is heard (set a release).
   - ORGAN runs in FASCIA's program, under the same DSP-time guard; it costs much less than a
     FASCIA voice.
+- **FASCIA fixes** (owner, 2026-11-15):
+  - A new FASCIA track starts as the demo vibraphone (STRIKE into a VIBE bar over a TUBE) with
+    CHAR 0 again: CHAR 127 drove every sound hard into its saturator.
+  - **TRK + CLEAR** on a FASCIA or ORGAN track now restores that machine's own defaults (it used
+    to reload stock's record defaults: HARD 100, DUST 64, TUNE +36, DAMP 127 and so on).
+  - **FUNC + turn on GEOM and SHIFT** (centre-zero knobs): toward the middle lands on 0, from 0
+    on the end that way.
 
 **Tests**
 
@@ -70,11 +78,17 @@ Every flash, every version:
 5. P-locks and an LFO on 8FT and on CELST; a slide.
 6. Switch a sounding track between FASCIA and ORGAN: each starts clean at its next note.
 7. SAVE PROJECT, power-cycle, reload: the organ track comes back the same.
-8. v0.3's tests, if v0.3 was never flashed.
+8. FASCIA from MACHINE SEL: the vibraphone, CHAR 0. Turn a few knobs, then TRK + CLEAR: the
+   vibraphone's values come back (not HARD 100 / DUST 64 / TUNE +36).
+9. FUNC + turn on GEOM and on SHIFT from either side: it stops at 0; again from 0: the end.
+10. v0.3's tests, if v0.3 was never flashed.
 
 **Known issues**
 
-- As v0.3. ORGAN's presets (Ravel's INFINITE, PLENUM, VOX CELESTE, FLUTE 4', TROMPETTE) are
+- As v0.3. FASCIA with BEND up and DAMP near 0 can sustain on some hits and decay short on
+  others, and now and then a voice cuts out (the owner's report, 2026-11-15): BEND's glide can
+  feed a long-ringing body. Lower BEND (10 or less) or raise DAMP until the fix lands.
+- ORGAN's presets (Ravel's INFINITE, PLENUM, VOX CELESTE, FLUTE 4', TROMPETTE) are
   not shipped as sounds yet: their settings are in docs/organ.md.
 
 ## v0.3 · FLEX
