@@ -18,7 +18,7 @@ from ..organ import machines as OM
 TYPE = 21                                  # after SILT's 20
 KIND = TYPE - 4
 LONG, SHORT = "Ligature", "LIG"
-LISTED = True
+LISTED = False                             # v0.7 (owner, 2026-11-17): held from MACHINE SEL until its block-and-cable screen
 
 PATCH_NAMES = ("INIT", "SYNC LD", "DX BELL", "PH DIST", "DRONE", "TANGLE", "SH BLIP", "TOMSKIN", "PLONK",
                "MANGRVE", "SPLIT", "CREASE", "BENJOLN")      # dnfw.ligature.live.PATCHES' names

@@ -432,22 +432,24 @@ class Organ:
         # page 4
         b = F(e[24] * F(F(1.0) / F(127.0)))
         edge = F(e[30] * F(F(1.0) / F(127.0)))
+        # v0.8 (Error Kit: "it should act as Attack for the blowing wind, not for the instrument"):
+        # BLOM is the breath's attack: the tone speaks at once, EDGE's breath and BRTH's flutter and
+        # darkening come in over BLOM (30 ms .. 3 s)
+        blon = e[29] > F(0.0)
+        if blon:
+            tb = F(F(0.03) * exp2f(F(e[29] * F(F(6.7) / F(127.0)))))
+            gb = F(F(1.0) - expf(F(F(-self.t) * recip(tb))))
+            b = F(b * gb)
         if b > F(0.0):
             lfl = F(F(1.0) + F(F(b * F(0.45)) * self.j))
             if lfl < F(0.0):
                 lfl = F(0.0)
             bdark = F(F(b * F(0.5)) * clampf(F(F(0.5) - F(F(0.5) * self.j)), F(0.0), F(1.0)))
-        blon = e[29] > F(0.0)
-        if blon:
-            tb = F(F(0.03) * exp2f(F(e[29] * F(F(6.7) / F(127.0)))))
-            gb = F(F(1.0) - expf(F(F(-self.t) * recip(tb))))
-        # v0.6 (Error Kit: the bloom's breath was too much on a slow drone): BLOM opens the pipe slowly;
-        # the breath heard as it opens is EDGE's, so EDGE 0 is a pure swell
         eon = edge > F(0.0)
         if eon:
             eg = F(edge * F(2.0))
             if blon:
-                eg = F(eg + F(F(F(F(1.0) - gb) * F(1.2)) * edge))
+                eg = F(eg * gb)
             eg = F(F(F(eg * F(F(1.0) + F(F(b * F(0.5)) * self.j))) * self.tot) * TRIM)
             self.ed.set(f, F(6.0))
         hon = self.dep > F(0.0)
@@ -488,8 +490,6 @@ class Organ:
                 v = F(v * vg)
             if b > F(0.0):
                 v = F(v * lfl)
-            if blon:
-                v = F(v * gb)
             if hon:
                 v = F(F(v * F(F(1.0) + F(self.dep * sin_turns(self.hph)))) * hn)
                 self.hph = F(self.hph + hinc)

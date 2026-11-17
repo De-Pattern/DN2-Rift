@@ -166,12 +166,18 @@ def test_celeste_fades_in_and_out():
     assert first is None, first
 
 
-def test_v06_blom_alone_is_a_pure_swell():
-    """v0.6 (Error Kit): BLOM with EDGE 0 opens the tone slowly with no breath on top: the first
-    blocks are quieter than the steady tone, and BLOM 0 is the plain organ"""
-    a, _w, first = B.compare(lambda k: {"BLOM": 110}, {0: 36.0}, 200)
-    assert first is None
-    early, late = np.sqrt(np.mean(a[:32 * 20] ** 2)), np.sqrt(np.mean(a[-32 * 20:] ** 2))
+def test_v08_blom_is_the_breaths_attack():
+    """v0.8 (Error Kit: BLOM "should act as Attack for the blowing wind, not for the instrument"):
+    BLOM alone leaves the tone as it is (it speaks at once); with EDGE up, the breath on top grows
+    over BLOM: early the sound is nearer the plain organ than late"""
+    plain, _w0, f0 = B.compare(lambda k: {}, {0: 36.0}, 120)
+    alone, _w1, f1 = B.compare(lambda k: {"BLOM": 110}, {0: 36.0}, 120)
+    assert f0 is None and f1 is None
+    assert np.array_equal(plain.view(np.uint32), alone.view(np.uint32))
+    breath, _w2, f2 = B.compare(lambda k: {"BLOM": 110, "EDGE": 127}, {0: 36.0}, 120)
+    assert f2 is None
+    d = breath - plain
+    early, late = np.sqrt(np.mean(d[:32 * 20] ** 2)), np.sqrt(np.mean(d[-32 * 20:] ** 2))
     assert early < 0.5 * late
 
 

@@ -59,7 +59,7 @@ WORDS = ("k146", "trig", "nn", "stop", "nr", "bad", "cnt0", "cnt1", "ybp", "outp
          "rot", "rotc", "tgt", "bb", "brk", "edge", "fc", "aa", "perc", "pf", "pinc", "tau", "pcoef", "kk",
          "mlv0", "mlv1", "minc0", "minc1", "vg", "am", "rsw", "lfl", "bdark", "tb", "gb", "eg", "ea1", "ea2",
          "ea3", "hinc", "hn", "x", "yv", "nz", "tnew", "mtab",
-         "mt", "mf", "mtab2", "fpon", "fkon", "fm0", "fm1", "fxon", "fvon", "fb", "fblon", "feon", "fhon", "frot")
+         "mt", "mf", "mtab2", "bpost", "fpon", "fkon", "fm0", "fm1", "fxon", "fvon", "fb", "fblon", "feon", "fhon", "frot")
 
 # -- the tables (DDR) ------------------------------------------------------------------------
 TAB_WORDS = 5 * 3 * LV.ORG_N
@@ -861,25 +861,27 @@ class OG(Gen):
             self.set(c("am"), k(1.0) - (c("rot") * k(0.3)) * (k(0.5) + k(0.5) * V("rs")))
             self.set(c("rsw"), (c("rot") * k(0.5)) * (k(0.5) - k(0.5) * V("rs")))
         self.cmp(c("rot"), "GT", k(0.0), rot_on)
-        # page 4: the breath's level and darkening
-        self.flag("fb", 0)
-
-        def b_on():
-            self.flag("fb", 1)
-            self.set(c("lfl"), k(1.0) + (c("bb") * k(0.45)) * V("jj"))
-            self.cmp(c("lfl"), "LT", k(0.0), lambda: self.fz(c("lfl")))
-            self.set(c("tmp1"), k(0.5) - k(0.5) * V("jj"))
-            self.clamp01("tmp1")
-            self.set(c("bdark"), (c("bb") * k(0.5)) * c("tmp1"))
-        self.cmp(c("bb"), "GT", k(0.0), b_on)
-        # the bloom
+        # the bloom (v0.8: the breath's attack, so first): gb, and the breath's amount bpost = bb gb
         self.flag("fblon", 0)
+        self.set(c("bpost"), c("bb"))
 
         def bl_on():
             self.flag("fblon", 1)
             self.set(c("tb"), k(0.03) * exp2f(e(29) * kd(6.7, 127.0)))
             self.set(c("gb"), k(1.0) - expf((-c("tnew")) * recip(c("tb"))))
+            self.set(c("bpost"), c("bb") * c("gb"))
         self.cmp(e(29), "GT", k(0.0), bl_on)
+        # page 4: the breath's level and darkening
+        self.flag("fb", 0)
+
+        def b_on():
+            self.flag("fb", 1)
+            self.set(c("lfl"), k(1.0) + (c("bpost") * k(0.45)) * V("jj"))
+            self.cmp(c("lfl"), "LT", k(0.0), lambda: self.fz(c("lfl")))
+            self.set(c("tmp1"), k(0.5) - k(0.5) * V("jj"))
+            self.clamp01("tmp1")
+            self.set(c("bdark"), (c("bpost") * k(0.5)) * c("tmp1"))
+        self.cmp(c("bpost"), "GT", k(0.0), b_on)
         # the edge (and, v0.6, the bloom's breath scaled by it): its level and its SVF at f, q 6
         self.flag("feon", 0)
         self.cmp(c("edge"), "GT", k(0.0), lambda: self.flag("feon", 1))
@@ -887,8 +889,8 @@ class OG(Gen):
         def e_on():
             self.set(c("eg"), c("edge") * k(2.0))
             p.ld(0, C["fblon"])
-            p.ifz(0, "NE", lambda: self.set(c("eg"), c("eg") + ((k(1.0) - c("gb")) * k(1.2)) * c("edge")))
-            self.set(c("eg"), ((c("eg") * (k(1.0) + (c("bb") * k(0.5)) * V("jj"))) * c("tot")) * k(LV.TRIM))
+            p.ifz(0, "NE", lambda: self.set(c("eg"), c("eg") * c("gb")))
+            self.set(c("eg"), ((c("eg") * (k(1.0) + (c("bpost") * k(0.5)) * V("jj"))) * c("tot")) * k(LV.TRIM))
             self.set(c("hz"), V("f"))
             top = float(F(LV.NYQ * F(0.9)))
 
@@ -946,8 +948,6 @@ class OG(Gen):
         p.ifz(0, "NE", lambda: self.set(c("yv"), c("yv") * c("vg")))
         p.ld(0, C["fb"])
         p.ifz(0, "NE", lambda: self.set(c("yv"), c("yv") * c("lfl")))
-        p.ld(0, C["fblon"])
-        p.ifz(0, "NE", lambda: self.set(c("yv"), c("yv") * c("gb")))
 
         def half():
             self.set(c("yv"), (c("yv") * (k(1.0) + V("dep") * sin_turns(V("hph")))) * c("hn"))

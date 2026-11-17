@@ -106,7 +106,8 @@ def test_coldfire_type_18():
         return
     from dnfw.perc import program as PP
     if PP.RIFT:   # RIFT: after the stock four, before the samples
-        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(8) - 4   # RIFT: then ORGAN, SILT, LIGATURE, then the samples
+        from dnfw.ligature import machines as LGM
+        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(8) - (4 if LGM.LISTED else 3)   # RIFT: then ORGAN, SILT, (LIGATURE,) the samples
     else:
         assert lst.index(F.TYPE) == lst.index(MM.TYPES[-1]) + 1 == lst.index(8) - 1   # after the MnM's, before the samples
     assert not CF.SAMPLER_FIRST <= F.TYPE <= CF.SAMPLER_LAST                   # the synth group: no divider
