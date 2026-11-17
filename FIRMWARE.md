@@ -28,10 +28,62 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.5** | 2026-11-17 | ORGAN pages 3 (ATTACK: PERC, PDEC, PHRM, KCLK, VELO, MIXT, ROTR, RSPD) and 4 (BREATH: BRTH, TURB, BREK, BDEP, PRES, BLOM, EDGE, PVEL), all off at 0; v0.4 organ sounds unchanged; CELESTE fades instead of switching | `builds/v0.5-BREATH/` | yes |
+| **v0.6** | 2026-11-17 | SILT, RIFT's third machine (material synthesis: FIBER, SILT, SKIN, FLUID played by ten gestures, alone or as an ensemble); ORGAN: BLOM a slow swell (breath from EDGE), MTUN replaces PHRM, MCHR replaces VELO | `builds/v0.6-SILT/` | yes |
+| v0.5 | 2026-11-17 | ORGAN pages 3 (ATTACK: PERC, PDEC, PHRM, KCLK, VELO, MIXT, ROTR, RSPD) and 4 (BREATH: BRTH, TURB, BREK, BDEP, PRES, BLOM, EDGE, PVEL), all off at 0; v0.4 organ sounds unchanged; CELESTE fades instead of switching | `builds/v0.5-BREATH/` | yes |
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.6 · SILT
+
+- **File:** `RIFT_v0.6_SILT_OS1.11.syx` (`builds/v0.6-SILT/`)
+- **sha256:** `597242a434ea3c1d36719cecfe9b74a9f980e321735cce5614ff9230f4a2e531`
+- **Gated:** 2026-11-17, `CLEARED TO FLASH`
+- **Source:** `883af79` (this repository)
+
+**Adds**
+
+- **SILT**, RIFT's third machine (MACHINE SEL: "Silt" / "SLT", after ORGAN): material
+  synthesis. A material (FIBER, SILT, SKIN, FLUID) played by a gesture (BOW, SCRAPE, STACC,
+  TREMO, SPICC, LEGNO, GLISS, FRACT, SWELL, QUAKE), alone or as an ensemble (SOLO, MASS,
+  MASS-8, SWARM). Four pages: MATTER, CONTACT, STRUCTURE and CONFIG.
+  - Velocity strikes harder and bows faster; in MASS it also sets how many players join. The
+    gate length is how long the gesture is held. LOOP re-starts it while the gate is open.
+  - Page 4 (CONFIG) is chosen per trig and can be p-locked. Every page 1 to 3 control
+    p-locks, slides and is an LFO destination; SHAPE, TUNE and QUAL are not LFO destinations.
+  - SILT is the heaviest engine. QUAL sets its DSP cost (ECO, NORMAL, DEEP). When time runs
+    short, the newest notes are kept and older voices are left out, as on FASCIA and ORGAN.
+- **ORGAN** (Error Kit's requests on Discord):
+  - **BLOM** opens the pipe slowly into the note (30 ms to 3 s); the breath you hear as it
+    opens is EDGE's, so EDGE at 0 gives a clean swell for drones.
+  - **MTUN** (Mixture Tune) replaces PHRM: it tunes the mixture down, 0 to 36 semitones.
+    PERC stays on the 2nd harmonic.
+  - **MCHR** (Mixture Character) replaces VELO: the mixture's pipe morphs toward a trumpet
+    (toward a flute when the stop is TRUMPET), from glassy to buzzy. The organ plays at one
+    level; PVEL still puts velocity on the pressure.
+
+**Known issues**
+
+- v0.5 ORGAN sounds with MIXT up sound different: their old PHRM value reads as MTUN (2ND as
+  about 9 semitones down, 3RD as about 27) and VELO as MCHR. Set MTUN and MCHR to 0 to get
+  the plain mixture back. v0.5 sounds that used BLOM have less breath unless EDGE is up.
+- SILT's materials are not yet level-matched: FIBER plays about twice as loud as the others.
+- Not yet tested on hardware: SILT's sound and DSP load on the unit, 16 SILT voices at once.
+
+**Tests**
+
+1. MACHINE SEL: Silt after Organ. The init sound: a bowed string, in tune; hold notes of
+   different lengths (the gate is the bow).
+2. MAT through FIBER, SILT, SKIN, FLUID; GEST through all ten; MODE SOLO, MASS, MASS-8, SWARM.
+3. Velocity soft and hard in MASS (fewer and more players).
+4. LOOP 16TH and FREE on a long gate; p-lock MAT and GEST on single trigs.
+5. An LFO on PRESS and on MORPH; a slide on GLISS.
+6. 8 SILT tracks at QUAL DEEP playing chords: listen for dropouts and watch the CPU flag;
+   then ECO.
+7. ORGAN: BLOM high, EDGE 0 on a long note (a clean swell); EDGE up (breath as it opens).
+8. ORGAN: MIXT up, then MTUN through its range and MCHR from 0 to 127.
+9. A v0.5 ORGAN project: it loads; sounds without MIXT sound as before.
+10. SAVE PROJECT, power-cycle, reload with SILT tracks: they come back.
 
 ## v0.5 · BREATH
 
