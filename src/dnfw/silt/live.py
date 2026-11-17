@@ -51,6 +51,9 @@ NBR = 2048          # the waveguide's lines (bridge, nut): down to about 24 Hz
 NSEC = 8            # filament slots
 NSEC_DEEP = 6       # QUAL DEEP's filaments (docs/silt-dsp.md, guardrail 2)
 NSL = 1024          # a filament's loop
+LINE_WORDS = 2 * NBR + NSEC * NSL      # a slot's lines in DDR: br, nk, then the filaments (48 KB)
+CLEAR_WORDS = 512                      # cleared a block when the slot becomes SILT: 24 blocks
+assert LINE_WORDS % CLEAR_WORDS == 0
 QN_MASS = (2, 4, NSEC_DEEP)
 QN_SOLO = (1, 2, 4)
 LOG2_10 = F(3.32192809488736)
@@ -196,10 +199,31 @@ class Voice:
         self.p_n = 0; self.p_i = 0; self.g_cnt = 0
         self.gate = 0; self.gate_left = 0
         self.L4 = [0] * 8
+        self.clear_at = LINE_WORDS             # the lines' clear: done (a fresh Voice's are zeros)
+        self.waiting = None                    # a note that came during the clear
+
+    def lines(self):
+        """the slot's DDR lines in order: br, nk, the filaments"""
+        return (self.br, self.nk, *self.sb)
+
+    def become(self):
+        """the slot became SILT (or the guard wiped it): its lines clear over 24 blocks"""
+        self.clear_at = 0
+
+    def _clear_step(self):
+        a = self.clear_at
+        for buf, off in zip(self.lines(), (0, NBR, *[2 * NBR + k * NSL for k in range(NSEC)])):
+            lo, hi = max(a, off), min(a + CLEAR_WORDS, off + len(buf))
+            if lo < hi:
+                buf[lo - off:hi - off] = F(0.0)
+        self.clear_at = a + CLEAR_WORDS
 
     # -- a note: the gesture starts again --------------------------------------------------
     def note(self, P, note, vel, gate_len):
         s = self
+        if s.clear_at < LINE_WORDS:            # the lines are clearing: the note waits for them
+            s.waiting = (list(P), note, vel, gate_len)
+            return
         s.f0 = F(440.0) * exp2((F(note) - F(69.0)) * F(1.0 / 12.0))
         s.vel = F(vel); s.gate = 1; s.gate_left = int(gate_len)
         s.t_note = F(0.0); s.strike = F(1.0); s.burst = F(0.0); s.vib_env = F(0.0)
@@ -239,6 +263,16 @@ class Voice:
     # -- a block ----------------------------------------------------------------------------
     def block(self, P, out=None):
         s = self
+        if s.clear_at < LINE_WORDS:
+            s._clear_step()
+            if out is None:
+                out = np.zeros(SUB, F)
+            out[:] = F(0.0)
+            return out
+        if s.waiting is not None:
+            w_ = s.waiting
+            s.waiting = None
+            s.note(*w_)
         rng, rng2 = s.rng, s.rng2
         P = [F(v) for v in P]
         L4 = s.L4
