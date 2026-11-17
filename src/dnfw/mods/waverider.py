@@ -46,7 +46,7 @@ SPEC = json.loads((pathlib.Path(__file__).with_name("waverider_code.json")).read
 # RIFT (owner, 2026-11-13: "new loader, we will make one later, use stock for now"): the DN2 mk2
 # start-up animation is not in RIFT; the stock start-up runs. The version stays readable at the
 # +Drive browser's top (smp_page.c, MOD_VERSION). One constant: True puts the animation back.
-BOOTANIM = False
+BOOTANIM = True                    # RIFT v0.8: RIFT's own animation (dnfw.bootanim, bootanim_rift.json)
 
 
 def _boot():

@@ -47,6 +47,13 @@ INTRO_FRAMES = 175
 CHUNK = b"ANIZ"
 DURATIONS_MS = (160,) + (80,) * 36 + (560,)          # (the last: frames 37..43's 7 x 80 ms, then held)
 SOURCE = pathlib.Path(__file__).with_name("bootanim_dn2mk2.json")
+# RIFT v0.8 (owner, 2026-11-17): RIFT's own animation (bootanim_rift.json, tools/anim/rift_anim3d.py):
+# three endoskeletons drum around a campfire, the camera tilts to the stars, the smoke spells RIFT;
+# 80 frames, 70 ms each, the last held. Its label says RIFT, not MOD.
+from .perc import program as _pp           # noqa: E402
+if _pp.RIFT:
+    DURATIONS_MS = (70,) * 79 + (900,)
+    SOURCE = pathlib.Path(__file__).with_name("bootanim_rift.json")
 
 
 def frames_pixels() -> list[set[tuple[int, int]]]:
@@ -118,7 +125,7 @@ LABEL_CHUNK = b"ANZL"
 
 def label_text() -> str:
     from .modversion import mod_version
-    return f"MOD {mod_version()}"
+    return f"{'RIFT' if _pp.RIFT else 'MOD'} {mod_version()}"
 
 
 def label_pixels(text: str | None = None) -> set[tuple[int, int]]:
