@@ -116,7 +116,8 @@ WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC)) | set(re
                      | set(re.findall(r'\bC\["([A-Za-z_0-9]+)"\]', _SRC))
                      | {"trig", "nn", "k146", "tmp0", "tmp1", "cc", "lg_e", "lg_t", "off", "tvel", "cnt0", "cnt1",
                         "cnt2", "outp", "bad", "kfl", "lnp"} | set(KNOB_WORDS)))
-ARRAYS = {"eff": NK, "yb": BLOCK, "sper": LV.NSEC, "bc": 4, "bs": 4, "mc": 6, "ms": 6, "wpos": 6}
+PLA = ("sper", "sbt", "lb", "isk", "slp", "sbow", "sdx", "sdy", "sw", "scnt")   # the players' L1 rows
+ARRAYS = {"eff": NK, "pl": len(PLA) * 8, "mir": 132, "bc": 4, "bs": 4, "mc": 6, "ms": 6, "wpos": 6}
 
 
 class Layout:
@@ -509,6 +510,7 @@ class SG(OP.OG):
         """I2 = the slot's state (ORGAN's), and its address in c('vba')"""
         OP.OG.vbase(self)
         self.p.st(self.L.C["vba"], 12)
+        self.p.st(self.L.C["vcur"], 12)
 
     def stolen_check(self) -> None:
         """the guard left this voice out twice in one note (perc.guard.around): it rests"""
@@ -1388,6 +1390,25 @@ class SG(OP.OG):
                          + ((c("stress") * k(30.0)) * V("wnd", 2)) * c("sgn"))
                 self.set(c("fk"), V("f0") * exp2((c("cc") + c("base_c")) * k(1.0 / 1200.0)))
                 self.set(Mv("i", 4, 0), mn(k(48000.0) * recip(mx(c("fk"), k(25.0))), k(float(LV.NSL - 4))))
+                # the player's block values for the hand-written sample loop (live: per sample, the same)
+                PL = lambda name: Mv("i", 4, 8 * PLA.index(name))      # noqa: E731
+                self.tabw(0, "FACK", "kint")
+                p.st(C["fac0"], 0)
+                self.set(c("fac"), k(1.0) + ((c("fac0") * (k(1.0) - c("lock"))) * (k(1.0) + k(2.0) * c("loose"))))
+                self.set(c("ent"), k(1.0))
+                self.icmp(gest, "EQ", 8, lambda: self.set(c("ent"), clipe(c("entry") * fi(self.ci("nsec")) - c("kfl"), 0.0, 1.0)))
+                self.set(PL("sbt"), (c("tgt") * c("fac")) * c("ent"))
+                self.tabw(0, "IMPK", "kint")
+                p.st(C["impk"], 0)
+                self.set(PL("isk"), (c("imp_sub") * k(0.25)) * c("impk"))
+                p.ld(9, C["kint"])
+                p.iconst(12, 4 * LV.NSL)
+                p.mul_ssi(9, 9, 12)
+                p.iconst(12, 4 * 2 * LV.NBR)
+                p.iop(9, 12, "+", 9)
+                p.ld(12, C["lnb"])
+                p.iop(9, 12, "+", 9)
+                self.st(PL("lb"), 9)
                 self.set(c("kfl"), c("kfl") + k(1.0))
                 p.ld(9, C["kint"])
                 p.iconst(12, 1)
@@ -1396,6 +1417,7 @@ class SG(OP.OG):
             self.ivloop("cnt1", one)
         p.ld(0, C["nsec"])
         p.ifz(0, "NE", players)
+        self.players_prep()
         self.set(c("prate"), k(5.0) + (c("dens") * c("dens")) * k(2500.0))
         self.set(c("sgn_p"), recip(sqrt(k(1.0) + ((c("prate") * (ab(V("bow")) * k(6.0) + c("imp") * k(40.0)))
                                                    + ((V("aval") * k(30.0)) * (c("dens") + k(0.2))) * c("prate")) * k(1.0 / 400.0))))
@@ -1405,10 +1427,10 @@ class SG(OP.OG):
         p, C = self.p, self.L.C
         p.ld(9, C["kint"])
         p.lsh(9, 9, 2)
-        p.ld(12, C["vba"])
+        p.ld(12, C["vcur"])
         p.iop(12, 12, "+", 9)
         p.seti(3, 12)
-        p.iconst(12, self.L.A["sper"])
+        p.iconst(12, self.L.A["pl"])
         p.iop(12, 12, "+", 9)
         p.seti(4, 12)
 
@@ -1471,7 +1493,10 @@ class SG(OP.OG):
             p.iconst(12, 1)
             p.iop(9, 12, "+", 9)
             p.st(C["si"], 9)
+        self.mirror(True)
         p.loop(C["cnt0"], BLOCK, sample)
+        self.mirror(False)
+        self.players_copy(out=True)
 
         def blown():
             self.zeros()
@@ -1770,110 +1795,261 @@ class SG(OP.OG):
         self.set(c("ee"), ab(c("a")) * k(2.5))
         self.skE_follow()
 
-    def s_players(self) -> None:
+    def players_prep(self) -> None:
+        """the block's flags and constants for the players' sample loop, and their words into L1"""
         p, C = self.p, self.L.C
         V, c = self.V, self.c
-        NBR, NSL = LV.NBR, LV.NSL
         mode, mat, gest = V("L4", 2), V("L4", 0), V("L4", 1)
+        # path: 0 a sympathetic strand (SOLO), 1 a bowed player (FIBER, SILT), 2 driven by the excitation
+        self.iset(c("pth"), 0)
+        self.icmp(mode, "GE", 1, lambda: self.icmp(mat, "EQ", 0, lambda: self.iset(c("pth"), 1),
+                  lambda: self.icmp(mat, "EQ", 1, lambda: self.iset(c("pth"), 1), lambda: self.iset(c("pth"), 2))))
+        self.iset(c("m2"), 0)
+        self.icmp(mode, "EQ", 2, lambda: self.iset(c("m2"), 1))
+        self.iset(c("ckone"), 0)
+        self.cmp(c("tgt"), "NE", k(0.0), lambda: self.iset(c("ckone"), 1))
+        for g_ in (0, 1, 6, 8, 9):
+            self.icmp(gest, "EQ", g_, lambda: self.iset(c("ckone"), 1))
+        self.iset(c("stk"), 0)
+        self.cmp(V("simp"), "GT", k(0.0), lambda: self.icmp(mode, "GE", 1, lambda: self.iset(c("stk"), 1)))
+        self.set(c("cK"), k(0.4) + k(1.2) * c("cohe"))
+        self.set(c("sl11"), c("slope") * k(1.1))
+        self.cmp(c("tgt"), "NE", k(0.0), lambda: self.set(c("ar"), c("att")), lambda: self.set(c("ar"), c("rel")))
+        self.ld(0, self.ci("pw0"))
+        p.iconst(12, 0)
+        p.float_(0, 0, 12)
+        p.st(C["pwf"], 0)
+        self.set(c("rp"), recip(c("pwf")))
+        self.set(c("sA"), (V("simp") * k(0.5)) * sqrt(k(8.0) * c("rp")))
+        self.players_copy(out=False)
+
+    def mirror(self, into: bool) -> None:
+        """the voice's first 132 words (everything but the players' rows) in L1 for the samples: I2
+        and vcur point at the copy, then back"""
+        p, C = self.p, self.L.C
+        assert VOICE["slp"] == 132 and self.L.A["mir"]
+        src, dst = (C["vba"], None) if into else (None, C["vba"])
+        if into:
+            p.ld(12, C["vba"])
+            p.seti(3, 12)
+            p.iconst(12, self.L.A["mir"])
+            p.seti(4, 12)
+        else:
+            p.iconst(12, self.L.A["mir"])
+            p.seti(3, 12)
+            p.ld(12, C["vba"])
+            p.seti(4, 12)
+
+        def one():
+            p.ldpost(0, 3)
+            p.stpost(4, 0)
+        p.loop_r(10, 132, one, one=11)
+        p.iconst(12, self.L.A["mir"]) if into else p.ld(12, C["vba"])
+        p.seti(2, 12)
+        p.st(C["vcur"], 12)
+
+    def players_copy(self, out: bool) -> None:
+        """the players' words between the voice (L2) and their L1 rows"""
+        p, C = self.p, self.L.C
+        p.ld(12, C["vba"])
+        p.seti(3, 12)
+        p.iconst(12, self.L.A["pl"])
+        p.seti(4, 12)
+        for name in ("slp", "sbow", "sdx", "sdy", "sw", "scnt"):
+            for kk in range(8):
+                if out:
+                    p.ldi(0, 8 * PLA.index(name) + kk, 4)
+                    p.sti(VOICE[name] + kk, 3, 0)
+                else:
+                    p.ldi(0, VOICE[name] + kk, 3)
+                    p.sti(8 * PLA.index(name) + kk, 4, 0)
+
+    def s_players(self) -> None:
+        """the players, a sample (live: the `nsec` loop), written by hand on registers"""
+        p, C = self.p, self.L.C
+        V, c = self.V, self.c
+        NSL = LV.NSL
         self.set(c("yprev"), c("y"))
 
         def any_():
+            # the sample's shared values
             self.fz(c("sacc"))
+            self.set(c("nzs"), c("nz") * c("scr"))
+            self.icmp(c("pth"), "EQ", 0, lambda: self.set(c("pn0"), (c("yprev") * k(0.03)) * c("cK")),
+                      lambda: self.set(c("pn0"), c("exv") * k(0.3)))
+            self.iset(c("spf"), 0)
+
+            def spl():
+                self.iset(c("spf"), 1)
+                self.ld(0, self.ci("si"))
+                p.iconst(12, 0)
+                p.float_(0, 0, 12)
+                p.st(C["sif"], 0)
+                self.set(c("isi"), k(1.0) - c("sif") * k(1.0 / 6.0))
+            self.cmp(c("imp_sub"), "GT", k(0.0), lambda: self.icmp(self.ci("si"), "LT", 6, spl))
             p.ld(0, C["nsec"])
             p.st(C["cnt2"], 0)
-            self.fz(c("kfl"))
-            p.iconst(0, 0)
-            p.st(C["kint"], 0)
+            p.iconst(0, self.L.A["pl"])
+            p.st(C["pptr"], 0)
+            R = lambda name: 8 * PLA.index(name)       # noqa: E731
 
             def one():
-                self.player_ptrs()
-                # the player's line: 2 NBR + kint NSL words in
-                p.ld(9, C["kint"])
+                p.ld(12, C["pptr"])
+                p.seti(3, 12)
+                # a = rd(line, sw, sper)
+                p.ldi(1, R("sper"), 3)
+                p.trunc(2, 1)
+                p.iconst(12, 0)
+                p.float_(3, 2, 12)
+                p.fop(4, 1, "-", 3)                 # fr
+                p.ldi(5, R("sw"), 3)
+                p.iop(5, 5, "-", 2)                 # r0
                 p.iconst(12, NSL)
-                p.mul_ssi(9, 9, 12)
-                p.iconst(12, 2 * NBR)
-                p.iop(9, 12, "+", 9)
-                p.st(C["loff"], 9)
-                Pk = self.Pk
-                self.rd_dyn("a", NSL, Pk("sw"), Mv("i", 4, 0))
-                self.set(Pk("slp"), Pk("slp") + (c("a") - Pk("slp")) * c("lpc"))
+                p.ifz(5, "LT", lambda: p.iop(5, 12, "+", 5))
+                p.iconst(13, 1)
+                p.iop(6, 5, "-", 13)                # r1
+                p.ifz(6, "LT", lambda: (p.iconst(12, NSL), p.iop(6, 12, "+", 6)))
+                p.ldi(7, R("lb"), 3)
+                p.lsh(8, 5, 2)
+                p.iop(8, 8, "+", 7)
+                p.seti(1, 8)
+                p.ldi(9, 0, 1)
+                p.lsh(8, 6, 2)
+                p.iop(8, 8, "+", 7)
+                p.seti(1, 8)
+                p.ldi(10, 0, 1)
+                p.fop(10, 10, "-", 9)
+                p.fop(10, 10, "*", 4)
+                p.fop(9, 9, "+", 10)                # a
+                p.st(C["pa"], 9)
+                # slp, v_s
+                p.ldi(0, R("slp"), 3)
+                p.fop(1, 9, "-", 0)
+                p.ld(2, C["lpc"])
+                p.fop(1, 1, "*", 2)
+                p.fop(0, 0, "+", 1)
+                p.sti(R("slp"), 3, 0)
+                p.fconst(2, 0.996)
+                p.fop(1, 0, "*", 2)
 
                 def inv():
-                    self.set(c("v_s"), -Pk("slp") * k(0.996))
+                    p.fconst(2, -1.0)
+                    p.fop(1, 1, "*", 2)
 
                 def upright():
-                    self.set(c("v_s"), (Pk("slp") * k(0.996) - Pk("sdx")) + k(0.995) * Pk("sdy"))
-                    self.set(Pk("sdx"), Pk("slp") * k(0.996))
-                    self.set(Pk("sdy"), c("v_s"))
-                self.icmp(mode, "EQ", 2, inv, upright)
-
-                def symp():
-                    self.set(c("nvk"), (c("yprev") * k(0.03)) * (k(0.4) + k(1.2) * c("cohe")))
+                    p.ldi(3, R("sdx"), 3)
+                    p.fop(4, 1, "-", 3)
+                    p.ldi(5, R("sdy"), 3)
+                    p.fconst(6, 0.995)
+                    p.fop(5, 5, "*", 6)
+                    p.fop(4, 4, "+", 5)
+                    p.sti(R("sdx"), 3, 1)
+                    p.sti(R("sdy"), 3, 4)
+                    p.fpass(1, 4)
+                p.ld(0, C["m2"])
+                p.ifz(0, "NE", inv, upright)        # F1 = v_s
 
                 def bowed():
-                    self.tabw(0, "FACK", "kint")
-                    p.st(C["fac0"], 0)
-                    self.set(c("fac"), k(1.0) + ((c("fac0") * (k(1.0) - c("lock"))) * (k(1.0) + k(2.0) * c("loose"))))
-                    self.set(c("ent"), k(1.0))
-                    self.icmp(gest, "EQ", 8, lambda: self.set(c("ent"), clipe(c("entry") * fi(self.ci("nsec")) - c("kfl"), 0.0, 1.0)))
-                    self.cmp(c("tgt"), "NE", k(0.0), lambda: self.set(c("ar"), c("att")), lambda: self.set(c("ar"), c("rel")))
-                    self.set(Pk("sbow"), Pk("sbow") + ((c("tgt") * c("fac")) * c("ent") - Pk("sbow")) * c("ar"))
-                    self.set(c("dvk"), Pk("sbow") - c("v_s"))
-                    self.bow_k("btk", c("dvk"), c("slope") * k(1.1), c("offset"))
-                    self.set(c("ck"), k(1.0))
+                    p.ldi(4, R("sbow"), 3)
+                    p.ldi(5, R("sbt"), 3)
+                    p.fop(5, 5, "-", 4)
+                    p.ld(6, C["ar"])
+                    p.fop(5, 5, "*", 6)
+                    p.fop(4, 4, "+", 5)
+                    p.sti(R("sbow"), 3, 4)
+                    p.fop(5, 4, "-", 1)             # dvk
+                    p.ld(6, C["sl11"])
+                    p.fop(6, 5, "*", 6)
+                    p.iconst(7, 0x7FFFFFFF)
+                    p.iop(6, 6, "AND", 7)
+                    p.ld(7, C["offset"])
+                    p.fop(6, 6, "+", 7)             # bt
+                    p.fop(7, 6, "*", 6)
+                    p.fop(7, 7, "*", 7)             # b4
+                    p.fconst(8, 1.0)
+                    p.if_(7, "GT", 8, lambda: FP_._recip_body(p, 7, 8, 6))      # btk
+                    p.fconst(6, 1.0)
+                    p.fop(6, 6, "-", 8)
+                    p.ld(7, C["nzs"])
+                    p.fop(6, 7, "*", 6)
+                    p.fconst(7, 0.05)
+                    p.fop(6, 6, "*", 7)
+                    p.fop(7, 5, "*", 8)
+                    p.fop(3, 7, "+", 6)             # nvk
 
-                    def nocon():
-                        self.set(c("ck"), mn(k(1.0), ab(Pk("sbow")) * k(60.0)))
-                    self.cmp(c("tgt"), "EQ", k(0.0), lambda: self.icmp(c("bowc"), "EQ", 0, nocon))
-                    self.set(c("nvk"), (c("dvk") * c("btk") + ((c("nz") * c("scr")) * (k(1.0) - c("btk"))) * k(0.05)) * c("ck"))
+                    def ck():
+                        p.iconst(7, 0x7FFFFFFF)
+                        p.iop(7, 4, "AND", 7)
+                        p.fconst(8, 60.0)
+                        p.fop(7, 7, "*", 8)
+                        p.fconst(8, 1.0)
+                        p.fop(7, 7, "MIN", 8)
+                        p.fop(3, 3, "*", 7)
+                    p.ld(0, C["ckone"])
+                    p.ifz(0, "EQ", ck)
 
                     def split():
-                        self.tabw(0, "IMPK", "kint")
-                        p.st(C["impk"], 0)
-                        self.ld(0, self.ci("si"))
-                        p.iconst(12, 0)
-                        p.float_(0, 0, 12)
-                        p.st(C["sif"], 0)
-                        self.set(c("nvk"), c("nvk") + ((c("imp_sub") * k(0.25)) * c("impk")) * (k(1.0) - c("sif") * k(1.0 / 6.0)))
-                    self.cmp(c("imp_sub"), "GT", k(0.0), lambda: self.icmp(self.ci("si"), "LT", 6, split))
-
-                def other():
-                    self.set(c("nvk"), c("exv") * k(0.3))
-                self.icmp(mode, "EQ", 0, symp, lambda: self.icmp(mat, "EQ", 0, bowed,
-                                                                 lambda: self.icmp(mat, "EQ", 1, bowed, other)))
+                        p.ldi(7, R("isk"), 3)
+                        p.ld(8, C["isi"])
+                        p.fop(7, 7, "*", 8)
+                        p.fop(3, 3, "+", 7)
+                    p.ld(0, C["spf"])
+                    p.ifz(0, "NE", split)
+                p.ld(0, C["pth"])
+                p.iconst(12, 1)
+                p.if_(0, "EQ", 12, bowed, lambda: p.ld(3, C["pn0"]), kind="i")
 
                 def strikes():
                     def tick():
-                        self.ld(9, Pk("scnt"))
                         p.iconst(12, 1)
-                        p.iop(9, 12, "+", 9)
-                        self.st(Pk("scnt"), 9)
+                        p.iop(4, 12, "+", 4)
+                        p.sti(R("scnt"), 3, 4)
 
                         def add():
-                            self.ld(0, Pk("scnt"))
                             p.iconst(12, 0)
-                            p.float_(0, 0, 12)
-                            p.st(C["scf"], 0)
-                            self.ld(0, self.ci("pw0"))
-                            p.float_(0, 0, 12)
-                            p.st(C["pwf"], 0)
-                            self.set(c("nvk"), c("nvk") + ((V("simp") * k(0.5)) * sqrt(k(8.0) * recip(c("pwf"))))
-                                     * sinf((k(LV.PI) * c("scf")) * recip(c("pwf"))))
-                        self.ld(9, Pk("scnt"))
-                        p.ifz(9, "GT", add)
-                    self.ld(0, Pk("scnt"))
-                    p.ld(1, C["pw0"])
-                    p.if_(0, "LT", 1, tick, kind="i")
-                self.cmp(V("simp"), "GT", k(0.0), lambda: self.icmp(mode, "GE", 1, strikes))
-                self.wr_dyn(Pk("sw"), clipe(c("v_s") + c("nvk"), -2.0, 2.0))
-                self.bump_ptr(Pk("sw"), NSL)
-                self.set(c("sacc"), c("sacc") + c("a"))
-                self.set(c("kfl"), c("kfl") + k(1.0))
-                p.ld(9, C["kint"])
+                            p.float_(5, 4, 12)
+                            p.fconst(6, float(LV.PI))
+                            p.fop(5, 6, "*", 5)
+                            p.ld(6, C["rp"])
+                            p.fop(5, 5, "*", 6)
+                            p.fpass(0, 5)
+                            OP.OLEAF["o_sinf"](self)
+                            p.ld(6, C["sA"])
+                            p.fop(0, 6, "*", 0)
+                            p.fop(3, 3, "+", 0)
+                        p.ifz(4, "GT", add)
+                    p.ldi(4, R("scnt"), 3)
+                    p.ld(5, C["pw0"])
+                    p.if_(4, "LT", 5, tick, kind="i")
+                p.ld(0, C["stk"])
+                p.ifz(0, "NE", strikes)
+                # the write, the pointer
+                p.fop(4, 1, "+", 3)
+                p.fconst(5, -2.0)
+                p.fop(4, 4, "MAX", 5)
+                p.fconst(5, 2.0)
+                p.fop(4, 4, "MIN", 5)
+                p.ldi(5, R("sw"), 3)
+                p.lsh(8, 5, 2)
+                p.ldi(7, R("lb"), 3)
+                p.iop(8, 8, "+", 7)
+                p.seti(1, 8)
+                p.sti(0, 1, 4)
                 p.iconst(12, 1)
-                p.iop(9, 12, "+", 9)
-                p.st(C["kint"], 9)
+                p.iop(5, 12, "+", 5)
+                p.iconst(12, NSL)
+                p.if_(5, "GE", 12, lambda: p.iconst(5, 0), kind="i")
+                p.sti(R("sw"), 3, 5)
+                p.ld(5, C["sacc"])
+                p.ld(6, C["pa"])
+                p.fop(5, 5, "+", 6)
+                p.st(C["sacc"], 5)
+                p.ld(12, C["pptr"])
+                p.iconst(13, 4)
+                p.iop(12, 12, "+", 13)
+                p.st(C["pptr"], 12)
             self.ivloop("cnt2", one)
+            mode = V("L4", 2)
 
             def solo_mix():
                 self.set(c("y"), c("y") + (c("sacc") * k(0.6)) * c("voices"))
