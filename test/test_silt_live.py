@@ -1,0 +1,60 @@
+"""SILT's float32 voice (live.py) against the audition model the owner approved (model.py).
+
+Not bit-exact (the DSP's primitives against libm, in feedback loops): the same level and the
+same spectral envelope over a held note, for each material and the ensemble modes, to within
+what the model itself varies by from one random seed to another (the noisy gestures and the
+drips are chaotic: a last-bit difference picks other random events). Every output finite and
+inside the soft clip."""
+import numpy as np
+import pytest
+
+from dnfw.silt import live as L
+from dnfw.silt import model as M
+
+NOTES = [(0.0, 48, 0.9, 0.8)]
+SEEDS = (0x3698CF1D, 0x5B05B057, 0x7F6FE491)
+CASES = {
+    "fiber_bow": dict(MAT="FIBER"),
+    "fiber_mass8": dict(MAT="FIBER", MODE="MASS-8", QUAL="NORMAL", SPREAD=70, VOICES=127),
+    "fiber_scrape": dict(MAT="FIBER", GEST="SCRAPE", PRESS=100, SCRAP=80, INST=90),
+    "skin_stacc": dict(MAT="SKIN", GEST="STACC", SNAP=104, VISC=28, PRESS=70, TENS=40, VOICES=0),
+    "silt_fract": dict(MAT="SILT", MODE="SWARM", GEST="FRACT", DENS=64, COHE=100),
+    "fluid_bow": dict(MAT="FLUID", GEST="BOW", DENS=56, VISC=26),
+}
+
+
+def bands(x):
+    X = np.abs(np.fft.rfft(x * np.hanning(len(x)))) ** 2
+    f = np.fft.rfftfreq(len(x), 1 / 48000)
+    e = np.logspace(np.log10(60), np.log10(16000), 9)
+    return np.array([10 * np.log10(X[(f >= e[i]) & (f < e[i + 1])].sum() + 1e-12) for i in range(8)])
+
+
+@pytest.mark.parametrize("name", list(CASES))
+def test_live_is_the_model(name):
+    kw = CASES[name]
+    a = M.play(M.panel(**kw), NOTES, 1.0)
+    b = L.render(L.panel(**kw), NOTES, 1.0).astype(float)
+    assert np.isfinite(b).all() and np.abs(b).max() <= 1.0
+    ra, rb = np.sqrt(np.mean(a ** 2)), np.sqrt(np.mean(b ** 2))
+    tol_db, tol_b = 1.0, np.full(8, 2.0)
+    for sd in SEEDS:                                  # the model against itself, other seeds
+        c = M.play(M.panel(**kw), NOTES, 1.0, seed=sd)
+        tol_db = max(tol_db, abs(20 * np.log10(np.sqrt(np.mean(c ** 2)) / ra)) + 0.5)
+        tol_b = np.maximum(tol_b, np.abs(bands(a) - bands(c)) + 1.0)
+    assert abs(20 * np.log10(rb / ra)) < tol_db
+    d = np.abs(bands(a) - bands(b))
+    assert (d < tol_b).all(), (d, tol_b)
+
+
+def test_the_comparison_sees_a_wrong_voice():
+    """negative control: a different material by the same measure fails it"""
+    a = M.play(M.panel(MAT="FIBER"), NOTES, 1.0)
+    b = L.render(L.panel(MAT="SKIN"), NOTES, 1.0).astype(float)
+    d = np.abs(bands(a) - bands(b))
+    ra, rb = np.sqrt(np.mean(a ** 2)), np.sqrt(np.mean(b ** 2))
+    assert d.max() >= 4.0 or abs(20 * np.log10(rb / ra)) >= 1.0
+
+
+def test_deep_is_six_filaments():
+    assert L.QN_MASS[2] == 6 == L.NSEC_DEEP
