@@ -28,9 +28,61 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.4** | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
+| **v0.5** | 2026-11-17 | ORGAN pages 3 (ATTACK: PERC, PDEC, PHRM, KCLK, VELO, MIXT, ROTR, RSPD) and 4 (BREATH: BRTH, TURB, BREK, BDEP, PRES, BLOM, EDGE, PVEL), all off at 0; v0.4 organ sounds unchanged; CELESTE fades instead of switching | `builds/v0.5-BREATH/` | yes |
+| v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.5 · BREATH
+
+- **File:** `RIFT_v0.5_BREATH_OS1.11.syx` (`builds/v0.5-BREATH/`)
+- **sha256:** `5798c52ff588e3f557c9c99e89a625b8a4784e7304f8401f92107b6d528e26ea`
+- **Gated:** 2026-11-17, `CLEARED TO FLASH`
+- **Source:** `41ca2ab` (this repository)
+
+**Adds**
+
+- **ORGAN: two new pages.** Everything on them starts at 0, and at 0 the organ is v0.4's,
+  sample for sample (the owner: "do not change the core sounds").
+  - **SYN3 ATTACK:** PERC (a Hammond-style percussion: a clean sine ping at each note), PDEC
+    (its decay, a tick to a bell), PHRM (the ping on the 2ND or 3RD harmonic), KCLK (key click:
+    a short contact click), VELO (velocity sensitivity: harder notes louder, with a stronger
+    ping and click), MIXT (a mixture: high pipes above the stop, shimmer), ROTR and RSPD (a
+    rotor: the level and tone swirl and the pipes waver, the speed easing between settings).
+  - **SYN4 BREATH** (from the owner's flute clip): BRTH (the air's turbulence inside the tone:
+    level, pitch and brightness flutter from within), TURB (how fast: a slow waver to a 50 Hz
+    rasp), BREK and BDEP (a voice-like break: the tone cracks down into a rough half-pitch
+    growl and recovers), PRES (blowing pressure: sharper, likelier to break), BLOM (each note
+    blooms from breath into tone, up to 3 s), EDGE (breath heard through the pipe), PVEL
+    (velocity on the pressure).
+  - Every new control is p-lockable and slides; all but BLOM, EDGE and PVEL are LFO
+    destinations (their records take no modulation).
+  - **Organ sounds made in v0.4 sound exactly as before.** Their pages 3 and 4 show leftover
+    numbers (64s) and stay off; the first turn of any knob on those pages sets both pages to
+    their defaults (all off) and moves the turned knob from there.
+- **CELESTE** fades its rank in and out instead of switching it (a tester: a click turning CELST
+  from 0 to 2 and back).
+- **The tremulant's sine** is now computed exactly as the model: past three quarters of each
+  cycle v0.4's DSP was off by up to 0.01 % (inaudible; found by a longer test).
+
+**Tests**
+
+1. An ORGAN sound from v0.4: it sounds as before. SYN3 and SYN4 show numbers; turn PERC: the
+   ping starts from the bottom and every other page 3 and 4 control reads its default.
+2. A new ORGAN track: SYN3 and SYN4 at their defaults (PERC, KCLK, MIXT, ROTR, BRTH, BREK,
+   PRES, BLOM, EDGE at 0): the organ as in v0.4.
+3. PERC up on fast notes: the ping; PDEC short to long; PHRM 2ND and 3RD.
+4. KCLK on fast notes; VELO up and play soft and hard.
+5. MIXT up; ROTR up, RSPD slow then fast (the speed eases over).
+6. BRTH up, TURB slow to fast; BREK and BDEP up (the breaks), PRES up (more of them).
+7. BLOM up on long notes (breath into tone); EDGE up.
+8. CELST from 0 to 2 and back on a held note: no click.
+9. SAVE PROJECT, power-cycle, reload with pages 3 and 4 set: they come back.
+10. v0.4's tests, if v0.4 was never flashed.
+
+**Known issues**
+
+- ORGAN's presets are still not shipped as sounds (docs/organ.md).
 
 ## v0.4 · ORGAN
 
