@@ -130,6 +130,10 @@ FASCIA_STEP = tuple(_fsc.SLOTS[c][1] for c in _fsc.CONTROLS if _fsc.is_choice(c)
 from .organ import machines as _org        # noqa: E402
 ORGAN_TYPE = _org.TYPE
 ORGAN_SLIDE = tuple(_org.SLOTS[c][1] for c in _org.CONTROLS if not _org.is_choice(c))
+# RIFT: SILT (type 20): its 24 knobs slide, page 4 steps
+from .silt import machines as _slt        # noqa: E402
+SILT_TYPE = _slt.TYPE
+SILT_SLIDE = tuple(_slt.SLOTS[c][1] for c in _slt.CONTROLS if not _slt.is_choice(c))
 
 DEST_SLOTS = (4, 12, 20)                # LFO DEST: copied unsmoothed by 0x400db12a; never slid
 SHARED_PAGES = (0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0D, 0x0E, 0x0F, 0x1A, 0x1B, 0x1C)
@@ -193,4 +197,6 @@ def c_header(stock: bytes) -> str:
             f"#define SL_FSC_TYPE {FASCIA_TYPE}\n"
             f"static const unsigned int sl_fsc[4] = {words(sum(1 << x for x in FASCIA_SLIDE))};\n"
             f"#define SL_ORG_TYPE {ORGAN_TYPE}\n"
-            f"static const unsigned int sl_org[4] = {words(sum(1 << x for x in ORGAN_SLIDE))};\n#endif\n")
+            f"static const unsigned int sl_org[4] = {words(sum(1 << x for x in ORGAN_SLIDE))};\n"
+            f"#define SL_SLT_TYPE {SILT_TYPE}\n"
+            f"static const unsigned int sl_slt[4] = {words(sum(1 << x for x in SILT_SLIDE))};\n#endif\n")

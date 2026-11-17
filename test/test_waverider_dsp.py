@@ -251,6 +251,9 @@ def test_perc_code_is_in_l2_above_the_stock_image_and_below_the_uncached_window(
                                                       (dsp.SMP_L2_LOAD, dsp.SMP_L2_SPAN)]
     assert dsp.PERC_L2_LOAD + perc_len <= dsp.SMP_L2_LOAD
     for _w, at, payload in data:
+        if at == dsp.FSC_L2_LOAD:                # RIFT (SILT): fascia.asm in PERC's former room, after perc.asm
+            assert dsp.PERC_L2_LOAD + perc_len <= at and at + len(payload) <= dsp.SMP_L2_LOAD
+            continue
         assert dsp.L2_IMAGE_END + 0x10000 <= at and at + len(payload) <= dsp.PERC_L2_LOAD
         assert bootstream.read_span(built, at, len(payload)) == payload
     assert dsp.SMP_L2_LOAD == dsp.PERC_L2_LOAD + dsp.PERC_L2_SPAN

@@ -62,7 +62,8 @@ from ..mnm import machines as _mnm_types
 from ..sampler import machines as _smp
 from ..fascia import machines as _fsc     # v0.45: FASCIA, type 18 (kind 14)
 from ..organ import machines as _org      # RIFT: ORGAN, type 19 (kind 15)
-TYPES_LAST = max(13, *_mnm_types.TYPES, _smp.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE)   # dnfw.waverider.coldfire.TYPES_LAST: 5.. are ours (v0.20: 13,
+from ..silt import machines as _slt       # RIFT: SILT, type 20 (kind 16)
+TYPES_LAST = max(13, *_mnm_types.TYPES, _smp.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE)   # dnfw.waverider.coldfire.TYPES_LAST: 5.. are ours (v0.20: 13,
                                   # SLICE, had been left out here: its track got WaveTone's pages;
                                   # v0.26: the Monomachine's from 14 on)
 GET_SHORT_NAME = 0x400372DA
@@ -296,6 +297,13 @@ def org_named() -> dict[int, tuple[str, str]]:
     return out
 
 
+def slt_named() -> dict[int, tuple[str, str]]:
+    """RIFT: record -> (long, short) on a SILT track (dnfw.silt.machines), the rest named "-" """
+    out = {_slt.SLOTS[c][0]: (_slt.LONG_NAMES[c], _slt.LABELS[c]) for c in _slt.CONTROLS}
+    out.update({r: (UNUSED_LONG, UNUSED_SHORT) for r in _slt.UNUSED_RECORDS})
+    return out
+
+
 # the C side's one descriptor a machine of FASCIA's kind (fmt.c, smp_page.c, rec.c, page.c pick it by
 # the track's type or kind): FASCIA's and ORGAN's tables behind one set of pointers
 MACH_C = """typedef struct {
@@ -312,13 +320,16 @@ static const wr_mach_t wr_mach_fsc = {FSC_TYPE, FSC_KIND, FSC_N, FSC_PAGES, FSC_
 static const wr_mach_t wr_mach_org = {ORG_TYPE, ORG_KIND, ORG_N, ORG_PAGES, -1, 0,
     org_rid, org_default, 0, org_slot, org_lo, org_top, org_choices, org_choice_at, org_bipolar,
     org_choice_name, org_choice_box, org_label};
+static const wr_mach_t wr_mach_slt = {SLT_TYPE, SLT_KIND, SLT_N, SLT_PAGES, -1, 0,
+    slt_rid, slt_default, 0, slt_slot, slt_lo, slt_top, slt_choices, slt_choice_at, slt_bipolar,
+    slt_choice_name, slt_choice_box, slt_label};
 static inline const wr_mach_t *wr_mach_type(int ty)
 {
-    return ty == FSC_TYPE ? &wr_mach_fsc : ty == ORG_TYPE ? &wr_mach_org : 0;
+    return ty == FSC_TYPE ? &wr_mach_fsc : ty == ORG_TYPE ? &wr_mach_org : ty == SLT_TYPE ? &wr_mach_slt : 0;
 }
 static inline const wr_mach_t *wr_mach_kind(int kind)
 {
-    return kind == FSC_KIND ? &wr_mach_fsc : kind == ORG_KIND ? &wr_mach_org : 0;
+    return kind == FSC_KIND ? &wr_mach_fsc : kind == ORG_KIND ? &wr_mach_org : kind == SLT_KIND ? &wr_mach_slt : 0;
 }
 """
 
@@ -393,9 +404,10 @@ def c_header() -> str:
     # (v0.44: a sample machine's kind is its type - 4: 4..9, and BOUNCE's 13)
     fsc = fsc_named()
     org = org_named()
-    order = sorted(set(order) | set(fsc) | set(org))
+    slt = slt_named()
+    order = sorted(set(order) | set(fsc) | set(org) | set(slt))
     by_kind = {1: wr, **{_smp.TYPE_OF[n] - 4: m for n, m in zip(_smp.NAMES, smp)},
-               **{kd: m for kd, m in zip(MNM_KINDS, mnm)}, _fsc.KIND: fsc, _org.KIND: org}
+               **{kd: m for kd, m in zip(MNM_KINDS, mnm)}, _fsc.KIND: fsc, _org.KIND: org, _slt.KIND: slt}
     if sorted(by_kind) != list(range(1, len(by_kind) + 1)):
         raise ValueError(f"the kinds are not 1..n: {sorted(by_kind)}")
     kinds = [by_kind[k] for k in sorted(by_kind)]
@@ -410,7 +422,7 @@ def c_header() -> str:
             f"#define WR_KINDS {len(kinds)}\n"
             f"static const char *const wr_named_long[WR_KINDS][WR_NAMED] = {{{', '.join(row(m, 0) for m in kinds)}}};\n"
             f"static const char *const wr_named_short[WR_KINDS][WR_NAMED] = {{{', '.join(row(m, 1) for m in kinds)}}};\n"
-            + perc_c_header() + smp_c_header() + mnm_c_header() + _fsc.c_header() + _org.c_header() + MACH_C
+            + perc_c_header() + smp_c_header() + mnm_c_header() + _fsc.c_header() + _org.c_header() + _slt.c_header() + MACH_C
             + f"#define WR_NAMED_LO {min(order)}\n#define WR_NAMED_HI {max(order)}\n")
 
 
@@ -613,6 +625,9 @@ def source(page_draw: int, cell: int) -> str:
     org_page_data = "\n".join(f"    .long org_title_{k}, org_subtitle_{k}\n"
                               f"    .long {', '.join(str(_org.SLOTS[c][0]) for c in page)}\n"
                               f"    .long {TAG}" for k, page in enumerate(_org.PAGES.values()))
+    slt_page_data = "\n".join(f"    .long slt_title_{k}, slt_subtitle_{k}\n"
+                              f"    .long {', '.join(str(_slt.SLOTS[c][0]) for c in page)}\n"
+                              f"    .long {TAG}" for k, page in enumerate(_slt.PAGES.values()))
     return f"""
 | -- the active track's machine, as ours: d0 = its type - 4 for types 5..{TYPES_LAST}: 1 PERC,
 | 4..9 the sample machines (8..13), 2, 3 and 10.. the Monomachine's (6, 7, 14..), else 0;
@@ -653,10 +668,15 @@ wr_count:
     bne.s   13f
     moveq   #{len(_fsc.PAGES)},%d0
     rts
-13: moveq   #{_org.KIND - 1},%d1                        | RIFT: ORGAN: its two pages
+13: moveq   #{_org.KIND - 1},%d1                        | RIFT: ORGAN: its pages
+    cmp.l   %d1,%d0
+    bne.s   15f
+    moveq   #{len(_org.PAGES)},%d0
+    rts
+15: moveq   #{_slt.KIND - 1},%d1                        | RIFT: SILT: its four pages
     cmp.l   %d1,%d0
     bne.s   11f
-    moveq   #{len(_org.PAGES)},%d0
+    moveq   #{len(_slt.PAGES)},%d0
     rts
 11: moveq   #2,%d1                         | d0 = kind - 1: 1, 2 and 9.. the Monomachine's
     cmp.l   %d1,%d0
@@ -710,9 +730,9 @@ wr_page:
     mulu.w  %d1,%d0
     addi.l  #fsc_descriptors,%d0
     bra.w   2f
-14: moveq   #{_org.KIND - 1},%d1                        | RIFT: ORGAN: its descriptor n (0..1)
+14: moveq   #{_org.KIND - 1},%d1                        | RIFT: ORGAN: its descriptor n
     cmp.l   %d1,%d0
-    bne.s   12f
+    bne.s   16f
     move.l  %sp@(16),%d0
     moveq   #{len(_org.PAGES)},%d1
     cmp.l   %d1,%d0
@@ -720,6 +740,17 @@ wr_page:
     moveq   #44,%d1
     mulu.w  %d1,%d0
     addi.l  #org_descriptors,%d0
+    bra.w   2f
+16: moveq   #{_slt.KIND - 1},%d1                        | RIFT: SILT: its descriptor n (0..3)
+    cmp.l   %d1,%d0
+    bne.s   12f
+    move.l  %sp@(16),%d0
+    moveq   #{len(_slt.PAGES)},%d1
+    cmp.l   %d1,%d0
+    bcc.w   6b
+    moveq   #44,%d1
+    mulu.w  %d1,%d0
+    addi.l  #slt_descriptors,%d0
     bra.w   2f
 12: moveq   #{_smp.BOUNCE_TYPE - 5},%d1
     cmp.l   %d1,%d0
@@ -882,6 +913,8 @@ fsc_descriptors:
 {fsc_page_data}
 org_descriptors:
 {org_page_data}
+slt_descriptors:
+{slt_page_data}
 {_rep("subtitle", SUBTITLE)}
 {chr(10).join(_rep(f"mnm_title_{k}", t) for k, t in enumerate(MNM_TITLES))}
 {chr(10).join(_rep(f"mnm_subtitle_{k}", t) for k, t in enumerate(MNM_SUBTITLES))}
@@ -892,6 +925,8 @@ org_descriptors:
 {chr(10).join(_rep(f"fsc_subtitle_{k}", t) for k, t in enumerate(_fsc.PAGE_SUBTITLES))}
 {chr(10).join(_rep(f"org_title_{k}", t) for k, t in enumerate(_org.PAGE_TITLES))}
 {chr(10).join(_rep(f"org_subtitle_{k}", t) for k, t in enumerate(_org.PAGE_SUBTITLES))}
+{chr(10).join(_rep(f"slt_title_{k}", t) for k, t in enumerate(_slt.PAGE_TITLES))}
+{chr(10).join(_rep(f"slt_subtitle_{k}", t) for k, t in enumerate(_slt.PAGE_SUBTITLES))}
 {_rep("smp_rec_subtitle", "Recorder")}
 {chr(10).join(_rep(f"title_{k}", t) for k, t in enumerate(TITLES))}
 {strings}

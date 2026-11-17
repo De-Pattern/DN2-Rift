@@ -629,6 +629,16 @@ static void (*const org_fns[])(int, char *) = {
     org_f12, org_f13, org_f14, org_f15, org_f16, org_f17, org_f18, org_f19, org_f20, org_f21, org_f22,
     org_f23, org_f24, org_f25, org_f26, org_f27, org_f28, org_f29, org_f30, org_f31};
 _Static_assert(sizeof org_fns / sizeof org_fns[0] == ORG_N, "one formatter an ORGAN control");
+#define SLT_F(j) static void slt_f##j(int v, char *b) { fsc_text(&wr_mach_slt, j, v, b); }
+SLT_F(0) SLT_F(1) SLT_F(2) SLT_F(3) SLT_F(4) SLT_F(5) SLT_F(6) SLT_F(7)
+SLT_F(8) SLT_F(9) SLT_F(10) SLT_F(11) SLT_F(12) SLT_F(13) SLT_F(14) SLT_F(15)
+SLT_F(16) SLT_F(17) SLT_F(18) SLT_F(19) SLT_F(20) SLT_F(21) SLT_F(22) SLT_F(23)
+SLT_F(24) SLT_F(25) SLT_F(26) SLT_F(27) SLT_F(28) SLT_F(29) SLT_F(30) SLT_F(31)   /* RIFT: SILT's 32 */
+static void (*const slt_fns[])(int, char *) = {
+    slt_f0, slt_f1, slt_f2, slt_f3, slt_f4, slt_f5, slt_f6, slt_f7, slt_f8, slt_f9, slt_f10, slt_f11,
+    slt_f12, slt_f13, slt_f14, slt_f15, slt_f16, slt_f17, slt_f18, slt_f19, slt_f20, slt_f21, slt_f22,
+    slt_f23, slt_f24, slt_f25, slt_f26, slt_f27, slt_f28, slt_f29, slt_f30, slt_f31};
+_Static_assert(sizeof slt_fns / sizeof slt_fns[0] == SLT_N, "one formatter a SILT control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -688,6 +698,9 @@ void smp_formats(int kind)
     if (kind == ORG_KIND)                       /* RIFT: ORGAN's (its records are FASCIA's: restored above) */
         for (int j = 0; j < ORG_N; j++)
             RECORD_FMT(org_rid[j]) = (void *)org_fns[j];
+    if (kind == SLT_KIND)                       /* RIFT: SILT's (FASCIA's records too) */
+        for (int j = 0; j < SLT_N; j++)
+            RECORD_FMT(slt_rid[j]) = (void *)slt_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.

@@ -51,7 +51,8 @@ from ..mnm import machines as _mnm           # noqa: E402
 from ..sampler import machines as _smpm         # noqa: E402
 from ..fascia import machines as _fsc           # noqa: E402  (v0.45: FASCIA, type 18)
 from ..organ import machines as _org            # noqa: E402  (RIFT: ORGAN, type 19)
-NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
+from ..silt import machines as _slt             # noqa: E402  (RIFT: SILT, type 20)
+NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
 CLONE = 1                               # WaveTone
 LONG_NAME, SHORT_NAME = "Perc", "PRC"           # v0.11: PERC in Waverider's place
 MACHINE_NAMES = {5: ("Perc", "PRC"),
@@ -60,6 +61,7 @@ MACHINE_NAMES = {5: ("Perc", "PRC"),
                  _smpm.BOUNCE_TYPE: ("Flex", "FLX"),       # v0.44: a section of its own, after the sample machines
                  _fsc.TYPE: (_fsc.LONG, _fsc.SHORT),          # v0.45: FASCIA, in the synth section
                  _org.TYPE: (_org.LONG, _org.SHORT),          # RIFT: ORGAN, after FASCIA
+                 _slt.TYPE: (_slt.LONG, _slt.SHORT),          # RIFT: SILT, after ORGAN
                  **{t: _mnm.LIST_NAMES[n] for t, n in zip(_mnm.TYPES, _mnm.NAMES)}}   # v0.26
 if set(MACHINE_NAMES) != set(NEW_TYPES):
     raise ImportError(f"machine types {sorted(set(NEW_TYPES) - set(MACHINE_NAMES))} have no machine")
@@ -85,7 +87,7 @@ LIST_DN2MK2 = (0, 2, 1, 3, 5, *_mnm.TYPES, *((_fsc.TYPE,) if _fsc.LISTED else ()
 from ..perc import program as _pp           # noqa: E402
 GONE_TYPES = (5, *_mnm.TYPES) if _pp.RIFT else ()
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
-    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()),
+    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()),
      *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
@@ -239,6 +241,8 @@ slot_shim:
     cmpi.l  #{_fsc.TYPE},%d0
     beq.s   3f
     cmpi.l  #{_org.TYPE},%d0                    | RIFT: ORGAN rides FASCIA's records
+    beq.s   3f
+    cmpi.l  #{_slt.TYPE},%d0                    | RIFT: and SILT
     bne.s   2f
 3:  moveq   #{_fsc.FM_SLOT_FIRST},%d0
     cmp.l   %a0,%d0
@@ -380,6 +384,8 @@ canon_valid:
     cmpi.l  #{_fsc.TYPE},%d3
     beq.s   5f
     cmpi.l  #{_org.TYPE},%d3                    | RIFT: ORGAN owns FASCIA's records
+    beq.s   5f
+    cmpi.l  #{_slt.TYPE},%d3                    | RIFT: and SILT
     bne.s   3f
 5:  moveq   #0,%d3
     cmpi.l  #{_fsc.FM_OWNED[1][0]},%d2

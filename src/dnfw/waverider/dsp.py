@@ -202,7 +202,8 @@ MNM_TYPES = _mnm_types.TYPES                 # v0.26: the Monomachine machines (
 # (dnfw.sampler.program FASCIA_MUTE). Before this its lookup word was the span's zero padding:
 # FM Tone's engine, on FASCIA's records
 from ..organ import machines as _org_types  # noqa: E402
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, 20)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
+from ..silt import machines as _slt_types  # noqa: E402
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable

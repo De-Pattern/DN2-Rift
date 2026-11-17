@@ -19352,13 +19352,13 @@ wr_fs_else_1496.:
 .GLOBAL wr_fs_fi_1497.;
 wr_fs_fi_1497.:
       R12 = DM(394, I5);
-      I3 = R12;
+      I1 = R12;
       R12 = 0x2e6b60;
       I4 = R12;
       R10 = 0x84;
 .GLOBAL wr_fs_loop_1498.;
 wr_fs_loop_1498.:
-      R0 = DM(I3, M6);
+      R0 = DM(I1, M6);
       DM(I4, M6) = F0;
       R11 = 0x1;
       R10 = R10 - R11;
@@ -21989,13 +21989,13 @@ wr_fs_else_1650.:
       DM(161, I5) = R0;
       IF NE JUMP 0xbea83a;                   // -> wr_fs_loop_1499.
       R12 = 0x2e6b60;
-      I3 = R12;
+      I1 = R12;
       R12 = DM(394, I5);
       I4 = R12;
       R10 = 0x84;
 .GLOBAL wr_fs_loop_1651.;
 wr_fs_loop_1651.:
-      R0 = DM(I3, M6);
+      R0 = DM(I1, M6);
       DM(I4, M6) = F0;
       R11 = 0x1;
       R10 = R10 - R11;

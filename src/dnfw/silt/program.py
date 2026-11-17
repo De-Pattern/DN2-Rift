@@ -2137,20 +2137,20 @@ class SG(OP.OG):
         and vcur point at the copy, then back"""
         p, C = self.p, self.L.C
         assert VOICE["slp"] == 132 and self.L.A["mir"]
-        src, dst = (C["vba"], None) if into else (None, C["vba"])
+        # I1 and I4 post-modified (L1 and L4 are 0: I0, I3, I5 only pre-modified, test_waverider_dsp)
         if into:
             p.ld(12, C["vba"])
-            p.seti(3, 12)
+            p.seti(1, 12)
             p.iconst(12, self.L.A["mir"])
             p.seti(4, 12)
         else:
             p.iconst(12, self.L.A["mir"])
-            p.seti(3, 12)
+            p.seti(1, 12)
             p.ld(12, C["vba"])
             p.seti(4, 12)
 
         def one():
-            p.ldpost(0, 3)
+            p.ldpost(0, 1)
             p.stpost(4, 0)
         p.loop_r(10, 132, one, one=11)
         p.iconst(12, self.L.A["mir"]) if into else p.ld(12, C["vba"])
