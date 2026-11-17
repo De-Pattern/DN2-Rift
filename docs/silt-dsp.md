@@ -100,16 +100,26 @@ Done (branch `silt`):
 3. In fascia.asm's walk as type 20. fascia.asm moved to 0x200c4000 (PERC's former room;
    RIFT's perc.asm is 7.7 KB there) and is 84 KB. The DSP program is 981,144 of 1,048,575 bytes.
 
-Measured (run mode, instructions a block, one voice sounding; memory not counted):
-FIBER SOLO 20.7k, SKIN 31.6k, FLUID MASS DEEP 53.2k, SILT SWARM 66.2k, FIBER MASS DEEP 69.4k.
-Without the memory, that is about 2.5 times the plan's estimate. With L2 and DDR, a MASS DEEP
-voice is about 90k cycles, against the 117k for all of our voices. **Next, before the gates:**
-- the per-sample words: copy the voice's working words from L2 into L1 at the block's start
-  and back at its end;
-- per-block decisions and per-player constants hoisted out of the sample loop (the target per
-  player and the attack/release choice are per block, as in live);
-- a sample loop specialised by material (one branch a block, not a branch a sample);
-- then the cap, from the runner's cost step: 4 SILT voices, or 2 for DEEP if needed.
+Measured after the lean pass (owner, 2026-11-17: "you can change the samples... get it down to as
+close to the 27,000 block as you can... we need this to be good"). These are run-mode estimates:
+instructions + 0.9 (4 L2 + 10 DDR).
+- FIBER SOLO about 22.5k.
+- SKIN about 30k.
+- SILT SWARM about 43k.
+- FIBER MASS DEEP about 44k (it was 109k).
+
+What the pass did:
+- The players' loop, FIBER's sample, SILT's sample, the clouds and the tail are written by hand
+  on registers.
+- The voice's words sit in L1 for the samples.
+- The players' line reads are cached (r1 is the last sample's r0).
+- QUAL is 2, 3 or 4 players.
+- A grain's per-mode draws happen only when a grain lands.
+- sper is at least 2.
+
+Next: specialised player loops (no per-player flags), knob reads for page 4 only at trigs, a
+smaller mirror, slow coefficients on alternate blocks, SKIN and FLUID by hand. After that the
+runner's real cost step sets the cap.
 
 Still to do: the ColdFire (type 20 in MACHINE SEL, four pages, formatters, defaults,
 p-locks, TRK + CLEAR), the runner's `silt` part, cost and stress parts with the cap and a
