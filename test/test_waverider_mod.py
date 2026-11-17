@@ -352,8 +352,20 @@ def test_v039_the_startup_animation_chunk_is_his_frames():
     the owner's (160 ms, then 80 ms each, the last held); it is small (the 2 MiB USB limit)"""
     import json
     from dnfw import bootanim as A
+    from dnfw.perc import program as PP
     c = A.chunk()
     ims = A.images()
+    if PP.RIFT:   # RIFT v0.7 (owner, 2026-11-17): the campfire, 80 frames, 70 ms, the last 900 ms
+        assert len(ims) == 80
+        assert A.DURATIONS_MS == (70,) * 79 + (900,) and sum(A.DURATIONS_MS) == 6430
+        assert A.decode(c) == ims
+        t = A.table()
+        assert len(t) == A.INTRO_FRAMES
+        assert list(t) == sorted(t) and set(t) == set(range(80)) and t[-1] == 79
+        assert len(c) < 65536   # the image keeps its room under the USB limit (the preflight's size check)
+        doc = json.loads(A.SOURCE.read_text())
+        assert doc["frames"] == 80 and A.SOURCE.name == "bootanim_rift.json"
+        return
     assert len(ims) == 38
     assert A.DURATIONS_MS == (160,) + (80,) * 36 + (560,) and sum(A.DURATIONS_MS) == 3600
     assert A.decode(c) == ims
@@ -373,8 +385,9 @@ def test_v037_the_build_hooks_the_intro_once_with_the_stamp():
     if not W.BOOTANIM:   # RIFT (owner, 2026-11-13): the stock start-up: no intro hook at all
         assert not [e for e in W.extents() if "intro hook" in e.what]
         return
+    from dnfw import bootanim as A
     spec, aniz = W._boot()
-    assert spec is B.SPEC and aniz.startswith(struct.pack(">I", 38))
+    assert spec is B.SPEC and aniz.startswith(struct.pack(">I", len(A.images())))
     assert spec["aniz_chunk"] == "ANIZ"
     ext = [e for e in W.extents() if "intro hook" in e.what]
     assert len(ext) == 1 and ext[0].length == 8
@@ -405,7 +418,8 @@ def test_v039_the_version_label_is_ours_over_his_last_frame_only():
     import struct
     from dnfw import bootanim as A
     lab = A.label_pixels()
-    assert A.label_text().startswith("MOD ")
+    from dnfw.perc import program as PP
+    assert A.label_text().startswith("RIFT " if PP.RIFT else "MOD ")
     assert max(x for x, _ in lab) == 126 and max(y for _, y in lab) == 62
     lit = A.frames_pixels()[-1]
     assert not [(x, y) for x, y in lit if x >= min(x for x, _ in lab) - 1 and y >= min(y for _, y in lab) - 1]
