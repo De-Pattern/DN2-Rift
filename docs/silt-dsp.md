@@ -86,3 +86,32 @@ per line: the read can be one burst per line per block into an L1 scratch, then 
    page 4.
 4. Gates: unit tests (live = program = SHARC), the ColdFire step (MACHINE SEL, pages, save
    and load), the SHARC runner part, the cost and stress parts with the voice cap.
+
+## Port status (2026-11-17)
+
+Done (branch `silt`):
+1. `silt/live.py`: the approved model on the DSP's arithmetic; `test_silt_live` holds it to
+   `silt/model.py` within the model's own seed-to-seed spread. The DN2's interface is
+   `SlotVoice`: knobs, trig, note, velocity, and the note-off (frame mask 36). The gate holds
+   until the note-off. A released voice under -80 dB rests. A trig of another MAT fades the old
+   sound over one block, clears the lines, then plays.
+2. `silt/program.py`: the SHARC program, bit-exact to `SlotVoice` (`test_silt_program`, 18
+   presets, moving knobs, a MAT change, rest and wake, with a negative control).
+3. In fascia.asm's walk as type 20. fascia.asm moved to 0x200c4000 (PERC's former room;
+   RIFT's perc.asm is 7.7 KB there) and is 84 KB. The DSP program is 981,144 of 1,048,575 bytes.
+
+Measured (run mode, instructions a block, one voice sounding; memory not counted):
+FIBER SOLO 20.7k, SKIN 31.6k, FLUID MASS DEEP 53.2k, SILT SWARM 66.2k, FIBER MASS DEEP 69.4k.
+Without the memory, that is about 2.5 times the plan's estimate. With L2 and DDR, a MASS DEEP
+voice is about 90k cycles, against the 117k for all of our voices. **Next, before the gates:**
+- the per-sample words: copy the voice's working words from L2 into L1 at the block's start
+  and back at its end;
+- per-block decisions and per-player constants hoisted out of the sample loop (the target per
+  player and the attack/release choice are per block, as in live);
+- a sample loop specialised by material (one branch a block, not a branch a sample);
+- then the cap, from the runner's cost step: 4 SILT voices, or 2 for DEEP if needed.
+
+Still to do: the ColdFire (type 20 in MACHINE SEL, four pages, formatters, defaults,
+p-locks, TRK + CLEAR), the runner's `silt` part, cost and stress parts with the cap and a
+negative control, the per-material output trims (by loudness), and the LOOP tempo (it
+assumes 120 BPM until the ColdFire sends the tempo).
