@@ -115,8 +115,8 @@ _SRC = pathlib.Path(__file__).read_text(encoding="utf-8")
 WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC)) | set(re.findall(r'\bci\("([A-Za-z_0-9]+)"\)', _SRC))
                      | set(re.findall(r'\bC\["([A-Za-z_0-9]+)"\]', _SRC))
                      | {"trig", "nn", "k146", "tmp0", "tmp1", "cc", "lg_e", "lg_t", "off", "tvel", "cnt0", "cnt1",
-                        "cnt2", "outp", "bad", "kfl", "lnp"} | set(KNOB_WORDS)))
-PLA = ("sper", "sbt", "lb", "isk", "slp", "sbow", "sdx", "sdy", "sw", "scnt")   # the players' L1 rows
+                        "cnt2", "outp", "bad", "kfl", "lnp", "cb0", "cn0"} | set(KNOB_WORDS)))
+PLA = ("sper", "sbt", "lb", "isk", "slp", "sbow", "sdx", "sdy", "sw", "scnt", "pc")   # the players' L1 rows
 ARRAYS = {"eff": NK, "pl": len(PLA) * 8, "mir": 132, "bc": 4, "bs": 4, "mc": 6, "ms": 6, "wpos": 6}
 
 
@@ -1389,7 +1389,7 @@ class SG(OP.OG):
                                     + ((c("vibr") * k(40.0)) * V("vib_env")) * sinf(k(LV.TWO_PI) * self.Pk("svph"))) + c("gk"))
                          + ((c("stress") * k(30.0)) * V("wnd", 2)) * c("sgn"))
                 self.set(c("fk"), V("f0") * exp2((c("cc") + c("base_c")) * k(1.0 / 1200.0)))
-                self.set(Mv("i", 4, 0), mn(k(48000.0) * recip(mx(c("fk"), k(25.0))), k(float(LV.NSL - 4))))
+                self.set(Mv("i", 4, 0), mx(mn(k(48000.0) * recip(mx(c("fk"), k(25.0))), k(float(LV.NSL - 4))), k(2.0)))
                 # the player's block values for the hand-written sample loop (live: per sample, the same)
                 PL = lambda name: Mv("i", 4, 8 * PLA.index(name))      # noqa: E731
                 self.tabw(0, "FACK", "kint")
@@ -1493,6 +1493,11 @@ class SG(OP.OG):
             p.iconst(12, 1)
             p.iop(9, 12, "+", 9)
             p.st(C["si"], 9)
+        self.set(c("fm06"), k(1.0) - c("form") * k(0.6))
+        self.set(c("p4"), k(0.4) + c("pr"))
+        self.set(c("b06"), c("breakup") * k(0.6))
+        self.icmp(V("gate"), "NE", 0, lambda: (self.set(c("ta"), k(1.0)), self.set(c("ra"), k(0.01))),
+                  lambda: (self.fz(c("ta")), self.set(c("ra"), k(0.0004))))
         self.mirror(True)
         p.loop(C["cnt0"], BLOCK, sample)
         self.mirror(False)
@@ -1515,51 +1520,183 @@ class SG(OP.OG):
         self.cmp(c("tgt"), "NE", k(0.0), lambda: self.set(c("ar"), c("att")), lambda: self.set(c("ar"), c("rel")))
         self.set(V("bow"), V("bow") + (c("tgt") - V("bow")) * c("ar"))
 
+    def rdc(self, dst: str, line_off: int, n: int, wptr: Mv, d: str, cache: str) -> None:
+        """c(dst) = live.rd(line, n, w, d), inline: buf[r1] is the last sample's buf[r0] (d is the
+        block's, so r1 is last sample's r0, which no write has touched since), read afresh only at
+        the block's first sample"""
+        p, C = self.p, self.L.C
+        p.ld(1, C[d])
+        p.trunc(2, 1)
+        p.iconst(12, 0)
+        p.float_(3, 2, 12)
+        p.fop(4, 1, "-", 3)                     # fr
+        self.ld(5, wptr)
+        p.iop(5, 5, "-", 2)                     # r0
+        p.iconst(12, n)
+        p.ifz(5, "LT", lambda: p.iop(5, 12, "+", 5))
+        p.ld(7, C["lnb"])
+        p.iconst(12, 4 * line_off)
+        p.iop(7, 12, "+", 7)
+        p.lsh(8, 5, 2)
+        p.iop(8, 8, "+", 7)
+        p.seti(1, 8)
+        p.ldi(9, 0, 1)                          # buf[r0]
+
+        def fresh():
+            p.iconst(13, 1)
+            p.iop(6, 5, "-", 13)
+            p.ifz(6, "LT", lambda: (p.iconst(12, n), p.iop(6, 12, "+", 6)))
+            p.lsh(8, 6, 2)
+            p.iop(8, 8, "+", 7)
+            p.seti(1, 8)
+            p.ldi(10, 0, 1)
+        p.ld(0, C["si"])
+        p.ifz(0, "EQ", fresh, lambda: p.ld(10, C[cache]))
+        p.st(C[cache], 9)
+        p.fop(10, 10, "-", 9)
+        p.fop(10, 10, "*", 4)
+        p.fop(9, 9, "+", 10)
+        p.st(C[dst], 9)
+
+    def wrc(self, line_off: int, idx: Mv, a: str, b: str) -> None:
+        """the line's word idx = clip(c(a) + c(b), -2, 2), inline"""
+        p, C = self.p, self.L.C
+        p.ld(0, C[a])
+        p.ld(1, C[b])
+        p.fop(0, 0, "+", 1)
+        p.fconst(1, -2.0)
+        p.fop(0, 0, "MAX", 1)
+        p.fconst(1, 2.0)
+        p.fop(0, 0, "MIN", 1)
+        self.ld(9, idx)
+        p.ld(11, C["lnb"])
+        p.iconst(12, 4 * line_off)
+        p.iop(11, 12, "+", 11)
+        p.lsh(12, 9, 2)
+        p.iop(12, 12, "+", 11)
+        p.seti(1, 12)
+        p.sti(0, 1, 0)
+
     def s_fiber(self) -> None:
+        """FIBER's sample (live: mat 0), by hand on registers but for the rare branches"""
         p, C = self.p, self.L.C
         V, c = self.V, self.c
+        VO = VOICE
         NBR = LV.NBR
-        self.rd("a0", 0, NBR, V("wb"), c("db"))
-        self.rd("a1", NBR, NBR, V("wk"), c("dn"))
-        self.set(V("lp"), V("lp") + (c("a0") - V("lp")) * c("lpc"))
+        self.rdc("a0", 0, NBR, V("wb"), "db", "cb0")
+        self.rdc("a1", NBR, NBR, V("wk"), "dn", "cn0")
+        p.ld(0, C["a0"])
+        p.ldi(1, VO["lp"], 2)
+        p.fop(2, 0, "-", 1)
+        p.ld(3, C["lpc"])
+        p.fop(2, 2, "*", 3)
+        p.fop(1, 1, "+", 2)
+        p.sti(VO["lp"], 2, 1)                   # lp
 
         def stiff():
-            self.set(c("fy"), (c("fapc") * V("lp") + V("f_ax")) - c("fapc") * V("f_ay"))
-            self.set(V("f_ax"), V("lp"))
-            self.set(V("f_ay"), c("fy"))
-            self.set(c("brr"), -c("fy") * c("lossm"))
-        self.cmp(c("stiff"), "GT", k(0.0), stiff, lambda: self.set(c("brr"), -V("lp") * c("lossm")))
-        self.set(c("nr"), -c("a1"))
-        self.set(c("sv"), c("brr") + c("nr"))
-        self.bowf()
-        self.set(c("contact"), k(1.0))
+            p.ld(2, C["fapc"])
+            p.fop(3, 2, "*", 1)
+            p.ldi(4, VO["f_ax"], 2)
+            p.fop(3, 3, "+", 4)
+            p.ldi(4, VO["f_ay"], 2)
+            p.fop(4, 2, "*", 4)
+            p.fop(3, 3, "-", 4)                 # fy
+            p.sti(VO["f_ax"], 2, 1)
+            p.sti(VO["f_ay"], 2, 3)
+            p.fconst(4, -1.0)
+            p.fop(3, 3, "*", 4)
+            p.ld(4, C["lossm"])
+            p.fop(5, 3, "*", 4)                 # brr
 
-        def nocon():
-            self.set(c("contact"), mn(k(1.0), ab(V("bow")) * k(60.0)))
-        self.cmp(c("tgt"), "EQ", k(0.0), lambda: self.icmp(c("bowc"), "EQ", 0, nocon))
-        self.set(c("dv"), V("bow") - c("sv"))
-        self.bow_k("btv", c("dv"), c("slope"), c("offset"))
-        self.cmp(c("breakup"), "GT", k(0.0), lambda: self.set(c("btv"), c("btv") * (k(1.0) + (c("breakup") * k(0.6)) * c("nz"))))
-        self.set(c("slip"), k(1.0) - c("btv"))
-        self.set(c("gz"), c("nz"))
+        def plain():
+            p.fconst(4, -1.0)
+            p.fop(3, 1, "*", 4)
+            p.ld(4, C["lossm"])
+            p.fop(5, 3, "*", 4)
+        p.ld(2, C["stiff"])
+        p.fconst(3, 0.0)
+        p.if_(2, "GT", 3, stiff, plain)
+        p.st(C["brr"], 5)
+        p.ld(6, C["a1"])
+        p.fconst(4, -1.0)
+        p.fop(6, 6, "*", 4)                     # nr
+        p.st(C["nr"], 6)
+        p.fop(7, 5, "+", 6)                     # sv
+        p.ldi(8, VO["bow"], 2)
+        p.ld(9, C["tgt"])
+        p.fop(9, 9, "-", 8)
+        p.ld(10, C["ar"])
+        p.fop(9, 9, "*", 10)
+        p.fop(8, 8, "+", 9)
+        p.sti(VO["bow"], 2, 8)                  # bow
+        p.fop(9, 8, "-", 7)                     # dv
+        p.st(C["dv"], 9)
+        # the bow table: bt = |dv slope| + offset, b4, 1 or recip
+        p.ld(10, C["slope"])
+        p.fop(10, 9, "*", 10)
+        p.iconst(11, 0x7FFFFFFF)
+        p.iop(10, 10, "AND", 11)
+        p.ld(11, C["offset"])
+        p.fop(10, 10, "+", 11)
+        p.fop(11, 10, "*", 10)
+        p.fop(11, 11, "*", 11)
+        p.fconst(0, 1.0)
+        p.if_(11, "GT", 0, lambda: FP_._recip_body(p, 11, 0, 10))     # F0 = bt
+
+        def brk():
+            p.ld(1, C["b06"])
+            p.ld(2, C["nz"])
+            p.fop(1, 1, "*", 2)
+            p.fconst(2, 1.0)
+            p.fop(1, 2, "+", 1)
+            p.fop(0, 0, "*", 1)
+        p.ld(1, C["breakup"])
+        p.fconst(2, 0.0)
+        p.if_(1, "GT", 2, brk)
+        p.fconst(1, 1.0)
+        p.fop(1, 1, "-", 0)                     # slip
+        p.ld(2, C["nz"])                        # gz
 
         def grit():
-            self.ld(9, V("g_cnt"))
+            p.ldi(3, VO["g_cnt"], 2)
             p.iconst(12, 1)
-            p.iop(9, 9, "-", 12)
-            self.st(V("g_cnt"), 9)
+            p.iop(3, 3, "-", 12)
 
             def hold():
-                self.set(V("g_hold"), c("nz"))
-                p.ld(0, C["ghold"])
-                self.st(V("g_cnt"), 0)
-            self.ld(9, V("g_cnt"))
-            p.ifz(9, "LE", hold)
-            self.set(c("gz"), V("g_hold") * k(1.4))
-        p.ld(0, C["ghold"])
-        p.iconst(1, 1)
-        p.if_(0, "GT", 1, grit, kind="i")
-        self.set(c("nv"), (c("dv") * c("btv") + (((c("gz") * c("scr")) * c("slip")) * k(0.06)) * (k(0.4) + c("pr"))) * c("contact"))
+                p.ld(4, C["nz"])
+                p.sti(VO["g_hold"], 2, 4)
+                p.ld(3, C["ghold"])
+            p.ifz(3, "LE", hold)
+            p.sti(VO["g_cnt"], 2, 3)
+            p.ldi(2, VO["g_hold"], 2)
+            p.fconst(3, 1.4)
+            p.fop(2, 2, "*", 3)
+        p.ld(3, C["ghold"])
+        p.iconst(4, 1)
+        p.if_(3, "GT", 4, grit, kind="i")
+        p.ld(3, C["scr"])
+        p.fop(2, 2, "*", 3)
+        p.fop(2, 2, "*", 1)
+        p.fconst(3, 0.06)
+        p.fop(2, 2, "*", 3)
+        p.ld(3, C["p4"])
+        p.fop(2, 2, "*", 3)
+        p.ld(9, C["dv"])
+        p.fop(3, 9, "*", 0)
+        p.fop(3, 3, "+", 2)                     # dv bt + ...
+
+        def contact():
+            p.ldi(4, VO["bow"], 2)
+            p.iconst(5, 0x7FFFFFFF)
+            p.iop(4, 4, "AND", 5)
+            p.fconst(5, 60.0)
+            p.fop(4, 4, "*", 5)
+            p.fconst(5, 1.0)
+            p.fop(4, 4, "MIN", 5)
+            p.fop(3, 3, "*", 4)
+        p.ld(4, C["ckone"])
+        p.ifz(4, "EQ", contact)
+        p.st(C["nv"], 3)
 
         def crackle():
             self.set(c("nv"), c("nv") + (bi2() * k(0.35)) * c("crk"))
@@ -1567,12 +1704,19 @@ class SG(OP.OG):
         def cr_t():
             self.cmp(V("bow"), "NE", k(0.0), lambda: self.cmp(u2(), "LT", (c("crk") * c("crk")) * k(0.004), crackle))
         self.cmp(c("crk"), "GT", k(0.0), cr_t)
-        self.set(c("nv"), c("nv") + c("pv") * k(0.9))
-        self.wr(NBR, V("wk"), clipe(c("brr") + c("nv"), -2.0, 2.0))
-        self.wr(0, V("wb"), clipe(c("nr") + c("nv"), -2.0, 2.0))
+        p.ld(3, C["nv"])
+        p.ld(4, C["pv"])
+        p.fconst(5, 0.9)
+        p.fop(4, 4, "*", 5)
+        p.fop(3, 3, "+", 4)
+        p.st(C["nv"], 3)
+        p.st(C["exv"], 3)
+        self.wrc(NBR, V("wk"), "brr", "nv")
+        self.wrc(0, V("wb"), "nr", "nv")
         self.bump_ptr(V("wb"), NBR)
         self.bump_ptr(V("wk"), NBR)
-        self.set(c("y"), c("a0"))
+        p.ld(0, C["a0"])
+        p.st(C["y"], 0)
 
         def squeal():
             self.rd("ah", 0, NBR, V("wb"), c("half"))
@@ -1580,20 +1724,39 @@ class SG(OP.OG):
         self.cmp(V("sq"), "GT", k(0.01), squeal)
 
         def hpc():
-            self.set(V("h1"), c("a_hp") * ((V("h1") + c("y")) - V("hx1")))
-            self.set(V("hx1"), c("y"))
-            self.set(V("h2"), c("a_hp") * ((V("h2") + V("h1")) - V("hx2")))
-            self.set(V("hx2"), V("h1"))
-            self.set(V("h3"), c("a_hp") * ((V("h3") + V("h2")) - V("hx3")))
-            self.set(V("hx3"), V("h2"))
-            self.set(V("h4"), c("a_hp") * ((V("h4") + V("h3")) - V("hx4")))
-            self.set(V("hx4"), V("h3"))
-            self.set(c("y"), V("h4"))
-        self.icmp(c("hpch"), "NE", 0, hpc)
-        self.set(c("exv"), c("nv"))
-        self.set(c("hn"), c("nz") - V("hp"))
-        self.set(V("hp"), V("hp") + (c("nz") - V("hp")) * k(0.25))
-        self.set(c("y"), c("y") + ((c("hn") * c("air")) * ab(V("bow"))) * k(0.3))
+            p.ld(0, C["y"])
+            p.ld(1, C["a_hp"])
+            for st in (1, 2, 3, 4):
+                p.ldi(2, VO[f"h{st}"], 2)
+                p.fop(2, 2, "+", 0)
+                p.ldi(3, VO[f"hx{st}"], 2)
+                p.fop(2, 2, "-", 3)
+                p.fop(2, 1, "*", 2)
+                p.sti(VO[f"hx{st}"], 2, 0)
+                p.sti(VO[f"h{st}"], 2, 2)
+                p.fpass(0, 2)
+            p.st(C["y"], 0)
+        p.ld(0, C["hpch"])
+        p.ifz(0, "NE", hpc)
+        # the air: hn = nz - hp; hp += (nz - hp) 0.25; y += ((hn air) |bow|) 0.3
+        p.ld(0, C["nz"])
+        p.ldi(1, VO["hp"], 2)
+        p.fop(2, 0, "-", 1)                     # hn
+        p.fconst(3, 0.25)
+        p.fop(3, 2, "*", 3)
+        p.fop(1, 1, "+", 3)
+        p.sti(VO["hp"], 2, 1)
+        p.ld(3, C["air"])
+        p.fop(2, 2, "*", 3)
+        p.ldi(3, VO["bow"], 2)
+        p.iconst(4, 0x7FFFFFFF)
+        p.iop(3, 3, "AND", 4)
+        p.fop(2, 2, "*", 3)
+        p.fconst(3, 0.3)
+        p.fop(2, 2, "*", 3)
+        p.ld(0, C["y"])
+        p.fop(0, 0, "+", 2)
+        p.st(C["y"], 0)
 
     def s_allpass4(self, coef: str) -> None:
         V, c = self.V, self.c
@@ -1806,6 +1969,9 @@ class SG(OP.OG):
                   lambda: self.icmp(mat, "EQ", 1, lambda: self.iset(c("pth"), 1), lambda: self.iset(c("pth"), 2))))
         self.iset(c("m2"), 0)
         self.icmp(mode, "EQ", 2, lambda: self.iset(c("m2"), 1))
+        self.iset(c("ens"), 0)
+        self.icmp(mode, "EQ", 1, lambda: self.iset(c("ens"), 1))
+        self.icmp(mode, "EQ", 2, lambda: self.iset(c("ens"), 1))
         self.iset(c("ckone"), 0)
         self.cmp(c("tgt"), "NE", k(0.0), lambda: self.iset(c("ckone"), 1))
         for g_ in (0, 1, 6, 8, 9):
@@ -1821,6 +1987,12 @@ class SG(OP.OG):
         p.st(C["pwf"], 0)
         self.set(c("rp"), recip(c("pwf")))
         self.set(c("sA"), (V("simp") * k(0.5)) * sqrt(k(8.0) * c("rp")))
+        self.icmp(c("ens"), "NE", 0, lambda: self.set(c("ym"), k(0.55)), lambda: self.set(c("ym"), k(0.8)))
+
+        def mixf():
+            self.set(c("mixf"), recip(sqrt(fi(self.ci("nsec"))) + k(1.0)))
+        p.ld(0, C["nsec"])
+        p.ifz(0, "NE", mixf)
         self.players_copy(out=False)
 
     def mirror(self, into: bool) -> None:
@@ -1889,13 +2061,11 @@ class SG(OP.OG):
             self.cmp(c("imp_sub"), "GT", k(0.0), lambda: self.icmp(self.ci("si"), "LT", 6, spl))
             p.ld(0, C["nsec"])
             p.st(C["cnt2"], 0)
-            p.iconst(0, self.L.A["pl"])
-            p.st(C["pptr"], 0)
+            p.iconst(11, self.L.A["pl"])            # R11: player k's L1 rows (the body leaves R11 alone)
             R = lambda name: 8 * PLA.index(name)       # noqa: E731
 
             def one():
-                p.ld(12, C["pptr"])
-                p.seti(3, 12)
+                p.seti(3, 11)
                 # a = rd(line, sw, sper)
                 p.ldi(1, R("sper"), 3)
                 p.trunc(2, 1)
@@ -1906,18 +2076,23 @@ class SG(OP.OG):
                 p.iop(5, 5, "-", 2)                 # r0
                 p.iconst(12, NSL)
                 p.ifz(5, "LT", lambda: p.iop(5, 12, "+", 5))
-                p.iconst(13, 1)
-                p.iop(6, 5, "-", 13)                # r1
-                p.ifz(6, "LT", lambda: (p.iconst(12, NSL), p.iop(6, 12, "+", 6)))
                 p.ldi(7, R("lb"), 3)
                 p.lsh(8, 5, 2)
                 p.iop(8, 8, "+", 7)
                 p.seti(1, 8)
-                p.ldi(9, 0, 1)
-                p.lsh(8, 6, 2)
-                p.iop(8, 8, "+", 7)
-                p.seti(1, 8)
-                p.ldi(10, 0, 1)
+                p.ldi(9, 0, 1)                      # buf[r0]
+
+                def fresh():                        # the block's first sample: buf[r1] read
+                    p.iconst(13, 1)
+                    p.iop(6, 5, "-", 13)
+                    p.ifz(6, "LT", lambda: (p.iconst(12, NSL), p.iop(6, 12, "+", 6)))
+                    p.lsh(8, 6, 2)
+                    p.iop(8, 8, "+", 7)
+                    p.seti(1, 8)
+                    p.ldi(10, 0, 1)
+                p.ld(0, C["si"])
+                p.ifz(0, "EQ", fresh, lambda: p.ldi(10, R("pc"), 3))   # else: last sample's buf[r0]
+                p.sti(R("pc"), 3, 9)
                 p.fop(10, 10, "-", 9)
                 p.fop(10, 10, "*", 4)
                 p.fop(9, 9, "+", 10)                # a
@@ -2044,10 +2219,8 @@ class SG(OP.OG):
                 p.ld(6, C["pa"])
                 p.fop(5, 5, "+", 6)
                 p.st(C["sacc"], 5)
-                p.ld(12, C["pptr"])
-                p.iconst(13, 4)
-                p.iop(12, 12, "+", 13)
-                p.st(C["pptr"], 12)
+                p.iconst(12, 4)
+                p.iop(11, 11, "+", 12)
             self.ivloop("cnt2", one)
             mode = V("L4", 2)
 
@@ -2055,8 +2228,7 @@ class SG(OP.OG):
                 self.set(c("y"), c("y") + (c("sacc") * k(0.6)) * c("voices"))
 
             def ens_mix():
-                self.icmp(c("ens"), "NE", 0, lambda: self.set(c("ym"), k(0.55)), lambda: self.set(c("ym"), k(0.8)))
-                self.set(c("y"), c("y") * c("ym") + (c("sacc") * k(1.6)) * recip(sqrt(fi(self.ci("nsec"))) + k(1.0)))
+                self.set(c("y"), c("y") * c("ym") + (c("sacc") * k(1.6)) * c("mixf"))
             self.icmp(mode, "EQ", 0, solo_mix, ens_mix)
         p.ld(0, C["nsec"])
         p.ifz(0, "NE", any_)
@@ -2101,44 +2273,102 @@ class SG(OP.OG):
             self.set(c("y"), c("y") + ((((V("cl_hp") * V("cl_b")) * k(0.12)) * (k(0.3) + c("grain"))) * (c("dens") - k(0.25)))
                      * k(1.0 / 0.75))
         self.icmp(c("ens"), "NE", 0, lambda: self.cmp(c("dens"), "GT", k(0.25), cloud))
-        self.fz(c("bo"))
+        # the body, FORM, the follower, the AMP, the soft clip: by hand on registers
+        A, VO = self.L.A, VOICE
+        p.ld(0, C["y"])                         # F0 = y
+        p.fconst(1, 0.0)                        # F1 = bo
         for kk in range(4):
-            b0, b1 = V("body", 2 * kk), V("body", 2 * kk + 1)
-            self.set(c("re"), (self.a("bc", kk) * b0 - self.a("bs", kk) * b1) + c("y") * k(LV.BGN[kk]))
-            self.set(c("im"), self.a("bs", kk) * b0 + self.a("bc", kk) * b1)
-            self.set(b0, c("re"))
-            self.set(b1, c("im"))
-            self.set(c("bo"), c("bo") + c("im"))
-        self.set(c("y"), c("y") + (c("bodyk") * c("bo")) * k(1.5))
-        self.set(c("v3"), c("y") - V("fm2"))
-        self.set(c("v1"), c("fa1") * V("fm1") + c("fa2") * c("v3"))
-        self.set(c("v2"), (V("fm2") + c("fa2") * V("fm1")) + c("fa3") * c("v3"))
-        self.set(V("fm1"), k(2.0) * c("v1") - V("fm1"))
-        self.set(V("fm2"), k(2.0) * c("v2") - V("fm2"))
-        self.set(c("y"), c("y") * (k(1.0) - c("form") * k(0.6)) + (c("v1") * c("form")) * k(1.8))
-        self.set(c("ee"), mn(k(1.0), ab(c("exv")) * k(4.0)))
-        self.cmp(c("ee"), "GT", V("env_e"), lambda: self.set(c("kk"), k(0.02)), lambda: self.set(c("kk"), k(0.0015)))
-        self.set(V("env_e"), V("env_e") + (c("ee") - V("env_e")) * c("kk"))
-
-        def gate_on():
-            self.set(V("amp"), V("amp") + (k(1.0) - V("amp")) * k(0.01))
-
-        def gate_off():
-            self.set(V("amp"), V("amp") + (k(0.0) - V("amp")) * k(0.0004))
-        self.icmp(V("gate"), "NE", 0, gate_on, gate_off)
-        self.set(c("yo"), tanh(c("y") * k(0.6)) * V("amp"))
+            p.ldi(2, VO["body"] + 2 * kk, 2)    # b0
+            p.ldi(3, VO["body"] + 2 * kk + 1, 2)
+            p.ld(4, A["bc"] + 4 * kk)
+            p.ld(5, A["bs"] + 4 * kk)
+            p.fop(6, 4, "*", 2)
+            p.fop(7, 5, "*", 3)
+            p.fop(6, 6, "-", 7)
+            p.fconst(7, float(LV.BGN[kk]))
+            p.fop(7, 0, "*", 7)
+            p.fop(6, 6, "+", 7)                 # re
+            p.fop(7, 5, "*", 2)
+            p.fop(8, 4, "*", 3)
+            p.fop(7, 7, "+", 8)                 # im
+            p.sti(VO["body"] + 2 * kk, 2, 6)
+            p.sti(VO["body"] + 2 * kk + 1, 2, 7)
+            p.fop(1, 1, "+", 7)
+        p.ld(2, C["bodyk"])
+        p.fop(2, 2, "*", 1)
+        p.fconst(3, 1.5)
+        p.fop(2, 2, "*", 3)
+        p.fop(0, 0, "+", 2)                     # y
+        p.ldi(2, VO["fm1"], 2)
+        p.ldi(3, VO["fm2"], 2)
+        p.fop(4, 0, "-", 3)                     # v3
+        p.ld(5, C["fa1"])
+        p.fop(5, 5, "*", 2)
+        p.ld(6, C["fa2"])
+        p.fop(7, 6, "*", 4)
+        p.fop(5, 5, "+", 7)                     # v1
+        p.fop(7, 6, "*", 2)
+        p.fop(7, 3, "+", 7)
+        p.ld(8, C["fa3"])
+        p.fop(8, 8, "*", 4)
+        p.fop(7, 7, "+", 8)                     # v2
+        p.fconst(8, 2.0)
+        p.fop(9, 8, "*", 5)
+        p.fop(9, 9, "-", 2)
+        p.sti(VO["fm1"], 2, 9)
+        p.fop(9, 8, "*", 7)
+        p.fop(9, 9, "-", 3)
+        p.sti(VO["fm2"], 2, 9)
+        p.ld(2, C["fm06"])
+        p.fop(0, 0, "*", 2)
+        p.ld(2, C["form"])
+        p.fop(5, 5, "*", 2)
+        p.fconst(2, 1.8)
+        p.fop(5, 5, "*", 2)
+        p.fop(0, 0, "+", 5)                     # y
+        # the follower: ee = min(1, |exv| 4)
+        p.ld(2, C["exv"])
+        p.iconst(3, 0x7FFFFFFF)
+        p.iop(2, 2, "AND", 3)
+        p.fconst(3, 4.0)
+        p.fop(2, 2, "*", 3)
+        p.fconst(3, 1.0)
+        p.fop(2, 2, "MIN", 3)
+        p.ldi(3, VO["env_e"], 2)
+        p.fconst(4, 0.0015)
+        p.if_(2, "GT", 3, lambda: p.fconst(4, 0.02))
+        p.fop(5, 2, "-", 3)
+        p.fop(5, 5, "*", 4)
+        p.fop(3, 3, "+", 5)
+        p.sti(VO["env_e"], 2, 3)
+        # the AMP (its target and rate, the block's)
+        p.ldi(2, VO["amp"], 2)
+        p.ld(3, C["ta"])
+        p.fop(3, 3, "-", 2)
+        p.ld(4, C["ra"])
+        p.fop(3, 3, "*", 4)
+        p.fop(2, 2, "+", 3)
+        p.sti(VO["amp"], 2, 2)
+        p.st(C["ampv"], 2)
+        p.fconst(1, 0.6)
+        p.fop(0, 0, "*", 1)
+        FP_.LEAF["tanh"](self)                  # F0 = tanh_r(y 0.6)
+        p.ld(1, C["ampv"])
+        p.fop(0, 0, "*", 1)
 
         def faded():
-            # the steal's ramp: 1 - (i + 1)/32
-            self.ld(0, self.ci("si"))
+            p.ld(1, C["si"])
             p.iconst(12, 1)
-            p.iop(0, 12, "+", 0)
+            p.iop(1, 12, "+", 1)
             p.iconst(12, 0)
-            p.float_(0, 0, 12)
-            p.st(C["sif"], 0)
-            self.set(c("yo"), c("yo") * (k(1.0) - c("sif") * k(1.0 / LV.SUB)))
-        self.icmp(c("fadeo"), "NE", 0, faded)
-        self.ld(0, c("yo"))
+            p.float_(1, 1, 12)
+            p.fconst(2, 1.0 / LV.SUB)
+            p.fop(1, 1, "*", 2)
+            p.fconst(2, 1.0)
+            p.fop(1, 2, "-", 1)
+            p.fop(0, 0, "*", 1)
+        p.ld(1, C["fadeo"])
+        p.ifz(1, "NE", faded)
         p.ld(12, C["outp"])
         p.seti(3, 12)
         p.sti(0, 3, 0)

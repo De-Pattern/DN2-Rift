@@ -49,14 +49,14 @@ DEFAULTS = dict(PART=42, TENS=66, MASS=53, COHE=70, VISC=43, GRAIN=55, DENS=28, 
 
 NBR = 2048          # the waveguide's lines (bridge, nut): down to about 24 Hz
 NSEC = 8            # filament slots
-NSEC_DEEP = 6       # QUAL DEEP's filaments (docs/silt-dsp.md, guardrail 2)
+NSEC_DEEP = 4       # QUAL DEEP's players (owner 2026-11-17: cheap and musical; 6 in the plan, 8 in the model)
 NSL = 1024          # a filament's loop
 LINE_WORDS = 2 * NBR + NSEC * NSL      # a slot's lines in DDR: br, nk, then the filaments (48 KB)
 REST_AMP = F(1e-4)                     # released and this quiet (-80 dB): the voice rests (the guardrails)
 FADE = np.array([F(F(1.0) - F(F(i + 1) * F(1.0 / SUB))) for i in range(SUB)], F)   # a block's fade out
 CLEAR_WORDS = 512                      # cleared a block when the slot becomes SILT: 24 blocks
 assert LINE_WORDS % CLEAR_WORDS == 0
-QN_MASS = (2, 4, NSEC_DEEP)
+QN_MASS = (2, 3, NSEC_DEEP)
 QN_SOLO = (1, 2, 4)
 LOG2_10 = F(3.32192809488736)
 INV_LN2_2 = F(2.0 / 0.693147180559945)
@@ -617,7 +617,7 @@ class Voice:
                 + vibr * F(40.0) * s.vib_env * sinf(TWO_PI * s.svph[k]) + gk \
                 + stress * F(30.0) * w[2] * SGNK[k]
             fk = s.f0 * exp2((c + base_c) * F(1.0 / 1200.0))
-            sper[k] = mn(FS * recip(mx(fk, F(25.0))), F(NSL - 4))
+            sper[k] = mx(mn(FS * recip(mx(fk, F(25.0))), F(NSL - 4)), F(2.0))   # at least 2: a read never meets the write
         prate = F(5.0) + dens * dens * F(2500.0)
         sgn = rsq = recip(sqrtf(F(1.0) + (prate * (abs(s.bow) * F(6.0) + imp * F(40.0))
                                           + s.aval * F(30.0) * (dens + F(0.2)) * prate) * F(1.0 / 400.0)))

@@ -56,8 +56,8 @@ def test_the_comparison_sees_a_wrong_voice():
     assert d.max() >= 4.0 or abs(20 * np.log10(rb / ra)) >= 1.0
 
 
-def test_deep_is_six_filaments():
-    assert L.QN_MASS[2] == 6 == L.NSEC_DEEP
+def test_deep_is_four_players():
+    assert L.QN_MASS == (2, 3, 4) == (2, 3, L.NSEC_DEEP)
 
 
 def test_a_slot_becoming_silt_clears_its_lines_then_plays_the_waiting_note():
