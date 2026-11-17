@@ -41,6 +41,8 @@ def main(argv=None) -> int:
     OP.write_ddr_json()                     # RIFT: ORGAN (type 19) runs in the same program
     from dnfw.silt import program as SP    # noqa: PLC0415
     SP.write_ddr_json()                     # RIFT: and SILT (type 20)
+    from dnfw.ligature import program as LP    # noqa: PLC0415
+    LP.write_ddr_json()                     # RIFT: and LIGATURE (type 21)
     text = build()
     if not a.no_resolve:
         import sharc_resolve_jumps as R  # noqa: PLC0415  (selas)

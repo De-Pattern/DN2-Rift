@@ -639,6 +639,16 @@ static void (*const slt_fns[])(int, char *) = {
     slt_f12, slt_f13, slt_f14, slt_f15, slt_f16, slt_f17, slt_f18, slt_f19, slt_f20, slt_f21, slt_f22,
     slt_f23, slt_f24, slt_f25, slt_f26, slt_f27, slt_f28, slt_f29, slt_f30, slt_f31};
 _Static_assert(sizeof slt_fns / sizeof slt_fns[0] == SLT_N, "one formatter a SILT control");
+#define LIG_F(j) static void lig_f##j(int v, char *b) { fsc_text(&wr_mach_lig, j, v, b); }
+LIG_F(0) LIG_F(1) LIG_F(2) LIG_F(3) LIG_F(4) LIG_F(5) LIG_F(6) LIG_F(7)
+LIG_F(8) LIG_F(9) LIG_F(10) LIG_F(11) LIG_F(12) LIG_F(13) LIG_F(14) LIG_F(15)
+LIG_F(16) LIG_F(17) LIG_F(18) LIG_F(19) LIG_F(20) LIG_F(21) LIG_F(22) LIG_F(23)
+LIG_F(24) LIG_F(25) LIG_F(26) LIG_F(27) LIG_F(28) LIG_F(29) LIG_F(30) LIG_F(31)   /* RIFT: LIGATURE's 32 */
+static void (*const lig_fns[])(int, char *) = {
+    lig_f0, lig_f1, lig_f2, lig_f3, lig_f4, lig_f5, lig_f6, lig_f7, lig_f8, lig_f9, lig_f10, lig_f11,
+    lig_f12, lig_f13, lig_f14, lig_f15, lig_f16, lig_f17, lig_f18, lig_f19, lig_f20, lig_f21, lig_f22,
+    lig_f23, lig_f24, lig_f25, lig_f26, lig_f27, lig_f28, lig_f29, lig_f30, lig_f31};
+_Static_assert(sizeof lig_fns / sizeof lig_fns[0] == LIG_N, "one formatter a LIGATURE control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -701,6 +711,9 @@ void smp_formats(int kind)
     if (kind == SLT_KIND)                       /* RIFT: SILT's (FASCIA's records too) */
         for (int j = 0; j < SLT_N; j++)
             RECORD_FMT(slt_rid[j]) = (void *)slt_fns[j];
+    if (kind == LIG_KIND)                       /* RIFT: LIGATURE's (FASCIA's records too) */
+        for (int j = 0; j < LIG_N; j++)
+            RECORD_FMT(lig_rid[j]) = (void *)lig_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.
