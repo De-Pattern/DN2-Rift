@@ -39,6 +39,8 @@ def main(argv=None) -> int:
     P.write_tables_json()
     from dnfw.organ import program as OP   # noqa: PLC0415
     OP.write_ddr_json()                     # RIFT: ORGAN (type 19) runs in the same program
+    from dnfw.silt import program as SP    # noqa: PLC0415
+    SP.write_ddr_json()                     # RIFT: and SILT (type 20)
     text = build()
     if not a.no_resolve:
         import sharc_resolve_jumps as R  # noqa: PLC0415  (selas)

@@ -188,6 +188,7 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
     if PP.RIFT:   # RIFT: no PERC or Machinedrum tables, no P-I lines; FASCIA's sine stays
         assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR, dsp.PERC_TABLES_DDR, dsp.SMP_TABLES_DDR,
                                           dsp.FSC_TABLES_DDR, dsp.ORGAN_TABLES_DDR,       # RIFT v0.4: ORGAN's
+                                          dsp.SILT_TABLES_DDR,                            # RIFT: SILT's
                                           dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
         assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)

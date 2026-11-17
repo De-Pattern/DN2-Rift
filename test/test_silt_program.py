@@ -85,3 +85,8 @@ def test_the_words_fit():
     L_ = P.layout()
     assert L_.words_end <= L_.fl.scratch_end
     assert 4 * P.VOICE_WORDS <= P.STRIDE
+
+
+def test_the_committed_tables_are_the_programs():
+    from dnfw.silt import ddr
+    assert ddr.tables_bytes() == P.tables_bytes()

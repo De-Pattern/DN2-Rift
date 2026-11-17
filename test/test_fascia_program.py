@@ -62,8 +62,9 @@ def test_the_layout_fits():
     assert L.state == dsp.FSC_STATE_L2 and L.state2 == dsp.FSC_STATE2_L2
     assert dsp.FSC_STATE_L2 + dsp.FSC_STATE_SPAN <= dsp.MD_STATE_L2           # voices 0..7: below the MD's state
     assert dsp.MAIN_TAP_L2 + dsp.MAIN_TAP_BYTES <= dsp.FSC_STATE2_L2          # 8..15: after the main mix's tap
-    assert dsp.FSC_L2_LOAD == dsp.FSC_STATE2_L2 + dsp.FSC_STATE_SPAN
-    assert dsp.FSC_L2_LOAD + dsp.FSC_L2_SPAN == dsp.PERC_L2_LOAD
+    # RIFT (SILT): the code in PERC's former room, after RIFT's perc.asm and before smp.asm
+    assert dsp.FSC_L2_LOAD > dsp.PERC_L2_LOAD and dsp.FSC_L2_LOAD + dsp.FSC_L2_SPAN == dsp.SMP_L2_LOAD
+    assert len(dsp.objects()["perc"]) + 128 <= dsp.FSC_L2_LOAD - dsp.PERC_L2_LOAD
     assert dsp.L2_IMAGE_END + 0x10000 <= dsp.FSC_STATE_L2                     # _check_l2's rule
     assert L.scratch == dsp.FSC_SCRATCH_DM and L.scratch_end <= dsp.REGION[1]  # L1, in the region's padding
     # the bookkeeping, in the Monomachine scratch after PERC's (keys .. strikes end at 0x3180)

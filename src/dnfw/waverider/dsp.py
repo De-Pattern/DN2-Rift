@@ -192,7 +192,7 @@ LOOKUP16_DM = 0x2DEE04                       # 16 words; 0x2dee00 is the [-1] gu
 from ..mnm import machines as _mnm_types    # noqa: E402
 from ..sampler import machines as _smp_types
 from ..fascia import machines as _fsc_types  # noqa: E402
-MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 2)   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
+MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 3)   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
 SMP_ENGINE_SLOT = 5                          # the engine slot the sample machines borrow
 SMP_TYPES = _smp_types.TYPES                 # ONESHOT WERP STRETCH REPITCH GRID SLICE (v0.19); v0.44 BOUNCE (17)
 ENGINES = {5: "PERC", 8: "ONESHOT", 12: "GRID"}   # types with an engine of ours
@@ -202,7 +202,7 @@ MNM_TYPES = _mnm_types.TYPES                 # v0.26: the Monomachine machines (
 # (dnfw.sampler.program FASCIA_MUTE). Before this its lookup word was the span's zero padding:
 # FM Tone's engine, on FASCIA's records
 from ..organ import machines as _org_types  # noqa: E402
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE)   # RIFT: ORGAN (19) borrows the engine slot too
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, 20)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable
@@ -213,8 +213,11 @@ FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE)   # RIFT: ORGAN (19) borrows t
 FSC_STATE_L2 = 0x20098400                    # voices 0..7
 FSC_STATE2_L2 = 0x200A9400                   # voices 8..15
 FSC_STATE_SPAN = 8 * 0xF80                   # dnfw.fascia.program.STRIDE
-FSC_L2_LOAD = FSC_STATE2_L2 + FSC_STATE_SPAN  # 0x200b1000
-FSC_L2_SPAN = PERC_L2_LOAD - FSC_L2_LOAD       # to 0x200c0000: 60 KB
+# RIFT (SILT, 2026-11-17): the code moved into PERC's former room (RIFT's perc.asm, its chain head and
+# the sample machines' shared code, is 7.7 KB there): FASCIA, ORGAN and SILT need about 84 KB;
+# 0x200b1000..0x200c0000 is free again
+FSC_L2_LOAD = PERC_L2_LOAD + 0x4000          # 0x200c4000, 16 KB after perc.asm's start
+FSC_L2_SPAN = SMP_L2_LOAD - FSC_L2_LOAD        # to smp.asm's 0x200e3000: 124 KB
 FSC_SW = 0xB80000 + (FSC_L2_LOAD - 0x20000000) // 2
 FSC_SCRATCH_DM = MNM_RENDER_DM + MNM_RENDER_BYTES          # 0x2e6400 .. REGION's end 0x2e7000
 FSC_TABLES_DDR = 0x81220000
@@ -397,8 +400,8 @@ def _perc_sine() -> bytes:
 
 
 def _silt_tables() -> bytes:
-    from ..silt import program as silt_program
-    return silt_program.tables_bytes()
+    from ..silt import ddr
+    return ddr.tables_bytes()
 
 
 def _organ_tables() -> bytes:
@@ -444,6 +447,8 @@ def l2_spans() -> list[tuple[str, int, bytes]]:
             raise DspError(f"{name}.asm ({len(code)} bytes) leaves fewer than 64 bytes of its L2 span")
         from ..perc import program as _pp
         if name == "perc" and _pp.RIFT:          # RIFT: the head only, then 128 bytes of NOPs
+            if len(code) + 128 > FSC_L2_LOAD - PERC_L2_LOAD:
+                raise DspError(f"perc.asm ({len(code)} bytes) runs into fascia.asm's room at {FSC_L2_LOAD:#x}")
             out.append(("perc.asm (wr_perc: RIFT's chain head), in L2", at, code + bytes(128)))   # BRANCH-12: 12 instructions (72 B) after its last JUMP
             continue
         out.append((what, at, code + bytes(span - len(code))))
@@ -463,9 +468,10 @@ def l2_spans() -> list[tuple[str, int, bytes]]:
     out.append(("FASCIA voices 0..7, in L2 (zeros; v0.45)", FSC_STATE_L2, bytes(FSC_STATE_SPAN)))
     out.append(("FASCIA voices 8..15, in L2 (zeros; v0.45)", FSC_STATE2_L2, bytes(FSC_STATE_SPAN)))
     code = obj["fascia"]
-    if FSC_L2_SPAN - len(code) < 64:
-        raise DspError(f"fascia.asm ({len(code)} bytes) leaves fewer than 64 bytes of its L2 span")
-    out.append(("fascia.asm (wr_fsc), in L2 (v0.45)", FSC_L2_LOAD, code + bytes(FSC_L2_SPAN - len(code))))
+    if FSC_L2_SPAN - len(code) < 256:
+        raise DspError(f"fascia.asm ({len(code)} bytes) leaves fewer than 256 bytes of its L2 span")
+    # RIFT: the code and 256 bytes of NOPs (zeros), not the whole span (the DSP image's room)
+    out.append(("fascia.asm (wr_fsc), in L2 (v0.45; RIFT: in PERC's former room)", FSC_L2_LOAD, code + bytes(256)))
     return out
 
 
