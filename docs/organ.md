@@ -68,6 +68,15 @@ speech, wind and tremulant run per 32-sample block, smoother than per 128).
     0.75..1 (the tremolo's sine, up to 1e-4 off live's; inaudible, but not bit-exact past 124 blocks
     of TREM at its fastest, which v0.4's gate never ran). v0.5 floors right (`_floor_f`) and the gate
     runs a 400-block tremolo.
+- **v0.6** (Error Kit on Discord, 2026-11-17; the owner chose):
+  - BLOM opens the pipe slowly (30 ms .. 3 s); the breath heard as it opens is EDGE's, so EDGE 0
+    is a pure swell (the bloom's breath burst was too much on drones).
+  - PHRM is **MTUN** (Mixture Tune, a knob on WAV2): the mixture's two pipes tuned down 0..36
+    semitones. PERC stays on the 2nd harmonic.
+  - VELO is **MCHR** (Mixture Character): the mixture's pipe morphs toward the TRUMPET's (the
+    FLUTE's on a TRUMPET stop). The organ plays at one level; PVEL stays.
+  - A v0.5 sound with MIXT up changes: its PHRM word reads as an MTUN (2ND's middle is about 9
+    semitones down) and its VELO as MCHR.
 - **Records: FASCIA's.** FASCIA writes its own defaults at MACHINE SEL (`fsc_default`,
   `rec.c`), and the names, the LFO list and the choices are per machine (`page.c`, `fmt.c`), so a
   record is free to serve two machines: a track is one or the other. STOP rides a choice record
