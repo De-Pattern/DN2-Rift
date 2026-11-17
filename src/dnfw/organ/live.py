@@ -397,7 +397,7 @@ class Organ:
         perc = F(e[16] * F(F(0.9) / F(127.0)))
         pon = False
         if perc > F(0.0):
-            pf = F(f * (F(3.0) if e[18] >= F(1.0) else F(2.0)))
+            pf = F(f * F(2.0))                                  # v0.6: on the 2nd harmonic (PHRM is MTUN now)
             pon = pf < F(F(0.45) * F(FS))
             pinc = F(pf * DT)
             tau = F(F(0.04) * exp2f(F(e[17] * F(F(5.2) / F(127.0)))))
@@ -410,18 +410,25 @@ class Organ:
         kon = kk > F(0.0) and self.kc > F(0.0)
         mix = []
         if e[21] > F(0.0):
+            # v0.6 (Error Kit, 2026-11-17: "tune the 2nd row"): MTUN takes the mixture down, 0..36 semitones
+            st = floorf(F(F(e[MTUN] * F(F(36.0) / F(127.0))) + F(0.5)))
+            mt = exp2f(F(F(-st) * F(F(1.0) / F(12.0))))
             for j, (ratio, gain) in enumerate(((F(6.0), F(0.55)), (F(16.0), F(0.35)))):
-                fr = F(f * ratio)
+                fr = F(F(f * ratio) * mt)
                 if fr < F(F(0.42) * F(FS)):
                     mix.append((j, F(F(fr * DT) * F(ORG_N)), F(F(e[21] * F(gain / F(127.0))) * F(F(1.0) / F(127.0)))))
         xon = pon or kon or bool(mix)
-        von = e[20] > F(0.0)
-        vg = F(F(1.0) - F(F(e[20] * F(F(1.0) / F(127.0))) * F(F(1.0) - self.pvel))) if von else F(1.0)
+        # v0.6 (Error Kit): VELO is MCHR now, the mixture's character (its stop's pipe morphing to the
+        # TRUMPET's, or the FLUTE's on a TRUMPET): the organ plays at one level (PVEL stays)
+        von = False
+        vg = F(1.0)
+        mf = F(e[MCHR] * F(F(1.0) / F(127.0)))
         rot = F(e[22] * F(F(1.0) / F(127.0)))
         if rot > F(0.0):
             am = F(F(1.0) - F(F(rot * F(0.3)) * F(F(0.5) + F(F(0.5) * self.rs))))
             rsw = F(F(rot * F(0.5)) * F(F(0.5) - F(F(0.5) * self.rs)))
         ta = self.tab[stop][1]
+        tm = self.tab[4 if stop != 4 else 0][1]
         # page 4
         b = F(e[24] * F(F(1.0) / F(127.0)))
         edge = F(e[30] * F(F(1.0) / F(127.0)))
@@ -434,11 +441,13 @@ class Organ:
         if blon:
             tb = F(F(0.03) * exp2f(F(e[29] * F(F(6.7) / F(127.0)))))
             gb = F(F(1.0) - expf(F(F(-self.t) * recip(tb))))
-        eon = edge > F(0.0) or blon
+        # v0.6 (Error Kit: the bloom's breath was too much on a slow drone): BLOM opens the pipe slowly;
+        # the breath heard as it opens is EDGE's, so EDGE 0 is a pure swell
+        eon = edge > F(0.0)
         if eon:
             eg = F(edge * F(2.0))
             if blon:
-                eg = F(eg + F(F(F(1.0) - gb) * F(1.2)))
+                eg = F(eg + F(F(F(F(1.0) - gb) * F(1.2)) * edge))
             eg = F(F(F(eg * F(F(1.0) + F(F(b * F(0.5)) * self.j))) * self.tot) * TRIM)
             self.ed.set(f, F(6.0))
         hon = self.dep > F(0.0)
@@ -470,6 +479,9 @@ class Organ:
                     fr = F(ph - F(i0))
                     i1 = (i0 + 1) & (ORG_N - 1)
                     a = F(F(int(ta[i0])) + F(F(int(ta[i1] - ta[i0])) * fr))
+                    if mf > F(0.0):
+                        bm = F(F(int(tm[i0])) + F(F(int(tm[i1] - tm[i0])) * fr))
+                        a = F(a + F(F(bm - a) * mf))
                     x = F(x + F(a * lv))
                 v = F(v + F(F(x * F(0.45)) * vg))
             if von:
@@ -501,13 +513,14 @@ class Organ:
 # WATR, FOLD, SIDE) and FM Tone's DUST, TZFM. The panel's order is Ravel's knob order.
 CONTROLS = ("STOP", "R16", "R8", "R4", "R223", "R2", "R135", "R1",
             "CHIFF", "SPEECH", "SPREAD", "AIR", "WIND", "TREM", "TRATE", "CELESTE",
-            "PERC", "PDEC", "PHRM", "KCLK", "VELO", "MIXT", "ROTR", "RSPD",     # v0.5: page 3
+            "PERC", "PDEC", "MTUN", "KCLK", "MCHR", "MIXT", "ROTR", "RSPD",     # v0.5: page 3
             "BRTH", "TURB", "BREK", "BDEP", "PRES", "BLOM", "EDGE", "PVEL")     # v0.5: page 4
 RIDES = ("TYPA", "HARD", "TUNE", "DAMP", "DEC", "MORPH", "FORM", "SHIFT",
          "LPG", "CHAR", "CLIK", "WATR", "FOLD", "SIDE", "DUST", "TZFM",
          "BEND", "MIX", "TYPB", "GEOM", "MATL", "POS", "COUP", "RING",
          "BUZZ", "BODA", "BODB", "CTYP", "XMOD", "ATK", "FDBK", "VARY")     # FASCIA's control each rides
-PHRM = 18                             # page 3's choice: the percussion's harmonic, 2ND or 3RD
+MCHR = 20                             # v0.6: the mixture's character (was VELO)
+MTUN = 18                             # v0.6: page 3's third knob, the mixture's tune (was PHRM, the percussion's 2ND/3RD)
 TRIM = F(0.519)                       # Ravel's per-engine trim (rv_synth.c): ORGAN at FASCIA's level
 MAGIC = 0x4F524721                    # 'ORG!': the voice's state was written by a strike
 
@@ -532,11 +545,10 @@ LEGACY = tuple(knob_of(w, t) for w, t in zip(LEGACY_WORDS, LEGACY_TOPS))
 
 
 def eff_of(knobs) -> list:
-    """the knobs (0..127 ints) -> Ravel's eff: STOP is its option 0..4 ((k 5) >> 7), PHRM its
-    option 0..1 ((k 2) >> 7), the rest the knob itself; pages 3 and 4 all 0 on a v0.4 sound"""
+    """the knobs (0..127 ints) -> Ravel's eff: STOP is its option 0..4 ((k 5) >> 7), the rest the
+    knob itself; pages 3 and 4 all 0 on a v0.4 sound"""
     e = [F(int(k)) for k in knobs]
     e[0] = F(min((int(knobs[0]) * 5) >> 7, 4))
-    e[PHRM] = F(min((int(knobs[PHRM]) * 2) >> 7, 1))
     if tuple(int(k) for k in knobs[16:32]) == LEGACY:
         e[16:32] = [F(0.0)] * 16
     return e

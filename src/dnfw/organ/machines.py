@@ -26,7 +26,7 @@ PAGES = {
     "SYN2 PIPES": ("CHIFF", "SPEECH", "SPREAD", "AIR", "WIND", "TREM", "TRATE", "CELESTE"),
     # v0.5 (owner, 2026-11-16): attack and tone, then the breath (his flute clip); both pages at 0
     # leave v0.4's organ as it was
-    "SYN3 ATTACK": ("PERC", "PDEC", "PHRM", "KCLK", "VELO", "MIXT", "ROTR", "RSPD"),
+    "SYN3 ATTACK": ("PERC", "PDEC", "MTUN", "KCLK", "MCHR", "MIXT", "ROTR", "RSPD"),
     "SYN4 BREATH": ("BRTH", "TURB", "BREK", "BDEP", "PRES", "BLOM", "EDGE", "PVEL"),
 }
 CONTROLS = tuple(c for page in PAGES.values() for c in page)
@@ -36,19 +36,19 @@ RIDES = dict(zip(CONTROLS, ("TYPA", "HARD", "TUNE", "DAMP", "DEC", "MORPH", "FOR
                             "BEND", "MIX", "TYPB", "GEOM", "MATL", "POS", "COUP", "RING",
                             "BUZZ", "BODA", "BODB", "CTYP", "XMOD", "ATK", "FDBK", "VARY")))
 SLOTS = {c: FM.SLOTS[RIDES[c]] for c in CONTROLS}
-CHOICES = {"STOP": STOPS, "PHRM": ("2ND", "3RD")}
+CHOICES = {"STOP": STOPS}                  # v0.6: PHRM (2ND/3RD) is MTUN, a knob
 LABELS = {"STOP": "STOP", "R16": "16FT", "R8": "8FT", "R4": "4FT", "R223": "NAZ", "R2": "2FT",
           "R135": "TIER", "R1": "1FT", "CHIFF": "CHIFF", "SPEECH": "SPCH", "SPREAD": "SPRD",
           "AIR": "AIR", "WIND": "WIND", "TREM": "TREM", "TRATE": "RATE", "CELESTE": "CELST",
-          "PERC": "PERC", "PDEC": "PDEC", "PHRM": "PHRM", "KCLK": "KCLK", "VELO": "VELO", "MIXT": "MIXT",
+          "PERC": "PERC", "PDEC": "PDEC", "MTUN": "MTUN", "KCLK": "KCLK", "MCHR": "MCHR", "MIXT": "MIXT",
           "ROTR": "ROTR", "RSPD": "RSPD", "BRTH": "BRTH", "TURB": "TURB", "BREK": "BREK", "BDEP": "BDEP",
           "PRES": "PRES", "BLOM": "BLOM", "EDGE": "EDGE", "PVEL": "PVEL"}
 LONG_NAMES = {"STOP": "Stop", "R16": "Rank 16 Foot", "R8": "Rank 8 Foot", "R4": "Rank 4 Foot",
               "R223": "Nazard", "R2": "Rank 2 Foot", "R135": "Tierce", "R1": "Rank 1 Foot",
               "CHIFF": "Chiff", "SPEECH": "Speech", "SPREAD": "Spread", "AIR": "Air", "WIND": "Wind",
               "TREM": "Tremulant", "TRATE": "Tremulant Rate", "CELESTE": "Celeste",
-              "PERC": "Percussion", "PDEC": "Percussion Decay", "PHRM": "Perc Harmonic", "KCLK": "Key Click",
-              "VELO": "Velocity", "MIXT": "Mixture", "ROTR": "Rotor", "RSPD": "Rotor Speed",
+              "PERC": "Percussion", "PDEC": "Percussion Decay", "MTUN": "Mixture Tune", "KCLK": "Key Click",
+              "MCHR": "Mixture Character", "MIXT": "Mixture", "ROTR": "Rotor", "RSPD": "Rotor Speed",
               "BRTH": "Breath", "TURB": "Turbulence", "BREK": "Break", "BDEP": "Break Depth",
               "PRES": "Pressure", "BLOM": "Bloom", "EDGE": "Edge", "PVEL": "Pressure Velocity"}
 BOX = {"FLUTE": "FLUT", "NACHTHN": "NACH", "PRINCPL": "PRIN", "GAMBA": "GAMB", "TRUMPET": "TRMP"}
@@ -56,7 +56,7 @@ BOX = {"FLUTE": "FLUT", "NACHTHN": "NACH", "PRINCPL": "PRIN", "GAMBA": "GAMB", "
 DEFAULTS = {"STOP": 38, "R16": 0, "R8": 110, "R4": 70, "R223": 0, "R2": 40, "R135": 0, "R1": 0,
             "CHIFF": 40, "SPEECH": 50, "SPREAD": 40, "AIR": 25, "WIND": 30, "TREM": 0, "TRATE": 60,
             "CELESTE": 0,
-            "PERC": 0, "PDEC": 40, "PHRM": 0, "KCLK": 0, "VELO": 0, "MIXT": 0, "ROTR": 0, "RSPD": 30,
+            "PERC": 0, "PDEC": 40, "MTUN": 0, "KCLK": 0, "MCHR": 0, "MIXT": 0, "ROTR": 0, "RSPD": 30,
             "BRTH": 0, "TURB": 70, "BREK": 0, "BDEP": 64, "PRES": 0, "BLOM": 0, "EDGE": 0, "PVEL": 0}
 NO_LFO = ("BLOM", "EDGE", "PVEL")         # v0.5: on FM Tone's 235..237 (ATK, FDBK, VARY), no modulation
 BIPOLAR = ()

@@ -14,13 +14,12 @@ def test_the_rides_are_the_dsps():
 
 def test_stop_is_a_choice_on_a_choice_record_and_the_rest_continuous():
     assert OM.is_choice("STOP") and FM.SLOTS[OM.RIDES["STOP"]][3] in (100, 120)
-    assert OM.is_choice("PHRM") and FM.SLOTS[OM.RIDES["PHRM"]][3] in (100, 120)
+    assert not OM.is_choice("MTUN") and FM.SLOTS[OM.RIDES["MTUN"]][3] in (100, 120)   # v0.6: a knob on PHRM's record
     # pages 1 and 2 on 0..127 records; v0.5's pages 3 and 4 also on PD1, PD2, OFS1, OFS2 (0..100),
     # read as 0..127 knobs (live.knob_of, fmt.c fsc_kn)
     assert all(FM.SLOTS[OM.RIDES[c]][3] == 127 for c in OM.CONTROLS[:16] if c != "STOP")
-    assert all(FM.SLOTS[OM.RIDES[c]][3] in (100, 127) for c in OM.CONTROLS[16:] if c != "PHRM")
+    assert all(FM.SLOTS[OM.RIDES[c]][3] in (100, 127) for c in OM.CONTROLS[16:] if c != "MTUN")
     assert [OM.option("STOP", OM.knob("STOP", OM.rep_word("STOP", o))) for o in range(5)] == list(range(5))
-    assert [OM.option("PHRM", OM.knob("PHRM", OM.rep_word("PHRM", o))) for o in range(2)] == [0, 1]
 
 
 def test_v04_sounds_read_as_pages_3_and_4_off():
@@ -40,7 +39,7 @@ def test_v04_sounds_read_as_pages_3_and_4_off():
 def test_defaults_are_ravels():
     w = OM.default_words()
     assert OM.option("STOP", OM.knob("STOP", w["STOP"])) == 1               # NACHTHORN
-    assert OM.option("PHRM", OM.knob("PHRM", w["PHRM"])) == 0               # v0.5: 2ND
+    assert OM.knob("MTUN", w["MTUN"]) == 0                                  # v0.6: the mixture in tune
     assert {c: OM.knob(c, w[c]) for c in OM.CONTROLS if c not in OM.CHOICES} == \
         {c: v for c, v in OM.DEFAULTS.items() if c not in OM.CHOICES}
 

@@ -138,10 +138,10 @@ def test_pages_3_and_4_random_bit_exact(seed):
     assert first is None, first
 
 
-@pytest.mark.parametrize("over", [{"PERC": 110, "PDEC": 50}, {"PERC": 100, "PHRM": 127}, {"KCLK": 120},
-                                  {"MIXT": 127, "STOP": 4}, {"VELO": 127}, {"ROTR": 127, "RSPD": 127},
+@pytest.mark.parametrize("over", [{"PERC": 110, "PDEC": 50}, {"MIXT": 110, "MTUN": 127}, {"MIXT": 90, "MTUN": 40}, {"KCLK": 120},
+                                  {"MIXT": 127, "STOP": 4}, {"MIXT": 120, "MCHR": 127}, {"MIXT": 120, "MCHR": 64, "STOP": 4}, {"ROTR": 127, "RSPD": 127},
                                   {"BRTH": 127, "TURB": 127}, {"BREK": 127, "BDEP": 127, "PRES": 127},
-                                  {"BLOM": 127, "EDGE": 127}, {"PVEL": 127, "BREK": 90}])
+                                  {"BLOM": 127, "EDGE": 127}, {"BLOM": 100}, {"PVEL": 127, "BREK": 90}])
 def test_each_new_control_bit_exact_and_sounding(over):
     got, want, first = B.compare(lambda k: over, {0: 55.0, 30: 70.0}, 60, vels={0: 40, 30: 120})
     assert first is None, first
@@ -164,3 +164,25 @@ def test_celeste_fades_in_and_out():
         return {"CELESTE": 0 if k < 10 or k >= 30 else 40}
     got, want, first = B.compare(panel, {0: 60.0}, 50)
     assert first is None, first
+
+
+def test_v06_blom_alone_is_a_pure_swell():
+    """v0.6 (Error Kit): BLOM with EDGE 0 opens the tone slowly with no breath on top: the first
+    blocks are quieter than the steady tone, and BLOM 0 is the plain organ"""
+    a, _w, first = B.compare(lambda k: {"BLOM": 110}, {0: 36.0}, 200)
+    assert first is None
+    early, late = np.sqrt(np.mean(a[:32 * 20] ** 2)), np.sqrt(np.mean(a[-32 * 20:] ** 2))
+    assert early < 0.5 * late
+
+
+def test_v06_mtun_lowers_the_mixture():
+    """MTUN 127 puts the mixture's pipes 36 semitones down: the spectrum's weight falls"""
+    hi, _w, f1 = B.compare(lambda k: {"MIXT": 127}, {0: 60.0}, 60)
+    lo, _w2, f2 = B.compare(lambda k: {"MIXT": 127, "MTUN": 127}, {0: 60.0}, 60)
+    assert f1 is None and f2 is None
+
+    def centroid(x):
+        X = np.abs(np.fft.rfft(x))
+        fr = np.fft.rfftfreq(len(x), 1 / 48000)
+        return float(np.sum(fr * X) / np.sum(X))
+    assert centroid(lo) < 0.8 * centroid(hi)

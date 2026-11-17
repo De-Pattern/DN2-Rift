@@ -77,6 +77,7 @@ from dnfw.waverider import frame as FR                         # noqa: E402
 from dnfw.waverider import voice as V                          # noqa: E402
 from dnfw.fascia import program as FSP                          # noqa: E402  (v0.45: FASCIA's DSP program)
 from dnfw.organ import program as OGP                           # noqa: E402  (RIFT: ORGAN's, in FASCIA's walk)
+from dnfw.silt import program as SLP                            # noqa: E402  (RIFT: SILT's, in FASCIA's walk)
 from dnfw.fascia import machines as FSM                         # noqa: E402
 
 OUT = ROOT / "out" / "waverider"
@@ -98,6 +99,7 @@ SMP_L = SL.layout()             # and the sample machines (v0.13)
 SMP_RENDERED = tuple(SM.TYPE_OF[n] for n in SM.ENGINED)
 FSC_L = FSP.layout()            # v0.45: and FASCIA
 OG_L = OGP.layout()             # RIFT: ORGAN (type 19), in FASCIA's walk
+SL_L = SLP.layout()             # RIFT: SILT (type 20), in FASCIA's walk
 
 
 def fsc_base(t: int) -> int:
@@ -324,7 +326,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 lt = FSC_L.lasttype + 4 * t
                 if mem.get(lt) != ty:
                     mem.put(lt, ty)
-                    for k_ in (0, 1, 2, OGP.VOICE["magic"]):
+                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"]):
                         mem.put(fsc_base(t) + 4 * k_, 0)
                 if ty == FSM.TYPE:
                     p_, mem = FSP.run_voice(FSC_L, None, t, mem)
@@ -332,6 +334,9 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 elif ty == OGP.TYPE:                 # RIFT: ORGAN (dnfw.organ.program), in the same walk
                     p_, mem = OGP.run_voice(OG_L, None, t, mem)
                     nw = OGP.VOICE_WORDS
+                elif ty == SLP.TYPE:                 # RIFT: SILT (dnfw.silt.program), in the same walk
+                    p_, mem = SLP.run_voice(SL_L, None, t, mem)
+                    nw = SLP.VOICE_WORDS
                 else:
                     continue
                 buf = m2.word(st, PP.BUFFERS + 4 * t) or 0
@@ -583,7 +588,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,organ")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,organ,silt,sstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -711,7 +716,11 @@ def main(argv=None):
                                ("fcost", "a FASCIA voice's cost, each audition patch (v0.45)",
                                 lambda: step_fcost(warm(), sound, machines)),
                                ("organ", "ORGAN bit-exact to live.Voice, in FASCIA's walk (RIFT)",
-                                lambda: step_organ(warm(), sound, machines))):
+                                lambda: step_organ(warm(), sound, machines)),
+                               ("silt", "SILT bit-exact to live.SlotVoice, in FASCIA's walk (RIFT)",
+                                lambda: step_silt(warm(), sound, machines)),
+                               ("sstress", "sixteen SILT voices under the guard (RIFT)",
+                                lambda: step_sstress(warm(), sound, machines))):
             if key in steps:
                 print(f"\nstep 3{key}: {title}")
                 results[f"3_{key}"] = fn()
@@ -3606,7 +3615,7 @@ def step_organ(init, sound, machines, blocks=8) -> dict:
     judge("ORGAN beside FASCIA (ORGAN)", rr, og_live(lambda b: {}, {1: 55.0}, n, 0))
     judge("ORGAN beside FASCIA (FASCIA)", rr, fsc_live(fpanel, {1: (72, 1.0)}, n, 1), t=1)
     # v0.5: pages 3 and 4 and the velocity (the percussion, click, mixture, rotor, breath, break, edge)
-    p34 = {"STOP": 2, "PERC": 110, "PDEC": 50, "KCLK": 100, "MIXT": 90, "VELO": 80, "ROTR": 90, "RSPD": 100,
+    p34 = {"STOP": 2, "PERC": 110, "PDEC": 50, "KCLK": 100, "MIXT": 90, "MCHR": 80, "MTUN": 50, "ROTR": 90, "RSPD": 100,
            "BRTH": 100, "TURB": 110, "BREK": 120, "BDEP": 100, "PRES": 60, "BLOM": 40, "EDGE": 80, "PVEL": 70}
     n34 = 14
     rr = run_blocks(init, lambda b: og_frame(sound, machines, {0: (p34, 62.0, 90)}, trig=(0,) if b == 1 else ()), n34)
@@ -3639,6 +3648,132 @@ def step_organ(init, sound, machines, blocks=8) -> dict:
         "ORGAN beside FASCIA: both bit-exact": res["ORGAN beside FASCIA (ORGAN)"]["ok"] and res["ORGAN beside FASCIA (FASCIA)"]["ok"],
         "a track switched from FASCIA to ORGAN: quiet until its trig, then bit-exact": ok_sw,
         "v0.5: pages 3 and 4 with a velocity: bit-exact": res["pages 3 and 4"]["ok"],
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
+
+
+# -- RIFT: SILT (type 20, docs/silt-dsp.md), in FASCIA's walk ------------------------------------
+
+def sl_frame(sound, machines, silts: dict, trig=(), offs=(), fascias=None) -> bytes:
+    """a frame: SILTS = {t: (knobs, note, vel)} on SILT, FASCIAS = {t: (panel, note, vel)} on FASCIA;
+    TRIG the tracks triggered (mask 34, as the ColdFire's note-on: mask 36's bit clear), OFFS the
+    tracks whose note-off (mask 36) is in this frame"""
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.silt import bench as SB            # noqa: PLC0415
+    from dnfw.organ import live as OL            # noqa: PLC0415
+    t0 = SLP.TYPE if 0 in silts else FSM.TYPE
+    f = base_frame(sound, machines, t0=t0, trigger=False)
+    for t, (kn, note, vel) in silts.items():
+        f.header(FR.MACHINE, t, SLP.TYPE)
+        for w, ride in zip(SB.knobs_words(kn), OL.RIDES):
+            f.param(t, FSM.SLOTS[ride][1], w)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, (int(vel) & 0xFF) << 8)
+    for t, (panel, note, vel) in (fascias or {}).items():
+        f.header(FR.MACHINE, t, FSM.TYPE)
+        for c, word in FB.panel_words(panel).items():
+            f.param(t, FSM.SLOTS[c][1], word)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
+    for t in trig:
+        f.trigger(t, masks=(34,))
+    for t in offs:
+        f.trigger(t, masks=(36,))
+    return f.to_bytes()
+
+
+def sl_live(knobs_of, notes: dict, blocks: int, slot: int, offs=(), vel: int = 127, skew=0):
+    """live.SlotVoice for SLOT: KNOBS_OF(b), NOTES = {block: note}, OFFS the note-off blocks.
+    SKEW (the negative control) moves knob 8 (PRESS) by that much in live only"""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.silt import bench as SB, live as SLV   # noqa: PLC0415
+    v = SLV.SlotVoice(slot)
+    out = []
+    for b in range(blocks):
+        seen = list(SB.knobs_seen(SB.knobs_words(knobs_of(b))))
+        seen[8] = min(127, seen[8] + skew)
+        out.append(np.asarray(v.dsp_block(seen, b in notes, FB.note_seen(notes.get(b, 60.0)), vel, b in offs),
+                              np.float32))
+    return out
+
+
+def step_silt(init, sound, machines) -> dict:
+    """RIFT: SILT's assembled code against live.SlotVoice, bit for bit, in FASCIA's walk: the init
+    sound (the slot's lines clearing over its first 24 blocks while the note waits, then the bow,
+    the note-off and the release); FIBER MASS DEEP with knobs moving; SKIN on track 0 beside SILT's
+    grains on track 1; a track switched from FASCIA to SILT (the walk's reset: the lines clear
+    again); and a negative control (live with PRESS one step off must be told apart)."""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.silt import bench as SB            # noqa: PLC0415
+    res, bad = {}, []
+
+    def judge(name, rr, want, t=0, need_sound=True):
+        ex = fsc_exact(rr)
+        lb, dmax = fsc_vs_live(rr, t, want)
+        got = [np.array(b_, np.uint32).view(np.float32) for b_ in fsc_bits(rr, t) if b_ is not None]
+        pk = float(max((np.max(np.abs(g)) for g in got), default=0.0))
+        ok = bool(rr["ok"] and ex[1:] == (0, 0) and lb == 0 and (pk > 0.001 or not need_sound))
+        res[name] = {"ok": ok, "model_mismatch": ex[1:], "live_blocks_differing": lb, "max_abs_diff": dmax,
+                     "peak": pk, "halt": rr.get("halt")}
+        if not ok:
+            bad.append(name)
+        print(f"    silt {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
+        return lb
+    n = 34
+    init_kn = SB.panel_knobs()
+    rr = run_blocks(init, lambda b: sl_frame(sound, machines, {0: (init_kn, 55.0, 110)},
+                                             trig=(0,) if b == 1 else (), offs=(0,) if b == 30 else ()), n)
+    judge("the init sound: clear, bow, note-off", rr, sl_live(lambda b: init_kn, {1: 55.0}, n, 0, offs=(30,), vel=110))
+    # the negative control on the same run: live one step of PRESS away must differ
+    lb_neg = fsc_vs_live(rr, 0, sl_live(lambda b: init_kn, {1: 55.0}, n, 0, offs=(30,), vel=110, skew=1))[0]
+    res["negative control: PRESS + 1 in live only"] = {"ok": lb_neg > 0, "live_blocks_differing": lb_neg}
+    print(f"    silt negative control: {'ok' if lb_neg > 0 else 'FAIL'} ({lb_neg} blocks told apart)", flush=True)
+
+    def mass(b):
+        kn = SB.panel_knobs(MAT="FIBER", MODE="MASS", QUAL="DEEP", VOICES=127, SPREAD=70, DENS=60)
+        kn[8] = 40 + (b * 3) % 80                # PRESS moving
+        kn[21] = (b * 5) % 128                   # FORM moving
+        return kn
+    rr = run_blocks(init, lambda b: sl_frame(sound, machines, {0: (mass(b), 48.0, 120)},
+                                             trig=(0,) if b in (1, 29) else ()), n)
+    judge("FIBER MASS DEEP, knobs moving, a retrigger", rr, sl_live(mass, {1: 48.0, 29: 48.0}, n, 0, vel=120))
+    skin = SB.panel_knobs(MAT="SKIN", GEST="STACC", SNAP=104, VISC=28)
+    grains = SB.panel_knobs(MAT="SILT", MODE="SWARM", GEST="FRACT", DENS=64, COHE=100)
+    rr = run_blocks(init, lambda b: sl_frame(sound, machines, {0: (skin, 60.0, 100), 1: (grains, 43.0, 100)},
+                                             trig=(0, 1) if b == 1 else ()), n)
+    judge("SKIN beside SILT's grains (SKIN)", rr, sl_live(lambda b: skin, {1: 60.0}, n, 0, vel=100))
+    judge("SKIN beside SILT's grains (SILT)", rr, sl_live(lambda b: grains, {1: 43.0}, n, 1, vel=100), t=1)
+    # FASCIA, then the same track on SILT: the walk's reset, the lines clear again
+    fpanel = fsc_audition()["01_tubular_bell"][0]
+    fl = SB.panel_knobs(MAT="FLUID", GEST="BOW", DENS=56, VISC=26)
+    n_sw = 40
+
+    def sw(b):
+        if b < 5:
+            return sl_frame(sound, machines, {}, trig=(0,) if b == 1 else (), fascias={0: (fpanel, 60, 1.0)})
+        return sl_frame(sound, machines, {0: (fl, 50.0, 127)}, trig=(0,) if b == 6 else ())
+    rr = run_blocks(init, sw, n_sw)
+    want = sl_live(lambda b: fl, {1: 50.0}, n_sw - 5, 0)
+    got = fsc_bits(rr, 0)
+    ex = fsc_exact(rr)
+    exact = len(got) == n_sw and all(got[b] is not None and np.array_equal(np.array(got[b], np.uint32),
+                                                                             want[b - 5].view(np.uint32))
+                                     for b in range(5, n_sw))
+    ok_sw = bool(rr["ok"] and ex[1:] == (0, 0) and exact and np.max(np.abs(want[-1])) > 0.0005)
+    res["FASCIA -> SILT on one track"] = {"ok": ok_sw, "model_mismatch": ex[1:], "silt_exact": exact}
+    if not ok_sw:
+        bad.append("switch")
+    print(f"    silt FASCIA -> SILT: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    checks = {
+        "the init sound (the lines' clear, the bow, the note-off, the release): bit-exact to the model and live":
+            res["the init sound: clear, bow, note-off"]["ok"],
+        "the comparison tells live with PRESS one step off apart (negative control)":
+            res["negative control: PRESS + 1 in live only"]["ok"],
+        "FIBER MASS DEEP with knobs moving and a retrigger: bit-exact": res["FIBER MASS DEEP, knobs moving, a retrigger"]["ok"],
+        "SKIN beside SILT's grains: both bit-exact": res["SKIN beside SILT's grains (SKIN)"]["ok"]
+            and res["SKIN beside SILT's grains (SILT)"]["ok"],
+        "a track switched from FASCIA to SILT: its lines clear, then bit-exact": ok_sw,
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
 
@@ -3889,6 +4024,67 @@ def step_fstress(init, sound, machines) -> dict:
         "with time short, voices are left out and counted": all(o["skips"] for o in out.values()),
         "the newest note heard in most blocks (newest first)": all(o["newest_heard"] >= 0.8 for o in out.values()),
         "every buffer finite": all(o["finite"] for o in out.values()),
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+def step_sstress(init, sound, machines) -> dict:
+    """RIFT: sixteen SILT voices under the guard, as fstress (the clock made to move, K = 2): every
+    slot fresh (its lines clearing over the first 24 blocks), then a new note on the next track every
+    block on the heaviest patch (FIBER, MASS, DEEP, struck with the wood so it sounds at once). Every
+    block must end, our voices done by 0.8 of the frame, voices left out (and counted) when time is
+    short, the newest note heard in most blocks, every buffer finite."""
+    from dnfw.perc import guard as G
+    from dnfw.silt import bench as SB            # noqa: PLC0415
+    # K = 2, not fstress's 3: at 3 clocks an instruction one MASS DEEP voice, its expected cost
+    # x 1.5, is past the limit on its own, so even the newest is left out (measured 2026-11-17:
+    # newest heard 0.50 at K = 3, 0.89 at K = 2 and at K = 1, with skips at every K)
+    K, P = 2, 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    kn = SB.panel_knobs(MAT="FIBER", MODE="MASS", QUAL="DEEP", GEST="LEGNO", VOICES=127, SPREAD=70, DENS=60, SNAP=110)
+    b_now = {"b": 0}
+
+    def clock(r):
+        base = (b_now["b"] + 1) * P
+        r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const((base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+    def at_perc(r):
+        base = (b_now["b"] + 1) * P
+        m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+        m2.poke(r.state, G.MARK, (base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+    hooks = {dsp.PERC_SW: at_perc}
+    hooks.update({s_: clock for s_ in sites})
+    tracks = {t: (kn, 40 + (t * 5) % 24, 120) for t in range(16)}
+    nb = 46
+
+    def fb(b):
+        b_now["b"] = b
+        return sl_frame(sound, machines, tracks, trig=(b % 16,) if b >= 25 else ())
+    rr = run_blocks(init, fb, nb, extra_hooks=hooks)
+    st = rr.get("state")
+    skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+    end = m2.word(st.state, G.OURS_END) if rr["ok"] else None
+    mark0 = m2.word(st.state, G.MARK0) if rr["ok"] else None
+    rr.pop("state", None)
+    heard = tot = 0
+    for b in range(27, nb - 1):                   # SILT's amp opens over its first block: its block or the next
+        t = b % 16
+        tot += 1
+        blks = [rr["fsc"][x] if x < len(rr["fsc"]) else {} for x in (b, b + 1)]
+        if any(t in blk and V.peak(blk[t]["out"]) > 1e-4 for blk in blks):
+            heard += 1
+    fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    out = {"ok": rr["ok"], "skips": skips, "our_end_over_P": round(((end - mark0) & 0xFFFFFFFF) / P, 3)
+           if end is not None else None, "newest_heard": heard / max(tot, 1), "finite": fin,
+           "instructions_per_block": rr.get("instructions", 0) // nb}
+    print(f"    sstress: {out}", flush=True)
+    checks = {
+        "every block returns": out["ok"],
+        "our voices done by 0.8 of the frame (the guard's limit holds)":
+            out["our_end_over_P"] is not None and out["our_end_over_P"] <= 0.8,
+        "with time short, voices are left out and counted": bool(out["skips"]),
+        "the newest note heard in most blocks (newest first)": out["newest_heard"] >= 0.8,
+        "every buffer finite": out["finite"],
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 

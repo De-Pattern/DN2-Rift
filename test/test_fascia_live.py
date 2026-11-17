@@ -167,7 +167,8 @@ def test_atk_window_is_the_models_exactly():
 def test_atk_window_precision(hard, dec, dust):
     """the causal window (two staggered moment sums) against an exact float64 convolution of
     the same excitation stream, noise and all, however long the excitation"""
-    q = L.expand({"HARD": hard, "DEC": dec, "DUST": dust})
+    # ATK's default went to 0 in pass 3 (no window then): the window is ATK's, so set it
+    q = L.expand({"HARD": hard, "DEC": dec, "DUST": dust, "ATK": 40})
     f0 = F(220.0)
     c = L.block_controls(q, F(0.9))
     e = L.Exciter("STRIKE", q, f0, F(0.9), L.XS(1), 9)

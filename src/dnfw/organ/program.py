@@ -59,7 +59,7 @@ WORDS = ("k146", "trig", "nn", "stop", "nr", "bad", "cnt0", "cnt1", "ybp", "outp
          "rot", "rotc", "tgt", "bb", "brk", "edge", "fc", "aa", "perc", "pf", "pinc", "tau", "pcoef", "kk",
          "mlv0", "mlv1", "minc0", "minc1", "vg", "am", "rsw", "lfl", "bdark", "tb", "gb", "eg", "ea1", "ea2",
          "ea3", "hinc", "hn", "x", "yv", "nz", "tnew", "mtab",
-         "fpon", "fkon", "fm0", "fm1", "fxon", "fvon", "fb", "fblon", "feon", "fhon", "frot")
+         "mt", "mf", "mtab2", "fpon", "fkon", "fm0", "fm1", "fxon", "fvon", "fb", "fblon", "feon", "fhon", "frot")
 
 # -- the tables (DDR) ------------------------------------------------------------------------
 TAB_WORDS = 5 * 3 * LV.ORG_N
@@ -466,10 +466,6 @@ class OG(Gen):
                 p.iconst(12, 4)
                 p.iop(4, 4, "MIN", 12)
                 p.st(C["stop"], 4)
-            if j == LV.PHRM:                   # v0.5: PHRM, the option, (k 2) >> 7, at most 1
-                p.lsh(4, 4, -6)
-                p.iconst(12, 1)
-                p.iop(4, 4, "MIN", 12)
             p.iconst(12, 0)
             p.float_(4, 4, 12)
             p.st(C[f"e{j}"], 4)
@@ -786,8 +782,7 @@ class OG(Gen):
         self.flag("fpon", 0)
 
         def perc_on():
-            self.cmp(e(18), "GE", k(1.0), lambda: self.set(c("pf"), V("f") * k(3.0)),
-                     lambda: self.set(c("pf"), V("f") * k(2.0)))
+            self.set(c("pf"), V("f") * k(2.0))          # v0.6: the 2nd harmonic
             self.cmp(c("pf"), "LT", k(F(F(0.45) * F(LV.FS))), lambda: self.flag("fpon", 1))
             self.set(c("pinc"), c("pf") * k(LV.DT))
             self.set(c("tau"), k(0.04) * exp2f(e(17) * kd(5.2, 127.0)))
@@ -803,12 +798,20 @@ class OG(Gen):
         self.flag("fm1", 0)
 
         def mixt():
+            # v0.6: MTUN, the mixture down 0..36 semitones: mt = exp2f(-floorf(e18 36/127 + 0.5)/12)
+            self.set(c("tmp1"), e(LV.MTUN) * kd(36.0, 127.0) + k(0.5))
+            self.ld(0, c("tmp1"))
+            p.fpass(15, 0)
+            _floor_f(p, 15, 14)
+            p.fpass(0, 14)
+            self.st(c("tmp1"), 0)
+            self.set(c("mt"), exp2f((-c("tmp1")) * kd(1.0, 12.0)))
             for j, (ratio, gain) in enumerate(((6.0, 0.55), (16.0, 0.35))):
                 def on(j=j, ratio=ratio, gain=gain):
                     self.flag(f"fm{j}", 1)
                     self.set(c(f"minc{j}"), (c("tmp0") * k(LV.DT)) * k(float(LV.ORG_N)))
                     self.set(c(f"mlv{j}"), (e(21) * kd(gain, 127.0)) * kd(1.0, 127.0))
-                self.set(c("tmp0"), V("f") * k(ratio))
+                self.set(c("tmp0"), (V("f") * k(ratio)) * c("mt"))
                 self.cmp(c("tmp0"), "LT", k(F(F(0.42) * F(LV.FS))), on)
         self.cmp(e(21), "GT", k(0.0), mixt)
         # the mixture's table: tables + 4 x 256 (3 stop + 1)
@@ -826,6 +829,15 @@ class OG(Gen):
         p.iconst(12, L.tables)
         p.iop(0, 12, "+", 0)
         p.st(C["mtab"], 0)
+        # v0.6: MCHR's target, the TRUMPET's middle table (the FLUTE's on a TRUMPET): 3 x 4 + 1, or 1
+        p.ld(0, C["stop"])
+        p.iconst(12, 4)
+        p.iconst(1, 13)
+        p.if_(0, "GE", 12, lambda: p.iconst(1, 1), kind="i")
+        p.lsh(1, 1, 10)
+        p.iconst(12, L.tables)
+        p.iop(1, 12, "+", 1)
+        p.st(C["mtab2"], 1)
         # the sum's flag: pon or kon or a mixture pipe
         p.ld(0, C["fpon"])
         p.ld(1, C["fkon"])
@@ -839,10 +851,8 @@ class OG(Gen):
         self.flag("fvon", 0)
         self.set(c("vg"), k(1.0))
 
-        def vel_on():
-            self.flag("fvon", 1)
-            self.set(c("vg"), k(1.0) - (e(20) * kd(1.0, 127.0)) * (k(1.0) - V("pvel")))
-        self.cmp(e(20), "GT", k(0.0), vel_on)
+        # v0.6: VELO is MCHR (the mixture's character, mix_pipe): no velocity gain
+        self.set(c("mf"), e(LV.MCHR) * kd(1.0, 127.0))
         # the rotor's part
         self.flag("frot", 0)
 
@@ -870,15 +880,14 @@ class OG(Gen):
             self.set(c("tb"), k(0.03) * exp2f(e(29) * kd(6.7, 127.0)))
             self.set(c("gb"), k(1.0) - expf((-c("tnew")) * recip(c("tb"))))
         self.cmp(e(29), "GT", k(0.0), bl_on)
-        # the edge (and the bloom's breath): its level and its SVF at f, q 6
-        p.ld(0, C["fblon"])
-        p.st(C["feon"], 0)
+        # the edge (and, v0.6, the bloom's breath scaled by it): its level and its SVF at f, q 6
+        self.flag("feon", 0)
         self.cmp(c("edge"), "GT", k(0.0), lambda: self.flag("feon", 1))
 
         def e_on():
             self.set(c("eg"), c("edge") * k(2.0))
             p.ld(0, C["fblon"])
-            p.ifz(0, "NE", lambda: self.set(c("eg"), c("eg") + (k(1.0) - c("gb")) * k(1.2)))
+            p.ifz(0, "NE", lambda: self.set(c("eg"), c("eg") + ((k(1.0) - c("gb")) * k(1.2)) * c("edge")))
             self.set(c("eg"), ((c("eg") * (k(1.0) + (c("bb") * k(0.5)) * V("jj"))) * c("tot")) * k(LV.TRIM))
             self.set(c("hz"), V("f"))
             top = float(F(LV.NYQ * F(0.9)))
@@ -1000,6 +1009,25 @@ class OG(Gen):
         p.fop(6, 6, "-", 5)
         p.fop(6, 6, "*", 4)
         p.fop(5, 5, "+", 6)                    # a
+
+        def morph():                           # v0.6: MCHR: a + (b - a) mf, b the target's table
+            p.ld(8, C["mtab2"])
+            p.iop(14, 8, "+", 12)
+            p.seti(1, 14)
+            p.ldi(6, 0, 1)
+            p.iop(14, 8, "+", 13)
+            p.seti(1, 14)
+            p.ldi(7, 0, 1)
+            p.fop(7, 7, "-", 6)
+            p.fop(7, 7, "*", 4)
+            p.fop(6, 6, "+", 7)                # b
+            p.fop(6, 6, "-", 5)
+            p.ld(7, C["mf"])
+            p.fop(6, 6, "*", 7)
+            p.fop(5, 5, "+", 6)
+        p.ld(6, C["mf"])
+        p.fconst(7, 0.0)
+        p.if_(6, "GT", 7, morph)
         p.st(C["tmp1"], 5)
         self.set(c("x"), c("x") + c("tmp1") * c(f"mlv{j}"))
 
