@@ -912,6 +912,7 @@ class SlotVoice(Voice):
     def __init__(self, slot: int, bpm=120.0):
         super().__init__(slot_seed(slot), bpm)
         self.slot = slot
+        self.become()                          # the DSP's first block: a state it never wrote
 
     def dsp_block(self, knobs, trig: bool, note: float, vel: int, off: bool) -> np.ndarray:
         P = eff_of(knobs)

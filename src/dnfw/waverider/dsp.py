@@ -220,6 +220,12 @@ FSC_SCRATCH_DM = MNM_RENDER_DM + MNM_RENDER_BYTES          # 0x2e6400 .. REGION'
 FSC_TABLES_DDR = 0x81220000
 # ORGAN (type 19, dnfw.organ.program): its pipes (5 stops x 3 tables x 256 floats), gains and ramp
 ORGAN_TABLES_DDR = 0x81222000
+# SILT (type 20, dnfw.silt.program): the players' constants (DDR, after ORGAN's 15.5 KB), and each slot's
+# lines, 48 KB a slot (docs/silt-dsp.md: above the old P-I delay lines, below the sample pool; cleared
+# by the DSP itself, 512 words a block, when a slot becomes SILT)
+SILT_TABLES_DDR = 0x81226000
+SILT_DELAY_DDR = 0x82400000
+SILT_DELAY_SPAN = 16 * 0xC000
 
 IDLE_SITE_SW = 0xB88ABB                      # prvIdleTask's back edge: jump (pc,-0x10)
 IDLE_SITE_STOCK = bytes.fromhex("3e07ff00f0ff")
@@ -368,6 +374,7 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
          _smp_tables()),
         ("FASCIA's tables (dnfw.fascia.program.tables_bytes; v0.45)", FSC_TABLES_DDR, _fsc_tables()),
         ("ORGAN's pipes, gains and ramp (dnfw.organ.program.tables_bytes; RIFT)", ORGAN_TABLES_DDR, _organ_tables()),
+        ("SILT's players' constants (dnfw.silt.program.tables_bytes; RIFT)", SILT_TABLES_DDR, _silt_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -387,6 +394,11 @@ def _perc_sine() -> bytes:
     from ..shft import live as SL
     data, at = SL.tables_bytes()
     return data[at["sin"]:at["pow2"]]
+
+
+def _silt_tables() -> bytes:
+    from ..silt import program as silt_program
+    return silt_program.tables_bytes()
 
 
 def _organ_tables() -> bytes:
