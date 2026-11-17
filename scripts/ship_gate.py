@@ -45,6 +45,10 @@ failure:
    headers first; stock areas and gaps byte-identical; everything reads erased; no write
    after the first TRIM; a bad card and a TRIM error fail at their sector; a power-on after
    cuts at seven points boots with an empty pool, and after the whole erase as a fresh install.
+6d2. **stock NAME screen** (v0.54, `emu_waverider_menu.py`, docs/name-screen.md): after TRIM's YES the
+   DN2's own NameView is up, opened once and drawn; its NO goes on to ASSIGN without a name. The negative
+   control clears the main view pointer: our own naming screen stands in (the fallback). The recorder
+   flow (6d) spells a name with the stock screen's own keys and its YES names the recording.
 6s. **DIRECT JUMP** (`emu_jump.py`, docs/jump.md): the sequencer ticked through stock's own ISR;
    off is stock's state every tick; on, every track goes on from its own step (Elektron's rule); a cue
    that is not the PTN view's stays stock's; the setting persists in its sector.
@@ -195,6 +199,7 @@ FIRST = (("preflight", "preflight (never reused)"),
 EMU = (("meter", "DSP load meter (ColdFire)"),
        ("keepsamp", "SAMP kept across sample machines (ColdFire)"),
        ("functurn", "FUNC + turn (ColdFire)"),
+       ("flexpool", "FLEX buffers in every sample machine's SAMP (ColdFire)"),
        ("aniz", "start-up animation, every frame"),
        ("recorder", "recorder screen (ColdFire)"),
        ("mnmpages", "Monomachine pages and detents (ColdFire)"),
@@ -210,6 +215,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("unused", "SELECT UNUSED (ColdFire)"),
        ("hooks", "overlays let go (ColdFire)"),
        ("recflow", "recorder flow (ColdFire)"),
+       ("stockname", "stock NAME screen: NO, and its fallback (ColdFire)"),
        ("slice", "SLICE menus and SLICES keys (ColdFire)"),
        ("samplist", "sample list, browser, playhead (ColdFire)"),
        ("colsw", "MACHINE SEL columns, SYN held (ColdFire)"),
@@ -223,6 +229,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("kbrec", "KEYBOARD kept through grid recording (ColdFire)"),
        ("thres", "THRES on both processors (coupled)"),
        ("flex", "FLEX: a recorder trig's take played by a note, on both processors (coupled)"),
+       ("flexplay", "FLEX buffers played by a ONESHOT track, on both processors (coupled)"),
        ("mute", "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)"),
        ("fineswap", "STRT/LEN/LOOP fine records swapped in and out (ColdFire)"),
        ("fineknob", "STRT's knob against stock's fine FREQ (ColdFire)"),
@@ -880,7 +887,7 @@ def main() -> int:
         if "rec_phase" in lay and "rec_pv_on" in lay:
             g = {k: hex(lay.get(k, 0)) for k in ("rec_overlay", "rec_phase", "trim_slot", "trim_n", "trim_s",
                                                   "trim_e", "nm_text", "rec_pv_on", "smp_func_held", "smp_cmds",
-                                                  "smp_saved", "trim_head_x")}
+                                                  "smp_saved", "trim_head_x", "sn_opens", "sn_results")}
             kit = 0x4210C08C                    # the snapshot's live kit ([0x800052a0])
             snd = hex(kit + 52 + 1163 * 2)      # track 3's sound
             steps = (f"wait:3,mem:0x800052a0:4,mem:{snd}:256,poke:{g['trim_slot']}:00000004,"
@@ -894,14 +901,11 @@ def main() -> int:
                      f"mem:{g['trim_head_x']}:4,png:p0,addl:0x4058e8d4:150,wait:3,mem:{g['trim_head_x']}:4,png:p1,"
                      f"addl:0x4058e8d4:150,wait:3,mem:{g['trim_head_x']}:4,png:p2,"
                      f"release:10,wait:3,release:17,wait:3,mem:{g['rec_pv_on']}:4,mem:{g['smp_func_held']}:4,"
-                     f"mem:{g['smp_cmds']}:4,mem:{g['trim_head_x']}:4,png:pr,yes,wait:10,mem:{g['rec_phase']}:4,png:n0,spin:0:3,wait:3,right,"
-                     f"wait:3,spin:0:2,wait:3,mem:{g['nm_text']}:8,press:17,wait:2,yes,wait:3,release:17,wait:3,"
-                     f"mem:{g['nm_text']}:8,press:17,wait:2,no,wait:3,release:17,wait:3,mem:{g['nm_text']}:8,"
-                     # v0.33: FUNC + NO steps the cursor back too (owner: held, it clears letter
-                     # after letter; the repeat runs on the unit's 1.5 kHz clock, which the
-                     # emulator barely moves): "CB", cursor on B -> "CB", cursor on C -> "B"
-                     f"press:17,wait:2,press:12,wait:10,release:12,wait:3,release:17,wait:3,mem:{g['nm_text']}:8,"
-                     f"png:n1,yes,wait:10,mem:{g['rec_phase']}:4,png:a1,tap:27,"
+                     f"mem:{g['smp_cmds']}:4,mem:{g['trim_head_x']}:4,png:pr,yes,wait:10,mem:{g['rec_phase']}:4,png:n0,"
+                     # v0.54: FILE NAME is the DN2's own NAME screen (NameView, docs/name-screen.md),
+                     # spelt with its own keys: UP gives A, RIGHT, UP twice gives B
+                     f"mem:{g['sn_opens']}:4,up,wait:5,right,wait:5,up,wait:5,up,wait:5,"
+                     f"png:n1,yes,wait:10,mem:{g['rec_phase']}:4,mem:{g['sn_results']}:4,mem:{g['nm_text']}:8,png:a1,tap:27,"
                      f"wait:20,mem:{g['rec_phase']}:4,mem:{snd}:256,png:r1,mem:{lay['trim_zoom']:#x}:4")
             js = work / "recflow.json"
             flow_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT,
@@ -927,13 +931,14 @@ def main() -> int:
                     cmds = [int(m[nth(cm, k)], 16) for k in range(3)]
                     before, after = bytes.fromhex(m[snd]), bytes.fromhex(m[nth(snd, 1)])
                     s0, e0 = int(m[g["trim_s"]], 16), int(m[g["trim_e"]], 16)
-                    names = [bytes.fromhex(m[nth(g["nm_text"], k)])[:4] for k in range(3)]
+                    name = bytes.fromhex(m[g["nm_text"]])[:4]
+                    nshot = {k: pathlib.Path(r["screens"][k]).read_bytes() for k in ("pr", "n0", "n1")}
                     hx = g["trim_head_x"]
                     heads = [struct.unpack(">i", bytes.fromhex(m[nth(hx, k)]))[0] for k in range(4)] \
                         if "trim_head_x" in lay else None
                     shot = {k: pathlib.Path(r["screens"][k]).read_bytes() for k in ("p0", "p1", "p2", "pr")}
                     facts = {"kit": m["0x800052a0"] == f"{kit:08x}",
-                             "phases": phases == [4, 1, 2, 3, 0],
+                             "phases (v0.54: FILE NAME is the stock NAME screen, phase 5)": phases == [4, 1, 5, 3, 0],
                              "trim": 0 < s0 < e0 < 0x17700,
                              "preview": int(m[pv], 16) == 1 and int(m[nth(pv, 1)], 16) == 0
                              and cmds[1] == cmds[0] + 1 and cmds[2] == cmds[1] + 1
@@ -942,21 +947,75 @@ def main() -> int:
                              "time, the screen changing) and is gone once let go":
                              heads is not None and 4 <= heads[0] < heads[1] < heads[2] <= 123 and heads[3] == -1
                              and shot["p0"] != shot["p1"] != shot["p2"] != shot["pr"],
-                             "name": names == [b"CB\0\0", b"C B\0", b"CB\0\0"],
-                             "v0.33: FUNC + NO steps back: a second one takes the letter before (and, held, the rest)":
-                             bytes.fromhex(m[nth(g["nm_text"], 3)])[:2] in (b"B\0", b"\0\0"),
+                             "v0.54: YES on TRIM opens the stock NAME screen (once), drawn, and its keys spell "
+                             "the name (UP, RIGHT, UP UP: AB); its YES names the recording and goes on to ASSIGN":
+                             int(m[g["sn_opens"]], 16) == 1 and int(m[g["sn_results"]], 16) == 1
+                             and name == b"AB\0\0" and nshot["n0"] != nshot["pr"] and nshot["n1"] != nshot["n0"],
                              "oneshot": before[0xDE] != 8 and after[0xDE] == 8,
                              "samp": after[0x6A] == 5,
                              "frames": r["screen_frames"] > 0,
                              "v0.33: F zooms TRIM (drawn)": int(m[f"{lay['trim_zoom']:#x}"], 16) >= 1
                              and pathlib.Path(r["screens"]["tz"]).read_bytes() != pathlib.Path(r["screens"]["t2"]).read_bytes()}
                     good = all(facts.values())
-                    why = str(facts) + f" phases {phases} cmds {cmds} names {names} heads {heads}"
+                    why = str(facts) + f" phases {phases} cmds {cmds} name {name} heads {heads}"
                 return good, ("SAVING on to TRIM; TRIM's ends move; FUNC + YES previews while held, its playhead "
                               f"moving (columns {heads[:3]}), gone at release; YES on to "
-                              "FILE NAME (knob, arrows, FUNC + YES inserts, FUNC + NO deletes), YES on to ASSIGN, "
+                              "FILE NAME, the stock NAME screen (spelt AB with its keys), YES on to ASSIGN, "
                               "a [TRIG] key makes track 3 ONESHOT on the slot" if good else why)
             later("recflow", "recorder flow (ColdFire)", "recorder flow (ColdFire)", [flow_cmd, sorted(EMU_ENV.items())], flow_body)
+
+        # 6d2. v0.54: the stock NAME screen (docs/name-screen.md). After TRIM's YES the DN2's
+        # own NameView is up (phase 5, opened once, drawn); its NO closes it without a name:
+        # the recording keeps the one it has and goes on to ASSIGN (phase 3, no result). The
+        # negative control: the same keys with the main screen's view pointer (SN_MAIN_VIEW)
+        # cleared, which leaves our own naming screen in use (phase 2, nothing opened): the
+        # fallback, and proof the facts above see the stock screen and not ours.
+        if "sn_opens" in lay and "rec_phase" in lay:
+            g2 = {k: hex(lay[k]) for k in ("rec_overlay", "rec_phase", "trim_slot", "trim_n", "trim_s",
+                                           "trim_e", "smp_saved", "sn_opens", "sn_results")}
+            pre = (f"wait:3,poke:{g2['trim_slot']}:00000004,poke:{g2['trim_n']}:00017700,"
+                   f"poke:{g2['trim_s']}:00000000,poke:{g2['trim_e']}:00017700,poke:{g2['smp_saved']}:00000000,"
+                   f"poke:{g2['rec_overlay']}:00000001,poke:{g2['rec_phase']}:00000004,wait:10,"
+                   f"poke:{g2['smp_saved']}:00000001,wait:10,png:t0,")
+            tail = (f"yes,wait:10,mem:{g2['rec_phase']}:4,mem:{g2['sn_opens']}:4,png:s0,no,wait:10,"
+                    f"mem:{g2['rec_phase']}:4,mem:{g2['sn_results']}:4,png:s1")
+            sn_runs = {}
+            for kind, extra in (("stock", ""), ("control", "poke:0x44647980:00000000,")):
+                js_ = work / f"stockname_{kind}.json"
+                sn_runs[kind] = (js_, [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT,
+                                       "--build", bdir, "--snapshot", snap, "--steps", pre + extra + tail,
+                                       "--png-dir", work / f"stockname_{kind}", "--json", js_])
+
+            def sn_body(tdir):
+                seen = {}
+                for kind, (js_, cmd) in sn_runs.items():
+                    rc, out = run(f"stock name {kind}", cmd, logs, env=EMU_ENV, trace=tdir)
+                    if rc != 0 or not js_.exists():
+                        return False, f"{kind}: " + out[-600:]
+                    r = json.loads(js_.read_text())
+                    m = r["memory"]
+                    ph = g2["rec_phase"]
+                    seen[kind] = {"phase_up": int(m[ph], 16), "opens": int(m[g2["sn_opens"]], 16),
+                                  "phase_after": int(m[f"{ph}@2"], 16), "results": int(m[g2["sn_results"]], 16),
+                                  "drawn": pathlib.Path(r["screens"]["s0"]).read_bytes()
+                                  != pathlib.Path(r["screens"]["t0"]).read_bytes(),
+                                  "faults": [f for f in r.get("fault_reports", [])]}
+                st, ct = seen["stock"], seen["control"]
+                facts = {"YES on TRIM: the stock NAME screen up (phase 5), opened once, drawn":
+                         st["phase_up"] == 5 and st["opens"] == 1 and st["drawn"],
+                         "its NO: closed without a name, on to ASSIGN (phase 3), no result":
+                         st["phase_after"] == 3 and st["results"] == 0,
+                         "no fault report": not st["faults"] and not ct["faults"],
+                         "negative control (no main screen view): our own naming screen (phase 2), "
+                         "nothing opened; its NO on to ASSIGN too":
+                         ct["phase_up"] == 2 and ct["opens"] == 0 and ct["phase_after"] == 3}
+                good = all(facts.values())
+                return good, ("the stock NAME screen opens on TRIM's YES and its NO leaves the name, "
+                              "on to ASSIGN; with no main view our own screen stands in (control)"
+                              if good else f"{facts} {json.dumps({k: {x: y for x, y in v.items() if x != 'faults'} for k, v in seen.items()})}")
+            later("stockname", "stock NAME screen: NO, and its fallback (ColdFire)",
+                  "stock NAME screen: NO, and its fallback (ColdFire)",
+                  [c for _j, c in sn_runs.values()] + [sorted(EMU_ENV.items())], sn_body)
 
         # 6e. v0.23, SLICE: its menus drawn over the page (the menu, the grid dialog, the
         # editor with a slice table), the editor's keys and knobs moving the picked slice;
@@ -1902,6 +1961,85 @@ def main() -> int:
                               "FUNC, its knobs stay put, and each of its five choices four detents a choice both "
                               "ways, a jump landing in its choice; RIFT v0.3: FASCIA's TUNE by octaves (0, 32, 64, 96, 127); RIFT v0.4: GEOM and SHIFT to their middle, then an end" if good else why)
             later("functurn", "FUNC + turn (ColdFire)", "FUNC + turn (ColdFire)", [f_cmd, sorted(EMU_ENV.items())], f_body)
+
+        # 6m2. v0.55 (owner: "add the recorded buffers (1-8) to the end of the project RAM list"):
+        # SAMP on a sample machine goes on past 127 to the eight FLEX buffers (their codes,
+        # BUF_SAMP0 + 2 b). The knob (the setter's own call of smp_quant, the knob's last turn
+        # poked fresh): 127 -> B1, B1 -> B2, B1 -> 127, B8 held, 5 -> 6 and 122 -> 123 as before, a
+        # stale knob as before. Knob D at 127 turned right by the panel's encoder (the stock knob
+        # stops at the record's 127: smp_ui_pop takes it on): B1, the list up on it, naming the
+        # buffer; DOWN B2, UP B1, UP 127 (smp_set_samp's write past the record, through smp_quant)
+        if "rt_buf_code" in lay:
+            from dnfw.sampler import machines as SMp   # noqa: PLC0415
+            kit = 0x4210C08C
+            snd0 = kit + 52
+            samp0 = snd0 + 20 + 2 * 43
+            clock, memcpy = 0x4058E8D4, 0x40134490
+            srec = SMp.SAMP_REC
+            b1, b2, b8 = SMp.BUF_SAMP0, SMp.BUF_SAMP0 + 2, SMp.BUF_SAMP0 + 14
+
+            def pcase(ty, old, knob, fresh, value):
+                q = [f"poke:{snd0 + 0xDE:#x}:{ty:02x}", f"poke:{samp0:#x}:{old:04x}",
+                     f"poke:{lay['smp_knob_d']:#x}:{knob & 0xFFFFFFFF:08x}"]
+                q += [f"call:{memcpy:#x}:{lay['smp_knob_at']:#x}:{clock:#x}:4"] if fresh else \
+                     [f"poke:{lay['smp_knob_at']:#x}:80000000"]
+                return q + [f"call:{lay['smp_quant']:#x}:sound0:43:{value:#x}:{srec}"]
+            pcases = [("127, a detent right: B1", (8, 0x7F00, 1, True, 0x8000), b1 << 8),
+                      ("B1, right: B2", (8, b1 << 8, 1, True, (b1 + 1) << 8), b2 << 8),
+                      ("B1, left: 127", (8, b1 << 8, -1, True, (b1 - 1) << 8), 0x7F00),
+                      ("B8, right: held", (8, b8 << 8, 1, True, (b8 + 1) << 8), b8 << 8),
+                      ("STRETCH 127, right: B1", (10, 0x7F00, 1, True, 0x8000), b1 << 8),
+                      ("5, right: 6 (as before)", (8, 0x0500, 1, True, 0x0600), 0x0600),
+                      ("122, right: 123 (as before)", (8, 0x7A00, 1, True, 0x7B00), 0x7B00),
+                      ("a stale knob: as it is", (8, 0x7F00, 1, False, 0x7F00), 0x7F00)]
+            ps = ["wait:3"] + [f"poke:{kit + 52 + 1163 * t + 0xDE:#x}:08" for t in range(16)]
+            for _n, args, _w in pcases:
+                ps += pcase(*args)
+            # the list and the pages, buffer 1 holding a take (its bytes poked), the others empty
+            # (rt_on follows the pool's directory: smp_dir_ok set first, then the take's bytes)
+            ps += [f"poke:{lay['smp_dir_ok']:#x}:00000001", "wait:4", f"poke:{lay['rt_play']:#x}:" + "00" * 8,
+                   f"poke:{lay['rt_rbytes']:#x}:00001000" + "00000000" * 15,
+                   f"poke:{snd0 + 0xDE:#x}:08", f"poke:{samp0:#x}:7f00", f"poke:{lay['smp_knob_at']:#x}:80000000",
+                   "wait:6", "tap:2", "wait:10", "spin:3:1", "wait:10", "png:list_b1",
+                   f"mem:{samp0:#x}:2", f"mem:{lay['smp_lst_open']:#x}:4",
+                   "down", "wait:8", "png:list_b2", f"mem:{samp0:#x}:2",
+                   "up", "wait:8", f"mem:{samp0:#x}:2", "up", "wait:8", f"mem:{samp0:#x}:2",
+                   "no", "wait:8", f"poke:{lay['smp_samp_turned']:#x}:80000000",   # (no turn: the list stays shut)
+                   f"poke:{samp0:#x}:{b1:02x}00", f"poke:{lay['smp_overlay_dirty']:#x}:00000001",
+                   "wait:10", "png:page1_b1", "tap:2", "wait:10", "png:page2_b1",
+                   f"poke:{samp0:#x}:{b2:02x}00", f"poke:{lay['smp_overlay_dirty']:#x}:00000001", "wait:10",
+                   "png:page2_b2", f"mem:{lay['rt_on']:#x}:4", f"mem:{lay['rt_rbytes']:#x}:4",
+                   f"poke:{snd0 + 0xDE:#x}:01", "wait:4"]
+            pjs = work / "flexpool.json"
+            p_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                     "--snapshot", snap, "--steps", ",".join(ps), "--png-dir", work / "flexpool", "--json", pjs]
+
+            def p_body(tdir):
+                rc, out = run("FLEX buffers in the list", p_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and pjs.exists():
+                    r = json.loads(pjs.read_text())
+                    calls = [c for c in r["direct_calls"] if int(str(c.get("fn", "0")), 0) == lay["smp_quant"]]
+                    got = [c["d0"] & 0xFFFF for c in calls]
+                    facts = {n: (g == w) for (n, _a, w), g in zip(pcases, got)}
+                    m = r["memory"]
+                    lo, sp = hex(lay["smp_lst_open"]), hex(samp0)
+                    sh = {n: pathlib.Path(r["screens"][n]).read_bytes() if n in r["screens"] else b""
+                          for n in ("list_b1", "list_b2", "page1_b1", "page2_b1", "page2_b2")}
+                    facts["knob D at 127, a detent right (the panel's encoder): B1, the list up on it"] = \
+                        m.get(sp) == f"{b1:02x}00" and int(m.get(lo, "0"), 16) == 1
+                    facts["DOWN: B2, UP: B1, UP: 127"] = [m.get(f"{sp}@2"), m.get(f"{sp}@3"), m.get(f"{sp}@4")] == \
+                        [f"{b2:02x}00", f"{b1:02x}00", "7f00"]
+                    facts["each view drawn, B1 and B2 told apart (FLEX BUF 1 holding its take, FLEX EMPTY 2)"] = \
+                        all(sh.values()) and len(set(sh.values())) == 5 and \
+                        m.get(hex(lay["rt_on"])) == "00000001" and m.get(hex(lay["rt_rbytes"])) == "00001000"
+                    good = len(got) == len(pcases) and all(facts.values())
+                    why = f"{facts} got={[hex(g) for g in got]} mem={m}"
+                return good, ("SAMP past 127 to the FLEX buffers B1..B8 by the knob and in the list, as before "
+                              "below; a stale knob as before; the list and both pages name the buffer" if good else why)
+            later("flexpool", "FLEX buffers in every sample machine's SAMP (ColdFire)",
+                  "FLEX buffers in every sample machine's SAMP (ColdFire)", [p_cmd, sorted(EMU_ENV.items())], p_body)
+
 
         # 6n. v0.32: the DSP load meter. smp_dsp_load gives the last half second's peak (the
         # idle packets' unit 18, permille) in percent, rounded, and -1 when none came in the last
@@ -2883,6 +3021,26 @@ def main() -> int:
               "FLEX: a recorder trig's take played by a note, on both processors (coupled)",
               [fx_cmd, sorted(EMU_ENV.items())], fx_body)
 
+        # v0.55 (owner: the FLEX buffers in every sample machine): the take recorded as in flex,
+        # then a ONESHOT track on SAMP B1 plays it (emu_coupled_flex.py --pool, links P0..P3)
+        if "rt_buf_code" in lay:
+            fp_js = work / "flexplay.json"
+            fp_cmd = [a.coupled_py, "-u", "scripts/emu_coupled_flex.py", "--build", a.build, "--stock", a.stock,
+                      "--snapshot", snap, "--pool", "--json", fp_js]
+
+            def fp_body(tdir):
+                rc, out = run("flexplay coupled", fp_cmd, logs, env=EMU_ENV, trace=tdir)
+                last = out.strip().splitlines()[-1] if out.strip() else ""
+                if rc != 0 or not last.startswith("PASS"):
+                    return False, out[-900:]
+                return True, ("on the ColdFire and the DSP together: a take recorded into buffer 1; a ONESHOT "
+                              "track on SAMP B1: its voice sent buffer 1's playing half (SAMP 129), the DSP "
+                              "renders it, the render is the take at the note's pitch; v0.57: MUTE SRC holds "
+                              "its SRC muted only while the FLEX track plays the take (M1..M3)")
+            later("flexplay", "FLEX buffers played by a ONESHOT track, on both processors (coupled)",
+                  "FLEX buffers played by a ONESHOT track, on both processors (coupled)",
+                  [fp_cmd, sorted(EMU_ENV.items())], fp_body)
+
         # v0.52 FLEX MUTE SRC (owner, option B): knob H on REC SETUP turns it ON; a note on the SRC
         # track: its voices' frame LEVEL and FX sends 0 (the DSP's LEVEL too), the other voices' as
         # unmuted, its block after the chain (the TRK source) as loud; OFF gives them back
@@ -2899,7 +3057,8 @@ def main() -> int:
                 return True, ("on the ColdFire and the DSP together: knob H on FLEX REC SETUP turns MUTE ON; the "
                               "SRC track's voices get LEVEL and FX sends 0 in the frame and the DSP, the other "
                               "voices' LEVEL unchanged, its block after the chain (the TRK source) as loud; OFF "
-                              "gives LEVEL and the sends back")
+                              "gives LEVEL and the sends back; v0.57: none of it without a take, or while the "
+                              "FLEX track is not playing (1b..1e)")
             later("mute", "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)",
                   "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)",
                   [mu_cmd, sorted(EMU_ENV.items())], mu_body)
