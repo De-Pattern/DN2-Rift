@@ -742,7 +742,7 @@ class Voice:
                 hpart = F(1.0) - part * F(0.5)
                 for k in range(6):
                     re = mc[k] * md[k, 0] - ms[k] * md[k, 1]
-                    if k < nm:
+                    if k < nm and d != F(0.0):       # a draw only when a grain lands (lean, 2026-11-17)
                         re += d * (F(0.4) + F(0.6) * rng.u()) * pk * wpos[k]
                     im = ms[k] * md[k, 0] + mc[k] * md[k, 1]
                     md[k, 0] = re

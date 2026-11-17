@@ -117,7 +117,7 @@ WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC)) | set(re
                      | {"trig", "nn", "k146", "tmp0", "tmp1", "cc", "lg_e", "lg_t", "off", "tvel", "cnt0", "cnt1",
                         "cnt2", "outp", "bad", "kfl", "lnp", "cb0", "cn0"} | set(KNOB_WORDS)))
 PLA = ("sper", "sbt", "lb", "isk", "slp", "sbow", "sdx", "sdy", "sw", "scnt", "pc")   # the players' L1 rows
-ARRAYS = {"eff": NK, "pl": len(PLA) * 8, "mir": 132, "bc": 4, "bs": 4, "mc": 6, "ms": 6, "wpos": 6}
+ARRAYS = {"mir": 132, "pl": len(PLA) * 8, "bc": 4, "bs": 4, "mc": 6, "ms": 6, "wpos": 6}
 
 
 class Layout:
@@ -138,6 +138,7 @@ class Layout:
         for name, n in ARRAYS.items():
             self.A[name] = at
             at += 4 * n
+        self.A["eff"] = self.A["mir"]          # the knobs (the block's start) share the voice's L1 copy (the samples)
         self.words_end = at
         assert at <= fascia.scratch_end, (at - fascia.scratch_end, "SILT's words must fit in FASCIA's arrays")
         self.scratch, self.scratch_end, self.base5 = fascia.scratch, fascia.scratch_end, fascia.base5
@@ -1495,6 +1496,20 @@ class SG(OP.OG):
             p.st(C["si"], 9)
         self.set(c("fm06"), k(1.0) - c("form") * k(0.6))
         self.set(c("p4"), k(0.4) + c("pr"))
+        # SILT's per-block constants (live computes them each sample: the same values)
+        self.set(c("dg"), c("dens") + k(0.2))
+        self.set(c("c06"), c("cohe") * k(2.0))
+        self.set(c("pp4"), k(0.4) + c("press"))
+        self.set(c("avadd"), (c("cohe") * (k(0.25) + k(0.5) * c("stress"))) * (k(0.5) + k(0.5) * c("rosin")))
+        self.set(c("hpart"), k(1.0) - c("part") * k(0.5))
+        self.set(c("m05"), k(1.0) - k(0.5) * c("morph"))
+        self.set(c("gm"), c("grain") * k(2.0) + c("morph") * k(3.0))
+        self.set(c("sa"), c("scrap") * k(0.12) + c("air") * k(0.06))
+        self.set(c("badd"), k(0.5) * (k(0.3) + c("cohe")))
+        self.set(c("bdec"), k(0.9995) - (k(1.0) - c("cohe")) * k(0.002))
+        self.set(c("hk"), k(0.05) + k(0.4) * c("part"))
+        self.set(c("g3"), k(0.3) + c("grain"))
+        self.set(c("dm"), c("dens") - k(0.25))
         self.set(c("b06"), c("breakup") * k(0.6))
         self.icmp(V("gate"), "NE", 0, lambda: (self.set(c("ta"), k(1.0)), self.set(c("ra"), k(0.01))),
                   lambda: (self.fz(c("ta")), self.set(c("ra"), k(0.0004))))
@@ -1837,43 +1852,165 @@ class SG(OP.OG):
         p.ldi(0, 0, 1)
         p.st(C[dst], 0)
 
-    def s_silt(self) -> None:
-        p, C = self.p, self.L.C
-        V, c = self.V, self.c
-        self.fz(c("d"))
+    def u1r(self, d: int) -> None:
+        """Fd = rng.u() (the first stream), by the leaf; F0 and R12-R15 clobbered"""
+        p = self.p
+        SLEAF["sb1"](self)
+        p.fconst(12, 0.5)
+        p.fop(0, 0, "*", 12)
+        p.fop(d, 0, "+", 12)
 
-        def particle():
-            self.set(c("d"), ((((k(0.3) + k(0.7) * u1()) * (k(1.0) + (c("cohe") * k(2.0)) * V("burst"))) * k(0.012))
-                              * (k(0.4) + c("press"))) * c("sgn_p"))
-            self.set(V("aval"), mn(k(1.5), V("aval") + (c("cohe") * (k(0.25) + k(0.5) * c("stress"))) * (k(0.5) + k(0.5) * c("rosin"))))
-        self.cmp(u1(), "LT", c("prate_fs") * ((ab(V("bow")) * k(6.0) + c("imp") * k(40.0))
-                                              + (V("aval") * k(30.0)) * (c("dens") + k(0.2))), particle)
-        self.set(V("aval"), V("aval") * c("av_dec"))
-        self.set(c("d"), c("d") + c("pv") * k(0.08))
-        self.set(c("exv"), c("d"))
-        self.fz(c("acc"))
-        self.set(c("pk"), k(1.0))
-        self.set(c("hpart"), k(1.0) - c("part") * k(0.5))
+    def s_silt(self) -> None:
+        """SILT's sample (live: mat 1), by hand on registers"""
+        p, C = self.p, self.L.C
+        VO = VOICE
+        A = self.L.A
+        # p_on: u < prate_fs ((|bow| 6 + imp 40) + (aval 30)(dens + 0.2))
+        self.u1r(1)
+        p.ldi(2, VO["bow"], 2)
+        p.iconst(3, 0x7FFFFFFF)
+        p.iop(2, 2, "AND", 3)
+        p.fconst(3, 6.0)
+        p.fop(2, 2, "*", 3)
+        p.ld(3, C["imp"])
+        p.fconst(4, 40.0)
+        p.fop(3, 3, "*", 4)
+        p.fop(2, 2, "+", 3)
+        p.ldi(3, VO["aval"], 2)
+        p.fconst(4, 30.0)
+        p.fop(3, 3, "*", 4)
+        p.ld(4, C["dg"])
+        p.fop(3, 3, "*", 4)
+        p.fop(2, 2, "+", 3)
+        p.ld(3, C["prate_fs"])
+        p.fop(2, 3, "*", 2)
+        p.fconst(5, 0.0)
+        p.st(C["d"], 5)
+
+        def grain_on():
+            self.u1r(1)
+            p.fconst(2, 0.7)
+            p.fop(1, 1, "*", 2)
+            p.fconst(2, 0.3)
+            p.fop(1, 2, "+", 1)
+            p.ld(2, C["c06"])
+            p.ldi(3, VO["burst"], 2)
+            p.fop(2, 2, "*", 3)
+            p.fconst(3, 1.0)
+            p.fop(2, 3, "+", 2)
+            p.fop(1, 1, "*", 2)
+            p.fconst(2, 0.012)
+            p.fop(1, 1, "*", 2)
+            p.ld(2, C["pp4"])
+            p.fop(1, 1, "*", 2)
+            p.ld(2, C["sgn_p"])
+            p.fop(1, 1, "*", 2)
+            p.st(C["d"], 1)
+            p.ldi(2, VO["aval"], 2)
+            p.ld(3, C["avadd"])
+            p.fop(2, 2, "+", 3)
+            p.fconst(3, 1.5)
+            p.fop(2, 2, "MIN", 3)
+            p.sti(VO["aval"], 2, 2)
+        p.if_(1, "LT", 2, grain_on)
+        p.ldi(2, VO["aval"], 2)
+        p.ld(3, C["av_dec"])
+        p.fop(2, 2, "*", 3)
+        p.sti(VO["aval"], 2, 2)
+        p.ld(1, C["d"])
+        p.ld(2, C["pv"])
+        p.fconst(3, 0.08)
+        p.fop(2, 2, "*", 3)
+        p.fop(1, 1, "+", 2)
+        p.st(C["d"], 1)
+        p.st(C["exv"], 1)
+        # the modes
+        p.fconst(1, 0.0)
+        p.st(C["acc"], 1)
+        p.fconst(1, 1.0)
+        p.st(C["pk"], 1)
         for kk in range(6):
-            mc, ms = self.a("mc", kk), self.a("ms", kk)
-            md0, md1 = V("md", 2 * kk), V("md", 2 * kk + 1)
-            self.set(c("re"), mc * md0 - ms * md1)
+            p.ld(2, A["mc"] + 4 * kk)
+            p.ld(3, A["ms"] + 4 * kk)
+            p.ldi(4, VO["md"] + 2 * kk, 2)
+            p.ldi(5, VO["md"] + 2 * kk + 1, 2)
+            p.fop(6, 2, "*", 4)
+            p.fop(7, 3, "*", 5)
+            p.fop(6, 6, "-", 7)                 # re
+            p.fop(7, 3, "*", 4)
+            p.fop(8, 2, "*", 5)
+            p.fop(7, 7, "+", 8)                 # im
+            p.sti(VO["md"] + 2 * kk + 1, 2, 7)
+            p.st(C["re"], 6)
 
             def exc(kk=kk):
-                self.set(c("re"), c("re") + ((c("d") * (k(0.4) + k(0.6) * u1())) * c("pk")) * self.a("wpos", kk))
+                self.u1r(1)
+                p.fconst(2, 0.6)
+                p.fop(1, 1, "*", 2)
+                p.fconst(2, 0.4)
+                p.fop(1, 2, "+", 1)
+                p.ld(2, C["d"])
+                p.fop(1, 2, "*", 1)
+                p.ld(2, C["pk"])
+                p.fop(1, 1, "*", 2)
+                p.ld(2, A["wpos"] + 4 * kk)
+                p.fop(1, 1, "*", 2)
+                p.ld(2, C["re"])
+                p.fop(2, 2, "+", 1)
+                p.st(C["re"], 2)
+
+            def gate_d():
+                p.ld(1, C["d"])
+                p.fconst(2, 0.0)
+                p.if_(1, "NE", 2, exc)
             p.ld(0, C["nm"])
             p.iconst(1, kk)
-            p.if_(1, "LT", 0, exc, kind="i")
-            self.set(c("im"), ms * md0 + mc * md1)
-            self.set(md0, c("re"))
-            self.set(md1, c("im"))
-            self.set(c("acc"), c("acc") + c("im"))
-            self.set(c("pk"), c("pk") * c("hpart"))
-        self.set(c("y"), ((c("acc") * k(0.5)) * (k(1.0) - k(0.5) * c("morph")))
-                 + (c("nz") * c("d")) * (c("grain") * k(2.0) + c("morph") * k(3.0)))
-        self.set(V("hp"), V("hp") + (c("nz") - V("hp")) * k(0.3))
-        self.set(c("y"), c("y") + ((V("hp") * ab(V("bow"))) * (c("scrap") * k(0.12) + c("air") * k(0.06))
-                                   + ((c("nz") * V("aval")) * c("air")) * k(0.01)))
+            p.if_(1, "LT", 0, gate_d, kind="i")
+            p.ld(6, C["re"])
+            p.sti(VO["md"] + 2 * kk, 2, 6)
+            p.ldi(7, VO["md"] + 2 * kk + 1, 2)
+            p.ld(8, C["acc"])
+            p.fop(8, 8, "+", 7)
+            p.st(C["acc"], 8)
+            p.ld(8, C["pk"])
+            p.ld(9, C["hpart"])
+            p.fop(8, 8, "*", 9)
+            p.st(C["pk"], 8)
+        # y = (acc 0.5)(1 - 0.5 morph) + (nz d)(grain 2 + morph 3)
+        p.ld(1, C["acc"])
+        p.fconst(2, 0.5)
+        p.fop(1, 1, "*", 2)
+        p.ld(2, C["m05"])
+        p.fop(1, 1, "*", 2)
+        p.ld(2, C["nz"])
+        p.ld(3, C["d"])
+        p.fop(2, 2, "*", 3)
+        p.ld(3, C["gm"])
+        p.fop(2, 2, "*", 3)
+        p.fop(1, 1, "+", 2)
+        # hp, the grit and the dust's air
+        p.ld(2, C["nz"])
+        p.ldi(3, VO["hp"], 2)
+        p.fop(4, 2, "-", 3)
+        p.fconst(5, 0.3)
+        p.fop(4, 4, "*", 5)
+        p.fop(3, 3, "+", 4)
+        p.sti(VO["hp"], 2, 3)
+        p.ldi(4, VO["bow"], 2)
+        p.iconst(5, 0x7FFFFFFF)
+        p.iop(4, 4, "AND", 5)
+        p.fop(3, 3, "*", 4)
+        p.ld(4, C["sa"])
+        p.fop(3, 3, "*", 4)
+        p.ldi(4, VO["aval"], 2)
+        p.fop(4, 2, "*", 4)
+        p.ld(5, C["air"])
+        p.fop(4, 4, "*", 5)
+        p.fconst(5, 0.01)
+        p.fop(4, 4, "*", 5)
+        p.fop(3, 3, "+", 4)
+        p.fop(1, 1, "+", 3)
+        p.st(C["y"], 1)
         self.bowf()
 
     def s_fluid(self) -> None:
@@ -2255,24 +2392,59 @@ class SG(OP.OG):
         V, c = self.V, self.c
         mode = V("L4", 2)
 
-        def swarm():
-            def gather():
-                self.set(V("burst"), mn(k(1.5), V("burst") + k(0.5) * (k(0.3) + c("cohe"))))
-            self.cmp(u1(), "LT", c("prate_fs") * (ab(V("bow")) * k(8.0) + k(0.2)), gather)
-            self.set(V("burst"), V("burst") * (k(0.9995) - (k(1.0) - c("cohe")) * k(0.002)))
-            self.set(V("hp"), V("hp") + (c("nz") - V("hp")) * (k(0.05) + k(0.4) * c("part")))
-            self.set(c("y"), c("y") + ((V("hp") * V("burst")) * k(0.12)) * (k(0.3) + c("grain")))
-        self.icmp(mode, "EQ", 3, swarm)
+        VO0 = VOICE
 
-        def cloud():
+        def cloud_of(stream: str, bw: str, hw: str, add: float, dm: bool):
+            """SWARM's cloud (stream 1, burst, hp, 0.2) or the ensemble's (stream 2, cl_b, cl_hp, 0.1, x (dens - 0.25)/0.75)"""
+            SLEAF["sb1" if stream == "1" else "sb2"](self)
+            p.fconst(12, 0.5)
+            p.fop(0, 0, "*", 12)
+            p.fop(1, 0, "+", 12)                # u
+            p.ldi(2, VO0["bow"], 2)
+            p.iconst(3, 0x7FFFFFFF)
+            p.iop(2, 2, "AND", 3)
+            p.fconst(3, 8.0)
+            p.fop(2, 2, "*", 3)
+            p.fconst(3, add)
+            p.fop(2, 2, "+", 3)
+            p.ld(3, C["prate_fs"])
+            p.fop(2, 3, "*", 2)
+
             def gather():
-                self.set(V("cl_b"), mn(k(1.5), V("cl_b") + k(0.5) * (k(0.3) + c("cohe"))))
-            self.cmp(u2(), "LT", c("prate_fs") * (ab(V("bow")) * k(8.0) + k(0.1)), gather)
-            self.set(V("cl_b"), V("cl_b") * (k(0.9995) - (k(1.0) - c("cohe")) * k(0.002)))
-            self.set(V("cl_hp"), V("cl_hp") + (c("nz") - V("cl_hp")) * (k(0.05) + k(0.4) * c("part")))
-            self.set(c("y"), c("y") + ((((V("cl_hp") * V("cl_b")) * k(0.12)) * (k(0.3) + c("grain"))) * (c("dens") - k(0.25)))
-                     * k(1.0 / 0.75))
-        self.icmp(c("ens"), "NE", 0, lambda: self.cmp(c("dens"), "GT", k(0.25), cloud))
+                p.ldi(3, VO0[bw], 2)
+                p.ld(4, C["badd"])
+                p.fop(3, 3, "+", 4)
+                p.fconst(4, 1.5)
+                p.fop(3, 3, "MIN", 4)
+                p.sti(VO0[bw], 2, 3)
+            p.if_(1, "LT", 2, gather)
+            p.ldi(3, VO0[bw], 2)
+            p.ld(4, C["bdec"])
+            p.fop(3, 3, "*", 4)
+            p.sti(VO0[bw], 2, 3)
+            p.ld(1, C["nz"])
+            p.ldi(4, VO0[hw], 2)
+            p.fop(5, 1, "-", 4)
+            p.ld(6, C["hk"])
+            p.fop(5, 5, "*", 6)
+            p.fop(4, 4, "+", 5)
+            p.sti(VO0[hw], 2, 4)
+            p.fop(4, 4, "*", 3)
+            p.fconst(5, 0.12)
+            p.fop(4, 4, "*", 5)
+            p.ld(5, C["g3"])
+            p.fop(4, 4, "*", 5)
+            if dm:
+                p.ld(5, C["dm"])
+                p.fop(4, 4, "*", 5)
+                p.fconst(5, 1.0 / 0.75)
+                p.fop(4, 4, "*", 5)
+            p.ld(1, C["y"])
+            p.fop(1, 1, "+", 4)
+            p.st(C["y"], 1)
+        self.icmp(mode, "EQ", 3, lambda: cloud_of("1", "burst", "hp", 0.2, False))
+        self.icmp(c("ens"), "NE", 0, lambda: self.cmp(c("dens"), "GT", k(0.25),
+                                                      lambda: cloud_of("2", "cl_b", "cl_hp", 0.1, True)))
         # the body, FORM, the follower, the AMP, the soft clip: by hand on registers
         A, VO = self.L.A, VOICE
         p.ld(0, C["y"])                         # F0 = y
