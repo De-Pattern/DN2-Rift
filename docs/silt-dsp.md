@@ -121,7 +121,8 @@ Next: specialised player loops (no per-player flags), knob reads for page 4 only
 smaller mirror, slow coefficients on alternate blocks, SKIN and FLUID by hand. After that the
 runner's real cost step sets the cap.
 
-Still to do: the ColdFire (type 20 in MACHINE SEL, four pages, formatters, defaults,
-p-locks, TRK + CLEAR), the runner's `silt` part, cost and stress parts with the cap and a
+ColdFire done (8c5d551): type 20 in MACHINE SEL after ORGAN, four pages, formatters, slides, the
+descriptor (TRK + CLEAR and MACHINE SEL's defaults go through it). Still to do: the gate's ColdFire
+`silt` step (as `organ`'s), the runner's `silt` part, cost and stress parts with the cap and a
 negative control, the per-material output trims (by loudness), and the LOOP tempo (it
 assumes 120 BPM until the ColdFire sends the tempo).
