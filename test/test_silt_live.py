@@ -87,3 +87,21 @@ def test_the_clear_test_sees_garbage():
     v.note(P, 48, 0.9)
     ref.note(P, 48, 0.9)
     assert any((v.block(P) != ref.block(P)).any() for _ in range(40))
+
+
+def test_a_released_voice_rests_and_a_note_wakes_it():
+    P = L.panel(MAT="FIBER")
+    v = L.Voice()
+    assert v.rest
+    v.note(P, 48, 0.9)
+    for _ in range(20):
+        v.block(P)
+    v.block(P, off=True)
+    n = 0
+    while not v.rest and n < 2000:
+        v.block(P)
+        n += 1
+    assert v.rest and 500 < n < 1000          # about half a second of release
+    assert (v.block(P) == 0).all()
+    v.note(P, 55, 0.9)
+    assert any((v.block(P) != 0).any() for _ in range(10))

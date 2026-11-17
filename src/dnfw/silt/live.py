@@ -52,6 +52,7 @@ NSEC = 8            # filament slots
 NSEC_DEEP = 6       # QUAL DEEP's filaments (docs/silt-dsp.md, guardrail 2)
 NSL = 1024          # a filament's loop
 LINE_WORDS = 2 * NBR + NSEC * NSL      # a slot's lines in DDR: br, nk, then the filaments (48 KB)
+REST_AMP = F(1e-4)                     # released and this quiet (-80 dB): the voice rests (the guardrails)
 CLEAR_WORDS = 512                      # cleared a block when the slot becomes SILT: 24 blocks
 assert LINE_WORDS % CLEAR_WORDS == 0
 QN_MASS = (2, 4, NSEC_DEEP)
@@ -200,6 +201,7 @@ class Voice:
         self.gate = 0
         self.L4 = [0] * 8
         self.clear_at = LINE_WORDS             # the lines' clear: done (a fresh Voice's are zeros)
+        self.rest = True                       # silent and costing nothing until a note
         self.waiting = None                    # a note that came during the clear
 
     def lines(self):
@@ -226,7 +228,7 @@ class Voice:
             s.waiting = (list(P), note, vel)
             return
         s.f0 = F(440.0) * exp2((F(note) - F(69.0)) * F(1.0 / 12.0))
-        s.vel = F(vel); s.gate = 1
+        s.vel = F(vel); s.gate = 1; s.rest = False
         s.t_note = F(0.0); s.strike = F(1.0); s.burst = F(0.0); s.vib_env = F(0.0)
         s.gl_amt = F(0.0)
         s.L4 = [int(P[24 + c]) for c in range(8)]
@@ -279,6 +281,11 @@ class Voice:
             w_ = s.waiting
             s.waiting = None
             s.note(*w_)
+        if s.rest:
+            if out is None:
+                out = np.zeros(SUB, F)
+            out[:] = F(0.0)
+            return out
         rng, rng2 = s.rng, s.rng2
         P = [F(v) for v in P]
         L4 = s.L4
@@ -831,6 +838,8 @@ class Voice:
             s.env_e += (ee - s.env_e) * (F(0.02) if ee > s.env_e else F(0.0015))
             s.amp += ((F(1.0) if gate else F(0.0)) - s.amp) * (F(0.01) if gate else F(0.0004))
             out[i] = tanh_r(y * F(0.6)) * s.amp
+        if not gate and s.amp < REST_AMP:     # released and under -80 dB: the voice rests
+            s.rest = True
         return out
 
 
