@@ -49,12 +49,14 @@ per line: the read can be one burst per line per block into an L1 scratch, then 
   0x81000000 for the same reason). The M5 gate's "every span we add reads back, after init"
   covers it. Every slot can be SILT, so no bank allocation: the cap is a count.
 - **Garbage at power-on:** 768 KB of zeros cannot ride in the DSP image (the upload buffer's
-  1 MiB, unpacked 947 KB used), and clearing a voice's lines at a note costs up to 12,288
-  DDR writes in one block. Instead each line carries a **written count** that saturates at
-  its length: a read further back than the count returns 0. It is reset only when the slot
-  becomes SILT (the walk's type change) or the output guard wipes the voice, never at a
-  note, so a retrigger rings on through the old vibration exactly as the model's does. One
-  compare a read.
+  1 MiB, unpacked 947 KB used), and clearing a voice's 12,288 words in one block would cost
+  about 120,000 cycles. So the slot **clears its lines over 24 blocks** (512 words a block,
+  about 5,000 cycles) when it becomes SILT (the walk's type change, which a project load or a
+  power-on with SILT on the track also is) and after the output guard wipes it. A note that
+  arrives meanwhile waits for the clear (at most 16 ms, only the first time). Every note
+  after that starts on the lines as the last one left them, exactly as the model's
+  retrigger rings on through the old vibration. (A written-count scheme was considered: it
+  loses SKIN's strike poke into lines not yet written, so the model's first hit would differ.)
 
 ## Guardrails (the owner's request for every engine, applied to SILT from its first build)
 
