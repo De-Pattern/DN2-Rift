@@ -501,6 +501,10 @@ static int shows(int i)
     return smp_values_held() || (i >= 0 && smp_knob_code == i + 1
                                  && *(volatile u32 *)0x4058E8D4u - smp_knob_at < VALUE_SHOW);
 }
+/* RIFT v0.7 (owner, 2026-11-17: "the p locked parameters [must] display values when the knob
+ * is turned while holding down a p locked trig, on all custom machines"): the same rule for
+ * FASCIA's, ORGAN's and SILT's pages (fsc_page_draw) and the generic grid (page.c: LIGATURE) */
+int smp_value_shows(int i) { return shows(i); }
 
 /* one cell: its widget at (X, Y) and, LABELLED, its label under it */
 /* v0.55: a control's value text as its record writes it; SAMP on a FLEX buffer reads B1..B8 */
@@ -649,9 +653,9 @@ void fsc_page_draw(void *view, void *c, int page, int kind)
             LABEL(c, cx, y + 6, "%.4s", M->choice_box[M->choice_at[j] + o]);
         } else
             w_knob_at(c, x, y, v, top, 0);
-        if (smp_values_held() && n)             /* SYN held: a choice's short name (the header */
-            LABEL(c, x + 12, y - 7, "%.4s", M->choice_box[M->choice_at[j] + o]);   /* has it whole) */
-        else if (smp_values_held()) {           /* SYN held: the value (O14) */
+        if (shows(i) && n)                      /* SYN held, or just turned (a lock with a trig held): */
+            LABEL(c, x + 12, y - 7, "%.4s", M->choice_box[M->choice_at[j] + o]);   /* a choice's short name */
+        else if (shows(i)) {                    /* the value (O14; v0.48's rule, RIFT v0.7) */
             char vb[32];
             u8 flag;
             vb[0] = 0;

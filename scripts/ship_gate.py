@@ -2150,7 +2150,10 @@ def main() -> int:
                    f"poke:{tb0 + 258 * 78:#x}:{hard:02x}00{lk_hard:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 258 * 79:#x}:{dust:02x}00{lk_dust:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 20640 + hard:#x}:4e", f"poke:{tb0 + 20640 + dust:#x}:4f",
-                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0", "release:25", "wait:10",
+                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0",
+                   # RIFT v0.7 (owner, 2026-11-17): with the locked trig held, knob C turned shows
+                   # its value in its cell, as stock does (smp_page.c smp_value_shows)
+                   "spin:2:1", "wait:10", "png:k0", f"mem:{lay['smp_knob_code']:#x}:4", "release:25", "wait:10",
                    "tap:19", "wait:10", "png:r2", "press:2", "wait:30", "png:v0", "release:2", "wait:10"]
             named = [FSg.SLOTS[c][0] for c in FSg.CONTROLS]
             gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named + list(FSg.UNUSED_RECORDS)]
@@ -2185,7 +2188,8 @@ def main() -> int:
                         x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
                         y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
                         return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
-                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0")]
+                    kc = f"{lay['smp_knob_code']:#x}"
+                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
                     playing = int(m.get("0x42c5a9a0", "0") or "0", 16)
                     want = [FSg.default_words()[c] for c in FSg.CONTROLS]
@@ -2218,6 +2222,10 @@ def main() -> int:
                         all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
                         "[TRIG 1] held: HARD's and DUST's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
+                            int(m.get(kc, "0") or "0", 16) == 3
+                            and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
+                            and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
                         "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
                         "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
                         "the LFO list names each control (short)": shorts[:len(named)] == list(FSg.CONTROLS),
@@ -2271,7 +2279,10 @@ def main() -> int:
                    f"poke:{tb0 + 258 * 78:#x}:{hard:02x}00{lk_hard:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 258 * 79:#x}:{dust:02x}00{lk_dust:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 20640 + hard:#x}:4e", f"poke:{tb0 + 20640 + dust:#x}:4f",
-                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0", "release:25", "wait:10",
+                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0",
+                   # RIFT v0.7 (owner, 2026-11-17): with the locked trig held, knob C turned shows
+                   # its value in its cell, as stock does (smp_page.c smp_value_shows)
+                   "spin:2:1", "wait:10", "png:k0", f"mem:{lay['smp_knob_code']:#x}:4", "release:25", "wait:10",
                    "tap:19", "wait:10", "png:r2", "press:2", "wait:30", "png:v0", "release:2", "wait:10"]
             named = [FSg.SLOTS[c][0] for c in FSg.CONTROLS]
             gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named + list(FSg.UNUSED_RECORDS)]
@@ -2317,7 +2328,8 @@ def main() -> int:
                         x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
                         y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
                         return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
-                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0")]
+                    kc = f"{lay['smp_knob_code']:#x}"
+                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
                     playing = int(m.get("0x42c5a9a0", "0") or "0", 16)
                     want = [FSg.default_words()[c] for c in FSg.CONTROLS]
@@ -2355,6 +2367,10 @@ def main() -> int:
                         all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
                         "[TRIG 1] held: 16FT's and 4FT's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
+                            int(m.get(kc, "0") or "0", 16) == 3
+                            and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
+                            and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
                         "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
                         "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
                         "the LFO list names each control (short)": shorts[:len(named)] == [FSg.LABELS[c] for c in FSg.CONTROLS],
@@ -2411,7 +2427,10 @@ def main() -> int:
                    f"poke:{tb0 + 258 * 78:#x}:{hard:02x}00{lk_hard:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 258 * 79:#x}:{dust:02x}00{lk_dust:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 20640 + hard:#x}:4e", f"poke:{tb0 + 20640 + dust:#x}:4f",
-                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0", "release:25", "wait:10",
+                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0",
+                   # RIFT v0.7 (owner, 2026-11-17): with the locked trig held, knob C turned shows
+                   # its value in its cell, as stock does (smp_page.c smp_value_shows)
+                   "spin:2:1", "wait:10", "png:k0", f"mem:{lay['smp_knob_code']:#x}:4", "release:25", "wait:10",
                    "tap:19", "wait:10", "png:r2", "press:2", "wait:30", "png:v0", "release:2", "wait:10"]
             named = [FSg.SLOTS[c][0] for c in FSg.CONTROLS]
             gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named + list(FSg.UNUSED_RECORDS)]
@@ -2446,7 +2465,8 @@ def main() -> int:
                         x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
                         y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
                         return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
-                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0")]
+                    kc = f"{lay['smp_knob_code']:#x}"
+                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
                     playing = int(m.get("0x42c5a9a0", "0") or "0", 16)
                     want = [FSg.default_words()[c] for c in FSg.CONTROLS]
@@ -2479,6 +2499,10 @@ def main() -> int:
                         all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
                         "[TRIG 1] held: TENS's and COHE's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
+                            int(m.get(kc, "0") or "0", 16) == 3
+                            and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
+                            and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
                         "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
                         "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
                         "the LFO list names each control (short)": shorts[:len(named)] == [FSg.LABELS[c] for c in FSg.CONTROLS],
@@ -2531,7 +2555,10 @@ def main() -> int:
                    f"poke:{tb0 + 258 * 78:#x}:{hard:02x}00{lk_hard:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 258 * 79:#x}:{dust:02x}00{lk_dust:04x}" + "ffff" * 127,
                    f"poke:{tb0 + 20640 + hard:#x}:4e", f"poke:{tb0 + 20640 + dust:#x}:4f",
-                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0", "release:25", "wait:10",
+                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0",
+                   # RIFT v0.7 (owner, 2026-11-17): with the locked trig held, knob C turned shows
+                   # its value in its cell, as stock does (smp_page.c smp_value_shows)
+                   "spin:2:1", "wait:10", "png:k0", f"mem:{lay['smp_knob_code']:#x}:4", "release:25", "wait:10",
                    "tap:19", "wait:10", "png:r2", "press:2", "wait:30", "png:v0", "release:2", "wait:10"]
             named = [FSg.SLOTS[c][0] for c in FSg.CONTROLS]
             gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named + list(FSg.UNUSED_RECORDS)]
@@ -2566,7 +2593,8 @@ def main() -> int:
                         x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
                         y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
                         return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
-                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0")]
+                    kc = f"{lay['smp_knob_code']:#x}"
+                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
                     playing = int(m.get("0x42c5a9a0", "0") or "0", 16)
                     want = [FSg.default_words()[c] for c in FSg.CONTROLS]
@@ -2599,6 +2627,10 @@ def main() -> int:
                         all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
                         "[TRIG 1] held: TUNE's and LFO1's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
+                            int(m.get(kc, "0") or "0", 16) == 3
+                            and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
+                            and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
                         "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
                         "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
                         "the LFO list names each control (short)": shorts[:len(named)] == [FSg.LABELS[c] for c in FSg.CONTROLS],

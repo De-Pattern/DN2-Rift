@@ -582,9 +582,9 @@ void wr_page_draw(void *view, void *canvas)
             label = NAME_SHORT(id);             /* PERC, samples: the name wr_names gave the record */
         if (smp && id)
             label = smp_text(view, id, kind, label);
-        extern int smp_values_held(void);
+        extern int smp_value_shows(int i);
         char vb[32];
-        if (smp_values_held() && id) {             /* v0.35: SYN held: the value (O14) */
+        if (smp_value_shows(i) && id) {            /* v0.35: SYN held (RIFT v0.7: or just turned, a lock with a trig held): the value */
             u8 fl;
             vb[0] = 0;
             ((void (*)(int, char *))(*(void **)(0x401F7F94u + 60u * id + 0x34u)))(GET_VALUE(view, id, &fl), vb);
