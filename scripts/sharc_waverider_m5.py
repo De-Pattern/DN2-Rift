@@ -3915,15 +3915,15 @@ def step_ligature(init, sound, machines) -> dict:
 
 def step_lstress(init, sound, machines) -> dict:
     """RIFT: sixteen LIGATURE voices under the guard, as sstress (the clock made to move, K = 2): a new
-    note on the next track every block on a heavy patch (DRONE: nine blocks, a band-pass its cutoff moved
-    by a cycle). Every block must end, our voices done by 0.8
+    note on the next track every block on a heavy patch that speaks at once (SYNC LD: seven blocks, a
+    low-pass its cutoff moved by an envelope, so retuned every fourth sample). Every block must end, our voices done by 0.8
     of the frame, voices left out (and counted) when time is short, the newest note heard in most
     blocks, every buffer finite."""
     from dnfw.perc import guard as G
     from dnfw.ligature import bench as LB        # noqa: PLC0415
     K, P = 2, 666_667
     sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
-    kn = LB.panel_knobs(PATCH="DRONE")
+    kn = LB.panel_knobs(PATCH="SYNC LD")
     b_now = {"b": 0}
 
     def clock(r):
