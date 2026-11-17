@@ -2145,6 +2145,17 @@ def main() -> int:
             gs += ["wait:4", "press:16", "wait:4", "press:17", "wait:4", "tap:20", "wait:10", "release:17",
                    "wait:4", "release:16", "wait:30", "png:cleared"]
             gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in FSg.CONTROLS]
+            # RIFT v0.5: a v0.4 ORGAN sound (stock's record defaults on pages 3 and 4's records,
+            # dnfw.organ.machines.LEGACY_WORDS): the first write to one of their controls (the
+            # setter's smp_quant, PERC turned one step up from its 64) puts v0.5's defaults on all
+            # 16 and PERC one step above its own default. The negative control: the same with one
+            # word off the legacy set (PVEL at 1): nothing else written, PERC as turned
+            p34 = FSg.CONTROLS[FSg.LEGACY_FIRST:]
+            q_perc = (FSg.SLOTS["PERC"][1], FSg.SLOTS["PERC"][0])
+            for words34 in (FSg.LEGACY_WORDS, FSg.LEGACY_WORDS[:-1] + (0x0100,)):
+                gs += [f"poke:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:{w:04x}" for c, w in zip(p34, words34)]
+                gs += ["wait:2", f"call:{lay['smp_quant']:#x}:sound0:{q_perc[0]}:{65 << 8:#x}:{q_perc[1]}", "wait:2"]
+                gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in p34]
             gjs, gsf = work / "organ.json", work / "organ.steps"
             gsf.write_text(",".join(gs))
             g_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
@@ -2188,7 +2199,12 @@ def main() -> int:
                     shorts = [cstr(x) for x in short_p]
                     longs = [cstr(x) for x in long_p]
                     masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
-                    cleared = [int(m[k], 16) for k in keys[-len(FSg.CONTROLS):]]   # RIFT v0.4: after TRK + CLEAR
+                    n34 = len(FSg.CONTROLS) - FSg.LEGACY_FIRST
+                    cleared = [int(m[k], 16) for k in keys[-len(FSg.CONTROLS) - 2 * n34:-2 * n34]]   # RIFT v0.4: after TRK + CLEAR
+                    mig = [int(m[k], 16) for k in keys[-2 * n34:-n34]]                    # v0.5: a v0.4 sound, turned
+                    neg = [int(m[k], 16) for k in keys[-n34:]]                            # ... and one not v0.4's
+                    qd0 = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["smp_quant"]]
+                    dw34 = [FSg.default_words()[c] for c in FSg.CONTROLS[FSg.LEGACY_FIRST:]]
                     facts = {
                         "MACHINE SEL's commit to ORGAN: track 1 is ORGAN": types[0] == FSg.TYPE,
                         f"its {len(FSg.CONTROLS)} controls at its model's DEFAULTS": words == want,
@@ -2209,11 +2225,15 @@ def main() -> int:
                         "... the unused records left out": all(x == 0 for x in masks[len(named):]),
                         "TRK + CLEAR: every control back at its machine's defaults (RIFT v0.4), not stock's":
                             cleared == want,
+                        "v0.5: a v0.4 sound's first turn on page 3 puts v0.5's defaults on pages 3 and 4, "
+                        "the turned PERC one step above its own": mig == dw34 and qd0[:1] == [(dw34[0] >> 8) + 1 << 8],
+                        "... and a sound that is not v0.4's is left as it is (PERC as turned)":
+                            neg == list(FSg.LEGACY_WORDS[:-1]) + [0x0100] and qd0[1:2] == [65 << 8],
                         "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),
                     }
                     good = all(facts.values())
                     why = (json.dumps({k: v for k, v in facts.items() if not v}) + f" types={types[:2]} words="
-                           f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
+                           f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} mig={[hex(w) for w in mig]} neg={[hex(w) for w in neg]} qd0={qd0} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
                 return good, ("ORGAN (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
                               "v0.14's: the real list is not driven here); its "
                               f"{npg} pages drawn, each its own (labels, knobs, STOP's box); p-locked 16FT and 4FT lit "

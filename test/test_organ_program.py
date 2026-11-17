@@ -100,3 +100,67 @@ def test_a_long_note_past_the_chiff_floor():
     for _ in range(3600):
         v.block(B.knobs_seen(B.knobs_words({})), False, 60.0)
     assert v.org.chiff == 0.0
+
+
+# -- v0.5: pages 3 and 4, the velocity, CELESTE's fade, the leaves' floor ------------------------
+
+def test_a_long_tremolo_bit_exact():
+    """v0.5: sin_turns past 0.75 (o_sint's floor took 0 there in v0.4: 124 blocks in, the DSP left
+    live by up to 1e-4)"""
+    got, want, first = B.compare(lambda k: {"TREM": 127, "TRATE": 127}, {0: 60.0}, 400)
+    assert first is None, first
+
+
+@pytest.mark.parametrize("seed", [41, 43, 47])
+def test_pages_3_and_4_random_bit_exact(seed):
+    rng = random.Random(seed)
+    blocks = 140
+    base = {c: rng.randrange(128) for c in LV.CONTROLS}
+    base["STOP"] = rng.randrange(5)
+    moves, k = {}, 0
+    while k < blocks:
+        k += rng.randrange(6, 30)
+        moves[k] = {c: rng.randrange(128) for c in rng.sample(LV.CONTROLS[1:], rng.randrange(1, 5))}
+
+    def panel(b):
+        q = dict(base)
+        for at in sorted(moves):
+            if at <= b:
+                q.update(moves[at])
+        return q
+    events = {0: float(rng.randrange(30, 90))}
+    vels = {0: rng.randrange(1, 128)}
+    for _ in range(4):
+        at = rng.randrange(5, blocks)
+        events[at] = rng.randrange(24, 100) + rng.random()
+        vels[at] = rng.randrange(1, 128)
+    got, want, first = B.compare(panel, events, blocks, vels=vels)
+    assert first is None, first
+
+
+@pytest.mark.parametrize("over", [{"PERC": 110, "PDEC": 50}, {"PERC": 100, "PHRM": 127}, {"KCLK": 120},
+                                  {"MIXT": 127, "STOP": 4}, {"VELO": 127}, {"ROTR": 127, "RSPD": 127},
+                                  {"BRTH": 127, "TURB": 127}, {"BREK": 127, "BDEP": 127, "PRES": 127},
+                                  {"BLOM": 127, "EDGE": 127}, {"PVEL": 127, "BREK": 90}])
+def test_each_new_control_bit_exact_and_sounding(over):
+    got, want, first = B.compare(lambda k: over, {0: 55.0, 30: 70.0}, 60, vels={0: 40, 30: 120})
+    assert first is None, first
+    assert np.max(np.abs(want)) > 0.001
+
+
+def test_a_v04_sound_is_v04s_organ():
+    """stock's record defaults on pages 3 and 4 (live.LEGACY): the DSP plays the organ as with both
+    pages at 0, bit for bit"""
+    leg = dict(zip(LV.CONTROLS[16:], LV.LEGACY))
+    a, _w, first = B.compare(lambda k: leg, {0: 60.0}, 40)
+    assert first is None
+    b, _w2, first2 = B.compare(lambda k: {}, {0: 60.0}, 40)
+    assert first2 is None and np.array_equal(a.view(np.uint32), b.view(np.uint32))
+
+
+def test_celeste_fades_in_and_out():
+    """the CELESTE rank fades over 8 blocks, no step (a tester: a click at CELST 0 <-> 2)"""
+    def panel(k):
+        return {"CELESTE": 0 if k < 10 or k >= 30 else 40}
+    got, want, first = B.compare(panel, {0: 60.0}, 50)
+    assert first is None, first

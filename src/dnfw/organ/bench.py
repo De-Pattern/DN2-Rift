@@ -44,11 +44,12 @@ def knobs_seen(words: list[int]) -> list[int]:
 
 
 class Frame(FB.Frame):
-    def organ(self, t: int, words: list[int], note: float, trig: bool):
+    def organ(self, t: int, words: list[int], note: float, trig: bool, vel: int = 127):
         for w, ride in zip(words, LV.RIDES):
             self.half(168 + 2 * FM.SLOTS[ride][1] + 146 * t, w)
         self.half(148 + 2 * t, P.TYPE)
         self.half(P.NOTE_OFFSET + 2 * t, FB.note_word(note))
+        self.half(FB.P.VEL_OFFSET + 2 * t, (int(vel) & 0xFF) << 8)     # v0.5: the trig's velocity
         tw = self.w.get(FB.TRIG, 0)
         if trig:
             tw |= 1 << (16 + t)
@@ -91,7 +92,7 @@ class Dsp:
         return out
 
 
-def compare(panel_of, events: dict, blocks: int, slot: int = 0, dsp: Dsp | None = None):
+def compare(panel_of, events: dict, blocks: int, slot: int = 0, dsp: Dsp | None = None, vels: dict | None = None):
     """slot SLOT for BLOCKS blocks; EVENTS: block -> note (a trig); PANEL_OF(block) -> panel.
     -> (dsp output, live output, first mismatching block or None)"""
     dsp = dsp or Dsp()
@@ -101,10 +102,11 @@ def compare(panel_of, events: dict, blocks: int, slot: int = 0, dsp: Dsp | None 
         words = knobs_words(panel_of(k))
         trig = k in events
         note = events.get(k, 60.0)
+        vel = (vels or {}).get(k, 127)
         f = Frame()
-        f.organ(slot, words, note, trig)
+        f.organ(slot, words, note, trig, vel)
         got = dsp.block(f, [slot])[slot]
-        want = v.block(knobs_seen(words), trig, FB.note_seen(note))
+        want = v.block(knobs_seen(words), trig, FB.note_seen(note), vel)
         a.append(got)
         b.append(want)
         if first is None and not np.array_equal(got.view(np.uint32), want.view(np.uint32)):

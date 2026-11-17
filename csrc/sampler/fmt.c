@@ -298,8 +298,37 @@ static int func_kind(u8 *s, int slot, u32 id)
 
 /* from the setter's write (hooks.S, smp_quant_hook): S = the sound, SLOT, VALUE the
  * value about to be written (coarse << 8 | fine), ID its record -> the value to write */
+/* RIFT v0.5: a v0.4 ORGAN sound holds stock's record defaults on the 16 records pages 3 and 4
+ * ride (org_legacy; the DSP reads that set as both pages at 0, so the organ sounds as it did). The
+ * first write to one of their controls puts v0.5's defaults on all 16 (the sound's own words, where
+ * the frame and the pages read them) and moves the written control from its default as the knob
+ * moved. Not while fsc_write_defaults writes (fsc_q_off). */
+static int org_is_legacy(u8 *s)
+{
+    for (int k = 0; k < ORG_N - ORG_LEGACY_FIRST; k++)
+        if (*(volatile u16 *)(s + SOUND_VALUES + 2 * org_slot[ORG_LEGACY_FIRST + k]) != org_legacy[k])
+            return 0;
+    return 1;
+}
+
+static int org_unlegacy(u8 *s, int slot, int value)
+{
+    int j = fsc_j(&wr_mach_org, slot);
+    if (j < ORG_LEGACY_FIRST || !org_is_legacy(s))
+        return value;
+    int old = *(volatile u16 *)(s + SOUND_VALUES + 2 * slot);
+    for (int k = ORG_LEGACY_FIRST; k < ORG_N; k++)
+        *(volatile u16 *)(s + SOUND_VALUES + 2 * org_slot[k]) = org_default[k];
+    int nv = (org_default[j] >> 8) + (((value >> 8) & 0xFF) - (old >> 8));
+    if (nv < org_lo[j]) nv = org_lo[j];
+    if (nv > org_lo[j] + org_top[j]) nv = org_lo[j] + org_top[j];
+    return nv << 8;
+}
+
 int smp_quant(u8 *s, int slot, int value, u32 id)
 {
+    if (!fsc_q_off && (signed char)s[SOUND_TYPE] == ORG_TYPE)
+        value = org_unlegacy(s, slot, value);
     int fk = func_kind(s, slot, id);
     int old0 = *(volatile u16 *)(s + SOUND_VALUES + 2 * slot);
     if (fk == F_NONE)
@@ -593,9 +622,12 @@ static void fsc_text(const wr_mach_t *M, int j, int v, char *buf)
 #define ORG_F(j) static void org_f##j(int v, char *b) { fsc_text(&wr_mach_org, j, v, b); }
 ORG_F(0) ORG_F(1) ORG_F(2) ORG_F(3) ORG_F(4) ORG_F(5) ORG_F(6) ORG_F(7)
 ORG_F(8) ORG_F(9) ORG_F(10) ORG_F(11) ORG_F(12) ORG_F(13) ORG_F(14) ORG_F(15)   /* RIFT: ORGAN's 16 */
+ORG_F(16) ORG_F(17) ORG_F(18) ORG_F(19) ORG_F(20) ORG_F(21) ORG_F(22) ORG_F(23)   /* v0.5: pages 3 */
+ORG_F(24) ORG_F(25) ORG_F(26) ORG_F(27) ORG_F(28) ORG_F(29) ORG_F(30) ORG_F(31)   /* and 4 */
 static void (*const org_fns[])(int, char *) = {
     org_f0, org_f1, org_f2, org_f3, org_f4, org_f5, org_f6, org_f7, org_f8, org_f9, org_f10, org_f11,
-    org_f12, org_f13, org_f14, org_f15};
+    org_f12, org_f13, org_f14, org_f15, org_f16, org_f17, org_f18, org_f19, org_f20, org_f21, org_f22,
+    org_f23, org_f24, org_f25, org_f26, org_f27, org_f28, org_f29, org_f30, org_f31};
 _Static_assert(sizeof org_fns / sizeof org_fns[0] == ORG_N, "one formatter an ORGAN control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)

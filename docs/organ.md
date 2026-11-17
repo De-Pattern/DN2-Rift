@@ -43,6 +43,31 @@ speech, wind and tremulant run per 32-sample block, smoother than per 128).
 - **Two pages of eight**, Ravel's sixteen knobs in Ravel's order:
   - SYN1 RANKS: STOP, 16', 8', 4', 2 2/3', 2', 1 3/5', 1'
   - SYN2 PIPES: CHIFF, SPEECH, SPREAD, AIR, WIND, TREMLNT, TREM RT, CELESTE
+- **v0.5: four pages** (owner, 2026-11-16: "we need attack, but i also like tone ... do not change
+  the core sounds"; the breath page from his flute clip). Every new control at 0 leaves v0.4's
+  organ bit for bit (`test_organ_live` against v0.4's live.py, `test_a_v04_sound_is_v04s_organ`):
+  - SYN3 ATTACK: PERC (a Hammond-style sine ping on the 2nd or 3rd harmonic at the strike), PDEC
+    (its decay, 40 ms .. 1.5 s), PHRM (2ND / 3RD), KCLK (a 12 ms contact click, its own noise), VELO
+    (velocity on the level and the attack), MIXT (pipes at 6 and 16 times the note), ROTR and RSPD
+    (a rotor: level and tone swirl, the pipes' Doppler, a 0.7 s lag on the speed).
+  - SYN4 BREATH: BRTH (the jet's turbulence inside the tone: level, pitch, a darkening), TURB (its
+    rate, 1.5 .. 59 Hz), BREK and BDEP (a downward voice-break: the tone's every other cycle changed,
+    a component at half the pitch, 7 dB under the note at the top), PRES (sharper, likelier to break),
+    BLOM (the note blooms from breath into tone, 30 ms .. 3 s), EDGE (breath through the pipe: noise
+    on a q-6 band-pass at the note), PVEL (velocity on the pressure).
+  - CELESTE's rank fades in and out over 8 blocks (a tester: a click at CELST 0 <-> 2).
+  - The new controls ride FASCIA's other 16 records (PHRM a choice on WAV2; TURB, BREK, BDEP, PRES on
+    the 0..100 PD and OFS records, read as 0..127 knobs; BLOM, EDGE, PVEL on FM Tone's 235..237: no LFO).
+  - **v0.4's sounds.** MACHINE SEL and TRK + CLEAR reset a sound to stock's record defaults and v0.4
+    wrote only ORGAN's 16, so a v0.4 ORGAN sound holds exactly stock's defaults on the 16 new records
+    (`live.LEGACY_WORDS`). The DSP reads that set as both pages at 0; the ColdFire writes v0.5's
+    defaults on both pages at the first turn of one of their knobs (`fmt.c org_unlegacy`), the turned
+    control moving from its default as the knob moved.
+  - The leaves' floor: `o_sint` and `o_sinf` called `_floor` with its integer and its scratch both
+    R12, so floorf gave 0 for 1 <= x < 2 and `sin_turns` left its polynomial's range for phases
+    0.75..1 (the tremolo's sine, up to 1e-4 off live's; inaudible, but not bit-exact past 124 blocks
+    of TREM at its fastest, which v0.4's gate never ran). v0.5 floors right (`_floor_f`) and the gate
+    runs a 400-block tremolo.
 - **Records: FASCIA's.** FASCIA writes its own defaults at MACHINE SEL (`fsc_default`,
   `rec.c`), and the names, the LFO list and the choices are per machine (`page.c`, `fmt.c`), so a
   record is free to serve two machines: a track is one or the other. STOP rides a choice record

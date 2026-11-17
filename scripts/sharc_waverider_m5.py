@@ -3520,11 +3520,14 @@ def og_frame(sound, machines, organs: dict, trig=(), fascias=None) -> bytes:
     from dnfw.organ import bench as OB, live as OL   # noqa: PLC0415
     t0 = OGP.TYPE if 0 in organs else FSM.TYPE
     f = base_frame(sound, machines, t0=t0, trigger=False)
-    for t, (panel, note) in organs.items():
+    for t, spec in organs.items():
+        panel, note = spec[0], spec[1]
         f.header(FR.MACHINE, t, OGP.TYPE)
         for w, ride in zip(OB.knobs_words(panel), OL.RIDES):
             f.param(t, FSM.SLOTS[ride][1], w)
         f.header(FR.NOTE, t, FB.note_word(note))
+        if len(spec) > 2:                            # v0.5: the trig's velocity, 0..127
+            f.header(FSP.VEL_OFFSET, t, (int(spec[2]) & 0xFF) << 8)
     for t, (panel, note, vel) in (fascias or {}).items():
         f.header(FR.MACHINE, t, FSM.TYPE)
         for c, word in FB.panel_words(panel).items():
@@ -3536,7 +3539,7 @@ def og_frame(sound, machines, organs: dict, trig=(), fascias=None) -> bytes:
     return f.to_bytes()
 
 
-def og_live(panel_of, notes: dict, blocks: int, slot: int):
+def og_live(panel_of, notes: dict, blocks: int, slot: int, vel: int = 127):
     """live.Voice for SLOT: PANEL_OF(b), NOTES = {block: note} -> 32 float32 a block"""
     import numpy as np                           # noqa: PLC0415
     from dnfw.fascia import bench as FB          # noqa: PLC0415
@@ -3545,7 +3548,7 @@ def og_live(panel_of, notes: dict, blocks: int, slot: int):
     out = []
     for b in range(blocks):
         out.append(np.asarray(v.block(OB.knobs_seen(OB.knobs_words(panel_of(b))), b in notes,
-                                      FB.note_seen(notes.get(b, 60.0))), np.float32))
+                                      FB.note_seen(notes.get(b, 60.0)), vel), np.float32))
     return out
 
 
@@ -3602,6 +3605,13 @@ def step_organ(init, sound, machines, blocks=8) -> dict:
                                              fascias={1: (fpanel, 72, 1.0)}), n)
     judge("ORGAN beside FASCIA (ORGAN)", rr, og_live(lambda b: {}, {1: 55.0}, n, 0))
     judge("ORGAN beside FASCIA (FASCIA)", rr, fsc_live(fpanel, {1: (72, 1.0)}, n, 1), t=1)
+    # v0.5: pages 3 and 4 and the velocity (the percussion, click, mixture, rotor, breath, break, edge)
+    p34 = {"STOP": 2, "PERC": 110, "PDEC": 50, "KCLK": 100, "MIXT": 90, "VELO": 80, "ROTR": 90, "RSPD": 100,
+           "BRTH": 100, "TURB": 110, "BREK": 120, "BDEP": 100, "PRES": 60, "BLOM": 40, "EDGE": 80, "PVEL": 70}
+    n34 = 14
+    rr = run_blocks(init, lambda b: og_frame(sound, machines, {0: (p34, 62.0, 90)}, trig=(0,) if b == 1 else ()), n34)
+    pk34 = judge("pages 3 and 4", rr, og_live(lambda b: p34, {1: 62.0}, n34, 0, 90))
+    res["pages 3 and 4"]["ok"] = res["pages 3 and 4"]["ok"] and pk34 > 0.001
     # FASCIA, then the same track on ORGAN: the walk's reset
     n_sw = 12
 
@@ -3628,6 +3638,7 @@ def step_organ(init, sound, machines, blocks=8) -> dict:
         "a steal (the fade, then the strike) and knobs moving mid-note: bit-exact": res["steal and moving knobs"]["ok"],
         "ORGAN beside FASCIA: both bit-exact": res["ORGAN beside FASCIA (ORGAN)"]["ok"] and res["ORGAN beside FASCIA (FASCIA)"]["ok"],
         "a track switched from FASCIA to ORGAN: quiet until its trig, then bit-exact": ok_sw,
+        "v0.5: pages 3 and 4 with a velocity: bit-exact": res["pages 3 and 4"]["ok"],
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
 

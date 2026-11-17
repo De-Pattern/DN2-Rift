@@ -43,13 +43,33 @@ def built(stock7) -> bytes:
 def test_committed_objects_match_their_sources():
     spec = json.loads(dsp.CODE.read_text(encoding="utf-8"))
     for key, name in (("perc", "perc"), ("idle_load", "idle_load"), ("block_count", "block_count"),
-                      ("entry_mark", "entry_mark"), ("ping", "ping")):   # (v0.26: RESONATOR and CZ gone; v0.27: GRAN)
+                      ("entry_mark", "entry_mark"), ("ping", "ping"),   # (v0.26: RESONATOR and CZ gone; v0.27: GRAN)
+                      # RIFT v0.5: and the machines' own programs (a regenerated fascia.asm whose
+                      # object was not reassembled would ship the old DSP code: the runner caught it)
+                      ("smp", "smp"), ("pvmix", "pvmix"), ("fascia", "fascia")):
         src = (SHARC / f"{name}.asm").read_bytes().replace(b"\r\n", b"\n")
         assert spec[key]["source_sha256"] == hashlib.sha256(src).hexdigest(), name
         csrc = json.loads((SHARC / f"{name}.json").read_text(encoding="utf-8"))
         assert csrc["object_parcels_be"] == spec[key]["object_parcels_be"], name
     assert spec["entry_jump"]["source"] == "JUMP 0x16f600;"
     assert spec["idle_jump"]["source"] == "JUMP 0x16f500;" and spec["idle_jump"]["at_sw"] == "0xb88abb"
+
+
+def test_fascia_asm_is_the_programs_as_they_now_are():
+    """RIFT v0.5: csrc/waverider/sharc/fascia.asm (FASCIA's walk, ORGAN inside it) is written by
+    scripts/gen_fascia_asm.py from dnfw.fascia.program and dnfw.organ.program: a program changed
+    without regenerating it ships the old DSP code. Every line but the resolved jump targets."""
+    import re
+    import sys
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import gen_fascia_asm as G
+
+    def norm(ln):
+        ln = re.sub(r"(JUMP|CALL) 0x[0-9a-f]+;\s*", r"\1 T; ", ln)
+        return re.sub(r"I12 = 0x[0-9a-f]+;\s*(// return address)", r"I12 = T; \1", ln)
+    want = [norm(ln) for ln in G.build().splitlines()]
+    have = [norm(ln) for ln in (SHARC / "fascia.asm").read_text().splitlines()]
+    assert have == want, "run scripts/gen_fascia_asm.py, then gen_waverider_sharc.py --assemble"
 
 
 def test_our_sources_avoid_dag1_m0_m3_in_memory_accesses():

@@ -37,11 +37,13 @@ from . import live as LV
 F = np.float32
 TYPE = 19
 NK = len(LV.CONTROLS)
-assert NK == 16 and BLOCK == LV.SUB
+assert NK == 32 and BLOCK == LV.SUB
 
 # -- the voice's words (in the slot's FASCIA state: the life words are FASCIA's first three) -----
 VOICE = St().w("on", "pending", "fading", "pnote", "f", "magic", "ns", "t", "chiff", "air_lp", "wind",
-               "wind_v", "trem_ph", "ic1", "ic2").w("ph", n=8).w("dly", n=8).w("cents", n=8)
+               "wind_v", "trem_ph", "ic1", "ic2").w("ph", n=8).w("dly", n=8).w("cents", n=8) \
+    .w("tvel", "pvel", "pe", "pph", "kc", "kprev", "rph", "rhz", "rlp", "cel_g", "rs", "kns", "mph0", "mph1",
+       "jns", "jv1", "jv2", "bk", "hph", "blp", "jj", "press", "dep", "eic1", "eic2")     # v0.5: pages 3, 4
 assert [VOICE[k] for k in ("on", "pending", "fading")] == [FP_.VOICE[k] for k in ("on", "pending", "fading")]
 assert VOICE.n < FP_.VOICE["FO"] + FP_.FORM["wetok"]          # fascia.program.off's other word is past ours
 VOICE_WORDS = VOICE.n
@@ -52,7 +54,12 @@ WORDS = ("k146", "trig", "nn", "stop", "nr", "bad", "cnt0", "cnt1", "ybp", "outp
          *[f"q{j}" for j in range(NK)], *[f"e{j}" for j in range(NK)],
          "speech", "chiffk", "air", "windk", "trem", "trem_hz", "celeste", "tot", "onset", "tr", "wob",
          "lv", "age", "g", "cents", "fr", "room", "sh", "lvl", "inc", "lo", "ons", "ka", "tmp0", "tmp1",
-         "a1", "a2", "a3", "gt", "cc", "sq_x", "spread", "windn", "hz", "mk", "rat", "cx", "fade")
+         "a1", "a2", "a3", "gt", "cc", "sq_x", "spread", "windn", "hz", "mk", "rat", "cx", "fade",
+         # v0.5, pages 3 and 4
+         "rot", "rotc", "tgt", "bb", "brk", "edge", "fc", "aa", "perc", "pf", "pinc", "tau", "pcoef", "kk",
+         "mlv0", "mlv1", "minc0", "minc1", "vg", "am", "rsw", "lfl", "bdark", "tb", "gb", "eg", "ea1", "ea2",
+         "ea3", "hinc", "hn", "x", "yv", "nz", "tnew", "mtab",
+         "fpon", "fkon", "fm0", "fm1", "fxon", "fvon", "fb", "fblon", "feon", "fhon", "frot")
 
 # -- the tables (DDR) ------------------------------------------------------------------------
 TAB_WORDS = 5 * 3 * LV.ORG_N
@@ -134,6 +141,22 @@ def _floor(p, src: int, dst: int, ri: int, tmp: int) -> None:
     p.if_(src, "LT", dst, down)
 
 
+def _floor_f(p, src: int, dst: int) -> None:
+    """Fdst = floorf(Fsrc), R12 clobbered. v0.5: o_sint and o_sinf called _floor with its int and
+    its scratch register both R12, so the scale overwrote the truncation and floorf gave 0 for
+    1 <= x < 2: sin_turns(ph) for ph in 0.75..1 left the polynomial's range (an error up to about
+    1e-4, what the DSP's tremolo computed in v0.4, against live's exact maths; inaudible). Here the
+    truncation stays in R12 and the scale is Fdst's own register, read before it is written."""
+    p.trunc(12, src)
+    p.iconst(dst, 0)
+    p.float_(dst, 12, dst)
+
+    def down():
+        p.fconst(12, 1.0)
+        p.fop(dst, dst, "-", 12)
+    p.if_(src, "LT", dst, down)
+
+
 def _sin_r(p) -> None:
     """F15 = _sin_r(F15) (turns, folded into -0.25..0.25)"""
     def hi():
@@ -184,7 +207,7 @@ def _o_sint(g) -> None:
     def body():
         p.fconst(12, 0.5)
         p.fop(14, 15, "+", 12)
-        _floor(p, 14, 13, 12, 12)
+        _floor_f(p, 14, 13)
         p.fop(15, 15, "-", 13)
         _sin_r(p)
     _leaf(p, "o_sint", body)
@@ -198,7 +221,7 @@ def _o_sinf(g) -> None:
         p.fop(14, 15, "*", 12)
         p.fconst(12, 0.5)
         p.fop(14, 14, "+", 12)
-        _floor(p, 14, 13, 12, 12)              # F13 = k
+        _floor_f(p, 14, 13)                    # F13 = k
         p.fconst(12, 6.28125)
         p.fop(14, 13, "*", 12)
         p.fop(15, 15, "-", 14)
@@ -235,7 +258,9 @@ def _o_sqrt(g) -> None:
 
 
 OLEAF = {"o_exp2": _o_exp2, "o_sint": _o_sint, "o_sinf": _o_sinf, "o_sqrt": _o_sqrt,
-         "obi": _xs_leaf("obi", 2, VOICE["ns"], "bi")}
+         "obi": _xs_leaf("obi", 2, VOICE["ns"], "bi"),
+         "okb": _xs_leaf("okb", 2, VOICE["kns"], "bi"),        # v0.5: the key click's own noise
+         "ojb": _xs_leaf("ojb", 2, VOICE["jns"], "bi")}        # v0.5: the jet's own noise
 
 
 def exp2f(x) -> E:
@@ -260,6 +285,14 @@ def sqrtf(x) -> E:
 
 def bi() -> E:
     return Fn("obi", Kc(0.0))
+
+
+def kbi() -> E:
+    return Fn("okb", Kc(0.0))
+
+
+def jbi() -> E:
+    return Fn("ojb", Kc(0.0))
 
 
 class OG(Gen):
@@ -304,6 +337,18 @@ class OG(Gen):
             self.new_note()
             p.ld(0, C["nn"])
             self.st(V("pnote"), 0)
+            # v0.5: the trig's velocity (the frame's header word 52 + 2t, >> 8, at most 127, / 127)
+            p.ld(9, L.t_word)
+            p.iop(10, 9, "+", 9)
+            PP.half(p, 4, FP_.VEL_OFFSET, 10)
+            p.lsh(4, 4, -8)
+            p.iconst(12, 127)
+            p.iop(4, 4, "MIN", 12)
+            p.iconst(12, 0)
+            p.float_(4, 4, 12)
+            p.fconst(5, float(LV.INV127))
+            p.fop(4, 4, "*", 5)
+            self.st(V("tvel"), 4)
             self.iset(V("pending"), 1)
             self.ld(0, V("on"))
             self.st(V("fading"), 0)
@@ -421,9 +466,27 @@ class OG(Gen):
                 p.iconst(12, 4)
                 p.iop(4, 4, "MIN", 12)
                 p.st(C["stop"], 4)
+            if j == LV.PHRM:                   # v0.5: PHRM, the option, (k 2) >> 7, at most 1
+                p.lsh(4, 4, -6)
+                p.iconst(12, 1)
+                p.iop(4, 4, "MIN", 12)
             p.iconst(12, 0)
             p.float_(4, 4, 12)
             p.st(C[f"e{j}"], 4)
+        # v0.5: a v0.4 sound (stock's defaults on pages 3 and 4's records: live.LEGACY): both pages at 0
+        p.iconst(0, 1)
+        p.st(C["fxon"], 0)
+        for j, want in enumerate(LV.LEGACY):
+            p.ld(4, C[f"q{16 + j}"])
+            p.iconst(12, want)
+            p.if_(4, "NE", 12, lambda: (p.iconst(0, 0), p.st(C["fxon"], 0)), kind="i")
+
+        def legacy():
+            p.fconst(4, 0.0)
+            for j in range(16, 32):
+                p.st(C[f"e{j}"], 4)
+        p.ld(0, C["fxon"])
+        p.ifz(0, "NE", legacy)
 
     # -- the strike (live.Voice: organ_note) ------------------------------------------------
     def strike(self) -> None:
@@ -441,8 +504,13 @@ class OG(Gen):
 
         def fresh():                           # Organ(): every word zero, then the magic
             p.iconst(0, 0)
-            for name in ("ns", "t", "chiff", "air_lp", "wind", "wind_v", "trem_ph", "ic1", "ic2"):
+            for name in ("ns", "t", "chiff", "air_lp", "wind", "wind_v", "trem_ph", "ic1", "ic2",
+                         "pe", "pph", "kc", "kprev", "rph", "rhz", "rlp", "cel_g", "rs", "kns", "mph0", "mph1",
+                         "jns", "jv1", "jv2", "bk", "hph", "blp", "jj", "press", "dep", "eic1", "eic2"):
                 self.st(V(name), 0)
+            p.fconst(0, 1.0)
+            self.st(V("pvel"), 0)
+            p.iconst(0, 0)
             for name in ("ph", "dly", "cents"):
                 for j in range(8):
                     self.st(V(name, j), 0)
@@ -472,6 +540,28 @@ class OG(Gen):
             self.set(V("dly", j), c("spread") * (bi() * k(0.5) + k(0.5)))
             self.set(V("cents", j), (c("windn") * k(0.5)) * bi())
             self.set(V("ph", j), bi() * k(0.5) + k(0.5))
+        # v0.5: pages 3 and 4's strike (their own noises seeded once; no draw from the pipes')
+        for name, add in (("kns", 0x3C6EF372), ("jns", 0x7F4A7C15)):
+            def seed2(name=name, add=add):
+                p.ld(9, L.t_word)
+                p.iconst(12, (0x2545F491 + add) & 0xFFFFFFFF)
+                p.iop(0, 12, "+", 9)
+                p.iconst(12, 1)
+                p.iop(0, 0, "OR", 12)
+                self.st(V(name), 0)
+            self.ld(0, V(name))
+            p.ifz(0, "EQ", seed2)
+        self.fz(V("hph"))
+        p.fconst(0, 1.0)
+        self.st(V("pe"), 0)
+        self.st(V("kc"), 0)
+        self.fz(V("pph"))
+        self.fz(V("kprev"))
+        self.fz(V("mph0"))
+        self.fz(V("mph1"))
+        self.cmp(c("e15") * kd(14.0, 127.0), "GT", k(0.01), lambda: self.set(V("cel_g"), k(1.0)),
+                 lambda: self.fz(V("cel_g")))
+        self.set(V("pvel"), V("tvel"))
         self.iset(V("on"), 1)
 
     # -- a block (live.Organ.render, x TRIM, and the steal's ramp) ----------------------------
@@ -503,6 +593,7 @@ class OG(Gen):
         self.st(V("trem_ph"), 0)
         self.set(c("tr"), c("trem") * sin_turns(V("trem_ph")))
         self.set(c("wob"), V("wind") * c("windk"))
+        self.blocks_v05(dt)
         # the 32-sample sum: zeros
         p.iconst(0, L.A["yb"])
         p.seti(4, 0)
@@ -553,6 +644,7 @@ class OG(Gen):
             self.set(c("ons"), c("onset") * recip(fi(self.ci("lo"))))
         p.ifz(0, "NE", mean, lambda: self.fz(c("ons")))
         self.set(c("ka"), k(0.3) + k(0.7) * c("ons"))
+        self.post_setup(dt)
         # the samples: the noise, the chiff, the air, the level, TRIM, the ramp; the output test
         p.iconst(0, 0)
         p.st(C["bad"], 0)
@@ -583,6 +675,9 @@ class OG(Gen):
             y = y + ((((c("g") * c("chiffk")) * V("chiff")) * k(0.5)) + (V("air_lp") * c("air")) * c("ka"))
             y = (y * c("tot")) * k(LV.TRIM)
             self.ev(y, 0)
+            p.st(C["yv"], 0)
+            self.post_sample()
+            p.ld(0, C["yv"])
 
             def ramp():
                 p.ld(12, C["lo"])
@@ -615,6 +710,328 @@ class OG(Gen):
         p.ld(0, C["bad"])
         p.ifz(0, "NE", blown)
 
+    # -- v0.5: pages 3 and 4, the block's part (live.Organ.render after `wob`) ---------------
+    def blocks_v05(self, dt) -> None:
+        p, C = self.p, self.L.C
+        V, c = self.V, self.c
+        e = lambda j: c(f"e{j}")              # noqa: E731
+        # CELESTE's fade
+        def cel_on():
+            def up():
+                self.set(V("cel_g"), V("cel_g") + k(LV.CEL_STEP))
+                self.cmp(V("cel_g"), "GT", k(1.0), lambda: self.set(V("cel_g"), k(1.0)))
+            self.cmp(V("cel_g"), "LT", k(1.0), up)
+
+        def cel_off():
+            def down():
+                self.set(V("cel_g"), V("cel_g") - k(LV.CEL_STEP))
+                self.cmp(V("cel_g"), "LT", k(0.0), lambda: self.fz(V("cel_g")))
+            self.cmp(V("cel_g"), "GT", k(0.0), down)
+        self.cmp(c("celeste"), "GT", k(0.01), cel_on, cel_off)
+        # the rotor
+        self.set(c("rot"), e(22) * kd(1.0, 127.0))
+        self.fz(c("rotc"))
+        self.fz(V("rs"))
+
+        def rotor():
+            self.set(c("tgt"), k(0.6) * exp2f(e(23) * kd(3.55, 127.0)))
+            self.cmp(V("rhz"), "LE", k(0.0), lambda: self.set(V("rhz"), c("tgt")),
+                     lambda: self.set(V("rhz"), V("rhz") + ((c("tgt") - V("rhz")) * dt) * k(LV.ROT_SLEW)))
+            self.set(V("rph"), V("rph") + V("rhz") * dt)
+            self.wrap(V("rph"))
+            self.set(V("rs"), sin_turns(V("rph")))
+            self.set(c("rotc"), (c("rot") * k(8.0)) * sin_turns(V("rph") + k(0.25)))
+        self.cmp(c("rot"), "GT", k(0.0), rotor)
+        # the jet, the pressure, the break
+        self.set(c("bb"), e(24) * kd(1.0, 127.0))
+        self.set(c("brk"), e(26) * kd(1.0, 127.0))
+        self.set(c("edge"), e(30) * kd(1.0, 127.0))
+        self.set(c("tgt"), (e(28) * kd(1.0, 127.0)) + (e(31) * kd(1.0, 127.0)) * (V("pvel") - k(0.5)))
+        self.clamp01("tgt")
+        self.set(V("press"), c("tgt"))
+        self.fz(V("jj"))
+
+        def jet():
+            self.set(c("fc"), k(1.5) * exp2f(e(25) * kd(5.3, 127.0)))
+            self.set(c("aa"), (c("fc") * k(LV.TWO_PI)) * dt)
+            self.cmp(c("aa"), "GT", k(1.0), lambda: self.set(c("aa"), k(1.0)))
+            self.set(V("jv1"), V("jv1") + (jbi() - V("jv1")) * c("aa"))
+            self.set(V("jv2"), V("jv2") + (V("jv1") - V("jv2")) * c("aa"))
+            self.set(V("jj"), (V("jv2") * sqrtf(recip(c("aa")))) * k(3.5))
+            self.clamp("jj", -float(LV.J_CLIP), float(LV.J_CLIP), voice=True)
+        self.any_gt0(("bb", "brk", "edge"), jet)
+        self.set(c("rotc"), c("rotc") + ((c("bb") * k(50.0)) * V("jj") + V("press") * k(15.0)))
+
+        def brk_on():
+            self.set(c("tgt"), ((V("jj") + V("press") * k(1.5)) - (k(2.2) - c("brk") * k(2.4))) * k(2.0))
+            self.clamp01("tgt")
+            self.cmp(c("tgt"), "GT", V("bk"), lambda: self.set(V("bk"), V("bk") + (c("tgt") - V("bk")) * k(LV.BK_UP)),
+                     lambda: self.set(V("bk"), V("bk") + (c("tgt") - V("bk")) * k(LV.BK_DOWN)))
+        self.cmp(c("brk"), "GT", k(0.0), brk_on, lambda: self.fz(V("bk")))
+        self.set(V("dep"), V("bk") * (k(0.35) + e(27) * kd(1.0, 127.0)))
+
+    # -- v0.5: live.Organ.post (pages 3 and 4, after the level and TRIM) ---------------------
+    def flag(self, name: str, val: int) -> None:
+        self.p.iconst(0, val)
+        self.p.st(self.L.C[name], 0)
+
+    def post_setup(self, dt) -> None:
+        """post's block part. live runs it after render, when t is t + dt: tnew"""
+        p, C, L = self.p, self.L.C, self.L
+        V, c = self.V, self.c
+        e = lambda j: c(f"e{j}")              # noqa: E731
+        self.set(c("tnew"), V("t") + dt)
+        # the percussion
+        self.set(c("perc"), e(16) * kd(0.9, 127.0))
+        self.flag("fpon", 0)
+
+        def perc_on():
+            self.cmp(e(18), "GE", k(1.0), lambda: self.set(c("pf"), V("f") * k(3.0)),
+                     lambda: self.set(c("pf"), V("f") * k(2.0)))
+            self.cmp(c("pf"), "LT", k(F(F(0.45) * F(LV.FS))), lambda: self.flag("fpon", 1))
+            self.set(c("pinc"), c("pf") * k(LV.DT))
+            self.set(c("tau"), k(0.04) * exp2f(e(17) * kd(5.2, 127.0)))
+            self.set(c("pcoef"), expf(k(F(-LV.DT)) * recip(c("tau"))))
+        self.cmp(c("perc"), "GT", k(0.0), perc_on, lambda: self.fz(V("pe")))
+        # the key click
+        self.set(c("kk"), e(19) * kd(0.48, 127.0))
+        self.cmp(c("tnew"), "GT", k(LV.KC_TIME), lambda: self.fz(V("kc")))
+        self.flag("fkon", 0)
+        self.cmp(c("kk"), "GT", k(0.0), lambda: self.cmp(V("kc"), "GT", k(0.0), lambda: self.flag("fkon", 1)))
+        # the mixture: its two pipes, if under 0.42 FS (live: fr < 0.42 FS)
+        self.flag("fm0", 0)
+        self.flag("fm1", 0)
+
+        def mixt():
+            for j, (ratio, gain) in enumerate(((6.0, 0.55), (16.0, 0.35))):
+                def on(j=j, ratio=ratio, gain=gain):
+                    self.flag(f"fm{j}", 1)
+                    self.set(c(f"minc{j}"), (c("tmp0") * k(LV.DT)) * k(float(LV.ORG_N)))
+                    self.set(c(f"mlv{j}"), (e(21) * kd(gain, 127.0)) * kd(1.0, 127.0))
+                self.set(c("tmp0"), V("f") * k(ratio))
+                self.cmp(c("tmp0"), "LT", k(F(F(0.42) * F(LV.FS))), on)
+        self.cmp(e(21), "GT", k(0.0), mixt)
+        # the mixture's table: tables + 4 x 256 (3 stop + 1)
+        p.ld(0, C["stop"])
+        p.iconst(12, 4)
+        p.iop(0, 0, "MIN", 12)
+        p.iconst(12, 0)
+        p.iop(0, 0, "MAX", 12)
+        p.lsh(1, 0, 1)
+        p.ipass(12, 1)
+        p.iop(0, 12, "+", 0)                   # 3 stop
+        p.iconst(12, 1)
+        p.iop(0, 12, "+", 0)                   # + 1: the middle table
+        p.lsh(0, 0, 10)
+        p.iconst(12, L.tables)
+        p.iop(0, 12, "+", 0)
+        p.st(C["mtab"], 0)
+        # the sum's flag: pon or kon or a mixture pipe
+        p.ld(0, C["fpon"])
+        p.ld(1, C["fkon"])
+        p.iop(0, 0, "OR", 1)
+        p.ld(1, C["fm0"])
+        p.iop(0, 0, "OR", 1)
+        p.ld(1, C["fm1"])
+        p.iop(0, 0, "OR", 1)
+        p.st(C["fxon"], 0)
+        # the velocity's gain
+        self.flag("fvon", 0)
+        self.set(c("vg"), k(1.0))
+
+        def vel_on():
+            self.flag("fvon", 1)
+            self.set(c("vg"), k(1.0) - (e(20) * kd(1.0, 127.0)) * (k(1.0) - V("pvel")))
+        self.cmp(e(20), "GT", k(0.0), vel_on)
+        # the rotor's part
+        self.flag("frot", 0)
+
+        def rot_on():
+            self.flag("frot", 1)
+            self.set(c("am"), k(1.0) - (c("rot") * k(0.3)) * (k(0.5) + k(0.5) * V("rs")))
+            self.set(c("rsw"), (c("rot") * k(0.5)) * (k(0.5) - k(0.5) * V("rs")))
+        self.cmp(c("rot"), "GT", k(0.0), rot_on)
+        # page 4: the breath's level and darkening
+        self.flag("fb", 0)
+
+        def b_on():
+            self.flag("fb", 1)
+            self.set(c("lfl"), k(1.0) + (c("bb") * k(0.45)) * V("jj"))
+            self.cmp(c("lfl"), "LT", k(0.0), lambda: self.fz(c("lfl")))
+            self.set(c("tmp1"), k(0.5) - k(0.5) * V("jj"))
+            self.clamp01("tmp1")
+            self.set(c("bdark"), (c("bb") * k(0.5)) * c("tmp1"))
+        self.cmp(c("bb"), "GT", k(0.0), b_on)
+        # the bloom
+        self.flag("fblon", 0)
+
+        def bl_on():
+            self.flag("fblon", 1)
+            self.set(c("tb"), k(0.03) * exp2f(e(29) * kd(6.7, 127.0)))
+            self.set(c("gb"), k(1.0) - expf((-c("tnew")) * recip(c("tb"))))
+        self.cmp(e(29), "GT", k(0.0), bl_on)
+        # the edge (and the bloom's breath): its level and its SVF at f, q 6
+        p.ld(0, C["fblon"])
+        p.st(C["feon"], 0)
+        self.cmp(c("edge"), "GT", k(0.0), lambda: self.flag("feon", 1))
+
+        def e_on():
+            self.set(c("eg"), c("edge") * k(2.0))
+            p.ld(0, C["fblon"])
+            p.ifz(0, "NE", lambda: self.set(c("eg"), c("eg") + (k(1.0) - c("gb")) * k(1.2)))
+            self.set(c("eg"), ((c("eg") * (k(1.0) + (c("bb") * k(0.5)) * V("jj"))) * c("tot")) * k(LV.TRIM))
+            self.set(c("hz"), V("f"))
+            top = float(F(LV.NYQ * F(0.9)))
+
+            def clamp_out():
+                self.cmp(c("hz"), "GT", k(10.0), lambda: self.set(c("hz"), k(top)),
+                         lambda: self.set(c("hz"), k(10.0)))
+            self.cmp(c("hz"), "GT", k(10.0), lambda: self.cmp(c("hz"), "LT", k(top), None, clamp_out), clamp_out)
+            self.set(c("tmp0"), (k(3.14159265) * c("hz")) * k(LV.DT))
+            self.tanf("gt", "tmp0")
+            self.set(c("ea1"), recip(k(1.0) + c("gt") * (c("gt") + kd(1.0, 6.0))))
+            self.set(c("ea2"), c("gt") * c("ea1"))
+            self.set(c("ea3"), c("gt") * c("ea2"))
+        p.ld(0, C["feon"])
+        p.ifz(0, "NE", e_on)
+        # the break's half-pitch
+        self.flag("fhon", 0)
+
+        def h_on():
+            self.flag("fhon", 1)
+            self.set(c("hinc"), (V("f") * k(0.5)) * k(LV.DT))
+            self.set(c("hn"), recip(k(1.0) + V("dep") * k(0.5)))
+        self.cmp(V("dep"), "GT", k(0.0), h_on)
+
+    def post_sample(self) -> None:
+        """post's sample part, on the block word yv"""
+        p, C = self.p, self.L.C
+        V, c = self.V, self.c
+
+        def xsum():
+            self.fz(c("x"))
+
+            def perc():
+                self.set(c("x"), c("x") + (sin_turns(V("pph")) * V("pe")) * c("perc"))
+                self.set(V("pph"), V("pph") + c("pinc"))
+                self.wrap(V("pph"))
+                self.set(V("pe"), V("pe") * c("pcoef"))
+                self.cmp(V("pe"), "LT", k(LV.CHIFF_FLOOR), lambda: self.fz(V("pe")))
+            p.ld(0, C["fpon"])
+            p.ifz(0, "NE", perc)
+
+            def click():
+                self.set(c("nz"), kbi())
+                self.set(c("x"), c("x") + ((c("nz") - V("kprev")) * V("kc")) * c("kk"))
+                self.set(V("kprev"), c("nz"))
+                self.set(V("kc"), V("kc") * k(LV.KC_COEF))
+            p.ld(0, C["fkon"])
+            p.ifz(0, "NE", click)
+            for j in range(2):
+                p.ld(0, C[f"fm{j}"])
+                p.ifz(0, "NE", lambda j=j: self.mix_pipe(j))
+            self.set(c("yv"), c("yv") + (c("x") * k(0.45)) * c("vg"))
+        p.ld(0, C["fxon"])
+        p.ifz(0, "NE", xsum)
+        p.ld(0, C["fvon"])
+        p.ifz(0, "NE", lambda: self.set(c("yv"), c("yv") * c("vg")))
+        p.ld(0, C["fb"])
+        p.ifz(0, "NE", lambda: self.set(c("yv"), c("yv") * c("lfl")))
+        p.ld(0, C["fblon"])
+        p.ifz(0, "NE", lambda: self.set(c("yv"), c("yv") * c("gb")))
+
+        def half():
+            self.set(c("yv"), (c("yv") * (k(1.0) + V("dep") * sin_turns(V("hph")))) * c("hn"))
+            self.set(V("hph"), V("hph") + c("hinc"))
+            self.wrap(V("hph"))
+        p.ld(0, C["fhon"])
+        p.ifz(0, "NE", half)
+
+        def dark():
+            self.set(V("blp"), V("blp") + (c("yv") - V("blp")) * k(0.12))
+            self.set(c("yv"), c("yv") + c("bdark") * (V("blp") - c("yv")))
+        p.ld(0, C["fb"])
+        p.ifz(0, "NE", dark)
+
+        def edge():
+            self.set(c("nz"), jbi())
+            self.set(c("tmp1"), c("nz") - V("eic2"))                                    # v3
+            self.set(c("g"), c("ea1") * V("eic1") + c("ea2") * c("tmp1"))               # v1
+            self.set(c("lv"), (V("eic2") + c("ea2") * V("eic1")) + c("ea3") * c("tmp1"))
+            self.set(V("eic1"), k(2.0) * c("g") - V("eic1"))
+            self.set(V("eic2"), k(2.0) * c("lv") - V("eic2"))
+            self.set(c("yv"), c("yv") + c("g") * c("eg"))
+        p.ld(0, C["feon"])
+        p.ifz(0, "NE", edge)
+
+        def rotor():
+            self.set(V("rlp"), V("rlp") + (c("yv") - V("rlp")) * k(0.15))
+            self.set(c("yv"), c("yv") * c("am") + c("rsw") * (V("rlp") - c("yv")))
+        p.ld(0, C["frot"])
+        p.ifz(0, "NE", rotor)
+
+    def mix_pipe(self, j: int) -> None:
+        """a mixture pipe's sample: live.post's table read, x += a lv"""
+        p, C = self.p, self.L.C
+        V, c = self.V, self.c
+        self.set(c("tmp0"), V(f"mph{j}") + c(f"minc{j}"))
+        self.cmp(c("tmp0"), "GE", k(float(LV.ORG_N)), lambda: self.set(c("tmp0"), c("tmp0") - k(float(LV.ORG_N))))
+        self.set(V(f"mph{j}"), c("tmp0"))
+        p.ld(0, C["tmp0"])
+        p.trunc(12, 0)
+        p.iconst(13, LV.ORG_N - 1)
+        p.iop(12, 12, "AND", 13)               # i0
+        p.iconst(13, 0)
+        p.float_(4, 12, 13)
+        p.fop(4, 0, "-", 4)                    # fr
+        p.iconst(13, 1)
+        p.iop(13, 13, "+", 12)
+        p.iconst(14, LV.ORG_N - 1)
+        p.iop(13, 13, "AND", 14)               # i1
+        p.lsh(12, 12, 2)
+        p.lsh(13, 13, 2)
+        p.ld(8, C["mtab"])
+        p.iop(14, 8, "+", 12)
+        p.seti(1, 14)
+        p.ldi(5, 0, 1)
+        p.iop(14, 8, "+", 13)
+        p.seti(1, 14)
+        p.ldi(6, 0, 1)
+        p.fop(6, 6, "-", 5)
+        p.fop(6, 6, "*", 4)
+        p.fop(5, 5, "+", 6)                    # a
+        p.st(C["tmp1"], 5)
+        self.set(c("x"), c("x") + c("tmp1") * c(f"mlv{j}"))
+
+    def wrap(self, mv) -> None:
+        """MV = MV - floorf(MV)"""
+        p, c = self.p, self.c
+        self.set(c("tmp0"), mv)
+        self.ld(0, c("tmp0"))
+        p.fpass(15, 0)
+        _floor(p, 15, 14, 13, 12)
+        p.fop(0, 0, "-", 14)
+        self.st(mv, 0)
+
+    def clamp01(self, name: str) -> None:
+        self.clamp(name, 0.0, 1.0)
+
+    def clamp(self, name: str, lo: float, hi: float, voice: bool = False) -> None:
+        """live.clampf(x, lo, hi): hi if x > hi, lo if x < lo"""
+        m = self.V(name) if voice else self.c(name)
+        self.cmp(m, "LT", k(lo), lambda: self.set(m, k(lo)),
+                 lambda: self.cmp(m, "GT", k(hi), lambda: self.set(m, k(hi))))
+
+    def any_gt0(self, names, fn) -> None:
+        """FN if any of the block words NAMES is above 0 (live: a > 0 or b > 0 ...)"""
+        p, C = self.p, self.L.C
+        p.iconst(0, 0)
+        p.st(C["fxon"], 0)
+        for n_ in names:
+            self.cmp(self.c(n_), "GT", k(0.0), lambda: (self.p.iconst(0, 1), self.p.st(C["fxon"], 0)))
+        p.ld(0, C["fxon"])
+        p.ifz(0, "NE", fn)
+
     def tanf(self, dst: str, src: str) -> None:
         """Ravel's tanf: sinf(x) / cosf(x), the cosine kept at least 1e-7 from 0"""
         c, p = self.c, self.p
@@ -634,7 +1051,7 @@ class OG(Gen):
         if kk < 7:
             self.set(c("lv"), e(1 + kk) * kd(1.0, 127.0))
         else:
-            self.cmp(c("celeste"), "GT", k(0.01), lambda: self.set(c("lv"), e(2) * kd(0.8, 127.0)),
+            self.cmp(self.V("cel_g"), "GT", k(0.0), lambda: self.set(c("lv"), (e(2) * kd(0.8, 127.0)) * self.V("cel_g")),
                      lambda: self.fz(c("lv")))
         self.set(c("mk"), k(F(F(1.0) - F(F(kk if kk < 7 else 1) * F(0.07)))))
         self.set(c("rat"), k(LV.RATIO[kk]))
@@ -675,7 +1092,7 @@ class OG(Gen):
             def onset():
                 self.set(c("g"), k(1.0) - expf((-c("age")) * recip(c("tmp1"))))
             self.cmp(c("age"), "LE", k(0.0), lambda: self.fz(c("g")), onset)
-            cents = (((R("cents") - (k(1.0) - c("g")) * k(18.0)) + c("wob") * k(3.0)) + c("tr") * k(6.0)) + c("cx")
+            cents = ((((R("cents") - (k(1.0) - c("g")) * k(18.0)) + c("wob") * k(3.0)) + c("tr") * k(6.0)) + c("cx")) + c("rotc")
             self.set(c("cents"), cents)
             self.set(c("fr"), (V("f") * c("rat")) * exp2f(c("cents") * kd(1.0, 1200.0)))
             self.cmp(c("fr"), "GT", k(F(F(0.45) * F(LV.FS))), None, keep)
