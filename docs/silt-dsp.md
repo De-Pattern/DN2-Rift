@@ -40,6 +40,22 @@ delay pointers advance one sample at a time, so each block's reads are 32 consec
 per line: the read can be one burst per line per block into an L1 scratch, then L1 reads
 (the plan below, item 3), which would take most of the DDR count away.
 
+## Where the lines live (decided 2026-11-17)
+
+- **DDR, 48 KB a slot, every slot:** `SILT_DELAY_DDR = 0x82400000`, slot t at
+  `+ t x 0xC000` (16 x 48 KB = 768 KB, to 0x824C0000). It sits above the Machinedrum's
+  P-I delay lines (0x82200000, 128 KB) and below the sample pool (0x84000000), in the
+  span `docs/w5-tables.md` measured clear of the stock's init (the tables live at
+  0x81000000 for the same reason). The M5 gate's "every span we add reads back, after init"
+  covers it. Every slot can be SILT, so no bank allocation: the cap is a count.
+- **Garbage at power-on:** 768 KB of zeros cannot ride in the DSP image (the upload buffer's
+  1 MiB, unpacked 947 KB used), and clearing a voice's lines at a note costs up to 12,288
+  DDR writes in one block. Instead each line carries a **written count** that saturates at
+  its length: a read further back than the count returns 0. It is reset only when the slot
+  becomes SILT (the walk's type change) or the output guard wipes the voice, never at a
+  note, so a retrigger rings on through the old vibration exactly as the model's does. One
+  compare a read.
+
 ## Guardrails (the owner's request for every engine, applied to SILT from its first build)
 
 1. **A voice cap:** at most 4 SILT voices sound at once across the tracks; a fifth note
