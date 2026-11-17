@@ -68,12 +68,12 @@ def test_a_slot_becoming_silt_clears_its_lines_then_plays_the_waiting_note():
     for buf in v.lines():
         buf[:] = L.F(1.5)                      # garbage
     v.become()
-    v.note(P, 48, 0.9, 48000)
+    v.note(P, 48, 0.9)
     out = [v.block(P).copy() for _ in range(24)]
     assert all((o == 0).all() for o in out)
     assert all((b == 0).all() for b in v.lines())
     ref = L.Voice()
-    ref.note(P, 48, 0.9, 48000)
+    ref.note(P, 48, 0.9)
     for _ in range(40):
         assert (v.block(P) == ref.block(P)).all()
 
@@ -84,6 +84,6 @@ def test_the_clear_test_sees_garbage():
     v, ref = L.Voice(), L.Voice()
     for buf in v.lines():
         buf[:] = L.F(1.5)
-    v.note(P, 48, 0.9, 48000)
-    ref.note(P, 48, 0.9, 48000)
+    v.note(P, 48, 0.9)
+    ref.note(P, 48, 0.9)
     assert any((v.block(P) != ref.block(P)).any() for _ in range(40))

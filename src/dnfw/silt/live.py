@@ -197,7 +197,7 @@ class Voice:
             setattr(self, n, F(0.0))
         self.loop_per = F(1.0); self.f0 = F(110.0); self.vel = F(1.0)
         self.p_n = 0; self.p_i = 0; self.g_cnt = 0
-        self.gate = 0; self.gate_left = 0
+        self.gate = 0
         self.L4 = [0] * 8
         self.clear_at = LINE_WORDS             # the lines' clear: done (a fresh Voice's are zeros)
         self.waiting = None                    # a note that came during the clear
@@ -219,13 +219,14 @@ class Voice:
         self.clear_at = a + CLEAR_WORDS
 
     # -- a note: the gesture starts again --------------------------------------------------
-    def note(self, P, note, vel, gate_len):
+    def note(self, P, note, vel):
+        """a trig (the DN2 gives the note and its velocity; the gate holds until the note-off)"""
         s = self
         if s.clear_at < LINE_WORDS:            # the lines are clearing: the note waits for them
-            s.waiting = (list(P), note, vel, gate_len)
+            s.waiting = (list(P), note, vel)
             return
         s.f0 = F(440.0) * exp2((F(note) - F(69.0)) * F(1.0 / 12.0))
-        s.vel = F(vel); s.gate = 1; s.gate_left = int(gate_len)
+        s.vel = F(vel); s.gate = 1
         s.t_note = F(0.0); s.strike = F(1.0); s.burst = F(0.0); s.vib_env = F(0.0)
         s.gl_amt = F(0.0)
         s.L4 = [int(P[24 + c]) for c in range(8)]
@@ -261,8 +262,13 @@ class Voice:
             * (F(1.0) + (F(P[12]) + F(P[22])) * F(0.8 / 254.0) * s.rng2.bi())
 
     # -- a block ----------------------------------------------------------------------------
-    def block(self, P, out=None):
+    def block(self, P, out=None, off=False):
+        """32 samples; OFF: the note-off came in this block's frame (mask 36, bit t)"""
         s = self
+        if off and s.waiting is not None:
+            s.waiting = None
+        if off:
+            s.gate = 0
         if s.clear_at < LINE_WORDS:
             s._clear_step()
             if out is None:
@@ -277,10 +283,6 @@ class Voice:
         P = [F(v) for v in P]
         L4 = s.L4
         t_note = s.t_note + DT
-        if s.gate:
-            s.gate_left -= SUB
-            if s.gate_left <= 0:
-                s.gate = 0
         gate = s.gate
         loopk = L4[4]
         if gate and loopk > 0 and t_note > DT:
@@ -832,16 +834,49 @@ class Voice:
         return out
 
 
+def knob_option(k, n):
+    """a page 4 knob (0..127) as its option of N: (k N) >> 7"""
+    return min((int(k) * n) >> 7, n - 1)
+
+
+def eff_of(knobs) -> list:
+    """the 32 knobs as the voice reads them: pages 1-3 as they are, page 4 as options"""
+    out = [float(int(k)) for k in knobs[:24]]
+    for j, name in enumerate(CONTROLS[24:]):
+        out.append(float(knob_option(knobs[24 + j], len(CHOICES[name]))))
+    return out
+
+
+def option_knob(o, n):
+    """the knob in the middle of option O's span (for tests and presets)"""
+    ks = [k for k in range(128) if knob_option(k, n) == o]
+    return (ks[0] + ks[-1]) // 2
+
+
 def render(P, notes, secs, seed=0x2545F491, bpm=120.0):
-    """the audition model's play(): P one panel (a list of 32), notes (t s, note, vel 0..1, gate s)"""
+    """the audition model's play(): P one panel (a list of 32, page 4 as options), notes
+    (t s, note, vel 0..1, gate s); the gate's end is a note-off in the block where the model's
+    gate count runs out (a later note voids an earlier note's off, as the model's count resets)"""
     v = Voice(seed, bpm)
     nblk = int(secs * 48000) // SUB
     ev = sorted((int(t * 48000), n, vel, int(g * 48000)) for t, n, vel, g in notes)
+    on_blk = {}
+    for e in ev:                               # the block each note lands in (the model's test)
+        b = 0
+        while not e[0] < b * SUB + SUB:
+            b += 1
+        on_blk.setdefault(b, []).append(e)
+    offs = set()
+    starts = sorted(on_blk)
+    for i, b in enumerate(starts):
+        g = on_blk[b][-1][3]
+        ob = b + max(1, -(-g // SUB)) - 1
+        if i + 1 < len(starts) and starts[i + 1] <= ob:
+            continue
+        offs.add(ob)
     out = np.zeros(nblk * SUB, F)
-    j = 0
     for b in range(nblk):
-        while j < len(ev) and ev[j][0] < b * SUB + SUB:
-            v.note(P, ev[j][1], ev[j][2], ev[j][3])
-            j += 1
-        v.block(P, out[b * SUB:(b + 1) * SUB])
+        for e in on_blk.get(b, ()):
+            v.note(P, e[1], e[2])
+        v.block(P, out[b * SUB:(b + 1) * SUB], off=b in offs)
     return out
