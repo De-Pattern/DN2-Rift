@@ -105,3 +105,28 @@ def test_a_released_voice_rests_and_a_note_wakes_it():
     assert (v.block(P) == 0).all()
     v.note(P, 55, 0.9)
     assert any((v.block(P) != 0).any() for _ in range(10))
+
+
+def test_another_material_fades_clears_then_plays():
+    """a trig of another MAT on a sounding voice: one faded block, 24 silent blocks of clearing,
+    then the new note from fresh lines (owner, 2026-11-15: page 4 per trig, without clicks)"""
+    A, B = L.panel(MAT="FIBER"), L.panel(MAT="SKIN", GEST="STACC")
+    v = L.Voice()
+    v.note(A, 48, 0.9)
+    for _ in range(50):
+        last = v.block(A).copy()
+    v.note(B, 55, 0.9)
+    faded = v.block(B)
+    assert abs(faded[-1]) < abs(last).max() * 0.1 + 1e-6
+    assert all((v.block(B) == 0).all() for _ in range(24))
+    assert all((b == 0).all() for b in v.lines())
+    assert any((v.block(B) != 0).any() for _ in range(10))
+
+
+def test_the_slot_voice_reads_the_dn2s_frame():
+    knobs = [L.DEFAULTS[c] for c in L.CONTROLS[:24]] + [
+        L.option_knob(L.DEFAULTS[c], len(L.CHOICES[c])) for c in L.CONTROLS[24:]]
+    assert L.eff_of(knobs)[24:] == [float(L.DEFAULTS[c]) for c in L.CONTROLS[24:]]
+    v = L.SlotVoice(3)
+    out = [v.dsp_block(knobs, k == 0, 48.0, 100, k == 30) for k in range(60)]
+    assert np.abs(np.concatenate(out)).max() > 0.01

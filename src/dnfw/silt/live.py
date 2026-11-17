@@ -53,6 +53,7 @@ NSEC_DEEP = 6       # QUAL DEEP's filaments (docs/silt-dsp.md, guardrail 2)
 NSL = 1024          # a filament's loop
 LINE_WORDS = 2 * NBR + NSEC * NSL      # a slot's lines in DDR: br, nk, then the filaments (48 KB)
 REST_AMP = F(1e-4)                     # released and this quiet (-80 dB): the voice rests (the guardrails)
+FADE = np.array([F(F(1.0) - F(F(i + 1) * F(1.0 / SUB))) for i in range(SUB)], F)   # a block's fade out
 CLEAR_WORDS = 512                      # cleared a block when the slot becomes SILT: 24 blocks
 assert LINE_WORDS % CLEAR_WORDS == 0
 QN_MASS = (2, 4, NSEC_DEEP)
@@ -63,6 +64,11 @@ HARM = tuple(F(c) for c in (0.0, 1200.0, 702.0, 1902.0, 2400.0, 1586.0, 969.0, 1
 MEM = tuple(F(c) for c in (1.0, 1.59, 2.14, 2.30, 2.65, 2.92))
 BFR = tuple(F(c) for c in (290.0, 470.0, 1150.0, 2600.0))
 BGN = tuple(F(c * 0.012) for c in (1.0, 0.7, 0.45, 0.25))
+# the filaments' own constants (tables on the DSP: one word each, so live and the SHARC agree)
+FACK = tuple(F(F(F(0.85) + F(F(F(0.3) * F((k * 7) % 5)) * F(0.25))) - F(1.0)) for k in range(8))
+IMPK = tuple(F(F(0.6) + F(F(F(0.4) * F((k * 3) % 4)) * F(1.0 / 3.0))) for k in range(8))
+SGNK = tuple(F(1.0) if k % 2 else F(-1.0) for k in range(8))     # odd players +, even -
+ALTK = tuple(F(1.0) if k % 2 == 0 else F(-1.0) for k in range(8))
 
 
 # -- arithmetic beyond fascia.live's -------------------------------------------------------
@@ -202,6 +208,9 @@ class Voice:
         self.L4 = [0] * 8
         self.clear_at = LINE_WORDS             # the lines' clear: done (a fresh Voice's are zeros)
         self.rest = True                       # silent and costing nothing until a note
+        self.fade = False                      # a note of another material: this block fades
+        self.w_off = False
+        self.seed = seed
         self.waiting = None                    # a note that came during the clear
 
     def lines(self):
@@ -224,8 +233,15 @@ class Voice:
     def note(self, P, note, vel):
         """a trig (the DN2 gives the note and its velocity; the gate holds until the note-off)"""
         s = self
-        if s.clear_at < LINE_WORDS:            # the lines are clearing: the note waits for them
-            s.waiting = (list(P), note, vel)
+        mat = int(P[24])
+        if s.clear_at < LINE_WORDS or s.fade:  # the lines are clearing (or about to): the note waits
+            s.waiting = (note, vel)
+            s.w_off = False
+            return
+        if not s.rest and mat != s.L4[0]:      # another material: the old one fades over a block,
+            s.fade = True                      # the lines clear, then this note
+            s.waiting = (note, vel)
+            s.w_off = False
             return
         s.f0 = F(440.0) * exp2((F(note) - F(69.0)) * F(1.0 / 12.0))
         s.vel = F(vel); s.gate = 1; s.rest = False
@@ -241,7 +257,7 @@ class Voice:
             elif dist == 1:
                 c = u
             elif dist == 2:
-                c = (F(0.6) + F(0.4) * abs(u)) * (F(1.0) if k % 2 == 0 else F(-1.0))
+                c = (F(0.6) + F(0.4) * abs(u)) * ALTK[k]
             else:
                 c = powf(abs(u), 0.7)
             cents = c * (F(5.0) + spread * F(195.0 / 127.0))
@@ -267,25 +283,49 @@ class Voice:
     def block(self, P, out=None, off=False):
         """32 samples; OFF: the note-off came in this block's frame (mask 36, bit t)"""
         s = self
-        if off and s.waiting is not None:
-            s.waiting = None
+        if out is None:
+            out = np.zeros(SUB, F)
         if off:
-            s.gate = 0
+            if s.waiting is not None:
+                s.w_off = True                 # the waiting note will start with its gate closed
+            else:
+                s.gate = 0
+        if s.fade:                             # the last block of the old material, faded
+            s.fade = False
+            s._render(P, out)
+            out *= FADE
+            s.rest = True                      # the old material is gone
+            s.become()
+            s._check(out)
+            return out
         if s.clear_at < LINE_WORDS:
             s._clear_step()
-            if out is None:
-                out = np.zeros(SUB, F)
             out[:] = F(0.0)
             return out
         if s.waiting is not None:
-            w_ = s.waiting
+            w_, wo = s.waiting, s.w_off
             s.waiting = None
-            s.note(*w_)
+            s.note(P, *w_)
+            if wo:
+                s.gate = 0
         if s.rest:
-            if out is None:
-                out = np.zeros(SUB, F)
             out[:] = F(0.0)
             return out
+        s._render(P, out)
+        s._check(out)
+        return out
+
+    def _check(self, out):
+        """a non-finite sample: the output guard's wipe (silence, the voice rests, its state is
+        written again at the next note, its lines clear first)"""
+        if not np.isfinite(out).all():
+            out[:] = F(0.0)
+            seed = self.seed
+            Voice.__init__(self, seed, float(self.bpm))
+            self.become()
+
+    def _render(self, P, out):
+        s = self
         rng, rng2 = s.rng, s.rng2
         P = [F(v) for v in P]
         L4 = s.L4
@@ -546,9 +586,9 @@ class Voice:
         nsec = 0
         if mode >= 1:
             nsec = QN_MASS[qual]
-            nsec = max(1, int(round(float(F(nsec) * (F(0.25) + F(0.75) * voices) * (F(0.4) + F(0.6) * s.vel)))))
+            nsec = max(1, int(F(F(nsec) * (F(0.25) + F(0.75) * voices) * (F(0.4) + F(0.6) * s.vel)) + F(0.5)))
         elif voices > F(0.01) and (mat == 0 or mat == 2):
-            nsec = max(1, int(round(float(F(QN_SOLO[qual]) * voices))))
+            nsec = max(1, int(F(QN_SOLO[qual]) * voices + F(0.5)))
         sper = [F(0.0)] * NSEC
         base_c = cents - glp - ov
         for k in range(nsec):
@@ -568,22 +608,20 @@ class Voice:
                 elif distk == 1:
                     gk = gn * F(1200.0) * crv(gp * recip(F(1.0) + F(0.35) * uk), shape) * (F(1.0) + F(0.15) * uk)
                 elif distk == 2:
-                    gk = s.gl_amt * F(100.0) * (F(1.0) if k % 2 == 0 else F(-1.0)) * (F(1.0) + F(0.75) * uk)
+                    gk = s.gl_amt * F(100.0) * ALTK[k] * (F(1.0) + F(0.75) * uk)
                 else:
                     pp = crv(gp, shape)
                     sc = F(1.0) + gn * pp * F(3.0) if gn > F(0.0) else F(1.0) + gn * pp
             dr = s.sdrift[2 * k] * (F(1.0) - lock) + w[0] * lock
             c = s.soff[k] * sc + drift * F(60.0) * dr * (F(1.0) + loose) \
                 + vibr * F(40.0) * s.vib_env * sinf(TWO_PI * s.svph[k]) + gk \
-                + stress * F(30.0) * w[2] * (F(1.0) if k % 2 else F(-1.0))
+                + stress * F(30.0) * w[2] * SGNK[k]
             fk = s.f0 * exp2((c + base_c) * F(1.0 / 1200.0))
             sper[k] = mn(FS * recip(mx(fk, F(25.0))), F(NSL - 4))
         prate = F(5.0) + dens * dens * F(2500.0)
         sgn = rsq = recip(sqrtf(F(1.0) + (prate * (abs(s.bow) * F(6.0) + imp * F(40.0))
                                           + s.aval * F(30.0) * (dens + F(0.2)) * prate) * F(1.0 / 400.0)))
         # -- samples --
-        if out is None:
-            out = np.zeros(SUB, F)
         bowc = gest in (0, 1, 6, 8, 9)
         hpchain = gest != 0 and gest != 6 and gest != 8
         prate_fs = prate * IFS
@@ -783,7 +821,7 @@ class Voice:
                     if mode == 0:
                         nvk = yprev * F(0.03) * (F(0.4) + F(1.2) * cohe)
                     elif mat == 0 or mat == 1:
-                        fac = F(1.0) + (F(0.85) + F(0.3) * F((k * 7) % 5) * F(0.25) - F(1.0)) * (F(1.0) - lock) \
+                        fac = F(1.0) + FACK[k] * (F(1.0) - lock) \
                             * (F(1.0) + F(2.0) * loose)
                         ent = clip(entry * F(nsec) - F(k), 0.0, 1.0) if gest == 8 else F(1.0)
                         s.sbow[k] += (tgt * fac * ent - s.sbow[k]) * (att if tgt != F(0.0) else rel)
@@ -792,7 +830,7 @@ class Voice:
                         ck = F(1.0) if (tgt != F(0.0) or bowc) else mn(F(1.0), abs(s.sbow[k]) * F(60.0))
                         nvk = (dvk * btk + nz * scr * (F(1.0) - btk) * F(0.05)) * ck
                         if imp_sub > F(0.0) and i < 6:
-                            nvk += imp_sub * F(0.25) * (F(0.6) + F(0.4) * F((k * 3) % 4) * F(1.0 / 3.0)) \
+                            nvk += imp_sub * F(0.25) * IMPK[k] \
                                 * (F(1.0) - F(i) * F(1.0 / 6.0))
                     else:
                         nvk = exv * F(0.3)
@@ -860,6 +898,26 @@ def option_knob(o, n):
     """the knob in the middle of option O's span (for tests and presets)"""
     ks = [k for k in range(128) if knob_option(k, n) == o]
     return (ks[0] + ks[-1]) // 2
+
+
+def slot_seed(t: int) -> int:
+    """the seed of slot T's voice (its noises): 0x2545F491 + t, odd"""
+    return (0x2545F491 + t) | 1
+
+
+class SlotVoice(Voice):
+    """the voice as the DN2 drives it, a block at a time: the 32 knobs (0..127), the trig, its
+    note (float) and velocity (0..127), the note-off (mask 36)"""
+
+    def __init__(self, slot: int, bpm=120.0):
+        super().__init__(slot_seed(slot), bpm)
+        self.slot = slot
+
+    def dsp_block(self, knobs, trig: bool, note: float, vel: int, off: bool) -> np.ndarray:
+        P = eff_of(knobs)
+        if trig:
+            self.note(P, note, F(min(int(vel), 127)) * INV127)
+        return self.block(P, off=off)
 
 
 def render(P, notes, secs, seed=0x2545F491, bpm=120.0):
