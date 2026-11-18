@@ -195,6 +195,31 @@ costs. Its pieces:
 - **The sample's rate**: a pool entry's rate (for example 44.1 kHz, played at 48 kHz) scales
   SPD and the pitch, as the sampler's `rate` does.
 
+### Memory facts found while planning (2026-11-18)
+
+- **The DSP image has about 39 KB spare** under the 2 MiB USB limit (the v0.9 build is
+  2,057,875 bytes). Anything loaded counts against it, zeros included.
+  - So the lanes' memory, and each voice's SMEAR state, are **not loaded**. SMEAR clears
+    them itself:
+    - a lane's P and ring when a voice takes the lane;
+    - WF and WB are wholly rewritten every hop;
+    - a voice's grains at its first note after power-on (a magic word).
+  - Only the code and the tables go in the image: about 13 KB of code, the twiddles
+    (16 KB forward and inverse, 4 KB split), and the window (8 KB). That is too much beside
+    the 39 KB.
+  - **The twiddles are computed at power-on** instead, into their room, from one quarter
+    sine table (or from a recurrence checked against the model). That leaves the code and
+    a 2 KB seed.
+- **L2 that RIFT does not use**:
+  - 0x200b1000..0x200c0000 (60 KB, "free again");
+  - the Machinedrum voices' 16 KB at 0x200a0000 and the DPRO tables' 4 KB at 0x200a8000
+    (`dsp.l2_spans`: RIFT loads neither).
+  The lanes, D and the stage twiddles fit with room to spare.
+- **Lane-specific addresses**: the jobs use immediates. Either the VOC code is emitted
+  once per lane (about 2 x 10 KB of image), or the lane's buffers come from a base
+  register (one copy, a few instructions more a loop). The second is the plan, given the
+  image.
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,
