@@ -2186,10 +2186,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2326,10 +2326,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2463,10 +2463,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2591,10 +2591,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2719,10 +2719,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]

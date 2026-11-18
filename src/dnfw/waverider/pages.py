@@ -322,6 +322,43 @@ def res_named() -> dict[int, tuple[str, str]]:
 
 # the C side's one descriptor a machine of FASCIA's kind (fmt.c, smp_page.c, rec.c, page.c pick it by
 # the track's type or kind): FASCIA's and ORGAN's tables behind one set of pointers
+# RIFT v0.9 (owner, 2026-11-18: "use the new guis that you made"): each control's LINE glyph (smp_page.c line_glyph)
+LINE_GLYPHS = ("ARC", "TUNE", "LEV", "DECAY", "ATTACK", "PULSE", "DOTS", "FM", "FOLD", "POS", "RAYS", "SPREAD",
+               "NOISE", "RATE", "STRC", "SINE", "PIPE", "BOW")
+_LINE_OF = {
+    "TUNE": ("TUNE", "MTUN", "SHIFT", "GLISS", "BEND", "FINE"),
+    "LEV": ("LEV", "LEVL", "MIX", "MIXT", "HIT", "PVEL", "VSNS"),
+    "DECAY": ("DEC", "DAMP", "PDEC", "SPEECH", "DRIFT"),
+    "ATTACK": ("ATK", "CHIFF", "BLOM", "PERC"),
+    "PULSE": ("HARD", "CLIK", "KCLK", "SNAP"),
+    "DOTS": ("DUST", "GRAIN", "DENS", "PART", "SCRAP", "WATR"),
+    "FM": ("TZFM", "RING", "SIDE"),
+    "FOLD": ("FOLD", "CHAR", "ROUGH", "DRIV"),
+    "POS": ("POS",), "RAYS": ("BRIT", "FORM", "EDGE"),
+    "SPREAD": ("SPREAD", "CELESTE", "VOICES", "COUP"),
+    "NOISE": ("AIR", "WIND", "TURB", "BRTH", "BREK", "BUZZ", "VARY", "EXCT"),
+    "RATE": ("TREM", "TRATE", "ROTR", "RSPD", "LFO1", "LFO2", "VIBR"),
+    "STRC": ("STRC",), "SINE": ("FDBK", "MORPH", "LPG", "MCHR"),
+    "BOW": ("SPEED", "ROSIN", "INST"),
+}
+
+
+def line_glyph(name: str) -> int:
+    for g, names in _LINE_OF.items():
+        if name in names:
+            return LINE_GLYPHS.index(g)
+    if name.startswith("R") and name[1:].isdigit():
+        return LINE_GLYPHS.index("PIPE")
+    return LINE_GLYPHS.index("ARC")
+
+
+def line_c() -> str:
+    out = "".join(f"#define LG_{g} {i}\n" for i, g in enumerate(LINE_GLYPHS))
+    for pre, m in (("fsc", _fsc), ("org", _org), ("slt", _slt), ("lig", _lig), ("res", _res)):
+        out += f"static const unsigned char {pre}_lglyph[{len(m.CONTROLS)}] = {{{', '.join(str(line_glyph(c)) for c in m.CONTROLS)}}};\n"
+    return out
+
+
 MACH_C = """typedef struct {
     int type, kind, n, pages, tune_j, nolfo_n;
     const unsigned short *rid, *def, *nolfo;
@@ -329,22 +366,23 @@ MACH_C = """typedef struct {
     const char (*choice_name)[8];
     const char (*choice_box)[5];
     const char (*label)[6];
+    const unsigned char *lglyph;
 } wr_mach_t;
 static const wr_mach_t wr_mach_fsc = {FSC_TYPE, FSC_KIND, FSC_N, FSC_PAGES, FSC_TUNE_J, FSC_NOLFO_N,
     fsc_rid, fsc_default, fsc_nolfo, fsc_slot, fsc_lo, fsc_top, fsc_choices, fsc_choice_at, fsc_bipolar,
-    fsc_choice_name, fsc_choice_box, fsc_label};
+    fsc_choice_name, fsc_choice_box, fsc_label, fsc_lglyph};
 static const wr_mach_t wr_mach_org = {ORG_TYPE, ORG_KIND, ORG_N, ORG_PAGES, -1, 0,
     org_rid, org_default, 0, org_slot, org_lo, org_top, org_choices, org_choice_at, org_bipolar,
-    org_choice_name, org_choice_box, org_label};
+    org_choice_name, org_choice_box, org_label, org_lglyph};
 static const wr_mach_t wr_mach_slt = {SLT_TYPE, SLT_KIND, SLT_N, SLT_PAGES, -1, 0,
     slt_rid, slt_default, 0, slt_slot, slt_lo, slt_top, slt_choices, slt_choice_at, slt_bipolar,
-    slt_choice_name, slt_choice_box, slt_label};
+    slt_choice_name, slt_choice_box, slt_label, slt_lglyph};
 static const wr_mach_t wr_mach_lig = {LIG_TYPE, LIG_KIND, LIG_N, LIG_PAGES, -1, 0,
     lig_rid, lig_default, 0, lig_slot, lig_lo, lig_top, lig_choices, lig_choice_at, lig_bipolar,
-    lig_choice_name, lig_choice_box, lig_label};
+    lig_choice_name, lig_choice_box, lig_label, lig_lglyph};
 static const wr_mach_t wr_mach_res = {RES_TYPE, RES_KIND, RES_N, RES_PAGES, -1, 0,
     res_rid, res_default, 0, res_slot, res_lo, res_top, res_choices, res_choice_at, res_bipolar,
-    res_choice_name, res_choice_box, res_label};
+    res_choice_name, res_choice_box, res_label, res_lglyph};
 static inline const wr_mach_t *wr_mach_type(int ty)
 {
     return ty == FSC_TYPE ? &wr_mach_fsc : ty == ORG_TYPE ? &wr_mach_org : ty == SLT_TYPE ? &wr_mach_slt : ty == LIG_TYPE ? &wr_mach_lig : ty == RES_TYPE ? &wr_mach_res : 0;
@@ -446,7 +484,7 @@ def c_header() -> str:
             f"#define WR_KINDS {len(kinds)}\n"
             f"static const char *const wr_named_long[WR_KINDS][WR_NAMED] = {{{', '.join(row(m, 0) for m in kinds)}}};\n"
             f"static const char *const wr_named_short[WR_KINDS][WR_NAMED] = {{{', '.join(row(m, 1) for m in kinds)}}};\n"
-            + perc_c_header() + smp_c_header() + mnm_c_header() + _fsc.c_header() + _org.c_header() + _slt.c_header() + _lig.c_header() + _res.c_header() + MACH_C
+            + perc_c_header() + smp_c_header() + mnm_c_header() + _fsc.c_header() + _org.c_header() + _slt.c_header() + _lig.c_header() + _res.c_header() + line_c() + MACH_C
             + f"#define WR_NAMED_LO {min(order)}\n#define WR_NAMED_HI {max(order)}\n")
 
 
@@ -540,6 +578,7 @@ def smp_quant_header() -> str:
             f"#define PERC_TYPE_SLOT {_perc.TYPE_REC[1]}\n")
 SMP_WAVE_W, SMP_WAVE_AMP = 100, 11         # the waveform strip: columns, half-height in pixels
 SMP_GLYPHS = "0123456789AB/-YESLRMPTDCWIU."  # v0.44: L, R for the CHAN icon; v0.51: FLEX REC's state column
+SMP_GLYPHS += "FGHJKNOQVXZ+"   # RIFT v0.9: the LINE pages' labels and values (every letter)
 
 
 def smp_widgets_header() -> str:

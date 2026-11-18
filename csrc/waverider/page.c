@@ -541,8 +541,7 @@ void wr_page_draw(void *view, void *canvas)
         extern void fsc_page_draw(void *view, void *canvas, int page, int kind);
         if (page >= fm->pages)
             page = 0;
-        fsc_page_draw(view, canvas, page, kind);
-        ((void (*)(void *, void *, int))method(view, 184))(view, canvas, 0);
+        fsc_page_draw(view, canvas, page, kind);   /* RIFT v0.9: the LINE page covers the left column too */
         int n = PAGE_COUNT(view);
         if (n > 1)
             PAGE_DOTS(view, canvas, n, page, 7);
