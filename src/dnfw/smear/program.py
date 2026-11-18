@@ -292,3 +292,234 @@ def emit_frame(p: Prog, L: Layout) -> None:
     emit_phase(p, L)
     FT.emit_inverse(p, L.WF, L.FFT)
     emit_ola(p, L)
+
+
+# ================================================================================ GRN
+class GLayout:
+    """The grains' words (byte addresses). Inputs a block: READ (int), PITCH, GINC, ENVINC,
+    SPRAY, PRAND (floats), WINP (the window table's address), SIZE (int), BASE (the
+    buffer's address). State: GPH, RNG, ORD, MS, GAIN, then GRAINS x 8 words: on, pi, pf,
+    di, df, e, ei, o. OUT: the block's 32 samples. CNT: a loop counter."""
+
+    NAMES = ("READ", "PITCH", "GINC", "ENVINC", "SPRAY", "PRAND", "WINP", "SIZE", "BASE",
+             "GPH", "RNG", "ORD", "MS", "GAIN", "CNT")
+
+    def __init__(self, base: int):
+        for k, n in enumerate(self.NAMES):
+            setattr(self, n, base + 4 * k)
+        self.G = base + 64
+        self.OUT = self.G + 32 * LV.GRAINS
+        self.end = self.OUT + 4 * 32
+
+
+def _rnd(p: Prog, G: GLayout, d: int) -> None:
+    """Fd = the generator's next value (uses R8, R13)."""
+    p.ld(8, G.RNG)
+    p.iconst(13, LV.LCG_A)
+    p.mul_ssi(8, 8, 13)
+    p.iconst(13, LV.LCG_C)
+    p.iop(8, 13, "+", 8)
+    p.st(G.RNG, 8)
+    p.iconst(13, -31)
+    p.float_(d, 8, 13)
+
+
+def _launch(p: Prog, G: GLayout) -> None:
+    p.comment("a grain: the first free slot, else the oldest")
+    p.iconst(9, -1)
+    for k in reversed(range(LV.GRAINS)):
+        p.ld(0, G.G + 32 * k)
+        p.ifz(0, "EQ", lambda k=k: p.iconst(9, k))
+
+    def oldest():
+        p.iconst(9, 0)
+        p.ld(11, G.G + 28)
+        for k in range(1, LV.GRAINS):
+            p.ld(10, G.G + 32 * k + 28)
+            p.if_(10, "LT", 11, lambda k=k: (p.iconst(9, k), p.ipass(11, 10)), kind="i")
+    p.ifz(9, "LT", oldest)
+    p.lsh(9, 9, 5)
+    p.iconst(10, G.G)
+    p.iop(9, 10, "+", 9)
+    p.seti(1, 9)
+    # the position
+    _rnd(p, G, 0)
+    p.ld(1, G.SPRAY)
+    p.fop(0, 0, "*", 1)
+    p.ld(10, G.SIZE)
+    p.iconst(13, 0)
+    p.float_(1, 10, 13)
+    p.fop(0, 0, "*", 1)
+    p.trunc(2, 0)
+    p.ld(9, G.READ)
+    p.iop(2, 9, "+", 2)
+    wrap(p, 2, 10)
+    p.sti(1, 1, 2)                                # pi
+    # the step
+    _rnd(p, G, 0)
+    p.ld(1, G.PRAND)
+    p.fop(0, 0, "*", 1)
+    p.fconst(1, 0.1)
+    p.fop(0, 0, "*", 1)                           # x
+    c1, c2, c3 = (float(c) for c in LV.LN2)
+    p.fconst(1, c3)
+    p.fop(1, 0, "*", 1)
+    p.fconst(2, c2)
+    p.fop(1, 2, "+", 1)
+    p.fop(1, 0, "*", 1)
+    p.fconst(2, c1)
+    p.fop(1, 2, "+", 1)
+    p.fop(1, 0, "*", 1)
+    p.fconst(2, 1.0)
+    p.fop(1, 2, "+", 1)                           # 2^x
+    p.ld(0, G.PITCH)
+    p.fop(0, 0, "*", 1)                           # step
+    p.trunc(2, 0)
+    p.sti(3, 1, 2)                                # di
+    p.iconst(3, 0)
+    p.float_(1, 2, 3)
+    p.fop(0, 0, "-", 1)
+    p.sti(4, 1, 0)                                # df
+    p.iconst(0, 0)
+    p.sti(2, 1, 0)                                # pf = 0.0
+    p.sti(5, 1, 0)                                # e = 0.0
+    p.ld(0, G.ENVINC)
+    p.sti(6, 1, 0)                                # ei
+    p.ld(9, G.ORD)
+    p.iconst(12, 1)
+    p.iop(9, 9, "+", 12)
+    p.st(G.ORD, 9)
+    p.sti(7, 1, 9)                                # o
+    p.iconst(0, 1)
+    p.sti(0, 1, 0)                                # on
+
+
+def _grain(p: Prog, G: GLayout) -> None:
+    """The grain at I1 (R14): its sample into F11 (the sum), then it moves on."""
+    def render():
+        p.ldi(8, 1, 1)                            # pi
+        p.ld(9, G.BASE)
+        p.iconst(12, 1)
+        p.iop(3, 12, "+", 8)
+        p.if_(3, "GE", 13, lambda: p.iconst(3, 0), kind="i")
+        p.lsh(4, 8, 2)
+        p.iop(4, 9, "+", 4)
+        p.seti(0, 4)
+        p.ldi(4, 0, 0)                            # s0
+        p.lsh(5, 3, 2)
+        p.iop(5, 9, "+", 5)
+        p.seti(2, 5)
+        p.ldi(5, 0, 2)                            # s1
+        p.fop(5, 5, "-", 4)
+        p.ldi(6, 2, 1)                            # pf
+        p.fop(5, 6, "*", 5)
+        p.fop(5, 4, "+", 5)                       # v
+        p.fconst(6, float(LV.WIN_LEN))
+        p.fop(6, 1, "*", 6)                       # x = e 512
+        p.trunc(2, 6)
+        p.iconst(3, 0)
+        p.float_(7, 2, 3)
+        p.fop(6, 6, "-", 7)                       # ef
+        p.ld(10, G.WINP)
+        p.lsh(3, 2, 2)
+        p.iop(3, 10, "+", 3)
+        p.seti(0, 3)
+        p.ldi(7, 0, 0)                            # w0
+        p.ldi(4, 1, 0)
+        p.fop(4, 4, "-", 7)
+        p.fop(4, 6, "*", 4)
+        p.fop(4, 7, "+", 4)                       # w
+        p.fconst(6, float(LV.GRAIN_AMP))
+        p.fop(5, 5, "*", 6)
+        p.fop(5, 5, "*", 4)
+        p.fop(11, 11, "+", 5)
+        p.ldi(6, 2, 1)
+        p.ldi(7, 4, 1)
+        p.fop(6, 6, "+", 7)                       # pf + df
+        p.ldi(3, 3, 1)
+        p.iop(3, 8, "+", 3)                       # pi + di
+        p.fconst(7, 1.0)
+        p.if_(6, "GE", 7, lambda: (p.fop(6, 6, "-", 7), p.iconst(12, 1), p.iop(3, 12, "+", 3)))
+        p.if_(3, "GE", 13, lambda: p.iop(3, 3, "-", 13), kind="i")
+        p.sti(2, 1, 6)
+        p.sti(1, 1, 3)
+        p.ldi(7, 6, 1)
+        p.fop(1, 1, "+", 7)
+        p.sti(5, 1, 1)                            # e + ei
+
+    def live_():
+        p.ldi(1, 5, 1)                            # e
+        p.fconst(2, 1.0)
+        p.if_(1, "GE", 2, lambda: (p.iconst(0, 0), p.sti(0, 1, 0)), render)
+    p.ldi(0, 0, 1)
+    p.ifz(0, "NE", live_)
+
+
+def emit_grn(p: Prog, G: GLayout) -> None:
+    """live.Grn.block: 32 samples into OUT."""
+    p.comment("SMEAR grains")
+    p.iconst(0, G.OUT)
+    p.seti(5, 0)
+
+    def sample():
+        p.ld(0, G.GPH)
+        p.ld(1, G.GINC)
+        p.fop(0, 0, "+", 1)
+        p.fconst(1, 1.0)
+
+        def passed():
+            p.fop(0, 0, "-", 1)
+            p.st(G.GPH, 0)
+            p.ld(0, G.ENVINC)
+            p.iconst(1, 0)
+            p.if_(0, "GT", 1, lambda: _launch(p, G))
+        p.if_(0, "GE", 1, passed, lambda: p.st(G.GPH, 0))
+        p.ld(13, G.SIZE)
+        p.iconst(11, 0)                           # the sum: 0.0
+        p.iconst(14, G.G)
+
+        def one():
+            p.seti(1, 14)
+            _grain(p, G)
+            p.iconst(12, 32)
+            p.iop(14, 14, "+", 12)
+        p.loop_r(15, LV.GRAINS, one)
+        p.stpost(5, 11)
+    p.loop(G.CNT, 32, sample)
+
+    p.comment("the limiter")
+    p.ld(0, G.MS)
+    p.iconst(9, G.OUT)
+    p.seti(5, 9)
+    p.fconst(2, float(LV.RMS_B))
+    p.fconst(3, float(LV.RMS_C))
+
+    def ms():
+        p.ldpost(1, 5)
+        p.fop(1, 1, "*", 1)
+        p.fop(1, 3, "*", 1)
+        p.fop(4, 2, "*", 0)
+        p.fop(0, 4, "+", 1)
+    p.loop_r(15, 32, ms)
+    p.st(G.MS, 0)
+    p.fconst(1, float(LV.EPS_PREV))
+    p.fop(0, 0, "+", 1)
+    rsqrt(p, 4, 0, 7, 8, 10)
+    p.fconst(1, float(LV.RMS_CEIL))
+    p.fop(4, 1, "*", 4)
+    p.fconst(1, 1.0)
+    p.fop(4, 4, "MIN", 1)                         # gn
+    p.ld(5, G.GAIN)
+    p.st(G.GAIN, 4)
+    p.fop(4, 4, "-", 5)
+    p.fconst(1, 1.0 / 32)
+    p.fop(4, 4, "*", 1)                           # dg
+    p.iconst(9, G.OUT)
+    p.seti(5, 9)
+
+    def ramp():
+        p.fop(5, 5, "+", 4)
+        p.ldi(0, 0, 5)
+        p.fop(0, 0, "*", 5)
+        p.stpost(5, 0)
+    p.loop_r(15, 32, ramp)

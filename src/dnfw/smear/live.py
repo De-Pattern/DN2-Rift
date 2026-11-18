@@ -169,3 +169,132 @@ class Voc:
             self.ring[k] = self.ring[k] + fr
         self.job = (self.job + 1) % BLOCKS_PER_HOP
         return out
+
+
+# ================================================================================ GRN
+GRAINS = 8
+WIN_LEN = 512
+GRAIN_AMP = f32(0.45)
+RMS_CEIL = f32(0.20)
+RMS_B = f32(np.exp(-2 * np.pi * 10.0 / 48000.0))
+RMS_C = f32(f32(1.0) - RMS_B)
+LCG_A, LCG_C = 1664525, 1013904223
+LN2 = (f32(0.693147180559945), f32(0.240226506959101), f32(0.0555041086648216))
+
+
+def exp2_small(x: f32) -> f32:
+    """2^x for |x| <= 0.1 (a grain's detune, in octaves): 1 + x (c1 + x (c2 + x c3))."""
+    c1, c2, c3 = LN2
+    return f32(1.0) + x * (c1 + x * (c2 + x * c3))
+
+
+class Grn:
+    """The grains, sample by sample, as the DSP computes them.
+
+    A voice's state:
+    - the launch phasor;
+    - the random generator (an LCG; r = its word as a signed fraction, -1..1);
+    - a launch counter;
+    - the limiter's mean square and gain;
+    - per grain: active, read point (integer and fraction), step (integer and fraction),
+      window phase and step, and its launch number (for stealing the oldest).
+
+    A grain reads the buffer with linear interpolation; the next sample wraps to 0 at the
+    end. Its window is one of model.WINDOWS (513 points), read with linear interpolation.
+    Its value is (s x 0.45) x w.
+
+    Launch, at the sample the phasor passes 1:
+    - into the first free slot, else the oldest's;
+    - at the block's read point plus trunc(r x spray x size), wrapped;
+    - with step pitch x 2^(r' x prand x 0.1) (r' the generator's next value; the detune is
+      at most +-0.1 octave, the pedal's 120 cents);
+    - its window advancing 1/dur a sample, ending at 1.
+
+    The limiter acts at the block's end: the mean square moves sample by sample
+    (b ms + (1 - b) v^2); the gain is min(1, 0.2 x rsqrt(ms + 1e-30)); it is ramped across
+    the block from the last block's."""
+
+    def __init__(self, buf, window: np.ndarray):
+        self.buf = np.asarray(buf, f32)
+        self.win = np.asarray(window, f32)
+        self.gphase = f32(0)
+        self.rng = 0x1234567
+        self.order = 0
+        self.ms = f32(0)
+        self.gain = f32(1)
+        self.g = [dict(on=0, pi=0, pf=f32(0), di=0, df=f32(0), e=f32(0), ei=f32(0), o=0)
+                  for _ in range(GRAINS)]
+
+    def rnd(self) -> f32:
+        self.rng = (self.rng * LCG_A + LCG_C) & 0xFFFFFFFF
+        v = self.rng - (1 << 32) if self.rng >> 31 else self.rng
+        return f32(v * 2.0 ** -31)
+
+    def launch(self, read: int, pitch: f32, spray: f32, prand: f32, envinc: f32):
+        slot = next((k for k, g in enumerate(self.g) if not g["on"]), None)
+        if slot is None:
+            slot = min(range(GRAINS), key=lambda k: self.g[k]["o"])
+        size = len(self.buf)
+        r1 = self.rnd()
+        off = int(np.trunc(f32(f32(r1 * spray) * f32(size))))
+        pos = (read + off) % size
+        r2 = self.rnd()
+        step = f32(pitch * exp2_small(f32(f32(r2 * prand) * f32(0.1))))
+        di = int(np.trunc(step))
+        self.order += 1
+        self.g[slot] = dict(on=1, pi=pos, pf=f32(0), di=di, df=f32(step - f32(di)), e=f32(0),
+                            ei=envinc, o=self.order)
+
+    def block(self, read: int, pitch, ginc, envinc, spray, prand, n=32) -> np.ndarray:
+        """READ: the read point (an integer sample) this block; GINC: launches a sample
+        (density / 48000); ENVINC: 1 / (grain length in samples), 0 for no grains."""
+        pitch, ginc, envinc = f32(pitch), f32(ginc), f32(envinc)
+        spray, prand = f32(spray), f32(prand)
+        size = len(self.buf)
+        out = np.zeros(n, f32)
+        for s in range(n):
+            self.gphase = f32(self.gphase + ginc)
+            if self.gphase >= f32(1):
+                self.gphase = f32(self.gphase - f32(1))
+                if envinc > f32(0):
+                    self.launch(read, pitch, spray, prand, envinc)
+            acc = f32(0)
+            for g in self.g:
+                if not g["on"]:
+                    continue
+                if g["e"] >= f32(1):
+                    g["on"] = 0
+                    continue
+                i0 = g["pi"]
+                i1 = i0 + 1 if i0 + 1 < size else 0
+                s0 = self.buf[i0]
+                v = f32(s0 + f32(g["pf"] * f32(self.buf[i1] - s0)))
+                x = f32(g["e"] * f32(WIN_LEN))
+                e0 = int(np.trunc(x))
+                ef = f32(x - f32(e0))
+                w0 = self.win[e0]
+                w = f32(w0 + f32(ef * f32(self.win[e0 + 1] - w0)))
+                acc = f32(acc + f32(f32(v * GRAIN_AMP) * w))
+                pf = f32(g["pf"] + g["df"])
+                pi_ = i0 + g["di"]
+                if pf >= f32(1):
+                    pf = f32(pf - f32(1))
+                    pi_ += 1
+                if pi_ >= size:
+                    pi_ -= size
+                g["pf"], g["pi"] = pf, pi_
+                g["e"] = f32(g["e"] + g["ei"])
+            out[s] = acc
+        ms = self.ms
+        for v in out:
+            ms = f32(f32(RMS_B * ms) + f32(RMS_C * f32(v * v)))
+        self.ms = ms
+        gn = f32(RMS_CEIL * rsqrt(np.array([f32(ms + EPS_PREV)]))[0])
+        gn = min(gn, f32(1))
+        dg = f32(f32(gn - self.gain) * f32(1.0 / n))
+        gc = self.gain
+        for s in range(n):
+            gc = f32(gc + dg)
+            out[s] = f32(out[s] * gc)
+        self.gain = gn
+        return out
