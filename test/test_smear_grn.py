@@ -29,7 +29,7 @@ def test_grains_are_the_contract(fmt=0):
     sr = 48000
     i = np.arange(5000)
     buf = (0.5 * np.sin(2 * np.pi * 440 * i / sr) + 0.2 * np.sin(2 * np.pi * 61 * i / sr)).astype(np.float32)
-    win = M.WINDOWS["GAUS"].astype(np.float32)
+    win = LV.TABLES["WIN"][0]
     G = P.GLayout(GA)
     mem = Mem()
     if fmt:

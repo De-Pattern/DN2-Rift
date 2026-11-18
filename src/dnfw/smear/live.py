@@ -50,7 +50,7 @@ BINS = FFT_N // 2 + 1                    # 1025
 EPS_PREV = f32(1e-30)
 EPS_LOCK = f32(1e-15)
 SCALE = f32(f32(2.0 / 3.0) * f32(1.0 / 1024.0))
-WIN = (f32(0.5) - f32(0.5) * np.cos(2 * np.pi * np.arange(FFT_N) / FFT_N).astype(f32)).astype(f32)
+WIN = np.array([f32(0.5) - f32(0.5) * F.cos2048(i) for i in range(FFT_N)], f32)   # Hann, from fft.QSIN
 
 
 def rsqrt(x: np.ndarray) -> np.ndarray:
@@ -176,7 +176,7 @@ class Voc:
 
 # ================================================================================ GRN
 GRAINS = 8
-WIN_LEN = 512
+WIN_LEN = 128                    # a grain window's points less one (the design's 512, every fourth)
 GRAIN_AMP = f32(0.45)
 RMS_CEIL = f32(0.20)
 RMS_B = f32(np.exp(-2 * np.pi * 10.0 / 48000.0))
@@ -332,7 +332,7 @@ def _tables():
     t["GLEN"] = np.where(gf < 4, 4.0, 6.0) * 1000.0 / gf       # ms at full overlap, less 1
     t["GLEN"] = t["GLEN"].astype(f32)
     t["SQ"] = ((np.arange(128) / 127.0) ** 2).astype(f32)      # OVLP, SPRY, PRND, SIZE
-    t["WIN"] = [M.WINDOWS[n].astype(f32) for n in WIN_NAMES]
+    t["WIN"] = [M.WINDOWS[n][::M.WIN_LEN // WIN_LEN].astype(f32) for n in WIN_NAMES]
     return t
 
 

@@ -220,6 +220,18 @@ costs. Its pieces:
   register (one copy, a few instructions more a loop). The second is the plan, given the
   image.
 
+### The image, done (2026-11-18)
+
+- **Twiddles and the vocoder's window are computed at power-on.**
+  - `fft.emit_init` derives them by symmetry from one quarter sine of 513 words (`fft.QSIN`,
+    2 KB in the image): the stage-ordered forward and inverse twiddles, the split twiddles
+    and the 2048-point Hann window.
+  - It costs about 196k instructions once.
+  - The model takes its tables from `QSIN` too, so they are equal word for word
+    (`test_power_on_tables`). Negation is `0 - x` on both sides.
+- **The grain windows are 129 points** (every fourth of the design's 513), seven shapes,
+  3.6 KB.
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,

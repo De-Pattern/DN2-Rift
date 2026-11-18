@@ -43,13 +43,30 @@ def bitrev_pairs() -> list[tuple[int, int]]:
     return out
 
 
+# One quarter of a sine over a 2048-point circle, float32: the image holds these 513
+# words, and every twiddle and the window are derived from them by symmetry at power-on
+# (`emit_init`), so the model takes them from here too, word for word.
+QSIN = np.sin(2 * np.pi * np.arange(513) / REAL_N).astype(f32)
+
+
+def cos2048(j: int) -> f32:
+    """cos(2 pi j / 2048), j in 0..2047, from QSIN."""
+    j &= REAL_N - 1
+    q, r = divmod(j, 512)
+    z = f32(0)
+    return (QSIN[512 - r], z - QSIN[r], z - QSIN[512 - r], QSIN[r])[q]    # 0 - x: the DSP's negation
+
+
+def sin2048(j: int) -> f32:
+    return cos2048(j - 512)
+
+
 def twiddles(inverse: bool) -> np.ndarray:
     """N/2 complex twiddles of the 1024-point kernel, interleaved: cos, -+sin."""
-    k = np.arange(N // 2)
-    a = 2 * np.pi * k / N
     w = np.empty(N, f32)
-    w[0::2] = np.cos(a).astype(f32)
-    w[1::2] = (np.sin(a) if inverse else -np.sin(a)).astype(f32)
+    for k in range(N // 2):
+        w[2 * k] = cos2048(2 * k)
+        w[2 * k + 1] = sin2048(2 * k) if inverse else f32(0) - sin2048(2 * k)
     return w
 
 
@@ -66,11 +83,10 @@ def stage_twiddles(tw: np.ndarray) -> np.ndarray:
 
 def split_twiddles() -> np.ndarray:
     """The real split's W_2048^k for k = 0..511, interleaved: cos, -sin."""
-    k = np.arange(N // 2)
-    a = 2 * np.pi * k / REAL_N
     w = np.empty(N, f32)
-    w[0::2] = np.cos(a).astype(f32)
-    w[1::2] = (-np.sin(a)).astype(f32)
+    for k in range(N // 2):
+        w[2 * k] = cos2048(k)
+        w[2 * k + 1] = f32(0) - sin2048(k)
     return w
 
 
@@ -379,3 +395,79 @@ def _split_inv(p: Prog, buf: int, tables: int) -> None:
         p.fop(0, 2, "-", 5)
         p.sti(1, 2, 0)
     _split_loop(p, buf, tables, math_)
+
+
+# ---------------------------------------------------------------------------- power-on
+def emit_cos(p: Prog, d: int, j: int, qsin: int) -> None:
+    """Fd = cos2048(Rj) (Rj in R8..R15, kept). Clobbers R0..R3, R12, R13 and I3."""
+    p.iconst(12, REAL_N - 1)
+    p.iop(0, j, "AND", 12)
+    p.lsh(1, 0, -9)                               # q
+    p.iconst(12, 511)
+    p.iop(2, 0, "AND", 12)                        # r
+    p.iconst(13, 512)
+    p.iop(3, 13, "-", 2)                          # 512 - r
+    p.iconst(12, 1)
+    p.iop(12, 12, "AND", 1)                       # q odd: Q[r], else Q[512 - r]
+    p.ifz(12, "NE", lambda: p.ipass(3, 2))
+    p.lsh(3, 3, 2)
+    p.iconst(13, qsin)
+    p.iop(3, 13, "+", 3)
+    p.seti(3, 3)
+    p.ldi(d, 0, 3)
+    # negative in quadrants 1 and 2: (q + 1) & 2
+    p.iconst(12, 1)
+    p.iop(13, 12, "+", 1)
+    p.iconst(12, 2)
+    p.iop(13, 13, "AND", 12)
+    p.ifz(13, "NE", lambda: (p.iconst(12, 0), p.fop(d, 12, "-", d)))
+
+
+def emit_init(p: Prog, qsin: int, tables: int, win: int) -> None:
+    """The tables `tables_words` and live.WIN describe, computed from QSIN (513 words at
+    QSIN) into TABLES (after the swap pairs, which the image holds) and WIN."""
+    def table(dst: int, n: int, jof, store):
+        """for i in 0..n-1: store(i) with R14 = i; I5 walks DST."""
+        p.iconst(9, dst)
+        p.seti(5, 9)
+        p.iconst(14, 0)
+
+        def body():
+            jof()
+            store()
+            p.iconst(12, 1)
+            p.iop(14, 14, "+", 12)
+        p.loop_r(15, n, body)
+
+    def cs(sign_sin: bool, shift_j):
+        """store cos(J), then +-sin(J) (J in R11)."""
+        def st():
+            emit_cos(p, 4, 11, qsin)
+            p.stpost(5, 4)
+            p.iconst(12, -512)
+            p.iop(10, 11, "+", 12)
+            emit_cos(p, 4, 10, qsin)              # sin(J) = cos(J - 512)
+            if sign_sin:
+                p.iconst(12, 0)
+                p.fop(4, 12, "-", 4)
+            p.stpost(5, 4)
+        return st
+
+    for which, neg in ((T_TWF, True), (T_TWI, False)):
+        p.comment(f"power-on: the {'forward' if neg else 'inverse'} stage twiddles")
+        off = 0
+        for s in range(LOG2N):
+            half = 1 << s
+            dst = tables + which + 8 * (half - 1)
+            table(dst, half, lambda s=s: p.lsh(11, 14, LOG2N - s), cs(neg, None))   # J = 2 (j << (9 - s))
+    p.comment("power-on: the split twiddles")
+    table(tables + T_TWS, N // 2, lambda: p.ipass(11, 14), cs(True, None))
+    p.comment("power-on: the Hann window")
+
+    def hann():
+        emit_cos(p, 4, 11, qsin)
+        p.fconst(6, 0.5)
+        p.fop(4, 6, "*", 4)
+        p.fop(4, 6, "-", 4)
+        p.stpost(5, 4)
+    table(win, REAL_N, lambda: p.ipass(11, 14), hann)

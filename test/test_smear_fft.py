@@ -68,3 +68,20 @@ def test_emits():
     F.emit_forward(p, BUF, TAB)
     F.emit_inverse(p, BUF, TAB)
     assert "JUMP" in p.text()
+
+
+def test_power_on_tables():
+    """emit_init computes, from the 513 QSIN words, every twiddle and the window, word for word."""
+    from dnfw.smear import live as LV
+    QA, WA = 0x4000_0000, 0x5000_0000
+    mem = Mem()
+    for k, x in enumerate(F.QSIN):
+        mem.put(QA + 4 * k, struct.unpack("<I", struct.pack("<f", float(x)))[0])
+    p = Prog("run", mem=mem)
+    F.emit_init(p, QA, TAB, WA)
+    want = F.tables_words()
+    got = [mem.get(TAB + 4 * k) for k in range(F.T_TWF // 4, len(want))]
+    assert got == want[F.T_TWF // 4:]
+    win = np.array([mem.get(WA + 4 * k) for k in range(F.REAL_N)], np.uint32).view(np.float32)
+    assert win.tobytes() == LV.WIN.tobytes()
+    print("power-on steps", p.steps)
