@@ -18,14 +18,13 @@ differences from the model:
 **Controls** (knobs 0..127). Page 1: TYPE TUNE PNCH DEC, then the type's own four (model.OWN).
 Page 2: OVER and Machinedrum-style tone shaping: EQF EQG (a peaking EQ), AMD AMF (amplitude
 modulation), FLTF FLTW (a base/width band filter: a high-pass at the base, a low-pass the width
-above it), and LEV. Page 2 is not in this module yet (`tone` is a pass-through until the owner hears
-page 1).
+above it), and LEV. 
 """
 from __future__ import annotations
 
 import numpy as np
 
-from ..organ.live import F, DT, recip, exp2f, expf, sin_turns, note_hz, xs_bi, floorf
+from ..organ.live import F, DT, recip, exp2f, expf, sin_turns, note_hz, xs_bi, floorf, tanf
 
 FS = 48000
 SUB = 32
@@ -96,6 +95,79 @@ class Bp:
         return F(v * self.g)
 
 
+class Svf:
+    """the TPT state-variable filter (organ.live's, all three outputs); `set` once a block"""
+
+    def __init__(self):
+        self.ic1 = self.ic2 = F(0.0)
+        self.k = self.a1 = self.a2 = self.a3 = F(0.0)
+
+    def set(self, hz, k):
+        hz = min(max(F(hz), F(10.0)), F(21600.0))
+        g = tanf(F(F(F(3.14159265) * hz) * DT))
+        self.k = F(k)
+        self.a1 = recip(F(F(1.0) + F(g * F(g + self.k))))
+        self.a2 = F(g * self.a1)
+        self.a3 = F(g * self.a2)
+
+    def tick(self, x):
+        """-> (lp, bp, hp)"""
+        v3 = F(x - self.ic2)
+        v1 = F(F(self.a1 * self.ic1) + F(self.a2 * v3))
+        v2 = F(F(self.ic2 + F(self.a2 * self.ic1)) + F(self.a3 * v3))
+        self.ic1 = F(F(F(2.0) * v1) - self.ic1)
+        self.ic2 = F(F(F(2.0) * v2) - self.ic2)
+        return v2, v1, F(F(x - F(self.k * v1)) - v2)
+
+
+PAGE2 = ("OVER", "EQF", "EQG", "AMD", "AMF", "FLTF", "FLTW", "LEV")
+PAGE2_DEFAULTS = {"OVER": 0, "EQF": 64, "EQG": 64, "AMD": 0, "AMF": 64, "FLTF": 0, "FLTW": 127, "LEV": 100}
+SQRT2_INV = F(0.70710678)
+
+
+class Tone:
+    """page 2, after the drum (the Machinedrum's order: EQ, then the base/width filter, then AM):
+    - EQF the peak's note (k + 24: 41 Hz .. 13 kHz), EQG its gain, +-15 dB at 0 / 127 (64 flat), Q 1;
+    - FLTF the base (a high-pass at note k: 8 Hz at 0, open), FLTW the width above it in semitones,
+      where a low-pass sits (127: open);
+    - AMD the depth of a sine tremolo, AMF its rate (0.1 .. 100 Hz, exponential);
+    - LEV the level, 1.0 at 100."""
+
+    def __init__(self):
+        self.eq, self.hp, self.lp = Svf(), Svf(), Svf()
+        self.am = F(0.0)
+
+    def set(self, k: dict):
+        g = F(F(F(k.get("EQG", 64) - 64) * F(15.0 / 64.0)) * F(0.166096405))     # dB -> log2 of amplitude
+        self.eq_g = F(exp2f(g) - F(1.0))
+        self.eq_on = k.get("EQG", 64) != 64
+        self.eq.set(note_hz(F(k.get("EQF", 64) + 24)), F(1.0))
+        f = k.get("FLTF", 0)
+        self.hp_on = f > 0
+        self.hp.set(note_hz(F(f)), SQRT2_INV * F(2.0))
+        top = f + k.get("FLTW", 127)
+        self.lp_on = top < 135
+        self.lp.set(note_hz(F(top)), SQRT2_INV * F(2.0))
+        self.amd = F(F(k.get("AMD", 0)) * INV127)
+        self.amf = F(F(0.1) * exp2f(F(F(F(k.get("AMF", 64)) * INV127) * F(9.97))))   # 0.1 .. 100 Hz
+        self.lev = F(F(k.get("LEV", 100)) * F(F(1.0) / F(100.0)))
+
+    def tick(self, x):
+        if self.eq_on:
+            _, bp, _ = self.eq.tick(x)
+            x = F(x + F(self.eq_g * bp))
+        if self.hp_on:
+            x = self.hp.tick(x)[2]
+        if self.lp_on:
+            x = self.lp.tick(x)[0]
+        if self.amd > F(0.0):
+            m = F(F(0.5) + F(F(0.5) * sin_turns(self.am)))
+            x = F(x * F(F(1.0) - F(self.amd * m)))
+            self.am = F(self.am + F(self.amf * DT))
+            self.am = F(self.am - floorf(self.am))
+        return F(x * self.lev)
+
+
 class Voice:
     """one DIGIDRUM voice. A trig starts a hit of the type and knobs at that moment; the type's own
     knobs and DEC are read at the trig (a hit is one gesture), PNCH and OVER every block."""
@@ -104,6 +176,7 @@ class Voice:
         self.slot = slot
         self.on = False
         self.rng = [0x2545F491 + slot]
+        self.tone = Tone()
 
     def trig(self, k: dict, note: float | None, vel: float = 1.0):
         ty = TYPES[min(k["TYPE"] * len(TYPES) >> 7, len(TYPES) - 1)]
@@ -276,6 +349,7 @@ class Voice:
         drive = F(F(1.0) + F(F(2.0) * pn))
         n_pn = recip(sat(drive))
         gain = GAIN[self.ty]
+        self.tone.set(k)
         peak = F(0.0)
         for i in range(SUB):
             y = self.sample()
@@ -286,7 +360,7 @@ class Voice:
             y = F(y * self.vel)
             if ov > F(0.0):
                 y = F(sat(F(y * g_over)) * n_over)
-            y = F(y * gain)
+            y = self.tone.tick(F(y * gain))
             out[i] = y
             peak = max(peak, F(abs(y)))
         if self.n > 4800 and peak < IDLE:
