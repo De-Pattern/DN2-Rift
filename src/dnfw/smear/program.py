@@ -40,7 +40,7 @@ class Layout:
 
     def __init__(self, base: int, tables: int, lane: tuple[int, int] | None = None):
         a = base
-        self.POS, self.PITCH, self.SIZE, self.BASE, self.R, self.CNT, self.FMT = (a + 4 * k for k in range(7))
+        self.POS, self.PITCH, self.SIZE, self.BASE, self.R, self.CNT, self.FMT, self.FRAME = (a + 4 * k for k in range(8))
         a += 64
         self.D = a; a += 4 * (N + 2)
         if lane is None:
@@ -569,18 +569,26 @@ def _jobs(L: Layout):
         lambda p: emit_read(p, L, False, 1),
         lambda p: emit_read(p, L, True, 0),
         lambda p: emit_read(p, L, True, 1),
-        lambda p: FT.emit_forward(p, L.WF, L.FFT, 0),
-        lambda p: FT.emit_forward(p, L.WF, L.FFT, 1),
-        lambda p: FT.emit_forward(p, L.WF, L.FFT, 2),
-        lambda p: FT.emit_forward(p, L.WB, L.FFT, 0),
-        lambda p: FT.emit_forward(p, L.WB, L.FFT, 1),
-        lambda p: FT.emit_forward(p, L.WB, L.FFT, 2),
+        lambda p: _fwd(p, L, L.WF, 0),
+        lambda p: _fwd(p, L, L.WF, 1),
+        lambda p: _fwd(p, L, L.WF, 2),
+        lambda p: _fwd(p, L, L.WB, 0),
+        lambda p: _fwd(p, L, L.WB, 1),
+        lambda p: _fwd(p, L, L.WB, 2),
         lambda p: emit_phase(p, L),
         lambda p: FT.emit_inverse(p, L.WF, L.FFT, 0),
         lambda p: FT.emit_inverse(p, L.WF, L.FFT, 1),
         lambda p: FT.emit_inverse(p, L.WF, L.FFT, 2),
         lambda p: emit_ola(p, L),
     )
+
+
+def _fwd(p: Prog, L: Layout, frame, part: int) -> None:
+    """A part of the forward transform on FRAME (WF or WB): one copy of the code, a leaf
+    subroutine, finding its frame from the word L.FRAME."""
+    at_reg(p, 9, frame)
+    p.st(L.FRAME, 9)
+    p.call(f"fwd{part}", lambda: FT.emit_forward(p, At(L.FRAME), L.FFT, part))
 
 
 N_JOBS = 15                       # one a block; the hop's last block does none

@@ -255,9 +255,9 @@ What the voice does, by block:
 The sampler's glue writes the inputs: the knobs, `tr`, the rate, the note, the slot's
 buffer, the clock, the lane, and the state's DDR address.
 
-**Code**: 2,974 instructions (about 17.8 KB). That is over the 13 KB estimate, because the
-F and B transforms are emitted twice. Sharing them (one transform, the frame from a base
-word) is the next cut, to about 12 KB.
+**Code**: 2,531 instructions (about 15 KB), with the forward transform's three parts shared
+by F and B as leaf subroutines (`_fwd`, the frame from the word FRAME). It was 2,974 with
+them emitted twice.
 
 ## Build order
 
