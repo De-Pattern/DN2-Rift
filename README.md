@@ -28,11 +28,55 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.6** | 2026-11-17 | SILT, RIFT's third machine (material synthesis: FIBER, SILT, SKIN, FLUID played by ten gestures, alone or as an ensemble); ORGAN: BLOM a slow swell (breath from EDGE), MTUN replaces PHRM, MCHR replaces VELO | `builds/v0.6-SILT/` | yes |
+| **v0.7** | 2026-11-18 | FLEX buffers B1..B8 in every sample machine's SAMP, MUTE SRC only while the FLEX track plays, the stock NAME screen for file names (from the DN2 mk2 mod's v0.54-v0.57); ORGAN: BLOM is the breath's attack; turned knobs show their value (a lock with its trig held) on RIFT's machines; the campfire start-up animation | `builds/v0.7-FLEXPOOL/` | yes |
+| v0.6 | 2026-11-17 | SILT, RIFT's third machine (material synthesis: FIBER, SILT, SKIN, FLUID played by ten gestures, alone or as an ensemble); ORGAN: BLOM a slow swell (breath from EDGE), MTUN replaces PHRM, MCHR replaces VELO | `builds/v0.6-SILT/` | yes |
 | v0.5 | 2026-11-17 | ORGAN pages 3 (ATTACK: PERC, PDEC, PHRM, KCLK, VELO, MIXT, ROTR, RSPD) and 4 (BREATH: BRTH, TURB, BREK, BDEP, PRES, BLOM, EDGE, PVEL), all off at 0; v0.4 organ sounds unchanged; CELESTE fades instead of switching | `builds/v0.5-BREATH/` | yes |
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.7 · FLEXPOOL
+
+- **File:** `RIFT_v0.7_FLEXPOOL_OS1.11.syx` (`builds/v0.7-FLEXPOOL/`)
+- **sha256:** `320a8cce74f91135b2bc7c02828593ee1d6e636d0f1ec63b87a92ebf0ed83143`
+- **Gated:** 2026-11-18, `CLEARED TO FLASH`
+- **Source:** `23cbc87` (this repository)
+
+**Adds**
+
+- **FLEX from the DN2 mk2 mod** (dn2mk2-firmware `3f314b4`..`5414008`, its v0.54 to v0.57; not
+  DDRW, the Monomachine's):
+  - the eight FLEX buffers in every sample machine's SAMP, past 127 as B1..B8: knob, list and
+    p-locks; a track on Bn plays that buffer's playing take (`docs/flex-pool.md`);
+  - MUTE SRC mutes the source only while the FLEX track plays; the REC 1/REC 2 names are gone;
+    the F bank letter for buffers;
+  - FILE NAME, RENAME and CREATE FOLDER on the Digitone's own NAME screen (`docs/name-screen.md`).
+- **Values on RIFT's machines** (owner, 2026-11-17): FASCIA's, ORGAN's, SILT's (and LIGATURE's)
+  pages show a just-turned knob's value in its label's place for a second, its lock with a trig
+  held, as stock and the sample machines do (v0.48's rule; before, only with SYN held).
+- **ORGAN:** BLOM is the breath's attack (Error Kit): it scales the breath and its edge noise,
+  not the voice.
+- **Start-up:** the campfire animation (80 frames; robots drumming, the camera to the sky, the
+  smoke spells RIFT), the RIFT version over its last frame.
+- **LIGATURE** (type 21) is in the build, engine and gate steps, but held from MACHINE SEL until
+  its block-and-cable screens exist (owner, 2026-11-17).
+
+**Known issues**
+
+- Not yet tested on hardware: the FLEX buffer rows and the NAME screen on RIFT, the new
+  start-up animation's timing on the unit.
+
+**Tests**
+
+1. Record a FLEX take; a ONESHOT track's SAMP past 127 to B1 plays it; the list shows FLEX BUF 1.
+2. An empty buffer (FLEX EMPTY n) plays nothing.
+3. SAMP p-locked to B2 on one trig.
+4. MUTE SRC: the source is muted only while the FLEX track plays.
+5. Sample RENAME and CREATE FOLDER open the stock NAME screen; YES keeps, NO aborts.
+6. ORGAN, BLOM up: the breath swells in, the tone is not delayed.
+7. A p-locked trig held on FASCIA, ORGAN and SILT, a knob turned: its cell shows the lock.
+8. Power on: the campfire animation, then RIFT 0.7 on the last frame; boot completes.
+9. MACHINE SEL lists Fascia, Organ, Silt (no Ligature).
 
 ## v0.6 · SILT
 
