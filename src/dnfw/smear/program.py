@@ -23,27 +23,41 @@ import numpy as np
 from ..perc.dsl import Prog
 from . import fft as FT
 from . import live as LV
+from .addr import At, at_reg, ldw, stw
 
 N = LV.FFT_N
 MAGIC = 0x5F3759DF
 
 
 class Layout:
-    """Byte addresses. Params: POS (int: spos), PITCH (float), SIZE (int), BASE (the buffer's first
-    sample, float32), R (the ring's read point, int)."""
+    """Byte addresses. Params (fixed words, which the voice writes before a job): POS (int:
+    spos), PITCH (float), SIZE (int), BASE (the buffer's first sample), R (the ring's read
+    point, int), CNT, FMT. D, the phase step's scratch, is fixed too.
 
-    def __init__(self, base: int, tables: int):
+    WF, WB, P and RING are fixed (LANE None) or a lane's: LANE = (word of the lane's
+    L2 base, word of its DDR base). WF and WB then sit at the L2 base, P and RING at the
+    DDR one (`At`), so one copy of the code serves both lanes."""
+
+    def __init__(self, base: int, tables: int, lane: tuple[int, int] | None = None):
         a = base
         self.POS, self.PITCH, self.SIZE, self.BASE, self.R, self.CNT, self.FMT = (a + 4 * k for k in range(7))
         a += 64
-        self.WF = a; a += 4 * N
-        self.WB = a; a += 4 * N
         self.D = a; a += 4 * (N + 2)
-        self.P = a; a += 4 * (N + 2)
-        self.RING = a; a += 4 * N
+        if lane is None:
+            self.WF = a; a += 4 * N
+            self.WB = a; a += 4 * N
+            self.P = a; a += 4 * (N + 2)
+            self.RING = a; a += 4 * N
+        else:
+            self.WF, self.WB = At(lane[0], 0), At(lane[0], 4 * N)
+            self.P, self.RING = At(lane[1], 0), At(lane[1], 4 * (N + 2))
         self.end = a
         self.WIN = tables
         self.FFT = tables + 4 * N
+
+
+LANE_L2_BYTES = 8 * N                     # WF, WB
+LANE_DDR_BYTES = 4 * (N + 2) + 4 * N      # P, RING
 
 
 def tables_words() -> list[int]:
@@ -140,7 +154,7 @@ def emit_read(p: Prog, L: Layout, B: bool = False, half: int | None = None) -> N
     p.float_(11, 11, 12)                         # fi = i0 (FLOAT i0 BY 0)
     p.iconst(0, L.WIN + 4 * i0)
     p.seti(4, 0)
-    p.iconst(0, (L.WB if B else L.WF) + 4 * i0)
+    at_reg(p, 0, (L.WB if B else L.WF) + 4 * i0)
     p.seti(5, 0)
 
     def body():
@@ -214,15 +228,15 @@ def emit_phase(p: Prog, L: Layout) -> None:
     """live.phase_step on WF, WB and P; the result into WF (packed) and P."""
     p.comment("SMEAR phase step, pass 1: d into D")
     for (pw, bw, dw) in ((0, 0, 0), (N, 1, N)):  # DC, then Nyquist (real; their im are 0)
-        p.ld(0, L.P + 4 * pw)
-        p.ld(1, L.P + 4 * pw + 4)
-        p.ld(2, L.WB + 4 * bw)
+        ldw(p, 0, L.P + 4 * pw)
+        ldw(p, 1, L.P + 4 * pw + 4)
+        ldw(p, 2, L.WB + 4 * bw)
         p.iconst(3, 0)
         _bin1(p)
         p.st(L.D + 4 * dw, 4)
         p.st(L.D + 4 * dw + 4, 5)
     for i, a in ((1, L.P + 8), (2, L.WB + 8), (3, L.D + 8)):
-        p.iconst(9, a)
+        at_reg(p, 9, a)
         p.seti(i, 9)
 
     def pass1():
@@ -240,26 +254,26 @@ def emit_phase(p: Prog, L: Layout) -> None:
     p.ld(6, L.D + 8)
     p.fop(4, 4, "+", 6)                          # lr0 = d0r + d1r
     p.iconst(5, 0)                               # li0 = 0
-    p.ld(0, L.WF)
+    ldw(p, 0, L.WF)
     p.iconst(1, 0)
     _bin2(p)
-    p.st(L.WF, 2)
-    p.st(L.P, 2)
+    stw(p, L.WF, 2)
+    stw(p, L.P, 2)
     p.iconst(3, 0)
-    p.st(L.P + 4, 3)
+    stw(p, L.P + 4, 3)
     p.ld(4, L.D + 4 * (N - 2))
     p.ld(6, L.D + 4 * N)
     p.fop(4, 4, "+", 6)                          # lrN = d1023r + d1024r
     p.iconst(5, 0)
-    p.ld(0, L.WF + 4)
+    ldw(p, 0, L.WF + 4)
     p.iconst(1, 0)
     _bin2(p)
-    p.st(L.WF + 4, 2)
-    p.st(L.P + 4 * N, 2)
+    stw(p, L.WF + 4, 2)
+    stw(p, L.P + 4 * N, 2)
     p.iconst(3, 0)
-    p.st(L.P + 4 * N + 4, 3)
+    stw(p, L.P + 4 * N + 4, 3)
     for i, a in ((0, L.WF + 8), (1, L.P + 8), (3, L.D)):
-        p.iconst(9, a)
+        at_reg(p, 9, a)
         p.seti(i, 9)
 
     def pass2():
@@ -287,10 +301,10 @@ def emit_ola(p: Prog, L: Layout) -> None:
     """RING[(R + i) & 2047] += (WIN[i] x WF[i]) x SCALE, as live.Voc.block."""
     p.comment("SMEAR overlap-add")
     p.ld(13, L.R)
-    p.iconst(14, L.RING)
+    at_reg(p, 14, L.RING)
     p.iconst(0, L.WIN)
     p.seti(4, 0)
-    p.iconst(0, L.WF)
+    at_reg(p, 0, L.WF)
     p.seti(5, 0)
     p.fconst(9, float(LV.SCALE))
 

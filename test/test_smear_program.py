@@ -92,3 +92,23 @@ def test_jobs_are_the_frame():
     assert words(m1, L1.RING, 2048).tobytes() == words(m2, L2.RING, 2048).tobytes()
     assert words(m1, L1.P, 2050).tobytes() == words(m2, L2.P, 2050).tobytes()
     assert most < 90_000          # the phase step, about 84k
+
+
+def test_lane_bases_are_the_fixed_layout():
+    """The code with a lane's base words (At) computes what the fixed layout does."""
+    sr = 48000
+    buf = (0.5 * np.sin(2 * np.pi * 300 * np.arange(9000) / sr)).astype(np.float32)
+    L1, m1 = setup(buf, 0.8, 1536, 7)
+    L2 = P.Layout(BASE, TAB, lane=(0x0F00_0000, 0x0F00_0004))
+    _, m2 = setup(buf, 0.8, 1536, 7)
+    m2.put(0x0F00_0000, 0x4000_0000)
+    m2.put(0x0F00_0004, 0x5000_0000)
+    for hop in range(2):
+        for k in range(P.N_JOBS):
+            P.emit_job(Prog("run", mem=m1), L1, k)
+            P.emit_job(Prog("run", mem=m2), L2, k)
+    assert words(m1, L1.RING, 2048).tobytes() == words(m2, 0x5000_0000 + 4 * 2050, 2048).tobytes()
+    assert words(m1, L1.P, 2050).tobytes() == words(m2, 0x5000_0000, 2050).tobytes()
+    p = Prog("emit", prefix="sml")
+    for k in range(P.N_JOBS):
+        P.emit_job(p, L2, k)

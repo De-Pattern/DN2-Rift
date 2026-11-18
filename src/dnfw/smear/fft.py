@@ -25,6 +25,7 @@ import struct
 import numpy as np
 
 from ..perc.dsl import Prog, bits
+from .addr import at_reg, ldw, stw
 
 N = 1024                       # complex points
 REAL_N = 2 * N                 # real points
@@ -173,7 +174,7 @@ def _bitrev(p: Prog, buf: int, tables: int) -> None:
     def body():
         p.ldpost(8, 3)
         p.ldpost(9, 3)
-        p.iconst(10, buf)
+        at_reg(p, 10, buf)
         p.iop(8, 8, "+", 10)
         p.iop(9, 9, "+", 10)
         p.seti(0, 8)
@@ -197,7 +198,7 @@ def _stages(p: Prog, buf: int, tw: int, stages=range(LOG2N)) -> None:
         half = 1 << s
         off = 8 * (half - 1)                     # stage s's run starts after 1 + 2 + .. + 2^(s-1)
         p.comment(f"stage {s}: {N // (2 * half)} groups of {half} butterflies")
-        p.iconst(10, buf)
+        at_reg(p, 10, buf)
 
         def group(s=s, half=half, off=off):
             p.seti(0, 10)                            # top
@@ -243,13 +244,13 @@ def _split_loop(p: Prog, buf: int, tables: int, body_math) -> None:
         p.iop(14, 15, "-", 12)                       # 510 .. 0
         p.iop(14, 14, "+", 12)                       # k: 511 .. 1
         p.lsh(10, 14, 3)
-        p.iconst(13, buf)
+        at_reg(p, 13, buf)
         p.iop(11, 10, "+", 13)
         p.seti(0, 11)
         p.iconst(13, tables + T_TWS)
         p.iop(11, 10, "+", 13)
         p.seti(1, 11)
-        p.iconst(13, buf + 8 * N)
+        at_reg(p, 13, buf + 8 * N)
         p.iop(11, 13, "-", 10)
         p.seti(2, 11)
         body_math()
@@ -273,16 +274,16 @@ def emit_forward(p: Prog, buf: int, tables: int, part: int | None = None) -> Non
 
 def _split_fwd(p: Prog, buf: int, tables: int) -> None:
     p.comment("real split")
-    p.ld(0, buf)
-    p.ld(1, buf + 4)
+    ldw(p, 0, buf)
+    ldw(p, 1, buf + 4)
     p.fop(2, 0, "+", 1)
-    p.st(buf, 2)
+    stw(p, buf, 2)
     p.fop(2, 0, "-", 1)
-    p.st(buf + 4, 2)
+    stw(p, buf + 4, 2)
     p.iconst(3, 0)
-    p.ld(0, buf + 8 * (N // 2) + 4)
+    ldw(p, 0, buf + 8 * (N // 2) + 4)
     p.fop(0, 3, "-", 0)          # -im as 0 - im (the model does the same)
-    p.st(buf + 8 * (N // 2) + 4, 0)
+    stw(p, buf + 8 * (N // 2) + 4, 0)
 
     def math_():
         p.fconst(9, 0.5)
@@ -334,18 +335,18 @@ def emit_inverse(p: Prog, buf: int, tables: int, part: int | None = None) -> Non
 def _split_inv(p: Prog, buf: int, tables: int) -> None:
     p.comment("inverse real split")
     p.fconst(9, 0.5)
-    p.ld(0, buf)
-    p.ld(1, buf + 4)
+    ldw(p, 0, buf)
+    ldw(p, 1, buf + 4)
     p.fop(2, 0, "+", 1)
     p.fop(2, 2, "*", 9)
-    p.st(buf, 2)
+    stw(p, buf, 2)
     p.fop(2, 0, "-", 1)
     p.fop(2, 2, "*", 9)
-    p.st(buf + 4, 2)
+    stw(p, buf + 4, 2)
     p.iconst(3, 0)
-    p.ld(0, buf + 8 * (N // 2) + 4)
+    ldw(p, 0, buf + 8 * (N // 2) + 4)
     p.fop(0, 3, "-", 0)
-    p.st(buf + 8 * (N // 2) + 4, 0)
+    stw(p, buf + 8 * (N // 2) + 4, 0)
 
     def math_():
         p.fconst(9, 0.5)
