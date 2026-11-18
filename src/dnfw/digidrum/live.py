@@ -176,7 +176,9 @@ class Tone:
 
 class Voice:
     """one DIGIDRUM voice. A trig starts a hit of the type and knobs at that moment; the type's own
-    knobs and DEC are read at the trig (a hit is one gesture), PNCH and OVER every block."""
+    knobs and DEC are read at the trig (a hit is one gesture), PNCH, OVER and page 2 every block.
+    The pitch is the type's base note + (TUNE - 64) + (the played note - 60), so C4 plays the
+    drum at its own pitch and the keyboard tunes it; VEL is the trig's velocity / 127."""
 
     def __init__(self, slot: int = 0):
         self.slot = slot
@@ -189,8 +191,8 @@ class Voice:
         self.ty, self.on, self.n = ty, True, 0
         q = {c: F(F(k.get(c, 64)) * INV127) for c in ("PNCH", "DEC", "OVER", *OWN[ty])}
         self.q = q
-        base = BASE_NOTE[ty] if note is None else note
-        self.f0 = note_hz(F(F(base) + F(k.get("TUNE", 64) - 64)))
+        nt = F(60.0) if note is None else F(note)
+        self.f0 = note_hz(F(F(F(BASE_NOTE[ty]) + F(k.get("TUNE", 64) - 64)) + F(nt - F(60.0))))
         self.vel = F(vel)
         dec = F(F(0.02) * exp2f(F(q["DEC"] * F(9.0))))              # 20 ms .. 10 s
         self.amp, self.amp_k = F(1.0), t60(dec)
