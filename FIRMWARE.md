@@ -28,12 +28,48 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.7** | 2026-11-18 | FLEX buffers B1..B8 in every sample machine's SAMP, MUTE SRC only while the FLEX track plays, the stock NAME screen for file names (from the DN2 mk2 mod's v0.54-v0.57); ORGAN: BLOM is the breath's attack; turned knobs show their value (a lock with its trig held) on RIFT's machines; the campfire start-up animation | `builds/v0.7-FLEXPOOL/` | yes |
+| **v0.8** | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
+| v0.7 | 2026-11-18 | FLEX buffers B1..B8 in every sample machine's SAMP, MUTE SRC only while the FLEX track plays, the stock NAME screen for file names (from the DN2 mk2 mod's v0.54-v0.57); ORGAN: BLOM is the breath's attack; turned knobs show their value (a lock with its trig held) on RIFT's machines; the campfire start-up animation | `builds/v0.7-FLEXPOOL/` | yes |
 | v0.6 | 2026-11-17 | SILT, RIFT's third machine (material synthesis: FIBER, SILT, SKIN, FLUID played by ten gestures, alone or as an ensemble); ORGAN: BLOM a slow swell (breath from EDGE), MTUN replaces PHRM, MCHR replaces VELO | `builds/v0.6-SILT/` | yes |
 | v0.5 | 2026-11-17 | ORGAN pages 3 (ATTACK: PERC, PDEC, PHRM, KCLK, VELO, MIXT, ROTR, RSPD) and 4 (BREATH: BRTH, TURB, BREK, BDEP, PRES, BLOM, EDGE, PVEL), all off at 0; v0.4 organ sounds unchanged; CELESTE fades instead of switching | `builds/v0.5-BREATH/` | yes |
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.8 · RESONATOR
+
+- **File:** `RIFT_v0.8_RESONATOR_OS1.11.syx` (`builds/v0.8-RESONATOR/`)
+- **sha256:** `9965a3533162719d2e78f9592919efe582d053d926496c171286e5cebfc7e420`
+- **Gated:** 2026-11-18, `CLEARED TO FLASH`
+- **Source:** `4ea8dfd` (this repository)
+
+**Adds**
+
+- **RESONATOR** (MACHINE SEL: "Resonator" / "RES", type 22): the Rings-style modal resonator from
+  the DN2 mk2 mod's early versions (v0.6-v0.25, `docs/rings.md` there), rebuilt as a RIFT machine
+  in FASCIA's walk. 24 two-pole modes a voice, struck by a mallet blended with a noise burst.
+  - One page: **TUNE** (semitones, -64..+63), **LEV**, **STRC** (0 a string's harmonic series,
+    the middle a free bar, the top a plate or bell), **BRIT** (the mallet's width and how fast
+    high modes die), **DAMP** (0.1 to 12 s), **POS** (where it is struck), **EXCT** (mallet to
+    noise), **HIT** (how hard).
+  - Every control p-locks, slides and is an LFO destination; turning a knob shows its value.
+  - Each note latches its pitch at the trig; the modes keep ringing through a retrigger. A voice
+    that has rung out costs nothing. When time runs short, the newest notes are kept.
+- `src/dnfw/reson`: live.py (the sound), program.py (the DSP, bit for bit to live), machines.py.
+
+**Known issues**
+
+- Its screen is the standard RIFT page for now; the new LINE screen style comes later.
+- Not yet tested on hardware: RESONATOR's sound and DSP load on the unit.
+
+**Tests**
+
+1. MACHINE SEL: Resonator after Silt. A note rings at its pitch; TUNE moves it in semitones.
+2. STRC from 0 to 127: string, then marimba bar, then bell.
+3. DAMP short and long; BRIT dark and bright; EXCT to noise.
+4. Chords of four on one track; several RESONATOR tracks at once: listen for dropouts.
+5. P-lock STRC and DAMP on single trigs; an LFO on POS; a slide on TUNE.
+6. SAVE PROJECT, power-cycle, reload with RESONATOR tracks.
 
 ## v0.7 · FLEXPOOL
 
