@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..organ.live import F, DT, recip, exp2f, expf, sin_turns, note_hz, xs_bi, floorf, tanf
+from ..organ.live import F, DT, recip, exp2f, expf, sin_turns, note_hz, xs_bi
 
 FS = 48000
 SUB = 32
@@ -71,12 +71,18 @@ def t60(t):
     return expf(F(F(0.0) - F(LN_60DB * recip(F(F(t) * F(FS))))))
 
 
-def square(ph):
-    return F(1.0) if F(ph - floorf(ph)) < F(0.5) else F(-1.0)
+def wrap1(x):
+    """a phase kept in [0, 1): one subtraction (every increment is under a turn)"""
+    return F(x - F(1.0)) if x >= F(1.0) else x
 
 
-def triangle(ph):
-    r = F(ph - floorf(ph))
+def square(x):
+    """the sign of sin(2 pi x): +1 or -1"""
+    return F(1.0) if sin_turns(x) >= F(0.0) else F(-1.0)
+
+
+def triangle(r):
+    """r in [0, 1): -1 at 0, +1 at 0.5"""
     return F(F(F(4.0) * r) - F(1.0)) if r < F(0.5) else F(F(3.0) - F(F(4.0) * r))
 
 
@@ -104,7 +110,8 @@ class Svf:
 
     def set(self, hz, k):
         hz = min(max(F(hz), F(10.0)), F(21600.0))
-        g = tanf(F(F(F(3.14159265) * hz) * DT))
+        t = F(F(hz * DT) * F(0.5))                                        # tan(pi hz / fs) ...
+        g = F(sin_turns(t) * recip(sin_turns(F(t + F(0.25)))))            # ... as sin / cos
         self.k = F(k)
         self.a1 = recip(F(F(1.0) + F(g * F(g + self.k))))
         self.a2 = F(g * self.a1)
@@ -163,8 +170,7 @@ class Tone:
         if self.amd > F(0.0):
             m = F(F(0.5) + F(F(0.5) * sin_turns(self.am)))
             x = F(x * F(F(1.0) - F(self.amd * m)))
-            self.am = F(self.am + F(self.amf * DT))
-            self.am = F(self.am - floorf(self.am))
+            self.am = wrap1(F(self.am + F(self.amf * DT)))
         return F(x * self.lev)
 
 
@@ -192,6 +198,7 @@ class Voice:
         self.ph = [F(0.0)] * 8
         self.prev = F(0.0)
         if ty == "BD MODERN":
+            self.ph[1] = F(0.25)
             sw = q["SWEP"]
             self.sw, self.sw_k = F(F(9.0) * sw), decay(F(F(0.006) + F(F(0.07) * sw)))
             m = q["MENV"]
@@ -260,12 +267,15 @@ class Voice:
         ty, n = self.ty, self.n
         if ty == "BD MODERN":
             f = F(self.f0 * F(F(1.0) + self.sw))
-            self.ph[0] = F(self.ph[0] + F(f * DT))
+            d = F(f * DT)
+            self.ph[0] = wrap1(F(self.ph[0] + d))                 # the body
+            self.ph[1] = wrap1(F(self.ph[1] + F(d * F(1.5))))     # the triangle's (from a quarter)
+            self.ph[2] = wrap1(F(self.ph[2] + F(d * F(0.5))))     # the sub's
             p = self.ph[0]
             sq = F(F(square(F(p * F(2.0))) * self.smod) * self.me)
-            tr = F(F(triangle(F(F(p * F(1.5)) + F(0.25))) * self.tmod) * self.me)
+            tr = F(F(triangle(self.ph[1]) * self.tmod) * self.me)
             body = sin_turns(F(F(p + sq) + tr))
-            sub = F(sin_turns(F(F(p * F(0.5)) + F(0.25))) * self.sub)
+            sub = F(sin_turns(F(self.ph[2] + F(0.25))) * self.sub)
             click = F(xs_bi(self.rng) * self.clk)
             y = F(F(F(body + sub) * self.amp) + click)
             self.sw = F(self.sw * self.sw_k)
@@ -274,10 +284,10 @@ class Voice:
             self.clk = F(self.clk * self.clk_k)
         elif ty in ("SD BASIC", "PC CARBON"):
             f = F(self.f0 * F(F(1.0) + self.sw))
-            self.ph[1] = F(self.ph[1] + F(F(f * self.ratio) * DT))
+            self.ph[1] = wrap1(F(self.ph[1] + F(F(f * self.ratio) * DT)))
             m = sin_turns(F(self.ph[1] + F(self.fb * self.prev)))
             self.prev = m
-            self.ph[0] = F(self.ph[0] + F(f * DT))
+            self.ph[0] = wrap1(F(self.ph[0] + F(f * DT)))
             y = sin_turns(F(self.ph[0] + F(F(self.idx * self.me) * m)))
             if ty == "SD BASIC":
                 y = F(F(F(0.7) * y) + F(xs_bi(self.rng) * self.nz))
@@ -289,7 +299,7 @@ class Voice:
             s = F(F(1.0) + self.sw)
             y = F(0.0)
             for j, md in enumerate(self.modes):
-                self.ph[j] = F(self.ph[j] + F(F(F(self.f0 * md[0]) * s) * DT))
+                self.ph[j] = wrap1(F(self.ph[j] + F(F(F(self.f0 * md[0]) * s) * DT)))
                 y = F(y + F(F(sin_turns(self.ph[j]) * md[1]) * md[2]))
                 md[2] = F(md[2] * md[3])
             x = xs_bi(self.rng)
@@ -314,17 +324,17 @@ class Voice:
             self.tail = F(self.tail * self.tail_k)
             if self.crunch > F(0.0):
                 clap = F(F(F(F(1.0) - self.crunch) * clap) + F(self.crunch * sat(F(clap * F(4.0)))))
-            self.ph[0] = F(self.ph[0] + F(self.f0 * DT))
-            p = self.ph[0]
-            body = F(sin_turns(F(p + F(self.bidx * sin_turns(F(p * self.bratio))))) * self.benv)
+            self.ph[0] = wrap1(F(self.ph[0] + F(self.f0 * DT)))
+            self.ph[1] = wrap1(F(self.ph[1] + F(F(self.f0 * self.bratio) * DT)))
+            body = F(sin_turns(F(self.ph[0] + F(self.bidx * sin_turns(self.ph[1])))) * self.benv)
             self.benv = F(self.benv * self.benv_k)
             y = F(F(F(F(1.0) - self.bal) * clap) + F(self.bal * body))
             y = F(y * self.amp)
         else:                                   # CY ALLOY
             m = F(self.cmod * self.me)
             s = F(0.0)
-            self.ph[0] = F(self.ph[0] + F(self.fa * DT))
-            self.ph[1] = F(self.ph[1] + F(self.fb * DT))
+            self.ph[0] = wrap1(F(self.ph[0] + F(self.fa * DT)))
+            self.ph[1] = wrap1(F(self.ph[1] + F(self.fb * DT)))
             for r in CY_RATIOS:
                 r = F(r)
                 s = F(s + square(F(F(self.ph[0] * r) + F(m * sin_turns(F(self.ph[1] * r))))))
