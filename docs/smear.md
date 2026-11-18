@@ -71,6 +71,28 @@ that holds a WERP track still loads and plays.
 - **State**: about 8k words a voice (the previous frame, the overlap-add, the two analysis
   frames). Where it lives (L1/L2/DDR) is phase 0's question.
 
+## Phase 0 so far (2026-11-18)
+
+- `src/dnfw/smear/fft.py`: the real 2048-point FFT and its inverse, written once in the DSL.
+  - The program in run mode equals the float32 numpy model bit for bit
+    (`test/test_smear_fft.py`), and the model is a correct FFT: within 1e-4 of numpy's, and
+    the round trip to 1e-5.
+  - Layout: a radix-2 complex 1024-point kernel, then the real split, in Csound's packing.
+  - The twiddles are laid out stage by stage, so every pointer steps one word.
+- **Cost**, run-mode instructions: 152k a transform (forward or inverse), 432 instructions
+  of code. A hop's three transforms are about 460k; the hop's other work (windowed reads,
+  phase lock) is still to write.
+- **Memory**: L1 block 1 has no free room left (it runs to 0x2e7000). A frame and its
+  twiddles (about 16 KB a voice, plus 12 KB of shared tables) would sit in L2, at about 4x an
+  access.
+- **The next cuts**:
+  - stages 0 and 1 without multiplies (their twiddles are 1 and -i);
+  - radix 4 (half the passes over memory);
+  - reclaiming L1 that RIFT doesn't use (PING, SHFT and GRAN's rooms, if RIFT carries
+    none of them).
+- Until those land, plan on one or two VOC voices a track. The SHARC runner's cost step
+  measures it before any cap is set.
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,
