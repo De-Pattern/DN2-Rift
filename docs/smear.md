@@ -154,6 +154,45 @@ costs. Its pieces:
   - Running the jobs one after another equals the whole frame bit for bit
     (`test_jobs_are_the_frame`).
 
+### Integration plan (phase 2 and 3)
+
+- **The machine type**: WERP's type, 9.
+  - SMEAR takes WERP's row in MACHINE SEL and its DSP dispatch.
+  - WERP's reader stays in the code, reached from a type no list offers. A project saved
+    with a WERP track then still plays it on loading. Whether such a track should open as
+    SMEAR instead is the owner's call.
+- **The records**: no new ones. SMEAR's twelve controls ride the sample machines' existing
+  WaveTone records, away from the recorder screen's:
+
+| | A | B | C | D | E | F | G | H |
+|---|---|---|---|---|---|---|---|---|
+| page 1 | TUNE 238 | SPD 254 | BLND 255 | SAMP 256 | STRT 239 | SIZE 258 | DENS 257 | OVLP 260 |
+| page 2 | SPRY 243 | PRND 242 | WIN 240 | LEV 241 | - | - | - | - |
+
+  - Page 2 shows the sample's waveform behind its controls, with the loop and the read
+    point, as the DT2's page 2 does.
+  - The tables index each record's own range (STRT 0..120, WIN 0..100, PRND 4..120).
+  - SPD and BLND have detents (64 is 0 and the middle).
+  - WIN gets `smp_quant`'s one-detent-a-choice.
+- **The DSP**: SMEAR's own program (`smear.asm`), entered from the sample machines'
+  dispatch for type 9, as STRETCH's render is.
+  - Its code is about 13 KB as written. Sharing the F and B transforms' code (the buffer
+    address from a word, not an immediate) brings it to about 10 KB.
+  - It needs a room of its own: FASCIA's L2 span, if FASCIA, ORGAN, SILT and RESONATOR
+    leave that much, else the lane room.
+  - With the code in the lane room, the stage twiddles move to DDR (about +10k a block a
+    lane).
+- **The voice's state**: the sampler's 128 bytes keep the slot, the region and the note.
+  SMEAR's own state is in DDR, about 16.5 KB a slot:
+  - the read point;
+  - the grains;
+  - P and the ring;
+  - the lane it holds.
+  The grains' words (about 300 bytes) are the busiest, so they may move to L1 if the runner
+  shows they matter.
+- **The sample's rate**: a pool entry's rate (for example 44.1 kHz, played at 48 kHz) scales
+  SPD and the pitch, as the sampler's `rate` does.
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,
