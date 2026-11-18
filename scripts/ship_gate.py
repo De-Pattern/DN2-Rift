@@ -176,7 +176,8 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_slides.py",
          "test/test_libtree.py", "test/test_web_tool.py",   # v0.40: nested folders (the model, the page's levels)
          "test/test_fascia_coldfire.py",                    # v0.45: FASCIA on the ColdFire (type 18)
-         "test/test_fascia_program.py"]                     # v0.45: FASCIA's DSP program (run mode = live.py)
+         "test/test_fascia_program.py",                     # v0.45: FASCIA's DSP program (run mode = live.py)
+         "test/test_digidrum_program.py"]                  # RIFT: DIGIDRUM (run mode = live.py)
 HIT = re.compile(r"^\s+([0-9a-f]{8}):", re.M)
 
 # v0.38 (owner, 2026-11-01): the steps by name, for --only and --list, in the order a full run
@@ -210,6 +211,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("organ", "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire)"),
        ("silt", "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("ligature", "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
+       ("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("alloc", "GRID allocate slice locks (ColdFire)"),
        ("multisel", "multi-select delete (ColdFire)"),
        ("unused", "SELECT UNUSED (ColdFire)"),
@@ -2654,6 +2656,134 @@ def main() -> int:
                               "and left out" if good else why)
             later("ligature", "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)",
                   "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
+
+        # 6f5. RIFT: DIGIDRUM (type 22, dnfw.digidrum.machines): LIGATURE's step on DIGIDRUM's table
+        if "smp_machine_commit" in lay and "wr_lfo_mask" in lay:
+            from dnfw.digidrum import machines as FSg       # noqa: PLC0415  (RIFT: DIGIDRUM, as LIGATURE's step)
+            kit = 0x4210C08C
+            snd0 = kit + 52
+            tyg = snd0 + 0xDE
+            tb0 = 0x4121898C + 97872                     # pattern 0's lock table (6i2's)
+            recs = 0x401F7F94
+            hard, dust = FSg.SLOTS["TUNE"][1], FSg.SLOTS["DEC"][1]
+            lk_hard, lk_dust = 0x7F00, 0x7F00
+            cm = lay["smp_machine_commit"]
+            gs = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10", "png:wt",
+                  f"poke:{tyg:#x}:08", f"poke:{snd0 + 20 + 2 * 43:#x}:0500", "wait:4", "tap:2", "wait:6",
+                  "func-src", "wait:20", "down", "wait:4", "yes", "wait:20",
+                  f"call:{cm:#x}:arg1@{cm:#x}:0:{FSg.TYPE}:arg4@{cm:#x}:arg5@{cm:#x}", "wait:10", "types"]
+            gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in FSg.CONTROLS]
+            npg = len(FSg.PAGES)                         # RIFT: pass 3's four
+            gs += ["no", "wait:10", "png:p0"]
+            for k in range(1, npg):
+                gs += ["tap:2", "wait:10", f"png:p{k}"]
+            gs += ["tap:2", "wait:10", "png:r0"]
+            # (as stock p-locks: RECORD on (grid recording), a trig placed on step 1, the locks
+            # written into the playing pattern's table, then [TRIG 1] held; emu_slides' way)
+            gs += ["tap:19", "wait:10", "tap:25", "wait:10", "mem:0x42c5a9a0:4",
+                   f"poke:{tb0 + 20640:#x}:" + "ff" * (101 * 16),
+                   f"poke:{tb0 + 258 * 78:#x}:{hard:02x}00{lk_hard:04x}" + "ffff" * 127,
+                   f"poke:{tb0 + 258 * 79:#x}:{dust:02x}00{lk_dust:04x}" + "ffff" * 127,
+                   f"poke:{tb0 + 20640 + hard:#x}:4e", f"poke:{tb0 + 20640 + dust:#x}:4f",
+                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0",
+                   # RIFT v0.7 (owner, 2026-11-17): with the locked trig held, knob C turned shows
+                   # its value in its cell, as stock does (smp_page.c smp_value_shows)
+                   "spin:2:1", "wait:10", "png:k0", f"mem:{lay['smp_knob_code']:#x}:4", "release:25", "wait:10",
+                   "tap:19", "wait:10", "png:r2", "press:2", "wait:30", "png:v0", "release:2", "wait:10"]
+            named = [FSg.SLOTS[c][0] for c in FSg.CONTROLS]
+            gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named + list(FSg.UNUSED_RECORDS)]
+            gs += [f"mem:{recs + 60 * r + 0x28:#x}:4" for r in named]
+            gs += [f"call:{lay['wr_lfo_mask']:#x}:{r}" for r in named + list(FSg.UNUSED_RECORDS)]
+            # RIFT v0.4: TRK + CLEAR (hooks.S fsc_clear_hook): every control's word moved off its
+            # default, then [TRK] held with [FUNC] + [PLAY] (CLEAR): the machine's defaults come back
+            # (stock's would leave WaveTone's and FM Tone's; no clear would leave the moved words)
+            dwm = FSg.default_words()
+            gs += [f"poke:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:{(dwm[c] ^ 0x1000) & 0xFFFF:04x}" for c in FSg.CONTROLS]
+            gs += ["wait:4", "press:16", "wait:4", "press:17", "wait:4", "tap:20", "wait:10", "release:17",
+                   "wait:4", "release:16", "wait:30", "png:cleared"]
+            gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in FSg.CONTROLS]
+            gjs, gsf = work / "digidrum.json", work / "digidrum.steps"
+            gsf.write_text(",".join(gs))
+            g_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                     "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{gsf}", "--png-dir", work / "digidrum",
+                     "--json", gjs]
+
+            def g_body(tdir):
+                rc, out = run("digidrum", g_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and gjs.exists():
+                    import numpy as np                     # noqa: PLC0415
+                    from PIL import Image                  # noqa: PLC0415
+                    r = json.loads(gjs.read_text())
+                    m = r["memory"]
+                    shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
+                    sc = shots["p0"].shape[1] // 128
+
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
+                    kc = f"{lay['smp_knob_code']:#x}"
+                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
+                    words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
+                    playing = int(m.get("0x42c5a9a0", "0") or "0", 16)
+                    want = [FSg.default_words()[c] for c in FSg.CONTROLS]
+                    types = m.get("types@0") or [None]
+                    flip = [float((cell(shots["l0"], i) != cell(shots["r1"], i)).mean()) for i in range(8)]
+                    page = FSg.CONTROLS[:8]
+                    locked = {page.index("TUNE"), page.index("DEC")}
+                    vals = [int(m[k], 16) for k in keys[len(FSg.CONTROLS):]]
+                    nn = len(named) + len(FSg.UNUSED_RECORDS)
+                    short_p, long_p = vals[:nn], vals[nn:nn + len(named)]
+                    blobs = list(platform.runtime(sec3))
+
+                    def cstr(ptr):
+                        for va, blob in blobs:
+                            if va <= ptr < va + len(blob):
+                                end = blob.index(b"\0", ptr - va)
+                                return blob[ptr - va:end].decode("ascii", "replace")
+                        return f"<{ptr:#x}: not ours>"
+                    shorts = [cstr(x) for x in short_p]
+                    longs = [cstr(x) for x in long_p]
+                    masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
+                    cleared = [int(m[k], 16) for k in keys[-len(FSg.CONTROLS):]]   # after TRK + CLEAR
+                    facts = {
+                        "MACHINE SEL's commit to DIGIDRUM: track 1 is DIGIDRUM": types[0] == FSg.TYPE,
+                        f"its {len(FSg.CONTROLS)} controls at its model's DEFAULTS": words == want,
+                        f"{npg} pages, each its own, none the stock grid":
+                        len({shots[f"p{k}"].tobytes() for k in range(npg)}) == npg
+                        and not any((shots[f"p{k}"] == shots["wt"]).all() for k in range(npg)),
+                        "the last page key comes back to the first page's cells":
+                        all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
+                        "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
+                        "[TRIG 1] held: TUNE's and DEC's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
+                            int(m.get(kc, "0") or "0", 16) == 3
+                            and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
+                            and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
+                        "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
+                        "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
+                        "the LFO list names each control (short)": shorts[:len(named)] == [FSg.LABELS[c] for c in FSg.CONTROLS],
+                        "... and long": longs == [FSg.LONG_NAMES[c] for c in FSg.CONTROLS],
+                        "... and its unused records -": all(x == "-" for x in shorts[len(named):]),
+                        "every control an LFO destination": len(masks) == nn and all((x != 0) == (c not in FSg.NO_LFO)
+                                                                for c, x in zip(FSg.CONTROLS, masks[:len(named)])),
+                        "... the unused records left out": all(x == 0 for x in masks[len(named):]),
+                        "TRK + CLEAR: every control back at its machine's defaults (RIFT v0.4), not stock's":
+                            cleared == want,
+                        "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),
+                    }
+                    good = all(facts.values())
+                    why = (json.dumps({k: v for k, v in facts.items() if not v}) + f" types={types[:2]} words="
+                           f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
+                return good, ("DIGIDRUM (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
+                              "v0.14's: the real list is not driven here); its "
+                              f"{npg} pages drawn, each its own (labels, knobs); p-locked TUNE and DEC lit "
+                              f"as stock lights a lock, nothing else; SYN held shows values; its {len(FSg.CONTROLS)} records "
+                              "named and offered to the LFOs, the unused ones named - "
+                              "and left out" if good else why)
+            later("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)",
+                  "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
 
         # 6p. v0.33: our overlays let go when the page under them goes (docs/freeze-hunt.md).
         # The sample list opened on track 1 (a SAMP turn), then TRK + [TRIG 2] to track 2, a

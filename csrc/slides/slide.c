@@ -147,6 +147,8 @@ static int continuous(int type, u32 slot, u32 v)
         return (sl_slt[slot >> 5] >> (slot & 31)) & 1;
     if (type == SL_LIG_TYPE)                        /* RIFT: LIGATURE's 31 knobs */
         return (sl_lig[slot >> 5] >> (slot & 31)) & 1;
+    if (type == SL_DGD_TYPE)                        /* RIFT: DIGIDRUM's 8 knobs */
+        return (sl_dgd[slot >> 5] >> (slot & 31)) & 1;
     if (type == SL_PERC_TYPE) {
         if ((sl_perc_fx[slot >> 5] >> (slot & 31)) & 1)
             return 1;

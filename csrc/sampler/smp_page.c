@@ -868,6 +868,11 @@ void fsc_page_draw(void *view, void *c, int page, int kind)
         int top, v = value(view, id, &top), n = M->choices[j], k = fsc_knob(M, j, v);
         (void)top;
         const char *lab = M->label[j];
+        if (M == &wr_mach_dgd && j >= 4 && j < 8) {     /* RIFT: DIGIDRUM's O1..O4 are named by its TYPE */
+            int t0, v0 = value(view, M->rid[0], &t0), o0 = (fsc_knob(M, 0, v0) * 6) >> 7;
+            (void)t0;
+            lab = dgd_own[o0 > 5 ? 5 : o0][j - 4];
+        }
         int ll = slen(lab, 5);
         if (n) {                                /* a choice: its word in a thin box; a change scrolls in */
             int o = (k * n) >> 7;
