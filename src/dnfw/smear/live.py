@@ -298,3 +298,118 @@ class Grn:
             out[s] = f32(out[s] * gc)
         self.gain = gn
         return out
+
+
+# ================================================================================ the voice
+SR = 48000
+CONTROLS = ("TUNE", "SPD", "BLND", "SAMP", "STRT", "SIZE", "DENS", "OVLP",
+            "SPRY", "PRND", "WIN", "LEV")
+DEFAULTS = dict(TUNE=64, SPD=80, BLND=0, SAMP=0, STRT=0, SIZE=127, DENS=64, OVLP=64,
+                SPRY=0, PRND=0, WIN=3, LEV=100)
+WIN_NAMES = ("GAUS", "BHAR", "EXPO", "TRI", "RAMP", "SINC", "RECT")
+MIN_LOOP = 64
+
+
+def _speed(k: int) -> float:
+    """SPD 0..127: 64 is 0 (frozen); +-4 at the ends; within 0.06 of +-1 it is +-1 (80, 48)."""
+    s = (k - 64) / 63.0 * 4.0
+    if abs(abs(s) - 1.0) < 0.06:
+        s = math.copysign(1.0, s)
+    return s
+
+
+def _tables():
+    from . import model as M
+    t = {}
+    t["SPD"] = np.array([_speed(k) for k in range(128)], f32)
+    b = np.array([M.law_blend(k / 127) for k in range(128)], f32)
+    t["VG"], t["PG"], t["GG"] = b[:, 0].copy(), b[:, 1].copy(), b[:, 2].copy()
+    gf = np.array([M.law_density(k / 127) for k in range(128)])
+    t["GINC"] = (gf / SR).astype(f32)
+    t["GLEN"] = np.where(gf < 4, 4.0, 6.0) * 1000.0 / gf       # ms at full overlap, less 1
+    t["GLEN"] = t["GLEN"].astype(f32)
+    t["SQ"] = ((np.arange(128) / 127.0) ** 2).astype(f32)      # OVLP, SPRY, PRND, SIZE
+    t["WIN"] = [M.WINDOWS[n].astype(f32) for n in WIN_NAMES]
+    return t
+
+
+import math  # noqa: E402
+
+TABLES = _tables()
+
+
+def recip(x: f32) -> f32:
+    """1/x for x >= 1: the seed 0x7ef311c7 - bits, then three Newton steps (FASCIA's)."""
+    x = f32(x)
+    r = np.array([0x7EF311C7 - int(np.array([x], f32).view(np.uint32)[0])], np.uint32).view(f32)[0]
+    for _ in range(3):
+        r = f32(r * f32(f32(2.0) - f32(x * r)))
+    return r
+
+
+class Voice:
+    """A whole SMEAR voice, block by block (32 samples), float32.
+
+    The read point is an integer sample and a fraction in [0, 1). SPEED is split the same
+    way (floor and remainder), so a long buffer keeps its precision. It moves sample by
+    sample and wraps within the loop [lstart, lstart + lsize).
+    - VOC reads at the hop's first block's read point.
+    - GRN reads at each block's.
+    - PLAY reads every sample (linear interpolation) and moves the read point.
+    - A path whose BLND gain is 0 is not computed."""
+
+    def __init__(self, buf):
+        self.buf = np.asarray(buf, f32)
+        self.voc = Voc(self.buf)
+        self.grn = Grn(self.buf, TABLES["WIN"][3])
+        self.pi, self.pf = 0, f32(0)
+
+    def loop(self, k):
+        size = len(self.buf)
+        lstart = int(np.trunc(f32(f32(k["STRT"] * f32(1 / 128)) * f32(size))))
+        lsize = int(np.trunc(f32(TABLES["SQ"][k["SIZE"]] * f32(size - lstart))))
+        return lstart, max(lsize, MIN_LOOP)
+
+    def trig(self, k):
+        self.pi, self.pf = self.loop(k)[0], f32(0)
+        self.voc.reset()
+
+    def block(self, k: dict, note: float = 60.0, trig: bool = False) -> np.ndarray:
+        if trig:
+            self.trig(k)
+        T = TABLES
+        pitch = f32(2.0 ** ((note - 60.0) / 12.0 + (k["TUNE"] - 64) / 12.0))
+        spd = T["SPD"][k["SPD"]]
+        si = int(np.floor(spd))
+        sf = f32(spd - f32(si))
+        lstart, lsize = self.loop(k)
+        lend = lstart + lsize
+        vg, pg, gg = T["VG"][k["BLND"]], T["PG"][k["BLND"]], T["GG"][k["BLND"]]
+        y = np.zeros(32, f32)
+        if vg > 0:
+            y = y + vg * self.voc.block(float(self.pi), float(pitch))
+        if gg > 0:
+            ov = T["SQ"][k["OVLP"]]
+            ms = f32(min(f32(f32(ov * T["GLEN"][k["DENS"]]) + f32(1)), f32(8000)))
+            envinc = recip(f32(ms * f32(48)))
+            self.grn.win = T["WIN"][min(k["WIN"] * 7 >> 7, 6)]
+            y = y + gg * self.grn.block(self.pi, pitch, T["GINC"][k["DENS"]], envinc,
+                                        T["SQ"][k["SPRY"]], T["SQ"][k["PRND"]])
+        size = len(self.buf)
+        for s in range(32):
+            if pg > 0:
+                i0 = self.pi % size
+                i1 = i0 + 1 if i0 + 1 < size else 0
+                s0 = self.buf[i0]
+                y[s] = f32(y[s] + f32(pg * f32(s0 + f32(self.pf * f32(self.buf[i1] - s0)))))
+            pf = f32(self.pf + sf)
+            pi = self.pi + si
+            if pf >= f32(1):
+                pf = f32(pf - f32(1))
+                pi += 1
+            while pi >= lend:
+                pi -= lsize
+            while pi < lstart:
+                pi += lsize
+            self.pi, self.pf = pi, pf
+        return (y * f32(k["LEV"] / 100.0)).astype(f32)

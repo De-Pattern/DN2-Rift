@@ -39,3 +39,24 @@ def test_freeze_holds_level():
     rms = np.sqrt(np.mean(tail ** 2))
     assert 0.25 < rms < 0.5, rms
     assert np.all(np.isfinite(y))
+
+
+def test_voice_speed_table_detents():
+    assert L.TABLES["SPD"][64] == 0.0
+    assert L.TABLES["SPD"][80] == 1.0 and L.TABLES["SPD"][48] == -1.0
+    assert L.TABLES["SPD"][127] == 4.0 and L.TABLES["SPD"][0] < -4.0
+
+
+def test_voice_paths_finite_and_frozen_holds():
+    b = _src()
+    for blnd in (0, 64, 127):
+        k = dict(L.DEFAULTS, SPD=64, BLND=blnd, STRT=30, SIZE=90, DENS=90, OVLP=110)
+        v = L.Voice(b)
+        y = np.concatenate([v.block(k, 67, trig=(n == 0)) for n in range(600)]).astype(float)
+        assert np.all(np.isfinite(y)) and np.max(np.abs(y)) < 2.0
+        assert v.pi == v.loop(k)[0]                 # SPD 64: the read point never moved
+
+
+def test_recip():
+    for x in (1.0, 48.0, 1234.5, 384000.0):
+        assert abs(float(L.recip(x)) * x - 1) < 1e-6
