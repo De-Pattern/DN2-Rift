@@ -151,7 +151,8 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
         from ..organ import machines as OGx    # RIFT: ORGAN (19), in FASCIA's walk: ours too
         from ..silt import machines as SLx     # RIFT: and SILT (20)
         from ..ligature import machines as LGx  # RIFT: and LIGATURE (21)
-        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE, SLx.TYPE, LGx.TYPE))):
+        from ..reson import machines as RSx     # RIFT: and RESONATOR (22)
+        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE, SLx.TYPE, LGx.TYPE, RSx.TYPE))):
             p.iconst(12, lo)
             if lo == hi:
                 p.if_(2, "EQ", 12, lambda: p.iconst(14, 1), kind="i")

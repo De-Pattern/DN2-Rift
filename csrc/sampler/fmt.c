@@ -671,6 +671,10 @@ static void (*const lig_fns[])(int, char *) = {
     lig_f12, lig_f13, lig_f14, lig_f15, lig_f16, lig_f17, lig_f18, lig_f19, lig_f20, lig_f21, lig_f22,
     lig_f23, lig_f24, lig_f25, lig_f26, lig_f27, lig_f28, lig_f29, lig_f30, lig_f31};
 _Static_assert(sizeof lig_fns / sizeof lig_fns[0] == LIG_N, "one formatter a LIGATURE control");
+#define RES_F(j) static void res_f##j(int v, char *b) { fsc_text(&wr_mach_res, j, v, b); }
+RES_F(0) RES_F(1) RES_F(2) RES_F(3) RES_F(4) RES_F(5) RES_F(6) RES_F(7)   /* RIFT: RESONATOR's 8 */
+static void (*const res_fns[])(int, char *) = {res_f0, res_f1, res_f2, res_f3, res_f4, res_f5, res_f6, res_f7};
+_Static_assert(sizeof res_fns / sizeof res_fns[0] == RES_N, "one formatter a RESONATOR control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -736,6 +740,9 @@ void smp_formats(int kind)
     if (kind == LIG_KIND)                       /* RIFT: LIGATURE's (FASCIA's records too) */
         for (int j = 0; j < LIG_N; j++)
             RECORD_FMT(lig_rid[j]) = (void *)lig_fns[j];
+    if (kind == RES_KIND)                       /* RIFT: RESONATOR's (FASCIA's records too) */
+        for (int j = 0; j < RES_N; j++)
+            RECORD_FMT(res_rid[j]) = (void *)res_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.
