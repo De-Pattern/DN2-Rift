@@ -224,10 +224,10 @@ class Grn:
         self.buf = np.asarray(buf, f32)
         self.win = np.asarray(window, f32)
         self.gphase = f32(0)
-        self.rng = 0x1234567
+        self.rng = 0                       # all zeros: a voice's state starts cleared (the DSP's DDR)
         self.order = 0
         self.ms = f32(0)
-        self.gain = f32(1)
+        self.gain = f32(0)                 # so the first block fades in
         self.g = [dict(on=0, pi=0, pf=f32(0), di=0, df=f32(0), e=f32(0), ei=f32(0), o=0)
                   for _ in range(GRAINS)]
 

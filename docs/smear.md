@@ -232,6 +232,33 @@ costs. Its pieces:
 - **The grain windows are 129 points** (every fourth of the design's 513), seven shapes,
   3.6 KB.
 
+### The whole voice, bit-exact (2026-11-18)
+
+`program.emit_voice` is one SMEAR voice's block, and in run mode it equals `live.Voice`
+bit for bit over 150 blocks (`test/test_smear_voice.py`). The run covers:
+- notes on both lanes, and a note that has to wait for its lane's hop;
+- every BLND region (VOC, VOC + PLAY, PLAY, PLAY + GRN, GRN);
+- speeds either way, at a 44.1 kHz sample's rate;
+- knob moves while it sounds.
+
+What the voice does, by block:
+1. Its state (82 words) is copied in from DDR. A magic word clears it on first use, since
+   DDR is not cleared at power-on.
+2. It reads the loop, the speed and the blend gains from the tables.
+3. A note resets the read point and clears its lane (P, the ring, the lane's words).
+4. **VOC** (lane held, VG > 0): the ring's 32 samples out; job 0 latches the read point and
+   pitch; once armed, this block's job.
+5. **GRN** (GG > 0).
+6. **PLAY**, sample by sample, and the read point moves on (wrapping in the loop).
+7. × LEV; the state is copied out.
+
+The sampler's glue writes the inputs: the knobs, `tr`, the rate, the note, the slot's
+buffer, the clock, the lane, and the state's DDR address.
+
+**Code**: 2,974 instructions (about 17.8 KB). That is over the 13 KB estimate, because the
+F and B transforms are emitted twice. Sharing them (one transform, the frame from a base
+word) is the next cut, to about 12 KB.
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,

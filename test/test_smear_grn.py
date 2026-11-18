@@ -44,8 +44,6 @@ def test_grains_are_the_contract(fmt=0):
     mem.put(G.SIZE, len(buf))
     mem.put(G.BASE, BUFA)
     mem.put(G.WINP, WINA)
-    mem.put(G.RNG, 0x1234567)
-    mem.put(G.GAIN, u32(1.0))
     rng = np.random.default_rng(5)
     steps = []
     for blk in range(60):

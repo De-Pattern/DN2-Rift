@@ -588,3 +588,432 @@ N_JOBS = 15                       # one a block; the hop's last block does none
 
 def emit_job(p: Prog, L: Layout, k: int) -> None:
     _jobs(L)[k](p)
+
+
+# ================================================================================ the voice
+VT_NAMES = ("SPD", "VG", "PG", "GG", "GINC", "GLEN", "SQ", "LEV")
+WIN_WORDS = LV.WIN_LEN + 1
+
+
+def voice_tables_words() -> list[int]:
+    """The voice's control tables (128 floats each, VT_NAMES' order), then the seven grain
+    windows (129 floats each)."""
+    out = []
+    for n in VT_NAMES:
+        out += [struct.unpack("<I", struct.pack("<f", float(x)))[0] for x in LV.TABLES[n]]
+    for w in LV.TABLES["WIN"]:
+        out += [struct.unpack("<I", struct.pack("<f", float(x)))[0] for x in w]
+    return out
+
+
+KNOBS = LV.CONTROLS                       # TUNE SPD BLND SAMP STRT SIZE DENS OVLP SPRY PRND WIN LEV
+LANE_WORDS = 4                            # a lane's own words after its P and ring: POS, PITCH, R, ARMED
+STATE_MAGIC = 0x534D5231                  # 'SMR1'
+
+
+class VLayout:
+    """The voice's fixed scratch (one voice at a time), byte addresses.
+
+    Inputs, written by the sampler's glue before the block:
+    - KN: the twelve knobs, 0..127 (KNOBS' order);
+    - TR, RATE (floats);
+    - TRIG, SIZE, BASE, FMT, CLOCK, LANE (-1, 0 or 1);
+    - VSTATE: the voice's state in DDR.
+
+    Then the voice's state as copied in (PI, PF, then the grains' state words), the
+    grains' and the vocoder's layouts, the outputs and the tables."""
+
+    def __init__(self, base: int, tables: int, vtables: int, lanes: tuple):
+        a = base
+        names = [f"KN{k}" for k in range(12)] + ["TR", "RATE", "TRIG", "SIZE", "BASE", "FMT",
+                                                  "CLOCK", "LANE", "VSTATE", "LSTART", "LEND",
+                                                  "LSIZE", "SI", "SF", "VG", "PG", "GG", "JOB",
+                                                  "LW2", "LWD", "LST", "TMP", "CNT2"]
+        for k, n in enumerate(names):
+            setattr(self, n, a + 4 * k)
+        a += 4 * len(names)
+        a = (a + 63) & ~63
+        self.MAGIC, self.PI, self.PF = a, a + 4, a + 8
+        self.G = GLayout(a + 64)
+        # the state copied in and out: MAGIC .. the grains' end (the grains' inputs ride along)
+        self.STATE_WORDS = (self.G.G + 32 * LV.GRAINS - self.MAGIC) // 4
+        a = self.G.end
+        self.L = Layout(a, tables, lane=(self.LW2, self.LWD))
+        a = self.L.end
+        self.VOUT = a; a += 128
+        self.OUT = a; a += 128
+        self.end = a
+        self.VT = vtables
+        self.lanes = lanes                # ((L2 base, DDR base), (L2 base, DDR base))
+
+    def vt(self, name: str) -> int:
+        return self.VT + 512 * VT_NAMES.index(name)
+
+    def win(self, k: int) -> int:
+        return self.VT + 512 * len(VT_NAMES) + 4 * WIN_WORDS * k
+
+
+def _tab(p: Prog, d: int, V: VLayout, name: str, knob: int) -> None:
+    """Fd = table NAME at the knob KNOB's value (uses R12, I3)."""
+    p.ld(d, V.KN0 + 4 * KNOBS.index(knob) if isinstance(knob, str) else knob)
+    p.lsh(d, d, 2)
+    p.iconst(12, V.vt(name))
+    p.iop(d, 12, "+", d)
+    p.seti(3, d)
+    p.ldi(d, 0, 3)
+
+
+def _copy(p: Prog, src_word: int, dst: int, n: int, out: bool) -> None:
+    """n words between the DDR address in SRC_WORD and the fixed DST (OUT: fixed -> DDR)."""
+    p.ld(9, src_word)
+    p.seti(1, 9)
+    p.iconst(9, dst)
+    p.seti(2, 9)
+
+    def body():
+        if out:
+            p.ldpost(0, 2)
+            p.stpost(1, 0)
+        else:
+            p.ldpost(0, 1)
+            p.stpost(2, 0)
+    p.loop_r(15, n, body)
+
+
+def _recip(p: Prog, d: int, x: int) -> None:
+    """Fd = live.recip(Fx): the seed 0x7ef311c7 - bits, three Newton steps (uses R12, R13)."""
+    p.iconst(12, 0x7EF311C7)
+    p.iop(d, 12, "-", x)
+    for _ in range(3):
+        p.fop(12, x, "*", d)
+        p.fconst(13, 2.0)
+        p.fop(12, 13, "-", 12)
+        p.fop(d, d, "*", 12)
+
+
+def emit_voice(p: Prog, V: VLayout) -> None:
+    """live.Voice.block for one voice: 32 samples into V.OUT."""
+    G, L = V.G, V.L
+    p.comment("SMEAR voice: its state in")
+    _copy(p, V.VSTATE, V.MAGIC, V.STATE_WORDS, False)
+    p.ld(0, V.MAGIC)
+    p.iconst(1, STATE_MAGIC)
+
+    def fresh():                                   # DDR is not cleared at power-on: the first use clears it
+        p.iconst(0, 0)
+        p.iconst(9, V.MAGIC)
+        p.seti(1, 9)
+        p.loop_r(15, V.STATE_WORDS, lambda: p.stpost(1, 0))
+        p.iconst(1, STATE_MAGIC)
+        p.st(V.MAGIC, 1)
+    p.if_(0, "NE", 1, fresh, kind="i")
+    # -- the loop
+    p.ld(13, V.SIZE)
+    p.iconst(12, 0)
+    p.float_(1, 13, 12)                              # size
+    p.ld(0, V.KN0 + 4 * KNOBS.index("STRT"))
+    p.float_(0, 0, 12)
+    p.fconst(2, 1 / 128)
+    p.fop(0, 0, "*", 2)
+    p.fop(0, 0, "*", 1)
+    p.trunc(4, 0)                                    # lstart
+    p.st(V.LSTART, 4)
+    p.ipass(14, 4)
+    p.iop(5, 13, "-", 14)
+    p.iconst(12, 0)
+    p.float_(1, 5, 12)
+    _tab(p, 0, V, "SQ", "SIZE")
+    p.fop(0, 0, "*", 1)
+    p.trunc(5, 0)
+    p.iconst(12, LV.MIN_LOOP)
+    p.iop(5, 5, "MAX", 12)                           # lsize
+    p.st(V.LSIZE, 5)
+    p.iop(5, 14, "+", 5)
+    p.st(V.LEND, 5)
+    # -- the speed
+    _tab(p, 0, V, "SPD", "SPD")
+    p.ld(1, V.RATE)
+    p.fop(0, 0, "*", 1)
+    p.trunc(2, 0)
+    p.iconst(12, 0)
+    p.float_(3, 2, 12)
+    p.if_(3, "GT", 0, lambda: (p.iconst(12, 1), p.iop(2, 2, "-", 12), p.iconst(12, 0),
+                               p.float_(3, 2, 12)))
+    p.st(V.SI, 2)
+    p.fop(0, 0, "-", 3)
+    p.st(V.SF, 0)
+    for n in ("VG", "PG", "GG"):
+        _tab(p, 0, V, n, "BLND")
+        p.st(getattr(V, n), 0)
+
+    # -- a trig
+    def trig():
+        p.ld(0, V.LSTART)
+        p.st(V.PI, 0)
+        p.iconst(0, 0)
+        p.st(V.PF, 0)
+
+        def clear_lane():
+            _lane_bases(p, V)
+            p.iconst(0, 0)
+            at_reg(p, 9, L.P)
+            p.seti(1, 9)
+            p.loop_r(15, N + 2 + N + LANE_WORDS, lambda: p.stpost(1, 0))   # P, the ring, POS PITCH R ARMED
+        p.ld(0, V.LANE)
+        p.ifz(0, "GE", clear_lane)
+    p.ld(0, V.TRIG)
+    p.ifz(0, "NE", trig)
+
+    # -- y = 0
+    p.iconst(0, 0)
+    p.iconst(9, V.OUT)
+    p.seti(1, 9)
+    p.loop_r(15, 32, lambda: p.stpost(1, 0))
+
+    # -- VOC
+    def voc():
+        _lane_bases(p, V)
+        lst = L.RING + 4 * N                         # the lane's words: POS PITCH R ARMED
+        # the job: (CLOCK + 8 LANE) & 15
+        p.ld(9, V.CLOCK)
+        p.ld(0, V.LANE)
+        p.lsh(0, 0, 3)
+        p.iop(9, 9, "+", 0)
+        p.iconst(12, 15)
+        p.iop(9, 9, "AND", 12)
+        p.st(V.JOB, 9)
+        # the ring's 32 samples out (cleared behind), R moving on
+        ldw(p, 13, lst + 8)                          # R
+        at_reg(p, 14, L.RING)
+        p.iconst(9, V.VOUT)
+        p.seti(5, 9)
+
+        def ring1():
+            p.lsh(3, 13, 2)
+            p.iop(3, 14, "+", 3)
+            p.seti(0, 3)
+            p.ldi(1, 0, 0)
+            p.stpost(5, 1)
+            p.iconst(1, 0)
+            p.sti(0, 0, 1)
+            p.iconst(12, 1)
+            p.iop(13, 13, "+", 12)
+            p.iconst(12, N - 1)
+            p.iop(13, 13, "AND", 12)
+        p.loop_r(15, 32, ring1)
+        p.ipass(10, 13)
+        stw(p, lst + 8, 10)
+        # job 0: latch the read point (spos) and the pitch, and arm
+        p.ld(9, V.JOB)
+
+        def latch():
+            p.ld(9, V.PI)
+            p.iconst(12, -LV.HOP)
+            p.iop(9, 9, "AND", 12)                   # HOP x floor(pi / HOP)
+            p.iconst(12, 1)
+            p.iop(9, 9, "-", 12)
+            p.ld(13, V.SIZE)
+            wrap(p, 9, 13)
+            p.iconst(12, 1)
+            p.iop(9, 12, "+", 9)                     # (spos - 1) % size + 1
+            stw(p, lst, 9)
+            p.ld(0, V.TR)
+            stw(p, lst + 4, 0)
+            p.iconst(0, 1)
+            stw(p, lst + 12, 0)
+        p.ifz(9, "EQ", latch)
+        # the hop's job, once armed
+        ldw(p, 0, lst + 12)
+
+        def jobs():
+            ldw(p, 0, lst)
+            p.st(L.POS, 0)
+            ldw(p, 0, lst + 4)
+            p.st(L.PITCH, 0)
+            ldw(p, 0, lst + 8)
+            p.st(L.R, 0)
+            for w in ("SIZE", "BASE", "FMT"):
+                p.ld(0, getattr(V, w))
+                p.st(getattr(L, w), 0)
+            p.ld(9, V.JOB)
+            for k in range(N_JOBS):
+                p.iconst(12, k)
+                p.if_(9, "EQ", 12, lambda k=k: (emit_job(p, L, k), p.ld(9, V.JOB)), kind="i")
+        p.ifz(0, "NE", jobs)
+        # y = y + vg voc
+        p.ld(2, V.VG)
+        p.iconst(9, V.VOUT)
+        p.seti(4, 9)
+        p.iconst(9, V.OUT)
+        p.seti(5, 9)
+
+        def mix():
+            p.ldpost(0, 4)
+            p.fop(0, 2, "*", 0)
+            p.ldi(1, 0, 5)
+            p.fop(1, 1, "+", 0)
+            p.stpost(5, 1)
+        p.loop_r(15, 32, mix)
+    p.ld(0, V.VG)
+    p.iconst(1, 0)
+
+    def vg_on():
+        p.ld(0, V.LANE)
+        p.ifz(0, "GE", voc)
+    p.if_(0, "GT", 1, vg_on)
+
+    # -- GRN
+    def grn():
+        p.ld(0, V.PI)
+        p.st(G.READ, 0)
+        p.ld(0, V.TR)
+        p.st(G.PITCH, 0)
+        _tab(p, 0, V, "GINC", "DENS")
+        p.st(G.GINC, 0)
+        _tab(p, 0, V, "SQ", "OVLP")
+        _tab(p, 1, V, "GLEN", "DENS")
+        p.fop(0, 0, "*", 1)
+        p.fconst(1, 1.0)
+        p.fop(0, 0, "+", 1)
+        p.fconst(1, 8000.0)
+        p.fop(0, 0, "MIN", 1)
+        p.fconst(1, 48.0)
+        p.fop(0, 0, "*", 1)
+        _recip(p, 2, 0)
+        p.st(G.ENVINC, 2)
+        _tab(p, 0, V, "SQ", "SPRY")
+        p.st(G.SPRAY, 0)
+        _tab(p, 0, V, "SQ", "PRND")
+        p.st(G.PRAND, 0)
+        # the window: min(WIN x 7 >> 7, 6)
+        p.ld(0, V.KN0 + 4 * KNOBS.index("WIN"))
+        p.lsh(1, 0, 3)
+        p.iop(0, 1, "-", 0)                         # x 7
+        p.lsh(0, 0, -7)
+        p.iconst(12, 6)
+        p.iop(0, 0, "MIN", 12)
+        p.iconst(12, 4 * WIN_WORDS)
+        p.mul_ssi(0, 0, 12)
+        p.iconst(12, V.win(0))
+        p.iop(0, 12, "+", 0)
+        p.st(G.WINP, 0)
+        for w in ("SIZE", "BASE", "FMT"):
+            p.ld(0, getattr(V, w))
+            p.st(getattr(G, w), 0)
+        emit_grn(p, G)
+        p.ld(2, V.GG)
+        p.iconst(9, G.OUT)
+        p.seti(4, 9)
+        p.iconst(9, V.OUT)
+        p.seti(5, 9)
+
+        def mix():
+            p.ldpost(0, 4)
+            p.fop(0, 2, "*", 0)
+            p.ldi(1, 0, 5)
+            p.fop(1, 1, "+", 0)
+            p.stpost(5, 1)
+        p.loop_r(15, 32, mix)
+    p.ld(0, V.GG)
+    p.iconst(1, 0)
+    p.if_(0, "GT", 1, grn)
+
+    # -- PLAY, and the read point moves on
+    p.comment("SMEAR PLAY and the read point")
+    p.iconst(9, V.OUT)
+    p.seti(5, 9)
+
+    def sample():
+        p.ld(0, V.PG)
+        p.iconst(1, 0)
+
+        def play():
+            p.ld(10, V.PI)
+            p.ld(13, V.SIZE)
+            wrap(p, 10, 13)
+            p.ld(14, V.BASE)
+            fetch(p, 6, 10, 14, V.FMT, 9, 0)
+            p.iconst(12, 1)
+            p.iop(3, 12, "+", 10)
+            p.if_(3, "GE", 13, lambda: p.iconst(3, 0), kind="i")
+            fetch(p, 7, 3, 14, V.FMT, 9, 0)
+            p.fop(7, 7, "-", 6)
+            p.ld(5, V.PF)
+            p.fop(7, 5, "*", 7)
+            p.fop(7, 6, "+", 7)
+            p.ld(0, V.PG)
+            p.fop(7, 0, "*", 7)
+            p.ldi(1, 0, 5)
+            p.fop(1, 1, "+", 7)
+            p.sti(0, 5, 1)
+        p.if_(0, "GT", 1, play)
+        # pf += sf; pi += si; carry; wrap into [lstart, lend)
+        p.ld(0, V.PF)
+        p.ld(1, V.SF)
+        p.fop(0, 0, "+", 1)
+        p.ld(10, V.PI)
+        p.ld(2, V.SI)
+        p.iop(10, 10, "+", 2)
+        p.fconst(1, 1.0)
+        p.if_(0, "GE", 1, lambda: (p.fop(0, 0, "-", 1), p.iconst(12, 1), p.iop(10, 10, "+", 12)))
+        p.st(V.PF, 0)
+        p.ld(11, V.LEND)
+        p.ld(13, V.LSIZE)
+        p.ld(14, V.LSTART)
+        _wrap_loop(p, 10, 11, 13, 14)
+        p.st(V.PI, 10)
+        p.iconst(9, 1)
+        p.ldi(0, 0, 5)
+        p.stpost(5, 0)                               # on to the next sample
+    p.loop(V.CNT2, 32, sample)
+    # -- x LEV
+    _tab(p, 2, V, "LEV", "LEV")
+    p.iconst(9, V.OUT)
+    p.seti(5, 9)
+
+    def lev():
+        p.ldi(0, 0, 5)
+        p.fop(0, 0, "*", 2)
+        p.stpost(5, 0)
+    p.loop_r(15, 32, lev)
+    p.comment("SMEAR voice: its state out")
+    _copy(p, V.VSTATE, V.MAGIC, V.STATE_WORDS, True)
+
+
+def _lane_bases(p: Prog, V: VLayout) -> None:
+    """LW2, LWD = the lane's L2 and DDR bases (LANE 0 or 1)."""
+    p.ld(0, V.LANE)
+    (a0, d0), (a1, d1) = V.lanes
+    p.iconst(1, a0)
+    p.iconst(2, d0)
+    p.ifz(0, "NE", lambda: (p.iconst(1, a1), p.iconst(2, d1)))
+    p.st(V.LW2, 1)
+    p.st(V.LWD, 2)
+
+
+def _wrap_loop(p: Prog, r: int, lend: int, lsize: int, lstart: int) -> None:
+    """while r >= lend: r -= lsize; while r < lstart: r += lsize (all R8..R15)."""
+    if p.run:
+        while True:
+            p.e("COMP")
+            if p._cmp(r, lend, "i") >= 0:
+                p.iop(r, r, "-", lsize)
+                continue
+            p.e("COMP")
+            if p._cmp(r, lstart, "i") < 0:
+                p.iop(r, r, "+", lsize)
+                continue
+            break
+        return
+    top, low, done = p.label("lw"), p.label("lwlo"), p.label("lwok")
+    p.place(top)
+    p.e(f"COMP(R{r}, R{lend});")
+    p.jump("LT", low)
+    p.iop(r, r, "-", lsize)
+    p.jump("", top)
+    p.place(low)
+    p.e(f"COMP(R{r}, R{lstart});")
+    p.jump("GE", done)
+    p.iop(r, r, "+", lsize)
+    p.jump("", low)
+    p.place(done)
