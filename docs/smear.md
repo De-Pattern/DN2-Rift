@@ -259,6 +259,36 @@ buffer, the clock, the lane, and the state's DDR address.
 by F and B as leaf subroutines (`_fwd`, the frame from the word FRAME). It was 2,974 with
 them emitted twice.
 
+### The chain (phase 3's shape, from how FASCIA is entered)
+
+The DSP's programs are separate objects at fixed addresses. They run as a chain, each
+jumping on to the next:
+- `smp.asm`'s tail jumps to `fascia.asm` (`dsp.FSC_SW`);
+- `fascia.asm` jumps on to the shared tail at `PING_SW`.
+
+SMEAR becomes a stage of its own between them, `smear.asm` at its own address:
+
+- **`smp.asm`, for a type 9 track**, does what it does for every sample machine:
+  - the note, `tr`, the slot latched (its base, frames, format and rate);
+  - the two-pass retrigger.
+
+  Then, instead of rendering, it leaves a mailbox for the track: on, the note this block,
+  `tr`, the rate, base, frames and format. Its tail jumps to `smear.asm` instead of
+  `fascia.asm`.
+- **`smear.asm`** loops over the 16 tracks. For each mailbox that is on:
+  - it reads the twelve knobs from the frame (the sampler's `ctl`);
+  - it takes a lane at a note;
+  - it runs `emit_voice`, and writes the 32 samples into the track's buffer, as FASCIA does.
+
+  The lanes' owner table, the clock and the power-on flag (the first block runs
+  `fft.emit_init`) are its own words. It then jumps on to `fascia.asm`.
+- **Gate**:
+  - the SHARC runner gets a `smear` part: notes, lanes, every BLND region, int16 and
+    float32 slots, each block bit-exact to `live.Voice`;
+  - an `mstress` part: 16 SMEAR tracks, the frame's limit held, with a negative control;
+  - the `cost` step measures it on the assembled code;
+  - `hwrules` gets `smear.asm`'s span.
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,
