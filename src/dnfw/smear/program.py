@@ -34,7 +34,7 @@ class Layout:
 
     def __init__(self, base: int, tables: int):
         a = base
-        self.POS, self.PITCH, self.SIZE, self.BASE, self.R, self.CNT = (a + 4 * k for k in range(6))
+        self.POS, self.PITCH, self.SIZE, self.BASE, self.R, self.CNT, self.FMT = (a + 4 * k for k in range(7))
         a += 64
         self.WF = a; a += 4 * N
         self.WB = a; a += 4 * N
@@ -95,6 +95,34 @@ def wrap(p: Prog, r: int, size: int) -> None:
     p.place(done)
 
 
+def fetch(p: Prog, d: int, k: int, base: int, fmt: int, t: int, ii: int) -> None:
+    """Fd = sample Rk of the buffer at Rbase: a float32, or (the word at FMT nonzero) an
+    int16 / 32768 read as the half of its 32-bit word, as the sampler's `fetch`. BASE and T
+    are R8..R15 and distinct; clobbers Rt, R12 and I`ii`."""
+    def f32_():
+        p.lsh(12, k, 2)
+        p.iop(12, base, "+", 12)
+        p.seti(ii, 12)
+        p.ldi(d, 0, ii)
+
+    def i16():
+        p.lsh(12, k, 1)
+        p.iop(t, base, "+", 12)                 # the frame's byte address
+        p.iconst(12, -4)
+        p.iop(12, t, "AND", 12)
+        p.seti(ii, 12)
+        p.ldi(d, 0, ii)
+        p.iconst(12, 2)
+        p.iop(t, t, "AND", 12)
+        p.ifz(t, "EQ", lambda: p.lsh(d, d, 16))
+        p.iconst(12, 0xFFFF0000 - (1 << 32))
+        p.iop(d, d, "AND", 12)
+        p.iconst(12, -31)
+        p.float_(d, d, 12)
+    p.ld(12, fmt)
+    p.ifz(12, "NE", i16, f32_)
+
+
 # ---------------------------------------------------------------------------- the jobs
 def emit_read(p: Prog, L: Layout, B: bool = False) -> None:
     """WF (WB): sample(spos + offset) x WIN for i = 0..N-1, as live.read_frames. POS holds
@@ -126,14 +154,13 @@ def emit_read(p: Prog, L: Layout, B: bool = False) -> None:
             p.if_(4, "GT", 1, lambda: (p.iconst(12, 1), p.iop(2, 2, "-", 12)))   # floor
         p.iop(2, 10, "+", 2)                     # spos + offset
         wrap(p, 2, 13)
-        p.lsh(3, 2, 2)
-        p.iop(3, 14, "+", 3)
-        p.seti(0, 3)
-        p.ldi(6, 0, 0)                           # s0
+        fetch(p, 6, 2, 14, L.FMT, 9, 0)          # s0 (R9: the pitch is in F9 ...
+        p.ld(9, L.PITCH)                                        # ... so it is reloaded)
         p.iconst(12, 1)
         p.iop(3, 12, "+", 2)
         p.fpass(7, 6)                            # s1 = s0 at the end ...
-        p.if_(3, "LT", 13, lambda: p.ldi(7, 1, 0), kind="i")   # ... else the next sample
+        p.if_(3, "LT", 13, lambda: (fetch(p, 7, 3, 14, L.FMT, 9, 0), p.ld(9, L.PITCH)),
+              kind="i")                          # ... else the next sample
         p.fop(7, 7, "-", 6)
         p.fop(7, 5, "*", 7)
         p.fop(7, 6, "+", 7)                      # s0 + frac (s1 - s0)
@@ -302,7 +329,7 @@ class GLayout:
     di, df, e, ei, o. OUT: the block's 32 samples. CNT: a loop counter."""
 
     NAMES = ("READ", "PITCH", "GINC", "ENVINC", "SPRAY", "PRAND", "WINP", "SIZE", "BASE",
-             "GPH", "RNG", "ORD", "MS", "GAIN", "CNT")
+             "GPH", "RNG", "ORD", "MS", "GAIN", "CNT", "FMT")
 
     def __init__(self, base: int):
         for k, n in enumerate(self.NAMES):
@@ -402,14 +429,8 @@ def _grain(p: Prog, G: GLayout) -> None:
         p.iconst(12, 1)
         p.iop(3, 12, "+", 8)
         p.if_(3, "GE", 13, lambda: p.iconst(3, 0), kind="i")
-        p.lsh(4, 8, 2)
-        p.iop(4, 9, "+", 4)
-        p.seti(0, 4)
-        p.ldi(4, 0, 0)                            # s0
-        p.lsh(5, 3, 2)
-        p.iop(5, 9, "+", 5)
-        p.seti(2, 5)
-        p.ldi(5, 0, 2)                            # s1
+        fetch(p, 4, 8, 9, G.FMT, 10, 2)              # s0
+        fetch(p, 5, 3, 9, G.FMT, 10, 2)              # s1
         p.fop(5, 5, "-", 4)
         p.ldi(6, 2, 1)                            # pf
         p.fop(5, 6, "*", 5)

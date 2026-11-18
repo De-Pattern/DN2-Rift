@@ -16,16 +16,29 @@ def u32(x):
     return struct.unpack("<I", struct.pack("<f", float(x)))[0]
 
 
-def test_grains_are_the_contract():
+def _packed(mem, a, buf):
+    q = np.round(buf * 32767).astype(np.int16)
+    if len(q) % 2:
+        q = np.concatenate([q, [0]]).astype(np.int16)
+    for k, w in enumerate(q.view(np.uint32)):
+        mem.put(a + 4 * k, int(w))
+    return q[:len(buf)].astype(np.float32) / np.float32(32768)
+
+
+def test_grains_are_the_contract(fmt=0):
     sr = 48000
     i = np.arange(5000)
     buf = (0.5 * np.sin(2 * np.pi * 440 * i / sr) + 0.2 * np.sin(2 * np.pi * 61 * i / sr)).astype(np.float32)
     win = M.WINDOWS["GAUS"].astype(np.float32)
-    g = LV.Grn(buf, win)
     G = P.GLayout(GA)
     mem = Mem()
-    for k, x in enumerate(buf):
-        mem.put(BUFA + 4 * k, u32(x))
+    if fmt:
+        buf = _packed(mem, BUFA, buf)
+    else:
+        for k, x in enumerate(buf):
+            mem.put(BUFA + 4 * k, u32(x))
+    mem.put(G.FMT, fmt)
+    g = LV.Grn(buf, win)
     for k, x in enumerate(win):
         mem.put(WINA + 4 * k, u32(x))
     mem.put(G.SIZE, len(buf))
@@ -52,10 +65,14 @@ def test_grains_are_the_contract():
         out = np.array([mem.get(G.OUT + 4 * k) for k in range(32)], np.uint32).view(np.float32)
         assert out.tobytes() == y.tobytes(), blk
     print("steps a block, most", max(steps))
-    assert max(steps) < 20_000
+    assert max(steps) < 25_000          # 8 grains, int16: about 23k
 
 
 def test_emits():
     p = Prog("emit", prefix="smg")
     P.emit_grn(p, P.GLayout(GA))
     assert "JUMP" in p.text()
+
+
+def test_grains_int16():
+    test_grains_are_the_contract(fmt=1)

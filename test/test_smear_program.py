@@ -19,13 +19,19 @@ def words(mem, a, n):
     return np.array([mem.get(a + 4 * k) for k in range(n)], np.uint32).view(np.float32)
 
 
-def setup(buf, pitch, pos, r):
+def setup(buf, pitch, pos, r, fmt=0):
     L = P.Layout(BASE, TAB)
     mem = Mem()
     for k, w in enumerate(P.tables_words()):
         mem.put(TAB + 4 * k, w)
-    for k, x in enumerate(buf):
-        mem.put(BUFA + 4 * k, u32(x))
+    if fmt:
+        q = np.round(buf * 32767).astype(np.int16)
+        for k, w in enumerate(q.view(np.uint32)):
+            mem.put(BUFA + 4 * k, int(w))
+    else:
+        for k, x in enumerate(buf):
+            mem.put(BUFA + 4 * k, u32(x))
+    mem.put(L.FMT, fmt)
     mem.put(L.POS, int(pos))
     mem.put(L.PITCH, u32(pitch))
     mem.put(L.SIZE, len(buf))
@@ -34,12 +40,14 @@ def setup(buf, pitch, pos, r):
     return L, mem
 
 
-def test_frames_are_the_contract():
+def test_frames_are_the_contract(fmt=0):
     sr = 48000
     i = np.arange(9000)
     buf = (0.5 * np.sin(2 * np.pi * 440 * i / sr) + 0.3 * np.sin(2 * np.pi * 97 * i / sr)).astype(np.float32)
+    L, mem = setup(buf, 1.26, 0.0, 0, fmt)
+    if fmt:
+        buf = np.round(buf * 32767).astype(np.int16).astype(np.float32) / np.float32(32768)
     v = LV.Voc(buf)
-    L, mem = setup(buf, 1.26, 0.0, 0)
     for hop, (tim, pitch, r) in enumerate(((3000.0, 1.26, 0), (3190.0, 0.71, 512), (8900.0, 2.5, 1024), (100.0, 3.9, 1536))):
         size = len(buf)
         spos = LV.HOP * int(np.floor(tim / LV.HOP))
@@ -62,3 +70,7 @@ def test_emits():
     p = Prog("emit", prefix="smv")
     P.emit_frame(p, P.Layout(BASE, TAB))
     assert len(p.lines) > 100
+
+
+def test_frames_int16():
+    test_frames_are_the_contract(fmt=1)
