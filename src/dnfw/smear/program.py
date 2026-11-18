@@ -38,7 +38,8 @@ class Layout:
     L2 base, word of its DDR base). WF and WB then sit at the L2 base, P and RING at the
     DDR one (`At`), so one copy of the code serves both lanes."""
 
-    def __init__(self, base: int, tables: int, lane: tuple[int, int] | None = None):
+    def __init__(self, base: int, tables: int, lane: tuple[int, int] | None = None,
+                 win: int | None = None, fft=None):
         a = base
         self.POS, self.PITCH, self.SIZE, self.BASE, self.R, self.CNT, self.FMT, self.FRAME = (a + 4 * k for k in range(8))
         a += 64
@@ -52,8 +53,8 @@ class Layout:
             self.WF, self.WB = At(lane[0], 0), At(lane[0], 4 * N)
             self.P, self.RING = At(lane[1], 0), At(lane[1], 4 * (N + 2))
         self.end = a
-        self.WIN = tables
-        self.FFT = tables + 4 * N
+        self.WIN = tables if win is None else win                 # the Hann window
+        self.FFT = tables + 4 * N if fft is None else fft         # an fft.Tabs, or contiguous
 
 
 LANE_L2_BYTES = 8 * N                     # WF, WB

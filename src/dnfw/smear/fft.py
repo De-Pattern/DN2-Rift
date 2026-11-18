@@ -113,6 +113,22 @@ T_TWS = T_TWI + 8 * (N - 1)
 TABLE_BYTES = T_TWS + 4 * N
 
 
+class Tabs:
+    """Where the transform's tables are: the swap pairs, the forward and inverse stage
+    twiddles and the split twiddles, each at its own address (the DSP spreads them over the
+    rooms it has, docs/smear.md). An int TABLES means them contiguous in `tables_words`'
+    order."""
+
+    def __init__(self, pairs: int, twf: int, twi: int, tws: int):
+        self.pairs, self.twf, self.twi, self.tws = pairs, twf, twi, tws
+
+
+def tabs(tables) -> Tabs:
+    if isinstance(tables, Tabs):
+        return tables
+    return Tabs(tables + T_PAIRS, tables + T_TWF, tables + T_TWI, tables + T_TWS)
+
+
 # ---------------------------------------------------------------------------- the model
 def _cfft(z: np.ndarray, tw: np.ndarray) -> np.ndarray:
     """In place on a float32 array of 2N words (re, im interleaved)."""
@@ -184,7 +200,7 @@ def inverse(X) -> np.ndarray:
 # ---------------------------------------------------------------------------- the program
 def _bitrev(p: Prog, buf: int, tables: int) -> None:
     p.comment("bit-reversal: swap the pairs in the table")
-    p.iconst(8, tables + T_PAIRS)
+    p.iconst(8, tabs(tables).pairs)
     p.seti(3, 8)
 
     def body():
@@ -263,7 +279,7 @@ def _split_loop(p: Prog, buf: int, tables: int, body_math) -> None:
         at_reg(p, 13, buf)
         p.iop(11, 10, "+", 13)
         p.seti(0, 11)
-        p.iconst(13, tables + T_TWS)
+        p.iconst(13, tabs(tables).tws)
         p.iop(11, 10, "+", 13)
         p.seti(1, 11)
         at_reg(p, 13, buf + 8 * N)
@@ -283,7 +299,7 @@ def emit_forward(p: Prog, buf: int, tables: int, part: int | None = None) -> Non
         _bitrev(p, buf, tables)
     for k, st in enumerate(PARTS):
         if part in (None, k):
-            _stages(p, buf, tables + T_TWF, st)
+            _stages(p, buf, tabs(tables).twf, st)
     if part in (None, 2):
         _split_fwd(p, buf, tables)
 
@@ -345,7 +361,7 @@ def emit_inverse(p: Prog, buf: int, tables: int, part: int | None = None) -> Non
         _bitrev(p, buf, tables)
     for k, st in enumerate(INV_PARTS):
         if part in (None, k):
-            _stages(p, buf, tables + T_TWI, st)
+            _stages(p, buf, tabs(tables).twi, st)
 
 
 def _split_inv(p: Prog, buf: int, tables: int) -> None:
@@ -453,15 +469,16 @@ def emit_init(p: Prog, qsin: int, tables: int, win: int) -> None:
             p.stpost(5, 4)
         return st
 
-    for which, neg in ((T_TWF, True), (T_TWI, False)):
+    T = tabs(tables)
+    for base, neg in ((T.twf, True), (T.twi, False)):
         p.comment(f"power-on: the {'forward' if neg else 'inverse'} stage twiddles")
         off = 0
         for s in range(LOG2N):
             half = 1 << s
-            dst = tables + which + 8 * (half - 1)
+            dst = base + 8 * (half - 1)
             table(dst, half, lambda s=s: p.lsh(11, 14, LOG2N - s), cs(neg, None))   # J = 2 (j << (9 - s))
     p.comment("power-on: the split twiddles")
-    table(tables + T_TWS, N // 2, lambda: p.ipass(11, 14), cs(True, None))
+    table(T.tws, N // 2, lambda: p.ipass(11, 14), cs(True, None))
     p.comment("power-on: the Hann window")
 
     def hann():
