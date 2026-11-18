@@ -153,9 +153,12 @@ class Voc:
         x = F.inverse(pack(Or, Oi))
         return (WIN * x) * SCALE
 
-    def block(self, tim: float, pitch: float) -> np.ndarray:
+    def block(self, tim: float, pitch: float, job: int | None = None) -> np.ndarray:
         """One block of 32 output samples. TIM and PITCH are this block's; only a hop's
-        first block's are used."""
+        first block's are used. JOB: which of the hop's 16 blocks this is (None: the
+        voice's own count, from its reset)."""
+        if job is not None:
+            self.job = job
         if self.job == 0:
             self.latched = (tim, pitch)
         out = np.empty(BLOCK, f32)
@@ -350,16 +353,26 @@ def recip(x: f32) -> f32:
 class Voice:
     """A whole SMEAR voice, block by block (32 samples), float32.
 
-    The read point is an integer sample and a fraction in [0, 1). SPEED is split the same
-    way (floor and remainder), so a long buffer keeps its precision. It moves sample by
-    sample and wraps within the loop [lstart, lstart + lsize).
+    The read point is an integer sample and a fraction in [0, 1). The speed is split the
+    same way (floor and remainder), so a long buffer keeps its precision. It moves sample
+    by sample and wraps within the loop [lstart, lstart + lsize).
     - VOC reads at the hop's first block's read point.
     - GRN reads at each block's.
     - PLAY reads every sample (linear interpolation) and moves the read point.
-    - A path whose BLND gain is 0 is not computed."""
+    - A path whose BLND gain is 0 is not computed.
 
-    def __init__(self, buf):
+    `block(k, tr, trig, clock, lane)`:
+    - K: the knobs;
+    - TR: the pitch ratio, the note and TUNE together (the sampler's `tr`), times the
+      sample's rate against 48 kHz;
+    - RATE: that rate alone, which scales the speed;
+    - CLOCK: the instrument's block count;
+    - LANE: the VOC lane this voice holds (0, 1 or None). The hop's job is
+      (CLOCK + 8 x LANE) mod 16, so the two lanes' heavy jobs never meet."""
+
+    def __init__(self, buf, rate: float = 1.0):
         self.buf = np.asarray(buf, f32)
+        self.rate = f32(rate)
         self.voc = Voc(self.buf)
         self.grn = Grn(self.buf, TABLES["WIN"][3])
         self.pi, self.pf = 0, f32(0)
@@ -374,20 +387,21 @@ class Voice:
         self.pi, self.pf = self.loop(k)[0], f32(0)
         self.voc.reset()
 
-    def block(self, k: dict, note: float = 60.0, trig: bool = False) -> np.ndarray:
+    def block(self, k: dict, tr: float = 1.0, trig: bool = False, clock: int = 0,
+              lane: int | None = 0) -> np.ndarray:
         if trig:
             self.trig(k)
         T = TABLES
-        pitch = f32(2.0 ** ((note - 60.0) / 12.0 + (k["TUNE"] - 64) / 12.0))
-        spd = T["SPD"][k["SPD"]]
+        pitch = f32(tr)
+        spd = f32(T["SPD"][k["SPD"]] * self.rate)
         si = int(np.floor(spd))
         sf = f32(spd - f32(si))
         lstart, lsize = self.loop(k)
         lend = lstart + lsize
         vg, pg, gg = T["VG"][k["BLND"]], T["PG"][k["BLND"]], T["GG"][k["BLND"]]
         y = np.zeros(32, f32)
-        if vg > 0:
-            y = y + vg * self.voc.block(float(self.pi), float(pitch))
+        if vg > 0 and lane is not None:
+            y = y + vg * self.voc.block(float(self.pi), float(pitch), (clock + 8 * lane) & 15)
         if gg > 0:
             ov = T["SQ"][k["OVLP"]]
             ms = f32(min(f32(f32(ov * T["GLEN"][k["DENS"]]) + f32(1)), f32(8000)))
@@ -413,3 +427,31 @@ class Voice:
                 pi += lsize
             self.pi, self.pf = pi, pf
         return (y * f32(k["LEV"] / 100.0)).astype(f32)
+
+
+class Lanes:
+    """The two VOC lanes: a note takes a free one, else the one taken longest ago."""
+
+    def __init__(self, n: int = 2):
+        self.owner: list = [None] * n
+        self.when = [0] * n
+        self.t = 0
+
+    def take(self, voice) -> int:
+        self.t += 1
+        for k, o in enumerate(self.owner):
+            if o is voice:
+                self.when[k] = self.t
+                return k
+        k = next((k for k, o in enumerate(self.owner) if o is None),
+                 min(range(len(self.owner)), key=lambda k: self.when[k]))
+        self.owner[k], self.when[k] = voice, self.t
+        return k
+
+    def held(self, voice):
+        return next((k for k, o in enumerate(self.owner) if o is voice), None)
+
+    def free(self, voice):
+        for k, o in enumerate(self.owner):
+            if o is voice:
+                self.owner[k] = None

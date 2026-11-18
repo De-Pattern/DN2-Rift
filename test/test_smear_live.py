@@ -52,7 +52,7 @@ def test_voice_paths_finite_and_frozen_holds():
     for blnd in (0, 64, 127):
         k = dict(L.DEFAULTS, SPD=64, BLND=blnd, STRT=30, SIZE=90, DENS=90, OVLP=110)
         v = L.Voice(b)
-        y = np.concatenate([v.block(k, 67, trig=(n == 0)) for n in range(600)]).astype(float)
+        y = np.concatenate([v.block(k, 2 ** (7 / 12), trig=(n == 0), clock=n) for n in range(600)]).astype(float)
         assert np.all(np.isfinite(y)) and np.max(np.abs(y)) < 2.0
         assert v.pi == v.loop(k)[0]                 # SPD 64: the read point never moved
 
@@ -60,3 +60,12 @@ def test_voice_paths_finite_and_frozen_holds():
 def test_recip():
     for x in (1.0, 48.0, 1234.5, 384000.0):
         assert abs(float(L.recip(x)) * x - 1) < 1e-6
+
+
+def test_lanes_steal_the_oldest():
+    ln = L.Lanes()
+    a, b, c = object(), object(), object()
+    assert ln.take(a) == 0 and ln.take(b) == 1
+    assert ln.take(c) == 0 and ln.held(a) is None and ln.held(c) == 0
+    ln.free(b)
+    assert ln.take(a) == 1
