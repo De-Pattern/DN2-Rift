@@ -109,6 +109,20 @@ that holds a WERP track still loads and plays.
 - Until those land, plan on one or two VOC voices a track. The SHARC runner's cost step
   measures it before any cap is set.
 
+### The vocoder's jobs (2026-11-18)
+
+`src/dnfw/smear/program.py` holds the read, the phase step and the overlap-add, beside the
+transforms. A whole frame's program in run mode equals `live.Voc` bit for bit over three
+hops, with the previous spectrum carried and the ring's read point moved
+(`test/test_smear_program.py`).
+
+A frame is about 690k run-mode instructions, about 43k a block over its hop, before memory
+costs. Its pieces:
+- the two reads: about 30k each;
+- the two forward transforms and the inverse: 152k each;
+- the phase step: about 55k;
+- the overlap-add: about 30k.
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,

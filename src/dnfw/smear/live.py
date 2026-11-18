@@ -116,7 +116,9 @@ def phase_step(Fr, Fi, Br, Bi, Pr, Pi):
     lr = lr + EPS_LOCK
     m = rsqrt(lr * lr + li * li)
     ur, ui = lr * m, li * m
-    return Fr * ur - Fi * ui, Fr * ui + Fi * ur
+    Or, Oi = Fr * ur - Fi * ui, Fr * ui + Fi * ur
+    Oi[0] = Oi[-1] = f32(0)                       # the DC and Nyquist bins are real
+    return Or, Oi
 
 
 class Voc:
