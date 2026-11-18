@@ -92,7 +92,7 @@ def _chunks() -> list[tuple[int, bytes, str]]:
                     "our machines' page renderer (csrc/waverider/page.c)"))
     if "machines_chunk" in SPEC:
         out.append((SPEC["machines_chunk"]["load"], bytes.fromhex(SPEC["machines_chunk"]["code"]),
-                    "the machine shims, names, attributes and MACHINE SEL list (PERC, RESONATOR, CZ)"))
+                    "the machine shims, names, attributes and MACHINE SEL list"))
     from ..perc import program as _pp
     if not _pp.RIFT:      # RIFT: no Machinedrum or Monomachine engine reads these, so the build
         md = _md_ui()     # needs neither firmware file (the link sends no tables: smp_tables -1)
