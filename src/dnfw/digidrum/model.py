@@ -22,7 +22,7 @@ OWN = {"BD MODERN": ("SWEP", "SMOD", "TMOD", "MENV"),
        "CP VINTAGE": ("SPCR", "BAL", "BODY", "BENV"),
        "CY ALLOY": ("SHIM", "RADIO", "MOD", "MENV"),
        "PC CARBON": ("SWEP", "INHM", "MOD", "MENV")}
-BASE_NOTE = {"BD MODERN": 36, "SD BASIC": 50, "SD VINTAGE": 50, "CP VINTAGE": 60, "CY ALLOY": 72, "PC CARBON": 60}
+BASE_NOTE = {"BD MODERN": 31, "SD BASIC": 50, "SD VINTAGE": 50, "CP VINTAGE": 60, "CY ALLOY": 72, "PC CARBON": 60}
 
 
 def mtof(n):
@@ -65,14 +65,19 @@ def render(type_, note=None, vel=1.0, secs=1.2, **kn):
     dec = 0.02 * 2 ** (k["DEC"] * 9)                 # 20 ms .. 10 s
     rng = np.random.default_rng(7)
     if type_ == "BD MODERN":
+        # v2 (owner, 2026-11-18: "not as deep"): a lower base (G0, 49 Hz), a sweep that starts
+        # higher and lands slower, the modulation scaled down at its defaults (it thinned the
+        # body), a sub sine under the body, and a short click
         sw = k["SWEP"]
-        sweep = 1 + 6 * sw * np.exp(-t / (0.004 + 0.06 * sw))
+        sweep = 1 + 9 * sw * np.exp(-t / (0.006 + 0.07 * sw))
         ph = 2 * np.pi * np.cumsum(f0 * sweep) / FS
-        me = np.exp(-t / (0.005 + 0.4 * k["MENV"])) * (0.3 + 0.7 * k["MENV"])
-        sq = np.sign(np.sin(ph * 2)) * k["SMOD"] * 1.5 * me
-        tri = (2 / np.pi) * np.arcsin(np.sin(ph * 1.5)) * k["TMOD"] * 2.0 * me
-        y = np.sin(ph + sq + tri)
-        y *= env(n, dec)
+        me = np.exp(-t / (0.004 + 0.3 * k["MENV"])) * (0.2 + 0.8 * k["MENV"])
+        sq = np.sign(np.sin(ph * 2)) * (k["SMOD"] ** 2) * 1.6 * me
+        tri = (2 / np.pi) * np.arcsin(np.sin(ph * 1.5)) * (k["TMOD"] ** 2) * 2.2 * me
+        body = np.sin(ph + sq + tri)
+        sub = np.sin(ph * 0.5 + 0.5 * np.pi) * np.exp(-t / (0.12 + 0.5 * dec))
+        click = rng.standard_normal(n) * np.exp(-t / 0.0015) * 0.35
+        y = (body + 0.55 * sub) * env(n, dec * 1.3) + click
     elif type_ in ("SD BASIC", "PC CARBON"):
         sw = k["SWEP"]
         sweep = 1 + 2.5 * sw * np.exp(-t / (0.003 + 0.03 * sw))
@@ -113,21 +118,40 @@ def render(type_, note=None, vel=1.0, secs=1.2, **kn):
             out[i] = wires[i] - lp
         y += 0.6 * b * out * np.exp(-t / (0.03 + 0.25 * k["MENV"]))
     elif type_ == "CP VINTAGE":
+        # v2 (owner, 2026-11-18: "isn't as complex or sharing the same dynamics"): four hand
+        # hits at uneven gaps with their own small timing and level differences, each a
+        # burst through two band-passes (the hand's crack and its slap), a diffuse tail made
+        # of noise through a different band-pass with a slower decay, and velocity that moves
+        # the level, the brightness and how much of the tail comes through
         sp = k["SPCR"]
-        gap = 0.006 + 0.012 * min(sp, 0.5) * 2
-        hits = sum(np.exp(-np.clip(t - j * gap, 0, None) / 0.004) * (t >= j * gap) for j in range(4))
-        tail = np.exp(-t / (0.03 + dec * 0.3)) * (t >= 3 * gap)
+        base_gap = 0.0045 + 0.010 * min(sp, 0.5) * 2
+        gaps = np.cumsum([0.0] + [base_gap * g for g in (1.0, 1.18, 1.35)])
+        jit = rng.uniform(-0.0006, 0.0006, 4)
+        lv = (0.75, 0.9, 0.8, 1.0)
+        hits = np.zeros(n)
+        for j in range(4):
+            at = gaps[j] + jit[j]
+            d = np.clip(t - at, 0, None)
+            hits += lv[j] * np.exp(-d / (0.0028 + 0.002 * j)) * (t >= at)
+        last = gaps[-1]
+        tail = np.exp(-np.clip(t - last, 0, None) / (0.045 + dec * 0.35)) * (t >= last)
+
+        def bp(x, fc, r_):
+            out = np.zeros(n)
+            a1 = a2 = 0.0
+            c = 2 * r_ * math.cos(2 * math.pi * fc / FS)
+            for i in range(n):
+                v = x[i] + c * a1 - r_ * r_ * a2
+                a2, a1 = a1, v
+                out[i] = v * (1 - r_)
+            return out
+        tf = 2 ** (k["TUNE"] / 12.0)
+        bright = 0.6 + 0.4 * vel
         noise = rng.standard_normal(n)
-        bp = np.zeros(n)
-        a1 = a2 = 0.0
-        fc = 1100 * 2 ** (k["TUNE"] / 12.0)
-        w = 2 * math.pi * fc / FS
-        r_ = 0.93
-        for i in range(n):
-            v = noise[i] + 2 * r_ * math.cos(w) * a1 - r_ * r_ * a2
-            a2, a1 = a1, v
-            bp[i] = v * (1 - r_)
-        clap = bp * 6 * (hits + 0.7 * tail)
+        crack = bp(noise, 1250 * tf * (0.85 + 0.3 * bright), 0.94)
+        slap = bp(noise, 2600 * tf * bright, 0.90)
+        diffuse = bp(rng.standard_normal(n), 900 * tf, 0.88)
+        clap = 7 * (crack * hits + 0.6 * slap * hits) + 5 * diffuse * tail * (0.5 + 0.5 * vel)
         if sp > 0.5:                                # crunch, faded in from 64
             c = (sp - 0.5) * 2
             clap = (1 - c) * clap + c * np.sign(clap) * np.abs(clap) ** 0.4 * 0.5
