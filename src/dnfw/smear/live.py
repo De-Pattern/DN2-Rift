@@ -12,9 +12,9 @@ other live models:
 - the read point `tim` (samples into the buffer);
 - the pitch ratio.
 
-The frame is then computed over the hop's 16 blocks, one job a block (`JOBS`), and added
-to the overlap-add ring at the end of the hop's last block, so it sounds from the next
-block on. In the model the whole frame is computed at that last block. That gives the same
+The frame is then computed over the hop's blocks, one job a block (`program.N_JOBS`, 15),
+and added to the overlap-add ring at the end of job 14's block, so it sounds from the next
+block on. After a reset, nothing is added until a hop has started (job 0). In the model the whole frame is computed at that last block. That gives the same
 result, because no job reads anything the other blocks change.
 
 The frame:
@@ -47,6 +47,7 @@ HOP = 512
 BLOCK = 32
 BLOCKS_PER_HOP = HOP // BLOCK            # 16
 BINS = FFT_N // 2 + 1                    # 1025
+OLA_JOB = 14                             # the hop's job that adds the frame (program.N_JOBS - 1)
 EPS_PREV = f32(1e-30)
 EPS_LOCK = f32(1e-15)
 SCALE = f32(f32(2.0 / 3.0) * f32(1.0 / 1024.0))
@@ -143,6 +144,7 @@ class Voc:
         self.r = 0
         self.job = 0
         self.latched = (0.0, 1.0)
+        self.armed = False                 # a hop has started since the reset
 
     def frame(self, tim, pitch):
         fw, bw = read_frames(self.buf, tim, pitch)
@@ -161,12 +163,13 @@ class Voc:
             self.job = job
         if self.job == 0:
             self.latched = (tim, pitch)
+            self.armed = True
         out = np.empty(BLOCK, f32)
         for s in range(BLOCK):
             out[s] = self.ring[self.r]
             self.ring[self.r] = f32(0)
             self.r = (self.r + 1) & (FFT_N - 1)
-        if self.job == BLOCKS_PER_HOP - 1:
+        if self.job == OLA_JOB and self.armed:
             fr = self.frame(*self.latched)
             k = (self.r + np.arange(FFT_N)) & (FFT_N - 1)
             self.ring[k] = self.ring[k] + fr
@@ -332,6 +335,7 @@ def _tables():
     t["GLEN"] = np.where(gf < 4, 4.0, 6.0) * 1000.0 / gf       # ms at full overlap, less 1
     t["GLEN"] = t["GLEN"].astype(f32)
     t["SQ"] = ((np.arange(128) / 127.0) ** 2).astype(f32)      # OVLP, SPRY, PRND, SIZE
+    t["LEV"] = (np.arange(128) / 100.0).astype(f32)
     t["WIN"] = [M.WINDOWS[n][::M.WIN_LEN // WIN_LEN].astype(f32) for n in WIN_NAMES]
     return t
 
@@ -399,7 +403,7 @@ class Voice:
         lstart, lsize = self.loop(k)
         lend = lstart + lsize
         vg, pg, gg = T["VG"][k["BLND"]], T["PG"][k["BLND"]], T["GG"][k["BLND"]]
-        y = np.zeros(32, f32)
+        y = np.zeros(32, f32)                         # y = 0, + vg voc, + gg grn, + pg play, x lev
         if vg > 0 and lane is not None:
             y = y + vg * self.voc.block(float(self.pi), float(pitch), (clock + 8 * lane) & 15)
         if gg > 0:
@@ -426,7 +430,7 @@ class Voice:
             while pi < lstart:
                 pi += lsize
             self.pi, self.pf = pi, pf
-        return (y * f32(k["LEV"] / 100.0)).astype(f32)
+        return (y * TABLES["LEV"][k["LEV"]]).astype(f32)
 
 
 class Lanes:

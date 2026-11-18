@@ -26,7 +26,7 @@ def test_voc_matches_the_design_one_hop_later():
     y = np.concatenate([v.block(tim[s], 1.26) for s in range(0, n, 32)]).astype(float)
     m = M.Mincer()
     r = np.concatenate([m.process(b.astype(float), tim[s:s + 32], 1.26, 32) for s in range(0, n, 32)])
-    a, c = y[512 + 8000:n], r[8000:n - 512]
+    a, c = y[480 + 8000:n], r[8000:n - 480]      # the frame sounds 15 blocks after its hop starts
     snr = 10 * np.log10((c ** 2).sum() / ((a - c) ** 2).sum())
     assert snr > 40, snr
 
