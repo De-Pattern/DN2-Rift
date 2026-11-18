@@ -29,7 +29,7 @@ MAGIC = 0x5F3759DF
 
 
 class Layout:
-    """Byte addresses. Params: POS, PITCH (float), SIZE (int), BASE (the buffer's first
+    """Byte addresses. Params: POS (int: spos), PITCH (float), SIZE (int), BASE (the buffer's first
     sample, float32), R (the ring's read point, int)."""
 
     def __init__(self, base: int, tables: int):
@@ -97,7 +97,8 @@ def wrap(p: Prog, r: int, size: int) -> None:
 
 # ---------------------------------------------------------------------------- the jobs
 def emit_read(p: Prog, L: Layout, B: bool = False) -> None:
-    """WF (WB): sample(pf [- hp]) x WIN for i = 0..N-1, as live.read_frames."""
+    """WF (WB): sample(spos + offset) x WIN for i = 0..N-1, as live.read_frames. POS holds
+    spos as an integer."""
     p.comment(f"SMEAR read {'B' if B else 'F'}")
     p.ld(10, L.POS)
     p.ld(9, L.PITCH)
@@ -113,15 +114,17 @@ def emit_read(p: Prog, L: Layout, B: bool = False) -> None:
     p.seti(5, 0)
 
     def body():
-        p.fop(0, 9, "*", 11)
-        p.fop(0, 10, "+", 0)                     # pf
+        p.fop(0, 9, "*", 11)                     # x
         p.trunc(2, 0)
         p.iconst(3, 0)
         p.float_(4, 2, 3)
         p.fop(5, 0, "-", 4)                      # frac
         if B:
-            p.fop(1, 0, "-", 8)
+            p.fop(1, 0, "-", 8)                  # xb
             p.trunc(2, 1)
+            p.float_(4, 2, 3)
+            p.if_(4, "GT", 1, lambda: (p.iconst(12, 1), p.iop(2, 2, "-", 12)))   # floor
+        p.iop(2, 10, "+", 2)                     # spos + offset
         wrap(p, 2, 13)
         p.lsh(3, 2, 2)
         p.iop(3, 14, "+", 3)

@@ -26,7 +26,7 @@ def setup(buf, pitch, pos, r):
         mem.put(TAB + 4 * k, w)
     for k, x in enumerate(buf):
         mem.put(BUFA + 4 * k, u32(x))
-    mem.put(L.POS, u32(pos))
+    mem.put(L.POS, int(pos))
     mem.put(L.PITCH, u32(pitch))
     mem.put(L.SIZE, len(buf))
     mem.put(L.BASE, BUFA)
@@ -40,11 +40,11 @@ def test_frames_are_the_contract():
     buf = (0.5 * np.sin(2 * np.pi * 440 * i / sr) + 0.3 * np.sin(2 * np.pi * 97 * i / sr)).astype(np.float32)
     v = LV.Voc(buf)
     L, mem = setup(buf, 1.26, 0.0, 0)
-    for hop, (tim, pitch, r) in enumerate(((3000.0, 1.26, 0), (3190.0, 0.71, 512), (8900.0, 2.5, 1024))):
+    for hop, (tim, pitch, r) in enumerate(((3000.0, 1.26, 0), (3190.0, 0.71, 512), (8900.0, 2.5, 1024), (100.0, 3.9, 1536))):
         size = len(buf)
         spos = LV.HOP * int(np.floor(tim / LV.HOP))
         spos = (spos - 1) % size + 1
-        mem.put(L.POS, u32(spos))
+        mem.put(L.POS, spos)
         mem.put(L.PITCH, u32(pitch))
         mem.put(L.R, r)
         p = Prog("run", mem=mem)

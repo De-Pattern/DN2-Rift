@@ -18,10 +18,12 @@ block on. In the model the whole frame is computed at that last block. That give
 result, because no job reads anything the other blocks change.
 
 The frame:
-1. `pos` = the read point, floored to a multiple of HOP and wrapped into (0, size].
-2. Two windowed reads of FFT_N samples, at `pos + pitch * i` (F) and HOP x pitch earlier
+1. `spos` = the read point, floored to a multiple of HOP and wrapped into (0, size]: an
+   integer.
+2. Two windowed reads of FFT_N samples, at `spos + pitch * i` (F) and HOP x pitch earlier
    (B). Both are linearly interpolated, and B reuses F's fraction (Csound's `mincer` does
-   the same).
+   the same). The offsets are formed apart from `spos` (`read_frames`), so a long buffer
+   loses no precision.
 3. Both are transformed (`fft.forward`, Csound's packing; the Nyquist and DC bins are real).
 4. The phase step. `d = conj(B) x prev / |prev|`, then phase-locked (each bin plus its two
    neighbours), normalised, and applied to F: `out = F x u`. `out` is the next `prev`.
@@ -64,18 +66,24 @@ def rsqrt(x: np.ndarray) -> np.ndarray:
 
 
 def read_frames(buf: np.ndarray, tim: float, pitch: float):
-    """Step 2: the two windowed reads (float32)."""
+    """Step 2: the two windowed reads (float32). The read point `spos` is an integer (a
+    multiple of HOP), so the offsets are formed apart from it: x = pitch x i is at most
+    4 x 2048 = 8192, where float32 still resolves a ten-thousandth of a sample, whatever the
+    buffer's length. F reads at spos + trunc(x) with the fraction x - trunc(x); B reads at
+    spos + floor(x - HOP x pitch), with F's fraction."""
     size = len(buf)
     spos = HOP * int(np.floor(tim / HOP))
     spos = (spos - 1) % size + 1
-    pos = f32(spos)
     p = f32(pitch)
     i = np.arange(FFT_N).astype(f32)
-    pf = pos + p * i
-    idx = pf.astype(np.int64)                         # TRUNC (pf >= 0)
-    frac = pf - idx.astype(f32)
+    x = p * i
+    t = x.astype(np.int64)                            # TRUNC (x >= 0)
+    frac = x - t.astype(f32)
     hp = f32(f32(HOP) * p)
-    ib = (pf - hp).astype(np.int64)
+    xb = x - hp
+    tb = xb.astype(np.int64)                          # TRUNC, toward zero ...
+    tb = tb - (tb.astype(f32) > xb)                   # ... then down: floor
+    idx, ib = spos + t, spos + tb
 
     def sample(k):
         k = k % size
