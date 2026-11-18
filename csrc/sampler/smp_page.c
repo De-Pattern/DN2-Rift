@@ -633,7 +633,7 @@ static int fsc_knob(const wr_mach_t *M, int j, int v)   /* a record's 0..top -> 
 }
 
 /* RIFT v0.9 (owner, 2026-11-18: "use the new guis that you made ... make sure they all work properly"):
- * the LINE pages of RIFT's machines (FASCIA, ORGAN, SILT, LIGATURE, RESONATOR), as the approved mockups
+ * the LINE pages of RIFT's machines (FASCIA, ORGAN, SILT, LIGATURE), as the approved mockups
  * (docs: claude/rift-ui-line.md). Below the stock header, in screen rows (0 the top; the canvas counts
  * up from the bottom, row r = canvas y 63 - r, rows 10..63 ours):
  *   eight cells of 30 columns in the knobs' places (A-D rows 11..33, E-H rows 38..60), each a 17 x 12

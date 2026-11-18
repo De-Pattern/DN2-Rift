@@ -192,7 +192,7 @@ LOOKUP16_DM = 0x2DEE04                       # 16 words; 0x2dee00 is the [-1] gu
 from ..mnm import machines as _mnm_types    # noqa: E402
 from ..sampler import machines as _smp_types
 from ..fascia import machines as _fsc_types  # noqa: E402
-MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 5)   # RIFT: 23, RESONATOR at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
+MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 4)   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
 SMP_ENGINE_SLOT = 5                          # the engine slot the sample machines borrow
 SMP_TYPES = _smp_types.TYPES                 # ONESHOT WERP STRETCH REPITCH GRID SLICE (v0.19); v0.44 BOUNCE (17)
 ENGINES = {5: "PERC", 8: "ONESHOT", 12: "GRID"}   # types with an engine of ours
@@ -204,8 +204,7 @@ MNM_TYPES = _mnm_types.TYPES                 # v0.26: the Monomachine machines (
 from ..organ import machines as _org_types  # noqa: E402
 from ..silt import machines as _slt_types  # noqa: E402
 from ..ligature import machines as _lig_types  # noqa: E402
-from ..reson import machines as _res_types  # noqa: E402
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _res_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable
@@ -234,8 +233,6 @@ SILT_DELAY_DDR = 0x82400000
 SILT_DELAY_SPAN = 16 * 0xC000
 # LIGATURE (type 21, dnfw.ligature.program): its patch table, knobs' records and ratios (after SILT's)
 LIG_TABLES_DDR = 0x81227000
-# RESONATOR (type 22, dnfw.reson.program): its knobs' records and the modes' anchors (after LIGATURE's)
-RESON_TABLES_DDR = 0x81229000
 
 IDLE_SITE_SW = 0xB88ABB                      # prvIdleTask's back edge: jump (pc,-0x10)
 IDLE_SITE_STOCK = bytes.fromhex("3e07ff00f0ff")
@@ -386,7 +383,6 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("ORGAN's pipes, gains and ramp (dnfw.organ.program.tables_bytes; RIFT)", ORGAN_TABLES_DDR, _organ_tables()),
         ("SILT's players' constants (dnfw.silt.program.tables_bytes; RIFT)", SILT_TABLES_DDR, _silt_tables()),
         ("LIGATURE's patches (dnfw.ligature.program.tables_bytes; RIFT)", LIG_TABLES_DDR, _lig_tables()),
-        ("RESONATOR's records and anchors (dnfw.reson.program.tables_bytes; RIFT)", RESON_TABLES_DDR, _res_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -406,11 +402,6 @@ def _perc_sine() -> bytes:
     from ..shft import live as SL
     data, at = SL.tables_bytes()
     return data[at["sin"]:at["pow2"]]
-
-
-def _res_tables() -> bytes:
-    from ..reson import ddr
-    return ddr.tables_bytes()
 
 
 def _lig_tables() -> bytes:
