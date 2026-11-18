@@ -82,9 +82,25 @@ that holds a WERP track still loads and plays.
 - **Cost**, run-mode instructions: 152k a transform (forward or inverse), 432 instructions
   of code. A hop's three transforms are about 460k; the hop's other work (windowed reads,
   phase lock) is still to write.
-- **Memory**: L1 block 1 has no free room left (it runs to 0x2e7000). A frame and its
-  twiddles (about 16 KB a voice, plus 12 KB of shared tables) would sit in L2, at about 4x an
-  access.
+- **Memory, the plan**:
+  - **L1, about 14 KB.** RIFT carries no PING, SHFT or GRAN. Since v0.45 their L1 rooms,
+    0x2e1d00..0x2e5400 (`waverider/dsp.py`: PING's state, GRAN's code and scratch, SHFT's
+    and GRAN's state), are loaded and read by nothing; no source names an address in them.
+    The SHARC runner must confirm nothing writes there before SMEAR takes it.
+  - **One shared 8 KB transform buffer** in that room. A hop's work is cut into jobs, one
+    job a block; each job copies a voice's frame in, transforms it and copies it out, so the
+    buffer is never held across blocks and the voices share it.
+  - **Each voice's own state in DDR**, about 24 KB: the previous output spectrum, the held
+    analysis spectrum and the overlap-add. That is about 12k DDR accesses a hop, about 8k
+    instruction times a block.
+  - **The twiddles in L2**, 20 KB shared.
+  - **Estimate**: about 700k instruction times a hop, **about 44k a block a voice
+    (6.6 % of the frame)**. That means a cap of 2–4 VOC voices; the unit's meter decides.
+    PLAY and GRN cost far less.
+- **Latency**: a trig's first vocoder frame comes 16 blocks (about 11 ms) after the note,
+  and the overlap-add reaches full level after 2048 samples, as in `mincer`. The PLAY and
+  GRN paths start at once. A pre-roll (the first frame computed at the trig) is a later
+  option, for percussive sources.
 - **The next cuts**:
   - stages 0 and 1 without multiplies (their twiddles are 1 and -i);
   - radix 4 (half the passes over memory);
