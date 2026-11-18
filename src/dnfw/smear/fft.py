@@ -189,13 +189,13 @@ def _bitrev(p: Prog, buf: int, tables: int) -> None:
     p.loop_r(15, len(PAIRS), body)
 
 
-def _stages(p: Prog, buf: int, tw: int) -> None:
+def _stages(p: Prog, buf: int, tw: int, stages=range(LOG2N)) -> None:
     """Ten stages; stage s runs N / (2 half) groups of `half` butterflies. Its twiddles are
     the table's own run for that stage (stage_twiddles), read in order, so every pointer
     steps one word at a time."""
-    off = 0
-    for s in range(LOG2N):
+    for s in stages:
         half = 1 << s
+        off = 8 * (half - 1)                     # stage s's run starts after 1 + 2 + .. + 2^(s-1)
         p.comment(f"stage {s}: {N // (2 * half)} groups of {half} butterflies")
         p.iconst(10, buf)
 
@@ -234,7 +234,6 @@ def _stages(p: Prog, buf: int, tw: int) -> None:
             else:
                 p.loop_r(15, half, bfly)
         p.loop_r(14, N // (2 * half), group)
-        off += 8 * half
 
 
 def _split_loop(p: Prog, buf: int, tables: int, body_math) -> None:
@@ -257,9 +256,22 @@ def _split_loop(p: Prog, buf: int, tables: int, body_math) -> None:
     p.loop_r(15, N // 2 - 1, body)
 
 
-def emit_forward(p: Prog, buf: int, tables: int) -> None:
-    _bitrev(p, buf, tables)
-    _stages(p, buf, tables + T_TWF)
+PARTS = (range(0, 4), range(4, 8), range(8, 10))       # a transform in three jobs
+
+
+def emit_forward(p: Prog, buf: int, tables: int, part: int | None = None) -> None:
+    """The forward transform, or one of its three PARTS (0: the bit reversal and stages
+    0..3; 1: stages 4..7; 2: stages 8, 9 and the real split)."""
+    if part in (None, 0):
+        _bitrev(p, buf, tables)
+    for k, st in enumerate(PARTS):
+        if part in (None, k):
+            _stages(p, buf, tables + T_TWF, st)
+    if part in (None, 2):
+        _split_fwd(p, buf, tables)
+
+
+def _split_fwd(p: Prog, buf: int, tables: int) -> None:
     p.comment("real split")
     p.ld(0, buf)
     p.ld(1, buf + 4)
@@ -305,7 +317,21 @@ def emit_forward(p: Prog, buf: int, tables: int) -> None:
     _split_loop(p, buf, tables, math_)
 
 
-def emit_inverse(p: Prog, buf: int, tables: int) -> None:
+INV_PARTS = (range(0), range(0, 5), range(5, 10))
+
+
+def emit_inverse(p: Prog, buf: int, tables: int, part: int | None = None) -> None:
+    """The inverse, or one of its three parts (0: the split and the bit reversal; 1: stages
+    0..4; 2: stages 5..9)."""
+    if part in (None, 0):
+        _split_inv(p, buf, tables)
+        _bitrev(p, buf, tables)
+    for k, st in enumerate(INV_PARTS):
+        if part in (None, k):
+            _stages(p, buf, tables + T_TWI, st)
+
+
+def _split_inv(p: Prog, buf: int, tables: int) -> None:
     p.comment("inverse real split")
     p.fconst(9, 0.5)
     p.ld(0, buf)
@@ -352,5 +378,3 @@ def emit_inverse(p: Prog, buf: int, tables: int) -> None:
         p.fop(0, 2, "-", 5)
         p.sti(1, 2, 0)
     _split_loop(p, buf, tables, math_)
-    _bitrev(p, buf, tables)
-    _stages(p, buf, tables + T_TWI)

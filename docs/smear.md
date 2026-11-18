@@ -123,6 +123,37 @@ costs. Its pieces:
 - the phase step: about 55k;
 - the overlap-add: about 30k.
 
+### Lanes and jobs (2026-11-18, decided)
+
+- **Two VOC lanes for the whole instrument.** A lane is one vocoder's working frames
+  (WF and WB, 16 KB) in L2's free room, 0x200b1000..0x200c0000 (60 KB; `waverider/dsp.py`:
+  "free again" since SILT's move).
+  - The room also holds the shared D scratch (8 KB) and the kernel's stage twiddles, forward
+    and inverse (16 KB).
+  - The window and the split twiddles go in DDR.
+  - Each voice's P and ring stay in its own DDR state.
+  - A note on a SMEAR voice takes a free lane, else the oldest's. A voice without a lane
+    plays PLAY and GRN but no VOC.
+  - The Nebulae is one voice; two lanes give two vocoded notes or tracks at once.
+- **A hop is 15 jobs, one a block** (the 16th does none). Run-mode instructions, by
+  `program.emit_job`:
+
+| job | what | instructions |
+|---|---|---|
+| 0, 1 | read F, two halves | 37k, 37k |
+| 2, 3 | read B, two halves | 41k, 41k |
+| 4–6 | forward F, three parts | 62k, 46k, 45k |
+| 7–9 | forward B, three parts | 62k, 46k, 45k |
+| 10 | the phase step | 84k |
+| 11–13 | inverse, three parts | 31k, 65k, 57k |
+| 14 | overlap-add | 33k |
+
+  - The heaviest block is 84k, 12.6 % of the frame a lane, before memory costs.
+  - The second lane runs 8 blocks behind the first, so their heaviest jobs never share a
+    block.
+  - Running the jobs one after another equals the whole frame bit for bit
+    (`test_jobs_are_the_frame`).
+
 ## Build order
 
 0. **Phase 0, the kernels.** Each is measured on the SHARC runner against its float32 model,

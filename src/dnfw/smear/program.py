@@ -124,9 +124,10 @@ def fetch(p: Prog, d: int, k: int, base: int, fmt: int, t: int, ii: int) -> None
 
 
 # ---------------------------------------------------------------------------- the jobs
-def emit_read(p: Prog, L: Layout, B: bool = False) -> None:
-    """WF (WB): sample(spos + offset) x WIN for i = 0..N-1, as live.read_frames. POS holds
-    spos as an integer."""
+def emit_read(p: Prog, L: Layout, B: bool = False, half: int | None = None) -> None:
+    """WF (WB): sample(spos + offset) x WIN for i = 0..N-1, as live.read_frames, or one HALF
+    of it (0: i < 1024, 1: the rest). POS holds spos as an integer."""
+    i0, n = (0, N) if half is None else (half * N // 2, N // 2)
     p.comment(f"SMEAR read {'B' if B else 'F'}")
     p.ld(10, L.POS)
     p.ld(9, L.PITCH)
@@ -134,11 +135,12 @@ def emit_read(p: Prog, L: Layout, B: bool = False) -> None:
     p.ld(14, L.BASE)
     p.fconst(8, float(LV.HOP))
     p.fop(8, 8, "*", 9)                          # hp
-    p.iconst(11, 0)
-    p.float_(11, 11, 11)                         # fi = 0.0 (FLOAT 0 BY 0)
-    p.iconst(0, L.WIN)
+    p.iconst(11, i0)
+    p.iconst(12, 0)
+    p.float_(11, 11, 12)                         # fi = i0 (FLOAT i0 BY 0)
+    p.iconst(0, L.WIN + 4 * i0)
     p.seti(4, 0)
-    p.iconst(0, L.WB if B else L.WF)
+    p.iconst(0, (L.WB if B else L.WF) + 4 * i0)
     p.seti(5, 0)
 
     def body():
@@ -169,7 +171,7 @@ def emit_read(p: Prog, L: Layout, B: bool = False) -> None:
         p.stpost(5, 7)
         p.fconst(6, 1.0)
         p.fop(11, 11, "+", 6)
-    p.loop_r(15, N, body)
+    p.loop_r(15, n, body)
 
 
 def _bin1(p: Prog) -> None:
@@ -544,3 +546,31 @@ def emit_grn(p: Prog, G: GLayout) -> None:
         p.fop(0, 0, "*", 5)
         p.stpost(5, 0)
     p.loop_r(15, 32, ramp)
+
+
+# ================================================================================ the jobs of a hop
+def _jobs(L: Layout):
+    return (
+        lambda p: emit_read(p, L, False, 0),
+        lambda p: emit_read(p, L, False, 1),
+        lambda p: emit_read(p, L, True, 0),
+        lambda p: emit_read(p, L, True, 1),
+        lambda p: FT.emit_forward(p, L.WF, L.FFT, 0),
+        lambda p: FT.emit_forward(p, L.WF, L.FFT, 1),
+        lambda p: FT.emit_forward(p, L.WF, L.FFT, 2),
+        lambda p: FT.emit_forward(p, L.WB, L.FFT, 0),
+        lambda p: FT.emit_forward(p, L.WB, L.FFT, 1),
+        lambda p: FT.emit_forward(p, L.WB, L.FFT, 2),
+        lambda p: emit_phase(p, L),
+        lambda p: FT.emit_inverse(p, L.WF, L.FFT, 0),
+        lambda p: FT.emit_inverse(p, L.WF, L.FFT, 1),
+        lambda p: FT.emit_inverse(p, L.WF, L.FFT, 2),
+        lambda p: emit_ola(p, L),
+    )
+
+
+N_JOBS = 15                       # one a block; the hop's last block does none
+
+
+def emit_job(p: Prog, L: Layout, k: int) -> None:
+    _jobs(L)[k](p)

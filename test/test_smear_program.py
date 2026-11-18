@@ -74,3 +74,21 @@ def test_emits():
 
 def test_frames_int16():
     test_frames_are_the_contract(fmt=1)
+
+
+def test_jobs_are_the_frame():
+    sr = 48000
+    i = np.arange(9000)
+    buf = (0.5 * np.sin(2 * np.pi * 300 * i / sr)).astype(np.float32)
+    L1, m1 = setup(buf, 1.5, 3584, 100)
+    L2, m2 = setup(buf, 1.5, 3584, 100)
+    P.emit_frame(Prog("run", mem=m1), L1)
+    most = 0
+    for k in range(P.N_JOBS):
+        p = Prog("run", mem=m2)
+        P.emit_job(p, L2, k)
+        most = max(most, p.steps)
+    print("the heaviest job", most)
+    assert words(m1, L1.RING, 2048).tobytes() == words(m2, L2.RING, 2048).tobytes()
+    assert words(m1, L1.P, 2050).tobytes() == words(m2, L2.P, 2050).tobytes()
+    assert most < 90_000          # the phase step, about 84k
