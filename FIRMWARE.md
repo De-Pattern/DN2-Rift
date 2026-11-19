@@ -4,7 +4,7 @@ Every RIFT build, newest first, with what it adds and what to test after flashin
 Each build **contains everything before it**, so you only ever flash the newest one. All
 builds are on stock Digitone II **OS 1.11**.
 
-**Get it:** the **DN2 Mod Patcher**, section 6 (RIFT), https://de-pattern.github.io/dn2mk2/patcher.html#rift (or this repository's own Pages site), builds the file in
+**Get it:** the **DN2 Mod Patcher**, its RIFT section, https://de-pattern.github.io/dn2mk2/patcher.html#rift (or this repository's own Pages site), builds the file in
 your browser from your own Digitone II OS 1.11, Digitakt II OS 1.17 and Machinedrum UW OS 1.63 files (the
 sample machines still read tables built from the Machinedrum's), and only lets
 you save it when it is byte for byte the cleared file. The cleared files are also on the
@@ -28,13 +28,52 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.8** | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
+| **v0.9** | 2026-11-19 | LINE, the new screens on every RIFT machine (thin lines, a moving icon per control, values the Syntakt way, p-locks highlighted); LIGATURE in MACHINE SEL; RESONATOR removed; the manual (MANUAL on the patcher) | `builds/v0.9-LINE/` | yes |
+| v0.8 | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
 | v0.7 | 2026-11-18 | FLEX buffers B1..B8 in every sample machine's SAMP, MUTE SRC only while the FLEX track plays, the stock NAME screen for file names (from the DN2 mk2 mod's v0.54-v0.57); ORGAN: BLOM is the breath's attack; turned knobs show their value (a lock with its trig held) on RIFT's machines; the campfire start-up animation | `builds/v0.7-FLEXPOOL/` | yes |
 | v0.6 | 2026-11-17 | SILT, RIFT's third machine (material synthesis: FIBER, SILT, SKIN, FLUID played by ten gestures, alone or as an ensemble); ORGAN: BLOM a slow swell (breath from EDGE), MTUN replaces PHRM, MCHR replaces VELO | `builds/v0.6-SILT/` | yes |
 | v0.5 | 2026-11-17 | ORGAN pages 3 (ATTACK: PERC, PDEC, PHRM, KCLK, VELO, MIXT, ROTR, RSPD) and 4 (BREATH: BRTH, TURB, BREK, BDEP, PRES, BLOM, EDGE, PVEL), all off at 0; v0.4 organ sounds unchanged; CELESTE fades instead of switching | `builds/v0.5-BREATH/` | yes |
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.9 · LINE
+
+- **File:** `RIFT_v0.9_LINE_OS1.11.syx` (`builds/v0.9-LINE/`)
+- **sha256:** `7dd50b8d21cbf187e44a975d44fcaaab2f4740559e2a434ddf74acf0c7be9e1d`
+- **Gated:** 2026-11-19, `CLEARED TO FLASH`
+- **Source:** `9005794` (this repository)
+
+**Adds**
+
+- **LIGATURE listed** in MACHINE SEL (`LISTED = True`, `src/dnfw/ligature/machines.py`).
+- **RESONATOR removed** (owner, 2026-11-18; 75210b9 and 3d4e6b1 reverted). A v0.8 RESONATOR track loads as FM Tone, as any type RIFT lacks.
+- **The manual:** `rift-manual.html`, behind the MANUAL button on the patcher's RIFT version row.
+
+- **LINE**, the new page style for RIFT's machines: FASCIA, ORGAN, SILT and LIGATURE. It is drawn by `fsc_page_draw` in
+  `csrc/sampler/smp_page.c`; the glyphs are listed in `pages.py` (`LINE_GLYPHS`, each machine's
+  `lglyph`).
+  - Two rows of four cells in the knobs' layout. Each cell is a 17 x 12 glyph that moves with
+    its value, and its label under it.
+  - Choices are drawn as boxes with the word inside, scrolling when the choice changes.
+  - No side panel, and the stock SYN box is not drawn under it. The page dots stay.
+  - Values show the Syntakt way: while a knob turns, while SYN is held, or while a trig is
+    held. A p-locked cell is drawn inverted while its trig is held, with its locked value.
+- `scripts/ship_gate.py`: the five machine UI steps read the new cells.
+
+**Known issues**
+
+- Not yet seen on hardware: the new screens' timing and legibility on the unit's display.
+
+**Tests**
+
+1. Every RIFT machine's pages: nothing overlaps, nothing is clipped, the track number is clean.
+2. Turn each knob: its glyph moves and its value shows, then hides.
+3. Hold SYN: every value shows.
+4. P-lock controls, then hold that trig: the locked cells are inverted, with their values.
+5. A choice control (FASCIA's modes, SILT's): the box scrolls to the new word.
+6. LIGATURE from MACHINE SEL: plays, its pages draw, its p-locks hold.
+7. Sound: unchanged from v0.8 (the gate's SHARC parts hold every engine bit for bit).
 
 ## v0.8 · RESONATOR
 
