@@ -177,7 +177,10 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_libtree.py", "test/test_web_tool.py",   # v0.40: nested folders (the model, the page's levels)
          "test/test_fascia_coldfire.py",                    # v0.45: FASCIA on the ColdFire (type 18)
          "test/test_fascia_program.py",                     # v0.45: FASCIA's DSP program (run mode = live.py)
-         "test/test_digidrum_program.py"]                  # RIFT: DIGIDRUM (run mode = live.py)
+         "test/test_digidrum_program.py",
+         # RIFT v0.12: LIGATURE's wirings (the DSP's decode = live, garbage safe, the seeded table the
+         # factory patches; the build's wire.json = live's) and its machine table
+         "test/test_ligature_program.py", "test/test_ligature_machines.py", "test/test_ligature_live.py"]                  # RIFT: DIGIDRUM (run mode = live.py)
 HIT = re.compile(r"^\s+([0-9a-f]{8}):", re.M)
 
 # v0.38 (owner, 2026-11-01): the steps by name, for --only and --list, in the order a full run
