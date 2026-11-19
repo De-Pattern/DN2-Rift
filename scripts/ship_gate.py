@@ -211,6 +211,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("organ", "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire)"),
        ("silt", "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("ligature", "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
+       ("ligedit", "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)"),
        ("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("alloc", "GRID allocate slice locks (ColdFire)"),
        ("multisel", "multi-select delete (ColdFire)"),
@@ -2537,7 +2538,9 @@ def main() -> int:
             tyg = snd0 + 0xDE
             tb0 = 0x4121898C + 97872                     # pattern 0's lock table (6i2's)
             recs = 0x401F7F94
-            hard, dust = FSg.SLOTS["TUNE"][1], FSg.SLOTS["LFO1"][1]
+            # v0.12: page 1 is the PATCH screen (the grid, the controls as text): the locks are on
+            # page 2's cells, S1A and S2A (knobs A and C there)
+            hard, dust = FSg.SLOTS["S1A"][1], FSg.SLOTS["S2A"][1]
             lk_hard, lk_dust = 0x7F00, 0x7F00
             cm = lay["smp_machine_commit"]
             gs = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10", "png:wt",
@@ -2549,7 +2552,7 @@ def main() -> int:
             gs += ["no", "wait:10", "png:p0"]
             for k in range(1, npg):
                 gs += ["tap:2", "wait:10", f"png:p{k}"]
-            gs += ["tap:2", "wait:10", "png:r0"]
+            gs += ["tap:2", "wait:10", "png:r0", "tap:2", "wait:10", "png:r0b"]
             # (as stock p-locks: RECORD on (grid recording), a trig placed on step 1, the locks
             # written into the playing pattern's table, then [TRIG 1] held; emu_slides' way)
             gs += ["tap:19", "wait:10", "tap:25", "wait:10", "mem:0x42c5a9a0:4",
@@ -2602,8 +2605,8 @@ def main() -> int:
                     want = [FSg.default_words()[c] for c in FSg.CONTROLS]
                     types = m.get("types@0") or [None]
                     flip = [float((cell(shots["l0"], i) != cell(shots["r1"], i)).mean()) for i in range(8)]
-                    page = FSg.CONTROLS[:8]
-                    locked = {page.index("TUNE"), page.index("LFO1")}
+                    page = FSg.CONTROLS[8:16]
+                    locked = {page.index("S1A"), page.index("S2A")}
                     vals = [int(m[k], 16) for k in keys[len(FSg.CONTROLS):]]
                     nn = len(named) + len(FSg.UNUSED_RECORDS)
                     short_p, long_p = vals[:nn], vals[nn:nn + len(named)]
@@ -2625,10 +2628,11 @@ def main() -> int:
                         f"{npg} pages, each its own, none the stock grid":
                         len({shots[f"p{k}"].tobytes() for k in range(npg)}) == npg
                         and not any((shots[f"p{k}"] == shots["wt"]).all() for k in range(npg)),
-                        "the last page key comes back to the first page's cells":
-                        all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
+                        "the last page key comes back to the first page (the PATCH screen, v0.12), then page 2's cells":
+                        bool((shots["r0"] == shots["p0"]).all())
+                        and all((cell(shots["r0b"], i) == cell(shots["p1"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
-                        "[TRIG 1] held: TUNE's and LFO1's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held: S1A's and S2A's cells (page 2) inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
                         "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
                             int(m.get(kc, "0") or "0", 16) == 3
                             and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
@@ -2650,12 +2654,99 @@ def main() -> int:
                            f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
                 return good, ("LIGATURE (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
                               "v0.14's: the real list is not driven here); its "
-                              f"{npg} pages drawn, each its own (labels, knobs, PATCH's box); p-locked TUNE and LFO1 lit "
+                              f"{npg} pages drawn, each its own (page 1 the PATCH screen, v0.12; labels, knobs); p-locked S1A and S2A lit "
                               f"as stock lights a lock, nothing else; SYN held shows values; its {len(FSg.CONTROLS)} records "
                               "named and offered to the LFOs, the unused ones named - "
                               "and left out" if good else why)
             later("ligature", "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)",
                   "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
+
+        # 6f4b. RIFT v0.12: LIGATURE's PATCH screen (csrc/sampler/lig.c; owner, 2026-11-19: "just fix the
+        # ligature ui so its usable"): YES on page 1 opens EDIT over it; the knobs edit the wiring PATCH
+        # plays (B the type, H the output), RIGHT moves to the next block, YES the BLOCK view and back,
+        # FUNC + NO empties the block, NO leaves: the edits are in lig.c's table (the DSP's words), the
+        # project's list is asked for, and the grid and page 2's names show them
+        if "lig_state" in lay and "smp_machine_commit" in lay:
+            from dnfw.ligature import machines as LGm, wire as LGw   # noqa: PLC0415
+            from dnfw.sampler import machines as SMg   # noqa: PLC0415
+            kit = 0x4210C08C
+            snd0 = kit + 52
+            tyg = snd0 + 0xDE
+            cm = lay["smp_machine_commit"]
+            wram0 = SMg.MIRROR + 0x218000 + 4 * LGw.WHDR        # slot 0 (PATCH's default)
+            ls = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10",
+                  f"poke:{tyg:#x}:08", f"poke:{snd0 + 20 + 2 * 43:#x}:0500", "wait:4", "tap:2", "wait:6",
+                  "func-src", "wait:20", "down", "wait:4", "yes", "wait:20",
+                  f"call:{cm:#x}:arg1@{cm:#x}:0:{LGm.TYPE}:arg4@{cm:#x}:arg5@{cm:#x}", "wait:10", "types",
+                  "no", "wait:10", "png:p0", "tap:2", "wait:10", "png:q0", "tap:2", "wait:6", "tap:2", "wait:6",
+                  "tap:2", "wait:10", "png:p0b",
+                  f"mem:{wram0:#x}:100",                                   # 0: the wiring before
+                  "yes", "wait:10", "png:e0", f"mem:{lay['lig_state']:#x}:4",   # 1
+                  "spin:1:1", "wait:10", "png:e1", f"mem:{wram0:#x}:100",   # 2: B (TYP) one on
+                  "right", "wait:6", f"mem:{lay['lig_blk']:#x}:4",          # 3
+                  "spin:7:1", "wait:10", f"mem:{wram0:#x}:100",             # 4: H (OUT) one on
+                  "yes", "wait:10", "png:b0", f"mem:{lay['lig_state']:#x}:4",   # 5
+                  "yes", "wait:6", f"mem:{lay['lig_state']:#x}:4",         # 6
+                  "press:17", "wait:4", "no", "wait:6", "release:17", "wait:6",
+                  f"mem:{wram0:#x}:100", f"mem:{lay['lig_state']:#x}:4",   # 7, 8: FUNC + NO
+                  "no", "wait:10", "png:x0", f"mem:{lay['lig_state']:#x}:4",    # 9
+                  f"mem:{lay['lig_saves']:#x}:4", f"mem:{lay['lig_edits']:#x}:4",   # 10, 11
+                  "tap:2", "wait:10", "png:q1"]
+            ljs, lsf = work / "ligedit.json", work / "ligedit.steps"
+            lsf.write_text(",".join(ls))
+            l_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                     "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{lsf}", "--png-dir", work / "ligedit",
+                     "--json", ljs]
+
+            def l_body(tdir):
+                rc, out = run("ligedit", l_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and ljs.exists():
+                    import numpy as np                     # noqa: PLC0415
+                    from PIL import Image                  # noqa: PLC0415
+                    r = json.loads(ljs.read_text())
+                    mv = [bytes.fromhex(v) for k, v in r["memory"].items() if not k.startswith("types")]
+                    shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
+
+                    def words(b):
+                        return list(struct.unpack("<25I", b))
+
+                    def be(b):
+                        return struct.unpack(">i", b)[0]
+                    w0, w2, w4, w7 = words(mv[0]), words(mv[2]), words(mv[4]), words(mv[7])
+                    tl = list(LGw.TYPES)
+                    t0 = w0[0] & 0xFF
+                    want_t = tl[tl.index(t0) + 1] if t0 in tl and tl.index(t0) + 1 < len(tl) else t0
+                    differ = lambda x, y: float((shots[x] != shots[y]).mean())   # noqa: E731
+                    facts = {
+                        "slot 0 holds the factory INIT (lig.c's seed)": w0 == LGw.factory()[0],
+                        "the page keys come back to page 1": differ("p0", "p0b") == 0.0,
+                        "YES on page 1: EDIT (lig_state 1), the selected tile inverted": be(mv[1]) == 1 and differ("e0", "p0") > 0.002,
+                        "B turned one detent: block 1's type the next in the palette, nothing else":
+                            (w2[0] & 0xFF) == want_t and want_t != t0 and w2[0] >> 8 == w0[0] >> 8 and w2[1:] == w0[1:],
+                        "RIGHT: block 2 selected": be(mv[3]) == 1,
+                        "H turned one detent: OUT one on (block 2's), nothing else":
+                            (w4[24] & 0xFF) == (w2[24] & 0xFF) + 1 and w4[:24] == w2[:24],
+                        "YES: the BLOCK view (lig_state 2), its own screen; YES again: EDIT": be(mv[5]) == 2 and be(mv[6]) == 1
+                            and differ("b0", "e1") > 0.01,
+                        "FUNC + NO: block 2 empty (its two words 0, its B MOVES bit off), EDIT stays":
+                            w7[2] == 0 and w7[3] == 0 and not (w7[24] >> 9) & 1 and w7[:2] == w4[:2] and be(mv[8]) == 1,
+                        "NO: EDIT closes (lig_state 0); the grid shows the edited wiring": be(mv[9]) == 0 and differ("x0", "p0") > 0.002,
+                        "the project's list asked for (lig_saves), three edits counted": be(mv[10]) >= 1 and be(mv[11]) == 3,
+                        "page 2's knobs named by the new wiring (block 1's type, block 2 empty)": differ("q1", "q0") > 0.002,
+                        "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),
+                    }
+                    good = all(facts.values())
+                    why = (json.dumps({k: v for k, v in facts.items() if not v}) + f" w0={[hex(x) for x in w0[:4]]} "
+                           f"w2={[hex(x) for x in w2[:4]]} last={[hex(w[24]) for w in (w0, w2, w4, w7)]} "
+                           f"states={[be(mv[i]) for i in (1, 3, 5, 6, 8, 9, 10, 11)]}")[:1500]
+                return good, ("LIGATURE's PATCH screen: YES opens EDIT, B and H edit block 1's type and the output, "
+                              "RIGHT moves, YES shows the BLOCK view and back, FUNC + NO empties a block, NO leaves; "
+                              "the table holds exactly those edits, the list is asked for, the grid and page 2's names "
+                              "follow" if good else why)
+            later("ligedit", "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)",
+                  "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)",
+                  [l_cmd, sorted(EMU_ENV.items())], l_body)
 
         # 6f5. RIFT: DIGIDRUM (type 22, dnfw.digidrum.machines): LIGATURE's step on DIGIDRUM's table
         if "smp_machine_commit" in lay and "wr_lfo_mask" in lay:

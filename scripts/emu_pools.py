@@ -275,7 +275,8 @@ def run(cx):
         watch["target"] = "follow"
         watch["cur"], watch["prev"] = target_from(image_dir()), None
         d = image_dir()
-        changed = sum(1 for k, v in pool.items() if 4 * k >= SM.DATA_OFFSET and fs0.get(k) != v)
+        changed = sum(1 for k, v in pool.items() if 4 * k >= SM.DATA_OFFSET and fs0.get(k) != v
+                      and not SM.WIRE_AREA <= 4 * k < SM.WIRE_AREA + SM.WIRE_BYTES)   # (v0.12: wirings are not frames)
         return {"active": act, "blank_periods": blank_at, "settle": n, "owner": i32("smp_pl_owner"),
                 "src": i32("smp_pl_src"), "switches": long("smp_pl_switches") - sw0,
                 "skipped": long("smp_pl_skipped") - skipped0, "frame_words_written": changed,
@@ -324,7 +325,7 @@ def run(cx):
                   "smp_pj_begins", "smp_pj_ends", "smp_pj_loads", "smp_pj_news", "smp_pj_last", "smp_blank_req"):
             put(n, 0)
         mir = cx["mirror"]
-        m.write(mir + 0x140000, b"\xA5" * 0xD4000)
+        m.write(mir + 0x140000, b"\xA5" * 0xDC000)       # (v0.12: and LIGATURE's wirings' RAM)
         m.write(mir + 0x220000, b"\x5A" * 0xC000 + b"\x5A" * 2560)
         watch["target"] = None
         for i in range(limit):
@@ -339,6 +340,50 @@ def run(cx):
         watch["target"] = "follow"
         watch["cur"], watch["prev"] = target_from(image_dir()), None
         return i32("smp_pl_boot_case")
+
+    # -- RIFT v0.12: LIGATURE's wirings (lig.c's table at mirror + 0x218000; each list's after its
+    # slice area, F_WIRE; the DSP's in the pool's WIRE area) --------------------------------------
+    import os as _os
+    import sys as _sys
+    _sys.path.insert(0, str(_os.path.join(_os.path.dirname(__file__), "..", "src")))
+    from dnfw.ligature import wire as LW            # noqa: PLC0415
+    wbytes = 4 * LW.WTABLE_WORDS
+    seedw = [LW.WMAGIC, LW.WVERSION]
+    fac = LW.factory()
+    for k_ in range(LW.WSLOTS):
+        seedw += fac[min((k_ * LW.NP) >> 7, LW.NP - 1)]
+    seedb = struct.pack(f"<{len(seedw)}I", *seedw)
+    L_WIRE, WIRE_SECT = 26 + 128 * 768 // 512, (wbytes + 511) // 512
+
+    def wram():
+        return m.read(cx["mirror"] + 0x218000, wbytes)
+
+    def dsp_wire():
+        lo = SM.WIRE_AREA // 4
+        return b"".join(struct.pack("<I", pool.get(lo + j, 0)) for j in range(LW.WTABLE_WORDS))
+
+    def list_wire(p):
+        """list P's newest copy's wirings (header flag F_WIRE and its sum), or None"""
+        best = None
+        for c in (0, 1):
+            s_ = PL_LISTS + PL_SPAN * (2 * p + c)
+            h = struct.unpack(">13I", disk.get(s_, bytes(512))[:52])
+            if h[0] != 0x444E324B or h[2] != p or h[11] != (csum(struct.pack(">11I", *h[:11])) ^ 0x504C4B31):
+                continue
+            if not (h[5] & 4):
+                body = None
+            else:
+                body = on_disk(s_ + L_WIRE, WIRE_SECT)
+                if csum(body) != h[12]:
+                    continue
+            if best is None or h[3] > best[0]:
+                best = (h[3], None if body is None else body[:wbytes])
+        return None if best is None else best[1]
+
+    edit = struct.pack("<25I", *([0x00640102 | (1 << 24), 0x00400064] + [0] * 22 + [0]))   # slot 3: one PHASE
+
+    def edited(b):
+        return b[4 * (2 + 25 * 3):4 * (2 + 25 * 4)] == edit
 
     watch["where"] = "1"
     # 1. migration -------------------------------------------------------------------------
@@ -356,6 +401,12 @@ def run(cx):
     # the legacy list's sums, filled in once the load had read the frames
     leg = list_dir(128)
     facts["1b the legacy list's sums known after the power-on load"] = leg is not None and all(leg[1][k] for k in range(3))
+    for _ in range(400):
+        step()
+        if dsp_wire() == seedb:
+            break
+    facts["W1 (v0.12) the wirings at power-on: the factory patches, in RAM, the legacy list and the DSP"] = (
+        wram() == seedb and list_wire(128) == seedb and dsp_wire() == seedb)
 
     if stop < 2:
         return {"facts": facts, "notes": notes, "ok": False, "stopped": 2}
@@ -386,6 +437,19 @@ def run(cx):
     known[x_ent[0]] = libx
     notes["3"] = {"list7": pool_names(l7[0]) if l7 else None, "x_entry": [hex(v) for v in x_ent],
                   "sum3": l7[1][3] if l7 else None}
+    # v0.12: a wiring edited in 7 (as lig.c's EDIT writes one): 7's list, and the DSP, take it
+    m.write(cx["mirror"] + 0x218000 + 4 * (2 + 25 * 3), edit)
+    call("smp_wire_push", 3)
+    call("smp_pl_wire_changed")
+    for _ in range(3000):
+        step()
+        lw7 = list_wire(7)
+        if lw7 is not None and edited(lw7) and edited(dsp_wire()):
+            break
+    step(50)
+    facts["W2 (v0.12) a wiring edited in 7: 7's list holds it, the DSP has it, the rest as they were"] = (
+        list_wire(7) is not None and edited(list_wire(7)) and edited(dsp_wire()) and edited(wram())
+        and dsp_wire()[:4 * (2 + 25 * 3)] == seedb[:4 * (2 + 25 * 3)] and list_wire(128) == seedb)
 
     if stop < 4:
         return {"facts": facts, "notes": notes, "ok": False, "stopped": 4}
@@ -396,6 +460,8 @@ def run(cx):
     facts["4 LOAD 9 (no list): the legacy pool; 7's sample silent, nothing sent"] = (
         r["owner"] == 9 and r["src"] == 128 and r["pool"] == {0: "KICK", 1: "SNARE", 2: "HAT"}
         and dsp_pool() == r["pool"] and r["frame_words_written"] == 0)
+    facts["W3 (v0.12) LOAD 9 (no list): the legacy list's wirings (7's edit not there), in RAM and the DSP"] = (
+        wram() == seedb and dsp_wire() == seedb)
     call("smp_discard", 1)
     step(100)
     call("smp_lib_load", 1)
@@ -425,6 +491,7 @@ def run(cx):
         rs[0]["pool"] == rs[2]["pool"] == {0: "KICK", 1: "SNARE", 2: "HAT", 3: "LIBX ON"}
         and rs[1]["pool"] == {0: "KICK", 1: "LIBY TW", 2: "HAT"}
         and all(r_["frame_words_written"] == 0 for r_ in rs) and all(r_["src"] == r_["owner"] for r_ in rs))
+    facts["W4 (v0.12) LOAD 7 again: 7's edited wiring back, in RAM and the DSP"] = edited(wram()) and edited(dsp_wire())
 
     if stop < 6:
         return {"facts": facts, "notes": notes, "ok": False, "stopped": 6}
@@ -436,6 +503,7 @@ def run(cx):
     r5 = switch(os_load, 5)
     r12 = switch(os_load, 12)
     notes["6"] = {"new": r_new, "new12": r_new12, "load5": r5, "load12": r12}
+    facts["W5 (v0.12) NEW in 12, then LOAD 12: the factory patches"] = wram() == seedb and dsp_wire() == seedb
     facts["6 NEW: an empty pool; NEW in 12: its list empty; LOAD 5 (old): today's pool; LOAD 12: empty"] = (
         r_new["pool"] == {} and r_new["owner"] == -1 and r_new["active"] == -1
         and r_new12["pool"] == {} and r_new12["owner"] == 12 and l12 is not None and pool_names(l12[0]) == {}
@@ -475,6 +543,12 @@ def run(cx):
     first = {}
     case = power_cycle(7)
     notes["7"] = {"case": case, "dsp": dsp_pool()}
+    for _ in range(400):
+        step()
+        if edited(dsp_wire()):
+            break
+    facts["W6 (v0.12) a power cycle with 7 active: 7's edited wiring read back, in RAM and the DSP"] = (
+        edited(wram()) and edited(dsp_wire()) and wram()[:8] == seedb[:8])
     order = list(m.read(syms["smp_l_order"], 4))
     r9 = switch(os_load, 9)
     facts["7 a power cycle: 7's pool loads (its kit's sample first); 9's change kept"] = (

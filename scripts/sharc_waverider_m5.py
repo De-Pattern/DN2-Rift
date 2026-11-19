@@ -3828,13 +3828,14 @@ def lg_frame(sound, machines, ligs: dict, trig=(), offs=(), fascias=None) -> byt
     return f.to_bytes()
 
 
-def lg_live(knobs_of, notes: dict, blocks: int, slot: int, offs=(), vel: int = 127, skew=0):
+def lg_live(knobs_of, notes: dict, blocks: int, slot: int, offs=(), vel: int = 127, skew=0, table=None):
     """live.SlotVoice for SLOT: KNOBS_OF(b), NOTES = {block: note}, OFFS the note-off blocks. SKEW (the
     negative control) moves knob 8 (block 1's setting A) by that much in live only"""
     import numpy as np                           # noqa: PLC0415
     from dnfw.fascia import bench as FB          # noqa: PLC0415
     from dnfw.ligature import bench as LB, live as LGV   # noqa: PLC0415
     v = LGV.SlotVoice(slot)
+    v.table = None if table is None else list(table)       # v0.12: the WIRE area's words
     out = []
     for b in range(blocks):
         seen = list(LB.knobs_seen(LB.knobs_words(knobs_of(b))))
@@ -3913,7 +3914,49 @@ def step_ligature(init, sound, machines) -> dict:
     if not ok_sw:
         bad.append("switch")
     print(f"    ligature FASCIA -> LIGATURE: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    # RIFT v0.12: the wirings you make, in the pool's WIRE area (as the ColdFire's link puts them):
+    # the seeded table plays each factory patch exactly as without one; wirings made at random, and
+    # garbage words under the magic, bit-exact to live reading the same table; no fault
+    import random                                # noqa: PLC0415
+    from dnfw.sampler import machines as SMw     # noqa: PLC0415
+    wire = dsp.SMP_POOL_DDR + SMw.WIRE_AREA
+
+    def with_table(tb):
+        def poke(r, tb=tb):
+            for k_, w_ in enumerate(tb):
+                m2.poke(r.state, wire + 4 * k_, int(w_) & 0xFFFFFFFF)
+        return {dsp.PERC_SW: poke}
+    seedt = LGV.seed_table()
+    wired_ok = True
+    for pk in (0, 5, 12):
+        base = LB.panel_knobs(PATCH=pk)
+        rr = run_blocks(init, lambda b, base=base, pk=pk: lg_frame(sound, machines, {0: (base, 44.0 + pk, 100)},
+                                                                   trig=(0,) if b == 1 else ()), 10,
+                        extra_hooks=with_table(seedt))
+        nm = f"seeded table: {LGV.PATCHES[pk][0]} as the factory patch"
+        judge(nm, rr, lg_live(lambda b, base=base: base, {1: 44.0 + pk}, 10, 0, vel=100))
+        wired_ok = wired_ok and res[nm]["ok"]
+    rnd = random.Random(12)
+    made = list(seedt)
+    for k_ in range(LGV.WSLOTS):
+        rows = []
+        nb_ = rnd.randrange(1, LGV.NB + 1)
+        for _i in range(nb_):
+            rows.append((rnd.choice(LGV.TYPES), rnd.randrange(LGV.NSRC), rnd.randrange(-100, 101),
+                         rnd.randrange(LGV.NSRC), rnd.randrange(-100, 101), rnd.randrange(128), rnd.randrange(128)))
+        made[LGV.WHDR + LGV.WWORDS * k_: LGV.WHDR + LGV.WWORDS * (k_ + 1)] = LGV.encode(rows, rnd.randrange(1, nb_ + 1),
+                                                                                     rnd.randrange(1 << LGV.NB))
+    garb = [LGV.WMAGIC, LGV.WVERSION] + [rnd.getrandbits(32) for _ in range(LGV.WTABLE_WORDS - 2)]
+    for nm, tb, slot_k in (("wirings made at random (slot 37)", made, 37), ("wirings made at random (slot 100)", made, 100),
+                           ("garbage under the magic (slot 9)", garb, 9)):
+        kn_ = [slot_k] + LB.panel_knobs()[1:]
+        rr = run_blocks(init, lambda b, kn_=kn_: lg_frame(sound, machines, {0: (kn_, 52.0, 120)},
+                                                          trig=(0,) if b == 1 else ()), 12, extra_hooks=with_table(tb))
+        judge(nm, rr, lg_live(lambda b, kn_=kn_: kn_, {1: 52.0}, 12, 0, vel=120, table=tb), need_sound=False)
+        wired_ok = wired_ok and res[nm]["ok"]
     checks = {
+        "v0.12: the WIRE table read as live reads it (the seeded table, wirings made, garbage): bit-exact":
+            wired_ok,
         "INIT (the note, the note-off, the release): bit-exact to the model and live":
             res["INIT: note, note-off, release"]["ok"],
         "the comparison tells live with 1A one step off apart (negative control)":

@@ -160,6 +160,7 @@ u32 smp_pl_gen D_ = 0;
 static u32 sb_seq D_ = 0, sb_dirsum D_ = 0, sb_tdirsum D_ = 0;
 static int sb_cur D_ = -1;              /* the sector holding the newest superblock */
 static int sb_pend D_ = 0, sb_pslot D_ = -1;
+static int boot_applied D_ = 0;                 /* v0.12: apply() ran in this power-on's pl_boot */
 static int dirty D_ = 0;                /* the pool changed since its list was written */
 static u32 seen_loads D_ = 0, seen_news D_ = 0;
 static int sw_kind D_ = 0, sw_slot D_ = -1;
@@ -631,6 +632,7 @@ static int apply(int kind, int slot)
         smp_pl_image_write(SLICE_AREA, SLAREA_BYTES, W_AREA);
     }
     lig_wire_loaded(kind == 1 && (fl & F_WIRE) ? W_WIRE : 0);   /* v0.12: its wirings, or the factory's */
+    boot_applied = 1;
     u32 hi = dir_extent_end(dir);
     if (hi < smp_hi)
         hi = smp_hi;
@@ -697,8 +699,9 @@ static u32 wire_boot_loads D_ = 0;
 int smp_pl_boot(void)
 {
     lig_wire_loaded(0);
+    boot_applied = 0;
     int r = pl_boot();
-    if (smp_pl_on && smp_pl_switches == 0) {
+    if (smp_pl_on && !boot_applied) {
         int p = smp_pl_owner >= 0 && smp_pl_owner < PL_N && LINFO[smp_pl_owner].valid ? smp_pl_owner
               : LINFO[PL_LEGACY].valid ? PL_LEGACY : -1;
         if (p >= 0 && (LINFO[p].flags & F_WIRE) && copy_read(p, LINFO[p].copy) == 0) {

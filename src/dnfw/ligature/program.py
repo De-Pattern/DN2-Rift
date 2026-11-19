@@ -129,7 +129,7 @@ ARRAYS = {"eff": NK, "ain": BLOCK, "bin": BLOCK, "tg": BLOCK, "nz": BLOCK, "mc":
 
 
 class Layout:
-    def __init__(self, fascia: FP_.Layout, tables: int, wire: int = 0):
+    def __init__(self, fascia: FP_.Layout, tables: int, wire: int):
         self.wire = wire                      # v0.12: the WIRE area (dsp.SMP_POOL_DDR + WIRE_AREA)
         self.fl = fascia
         self.state, self.state2 = fascia.state, fascia.state2

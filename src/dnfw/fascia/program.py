@@ -3754,7 +3754,8 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
     p.jump("", nxt)
     p.place(lig)                               # RIFT: LIGATURE (type 21, dnfw.ligature.program)
-    LL_ = LP.Layout(L, _dsp.LIG_TABLES_DDR)
+    from ..sampler import machines as _SMw     # v0.12: LIGATURE's wirings, in the pool's WIRE area
+    LL_ = LP.Layout(L, _dsp.LIG_TABLES_DDR, _dsp.SMP_POOL_DDR + _SMw.WIRE_AREA)
     lg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: lg.append(LP.voice(p, LL_)),
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
