@@ -598,7 +598,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,organ,silt,sstress,ligature,lstress,digidrum,dstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -723,6 +723,8 @@ def main(argv=None):
                                 lambda: step_fsilence(warm(), sound, machines)),
                                ("fstress", "sixteen FASCIA voices, the clock made to move (v0.45)",
                                 lambda: step_fstress(warm(), sound, machines)),
+                               ("fkeep", "a held chord kept under a melody, the clock made to move (v0.11)",
+                                lambda: step_fkeep(warm(), sound, machines)),
                                ("fcost", "a FASCIA voice's cost, each audition patch (v0.45)",
                                 lambda: step_fcost(warm(), sound, machines)),
                                ("organ", "ORGAN bit-exact to live.Voice, in FASCIA's walk (RIFT)",
@@ -3383,7 +3385,7 @@ def fsc_audition():
     return FA.PATCHES
 
 
-def fsc_frame(sound, machines, tracks: dict, trig=(), others=None) -> bytes:
+def fsc_frame(sound, machines, tracks: dict, trig=(), others=None, offs=()) -> bytes:
     """a frame: TRACKS = {t: (panel, note, vel)} on FASCIA, OTHERS = {t: (type, words)}; TRIG the
     tracks triggered this block"""
     from dnfw.fascia import bench as FB          # noqa: PLC0415
@@ -3403,6 +3405,8 @@ def fsc_frame(sound, machines, tracks: dict, trig=(), others=None) -> bytes:
         f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
     for t in trig:
         f.trigger(t)
+    for t in offs:                               # v0.11: a note-off (mask 36 alone)
+        f.trigger(t, masks=(36,))
     return f.to_bytes()
 
 
@@ -4343,6 +4347,75 @@ def step_fcost(init, sound, machines) -> dict:
            for K in (1, 3)}
     return {"ok": ok, "checks": {"every audition patch measured (every block returned)": ok},
             "numbers": {"per_patch": rows, "typical": typical, "worst": worst, "voices_in_0.6P": fit}}
+
+
+def step_fkeep(init, sound, machines, K: float = 1.0) -> dict:
+    """RIFT v0.11 (dreamsaremaps, 2026-11-19): two FASCIA notes struck and held (no note-off);
+    then a melody, a note a block on the next track, each block's note-off ending the one
+    before (its tail rings on), the clock moved as fstress's so time runs short. The held
+    voices must be rendered before the melody's released tails, so they keep sounding to the
+    end; the newest melody note must sound too. Also REUSE: one track re-struck and released
+    over and over beside two held."""
+    from dnfw.perc import guard as G
+    P = 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    pats = fsc_audition()
+    panel = pats["20_snare_wires"][0]
+    out = {}
+    for label in ("melody", "reuse"):
+        b_now = {"b": 0}
+
+        def clock(r):
+            base = (b_now["b"] + 1) * P
+            r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const(int(base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+        def at_perc(r):
+            base = (b_now["b"] + 1) * P
+            m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+            m2.poke(r.state, G.MARK, int(base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+        hooks = {dsp.PERC_SW: at_perc}
+        hooks.update({s_: clock for s_ in sites})
+        tracks = {t: (panel, 48 + (t * 5) % 24, 0.9) for t in range(16)}
+        nb = 24
+
+        def fb(b, tracks=tracks, label=label):
+            b_now["b"] = b
+            if b == 0:
+                return fsc_frame(sound, machines, tracks, trig=(0, 1) if label == "melody" else (0, 1, 2))
+            if label == "melody":
+                t = 2 + (b - 1) % 14
+                prev = 2 + (b - 2) % 14 if b > 1 else None
+                return fsc_frame(sound, machines, tracks, trig=(t,), offs=() if prev is None else (prev,))
+            # reuse: three held; track 2 released on odd blocks, struck again on even ones
+            return fsc_frame(sound, machines, tracks, trig=() if b % 2 else (2,), offs=(2,) if b % 2 else ())
+        rr = run_blocks(init, fb, nb, extra_hooks=hooks)
+        st = rr.get("state")
+        skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+        rr.pop("state", None)
+
+        def heard(b, t):
+            blk = rr["fsc"][b] if b < len(rr["fsc"]) else {}
+            return t in blk and V.peak(blk[t]["out"]) > 1e-4
+        last = range(nb - 6, nb)
+        held = all(heard(b, t) for b in last for t in (0, 1))
+        print("    fkeep " + label + " heard: " + " ".join("".join("x" if heard(b, t) else "." for t in range(6)) for b in range(nb)), flush=True)
+        if label == "melody":
+            newest = sum(heard(b, 2 + (b - 1) % 14) for b in range(2, nb)) / (nb - 2)
+        else:
+            newest = sum(heard(b, 2) for b in range(2, nb, 2)) / len(range(2, nb, 2))
+        fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+        out[label] = {"ok": rr["ok"], "skips": skips, "held_to_the_end": held, "newest_heard": round(newest, 3),
+                      "finite": fin}
+        print(f"    fkeep {label}: {out[label]}", flush=True)
+    checks = {
+        "every block returns": all(o["ok"] for o in out.values()),
+        "time ran short (voices left out)": all(o["skips"] for o in out.values()),
+        "the two held notes sound to the end (melody)": out["melody"]["held_to_the_end"],
+        "the two held notes sound to the end (REUSE re-strikes)": out["reuse"]["held_to_the_end"],
+        "the newest note heard in most blocks": all(o["newest_heard"] >= 0.8 for o in out.values()),
+        "every buffer finite": all(o["finite"] for o in out.values()),
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 
 
 def step_fstress(init, sound, machines) -> dict:

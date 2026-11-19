@@ -82,6 +82,17 @@ RESTS_OFF = 0x3100
 # first blocks cost the most: DDRW's chord lost three of its four voices to the attack alone)
 STRIKES_OFF = 0x3140
 STEAL_STRIKES = 2
+# RIFT v0.11 (dreamsaremaps, Discord 2026-11-19: on a CPU-limited track a held chord lost its
+# notes to a melody played over it, and to one of its own notes re-struck on REUSE): each slot's
+# note-off (the frame's mask 36, low half, bit u: OFF_WORD) sets its RELEASED word, its next
+# note clears it; a released voice's key gets RELEASED_BIAS, so every voice still held is
+# rendered (and so kept) before any released one's tail. Among the held, and among the
+# released, the newest first, as v0.29. Power-on garbage reads as released until the slot's
+# first note: only the order changes.
+RELS_OFF = 0x3180                          # 16 words; FASCIA's MISC_OFF starts at 0x3200
+SORTS_OFF = 0x31C0                         # 16 words: each slot's key as ORDER sorts it
+OFF_WORD = 0x25C4B0                        # the frame's mask 36: the note-off, low half, bit u
+RELEASED_BIAS = 1 << 30                    # above every age key (< 2^30), below MNM_NONE
 MNM_QUIET_LEVEL = 2.0 ** -16                # -96 dB: an AMP envelope's tail and a filter's are under it
 MNM_QUIET_BLOCKS = 64                      # 43 ms
 MNM_SCRATCH = 0x200A4000                   # dsp.MNM_SCRATCH_L2 (v0.32: L2; test_waverider_dsp holds them equal)
@@ -136,7 +147,16 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
     costs = L.md.mnm.scratch + MNM_COSTS_OFF
     p.ld(3, TRIG_WORD)
     p.lsh(3, 3, -16)                           # the slots' note triggers
+    rels = L.md.mnm.scratch + RELS_OFF
+    sorts = L.md.mnm.scratch + SORTS_OFF
     for u in range(16):
+        # v0.11: the slot's RELEASED word: its note-off sets it, its note clears it (a note wins)
+        p.ld(0, OFF_WORD)
+        p.iconst(12, 1 << u)
+        p.iop(0, 0, "AND", 12)
+        p.ifz(0, "NE", lambda u=u: (p.iconst(0, 1), p.st(rels + 4 * u, 0)))
+        p.iop(0, 3, "AND", 12)
+        p.ifz(0, "NE", lambda u=u: (p.iconst(0, 0), p.st(rels + 4 * u, 0)))
         p.iconst(10, 2 * u)
         half(p, 2, 148, 10)                    # the slot's machine type, as raw_type
         p.iconst(4, 0)
@@ -202,10 +222,16 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
             p.iconst(12, u)
             p.iop(13, 13, "OR", 12)
             p.st(keys + 4 * u, 13)
+            # v0.11: ORDER sorts a copy: a released voice's key + RELEASED_BIAS (the key itself
+            # keeps the age for the next block)
+            p.ld(0, rels + 4 * u)
+            p.ifz(0, "NE", lambda: (p.iconst(12, RELEASED_BIAS), p.iop(13, 13, "+", 12)))
+            p.st(sorts + 4 * u, 13)
 
         def none(u=u):
             p.iconst(5, MNM_NONE | u)
             p.st(keys + 4 * u, 5)
+            p.st(sorts + 4 * u, 5)
         p.ifz(14, "NE", mnm, none)
     # the slots in key order: slot u goes to place (how many keys are smaller)
     order = L.md.mnm.scratch + ORDER_OFF
@@ -215,13 +241,13 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
     def place():
         p.ld(9, L.md.mnm.scratch + RANK_U)
         p.lsh(12, 9, 2)
-        p.iconst(11, keys)
+        p.iconst(11, sorts)                    # v0.11: the sort keys (keys + the released bias)
         p.iop(12, 11, "+", 12)
         p.seti(1, 12)
         p.ldi(6, 0, 1)                         # slot u's key
         p.iconst(8, 0)
         for v in range(16):
-            p.ld(7, keys + 4 * v)
+            p.ld(7, sorts + 4 * v)
             p.if_(7, "LT", 6, lambda: (p.iconst(12, 1), p.iop(8, 8, "+", 12)), kind="i")
         p.lsh(12, 8, 2)
         p.iconst(11, order)

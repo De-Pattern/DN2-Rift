@@ -3803,7 +3803,7 @@ def run_voice(L: Layout, read, t: int, mem=None):
     return p, mem
 
 
-MISC_OFF = 0x3200                    # in the Monomachine scratch (L2): its bookkeeping ends at 0x3180
+MISC_OFF = 0x3200                    # in the Monomachine scratch (L2): its bookkeeping ends at 0x3200 (v0.11: RELS, SORTS)
 
 
 def layout() -> Layout:
