@@ -146,6 +146,10 @@ TABLE_ROOM = 512 << 10
 TABLE_AREA = SLICE_AREA - TABLE_ROOM
 TABLE_READY = SLICE_AREA - 512
 TABLE_MAGIC = 0x4D4E5442                   # "BTNM" in memory
+# RIFT v0.12: LIGATURE's wirings (dnfw.ligature.live WTABLE_WORDS words: WMAGIC, WVERSION, 128 x 25),
+# sent by the ColdFire from the project's list; in the table area's free room, past the tables
+WIRE_AREA = TABLE_AREA + (256 << 10)
+WIRE_BYTES = 16 << 10
 TABLE_LOAD = 0x47000000                    # their bytes in the ColdFire's RAM (a CODE chunk): magic, length, data
 REC_BYTES = TABLE_AREA - REC_OFFSET        # v0.23: the recordings' area ends at the slice area (v0.26: the tables)
 USER_HOLE = (REC_OFFSET, REC_END)           # yours: 0..96 MB, then 128..400 MB (dn2samples.py skips the hole)

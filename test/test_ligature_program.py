@@ -73,3 +73,84 @@ def test_the_comparison_sees_a_wrong_program():
             seen = k
             break
     assert seen is not None
+
+
+# -- v0.12: the wirings you make ------------------------------------------------------------------
+SEED = L.seed_table()
+
+
+@pytest.mark.parametrize("pk", range(0, L.NP, 3))
+def test_the_seeded_table_plays_the_factory_patches_bit_for_bit(pk):
+    kn = lambda k: B.panel_knobs(PATCH=pk)
+    ev = {1: 40.0 + pk, 30: 64.0}
+    a, b, first = B.compare(kn, ev, 50, offs=(20,), table_of=lambda k: SEED)
+    assert first is None, first
+    a0, _b0, f0 = B.compare(kn, ev, 50, offs=(20,))
+    assert f0 is None and np.array_equal(a.view(np.uint32), a0.view(np.uint32))
+
+
+def _random_wiring(r):
+    rows = []
+    n = r.randrange(1, L.NB + 1)
+    for i in range(n):
+        rows.append((r.choice(L.TYPES), r.randrange(L.NSRC), r.randrange(-100, 101), r.randrange(L.NSRC),
+                     r.randrange(-100, 101), r.randrange(128), r.randrange(128)))
+    return L.encode(rows, r.randrange(1, n + 1), r.randrange(1 << L.NB))
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_wirings_you_make_are_bit_exact(seed):
+    r = random.Random(seed)
+    tb = list(SEED)
+    for k in range(L.WSLOTS):
+        tb[L.WHDR + L.WWORDS * k: L.WHDR + L.WWORDS * (k + 1)] = _random_wiring(r)
+    slot = r.randrange(128)
+    a, b, first = B.compare(lambda k: [slot] + B.panel_knobs()[1:], {1: 50.0, 25: 62.0}, 45, offs=(15,),
+                            table_of=lambda k: tb)
+    assert first is None, first
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_garbage_in_the_table_is_safe_and_bit_exact(seed):
+    """any word in the WIRE area reads as a safe wiring (live.decode), the DSP as live"""
+    r = random.Random(100 + seed)
+    tb = [L.WMAGIC, L.WVERSION] + [r.getrandbits(32) for _ in range(L.WTABLE_WORDS - 2)]
+    slot = r.randrange(128)
+    a, b, first = B.compare(lambda k: [slot] + B.panel_knobs()[1:], {1: 45.0}, 40, table_of=lambda k: tb)
+    assert first is None, first
+    assert np.isfinite(a).all()
+
+
+def test_an_edit_mid_note_and_the_table_arriving():
+    """no table, then the seeded one (same sound), then slot 0 edited while the note plays"""
+    r = random.Random(7)
+    edited = list(SEED)
+    edited[L.WHDR: L.WHDR + L.WWORDS] = _random_wiring(r)
+
+    def tb(k):
+        return None if k < 10 else SEED if k < 25 else edited
+    a, b, first = B.compare(lambda k: B.panel_knobs(PATCH=0)[:1] and [0] + B.panel_knobs()[1:], {1: 48.0}, 50,
+                            table_of=tb)
+    assert first is None, first
+
+
+def test_the_comparison_sees_a_wrong_table():
+    """negative control: live reading another wiring than the DSP's is caught"""
+    r = random.Random(3)
+    other = list(SEED)
+    other[L.WHDR: L.WHDR + L.WWORDS] = _random_wiring(r)
+    dsp = B.Dsp()
+    dsp.set_table(SEED)
+    v = L.SlotVoice(0)
+    v.table = other
+    kn = [0] + B.panel_knobs()[1:]
+    f = B.Frame()
+    words = B.knobs_words(kn)
+    f.lig(0, words, 48.0, True)
+    got = dsp.block(f, [0])[0]
+    want = v.dsp_block(B.knobs_seen(words), True, 48.0, 127, False)
+    f2 = B.Frame()
+    f2.lig(0, words, 48.0, False)
+    got = np.concatenate([got] + [dsp.block(f2, [0])[0] for _ in range(6)])
+    want = np.concatenate([want] + [v.dsp_block(B.knobs_seen(words), False, 48.0, 127, False) for _ in range(6)])
+    assert not np.array_equal(got.view(np.uint32), want.view(np.uint32))

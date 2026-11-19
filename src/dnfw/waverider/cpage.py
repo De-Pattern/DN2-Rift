@@ -75,7 +75,7 @@ def compile_page(header: str, *, base: int) -> tuple[bytes, dict[str, int], int]
         # (link.c tbl_bytes; ERASE MOD DATA faulted there)
         from ..perc import program as _pp
         defines["WR_NO_TABLES"] = int(_pp.RIFT)
-        for name in ("POOL_BYTES", "REC_OFFSET", "REC_END", "RAM_PROVEN", "SLICE_AREA", "TABLE_AREA", "TABLE_ROOM", "TABLE_READY", "TABLE_MAGIC", "TABLE_LOAD", "CMD_OFFSET", "STATUS_MAGIC", "TDM_TAG",
+        for name in ("POOL_BYTES", "REC_OFFSET", "REC_END", "RAM_PROVEN", "SLICE_AREA", "TABLE_AREA", "WIRE_AREA", "WIRE_BYTES", "TABLE_ROOM", "TABLE_READY", "TABLE_MAGIC", "TABLE_LOAD", "CMD_OFFSET", "STATUS_MAGIC", "TDM_TAG",
                      "RX_MAGIC", "TX_MAGIC", "POS_MAGIC", "POS_NONE", "POS_ONE", "META_PTR", "META_PTR_MAGIC", "META_MAGIC", "META_FOLDERS",
                      "META_FOLDER_BYTES", "META_SLOT_BYTES", "META_NAME_BYTES", "META_BYTES", "LIBID_OFFSET"):      # v0.16; v0.25 POS
             defines[name] = hex(getattr(SM, name)) + "u"

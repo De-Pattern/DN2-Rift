@@ -114,6 +114,66 @@ TRIM = F(0.6)                             # LIGATURE at FASCIA's level (its outp
 REST_BLOCKS = 16                          # the gate shut and this many quiet blocks: the voice rests
 
 
+# -- v0.12: the wirings you make (owner, 2026-11-19: "just fix the ligature ui so its usable") ----
+# Each project keeps WSLOTS wirings; PATCH (0..127) picks one. The ColdFire keeps the project's
+# table (csrc/sampler/pools.c's list, its RAM copy) and sends it into the pool's WIRE area in DSP
+# DDR (dnfw.sampler.machines.WIRE_AREA): WHDR words (WMAGIC, WVERSION), then WSLOTS x WWORDS.
+# A wiring: per block two words, then one: w0 = type | A << 8 | B << 16 | setting 1 << 24;
+# w1 = amount A (s8) | amount B (s8) << 8 | setting 2 << 16; last = (OUT - 1) | BMOVE << 8.
+# decode() is the contract the DSP keeps: any word reads as a safe wiring (a type not in TYPES
+# is no block, an input past NSRC is nothing, OUT past the last block the last), so garbage in
+# DDR never reaches a kernel. No table (the magic not there): PATCH picks a factory patch, as
+# v0.7..v0.11; the seeded table holds exactly those, so a saved sound sounds the same.
+WSLOTS = 128
+WWORDS = 2 * NB + 1
+WHDR = 2
+WMAGIC = 0x5747494C                       # 'LIGW' in memory
+WVERSION = 1
+WTABLE_WORDS = WHDR + WSLOTS * WWORDS
+TYPEMAP = tuple(t if t in TYPES else NONE for t in range(256))
+
+
+def _s8(x: int) -> int:
+    x &= 0xFF
+    return x - 256 if x >= 128 else x
+
+
+def encode(rows, out: int, bm: int) -> list[int]:
+    """12 rows (type, a, aa, b, ab, d1, d2), OUT (1..12), BMOVE -> WWORDS words"""
+    rows = list(rows) + [(NONE, 0, 0, 0, 0, 0, 0)] * (NB - len(rows))
+    w = []
+    for (ty, sa, aa, sb, ab, d1, d2) in rows:
+        w.append((ty & 0xFF) | (sa & 0xFF) << 8 | (sb & 0xFF) << 16 | (int(d1) & 0xFF) << 24)
+        w.append((aa & 0xFF) | (ab & 0xFF) << 8 | (int(d2) & 0xFF) << 16)
+    w.append(((out - 1) & 0xFF) | (bm & 0xFFF) << 8)
+    return w
+
+
+def decode(words) -> tuple[list, int, int]:
+    """WWORDS words -> (rows, OUT 1..12, BMOVE), every field made safe (the DSP's reading)"""
+    rows = []
+    for i in range(NB):
+        w0, w1 = int(words[2 * i]) & 0xFFFFFFFF, int(words[2 * i + 1]) & 0xFFFFFFFF
+        sa, sb = (w0 >> 8) & 0xFF, (w0 >> 16) & 0xFF
+        rows.append((TYPEMAP[w0 & 0xFF], sa if sa < NSRC else 0, _s8(w1), sb if sb < NSRC else 0,
+                     _s8(w1 >> 8), (w0 >> 24) & 0xFF, (w1 >> 16) & 0xFF))
+    last = int(words[2 * NB]) & 0xFFFFFFFF
+    return rows, min(last & 0xFF, NB - 1) + 1, (last >> 8) & 0xFFF
+
+
+def seed_table() -> list[int]:
+    """a new project's table: slot k holds the factory patch PATCH k always played"""
+    out = [WMAGIC, WVERSION]
+    for k in range(WSLOTS):
+        rows, o, bm = patch_rows(patch_of(k))
+        out += encode(rows, o, bm)
+    return out
+
+
+def table_ok(table) -> bool:
+    return table is not None and len(table) >= WTABLE_WORDS and int(table[0]) & 0xFFFFFFFF == WMAGIC
+
+
 def patch_of(k) -> int:
     """PATCH's knob (0..127) -> the patch: equal spans of 0..127, as every choice"""
     return min((int(min(max(int(k), 0), 127)) * NP) >> 7, NP - 1)
@@ -221,6 +281,7 @@ class Voice:
         self.blk = [Block() for _ in range(NB)]
         self.buf = np.zeros((NB, SUB), np.float32)          # each block's last 32 samples
         self.last_patch = -1
+        self.table = None                    # v0.12: the WIRE area's words as the DSP sees them
 
     def reset(self):
         self.blk = [Block() for _ in range(NB)]
@@ -250,12 +311,17 @@ class Voice:
         if not self.on:
             self.trig = False
             return out
-        pk = patch_of(kn[0])
+        k0 = min(max(int(kn[0]), 0), 127)
+        if table_ok(self.table):             # v0.12: the project's wiring k0
+            pk = k0
+            rows, outb, bm = decode(self.table[WHDR + WWORDS * k0: WHDR + WWORDS * (k0 + 1)])
+        else:                                # none sent yet: the factory patch, as before
+            pk = 256 + patch_of(k0)
+            rows, outb, bm = patch_rows(patch_of(k0))
         if pk != self.last_patch:            # a new wiring starts clean (WEFT's preset load)
             if self.last_patch >= 0:
                 self.reset()
             self.last_patch = pk
-        rows, outb, bm = patch_rows(pk)
         tune = F(F(F(F(kn[1]) - F(64.0)) * F(24.0 / 63.0)))
         fine = F(F(F(kn[2]) - F(64.0)) * F(50.0 / 63.0))
         nn = F(F(self.note_n + tune) + F(fine * F(0.01)))
