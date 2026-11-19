@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.9** | 2026-11-19 | LINE, the new screens on every RIFT machine (thin lines, a moving icon per control, values the Syntakt way, p-locks highlighted); LIGATURE in MACHINE SEL; RESONATOR removed; the manual (MANUAL on the patcher) | `builds/v0.9-LINE/` | yes |
+| **v0.10** | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
+| v0.9 | 2026-11-19 | LINE, the new screens on every RIFT machine (thin lines, a moving icon per control, values the Syntakt way, p-locks highlighted); LIGATURE in MACHINE SEL; RESONATOR removed; the manual (MANUAL on the patcher) | `builds/v0.9-LINE/` | yes |
 | v0.8 | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
 | v0.7 | 2026-11-18 | FLEX buffers B1..B8 in every sample machine's SAMP, MUTE SRC only while the FLEX track plays, the stock NAME screen for file names (from the DN2 mk2 mod's v0.54-v0.57); ORGAN: BLOM is the breath's attack; turned knobs show their value (a lock with its trig held) on RIFT's machines; the campfire start-up animation | `builds/v0.7-FLEXPOOL/` | yes |
 | v0.6 | 2026-11-17 | SILT, RIFT's third machine (material synthesis: FIBER, SILT, SKIN, FLUID played by ten gestures, alone or as an ensemble); ORGAN: BLOM a slow swell (breath from EDGE), MTUN replaces PHRM, MCHR replaces VELO | `builds/v0.6-SILT/` | yes |
@@ -36,6 +37,45 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.10 · DIGIDRUM
+
+- **File:** `RIFT_v0.10_DIGIDRUM_OS1.11.syx` (`builds/v0.10-DIGIDRUM/`)
+- **sha256:** `783eafd2c4ea8f89cdbca9aa4a54316d84513ce31b369ef100f23160632dba52`
+- **Gated:** 2026-11-19, `CLEARED TO FLASH`
+- **Source:** `c81ef3a` (this repository)
+
+**Adds**
+
+- **DIGIDRUM** (type 22, where RESONATOR was), in MACHINE SEL after LIGATURE: six digital drum
+  voices after the Syntakt's, BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon
+  (`src/dnfw/digidrum/`: `model.py` the design, `live.py` the float32 contract, `program.py` the
+  DSP program in FASCIA's walk, bit-exact to `live.Voice` for all six types).
+  - Page 1 DRUM: TYPE (a choice, p-lockable per trig), TUNE, PNCH, DEC, and O1..O4, named and
+    used by the TYPE (`dgd_own`, `smp_page.c` relabels them as TYPE turns).
+  - Page 2 TONE: OVER, EQF, EQG (a peaking EQ), AMD, AMF (a tremolo), FLTF, FLTW (a base/width
+    filter), LEV.
+  - On the LINE pages, its formatters in `fmt.c`, its slides, its DDR records.
+- `scripts/ship_gate.py`: the unit step runs `test/test_digidrum_program.py`; step `digidrum`
+  (MACHINE SEL, the page, p-locks, LFO names, TRK + CLEAR on the ColdFire); the SHARC runner's
+  `digidrum` (bit-exact to the live model) and `dstress` (every slot on DIGIDRUM at once).
+
+**Known issues**
+
+- A v0.8 RESONATOR track never re-saved in v0.9 opens as DIGIDRUM, with its old values read as
+  DIGIDRUM's.
+- The voices are matched to the Syntakt by ear, not yet by measurement against recordings.
+- The CPU-limit voice drop (newest first) can take held notes on a busy track: see the
+  dreamsaremaps report in the work queue; not changed in this version.
+
+**Tests**
+
+1. MACHINE SEL: DIGIDRUM after LIGATURE; each TYPE plays.
+2. P-lock TYPE on several trigs: each trig plays its own voice.
+3. Turn TYPE: page 1's last four labels follow it.
+4. Page 2: OVER, EQ, tremolo, filter and LEV each act.
+5. With other tracks running: no new clicks or dropouts.
+6. The other machines: unchanged from v0.9 (the gate's SHARC parts hold them bit for bit).
 
 ## v0.9 · LINE
 
