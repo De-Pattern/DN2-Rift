@@ -984,6 +984,8 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
                  # v0.40: folders inside folders
                  "smp_lib_fpar", "smp_fb_titletext", "smp_fb_delete",
                  # v0.45: FASCIA (the gate's "fascia" step asks the LFO list's mask lookup)
+                 # RIFT v0.12: LIGATURE's PATCH screen (lig.c; the gate's "ligedit" step)
+                 "lig_state", "lig_blk", "lig_cur", "lig_edits", "lig_saves", "lig_loads", "lig_seeds", "lig_seen_draw", "lig_word", "lig_pop", "lig_poll", "lig_draw", "lig_visible", "lig_wbytes", "lig_track_slot", "smp_wire_sent", "smp_wire_push", "smp_pl_wire_changed", "smp_lig_draw",
                  "wr_lfo_mask", "fsc_q_off"):   # the sample link's state (v0.15)
         layout[name] = csyms[name]
     # v0.45: PING removed (owner, 2026-11-08): its chunk (the FLTR list's 'Ping', the filter

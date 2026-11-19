@@ -627,6 +627,10 @@ static void f_mtune(int v, char *buf)
 static void fsc_text(const wr_mach_t *M, int j, int v, char *buf)
 {
     int k = fsc_kn(M, j, (v >> 8) & 0xFF), n = M->choices[j];
+    if (M == &wr_mach_lig && j == 0) {          /* RIFT v0.12: PATCH, a wiring slot 1..128 */
+        put_num(buf, k + 1);
+        return;
+    }
     if (n) {
         int o = (k * n) >> 7;
         put(buf, M->choice_name[M->choice_at[j] + (o > n - 1 ? n - 1 : o)], 7);

@@ -847,11 +847,41 @@ static u32 ln_at[8] __attribute__((section(".data")));
 static int ln_kind __attribute__((section(".data"))) = -1;
 static int ln_page __attribute__((section(".data"))) = -1;
 
+static void lig_page1(void *view, void *c);
+extern u32 lig_word(int k, int j);
+
+/* RIFT v0.12: a LIGATURE settings knob's label from the wiring its PATCH plays: the block's number
+ * and its setting's name for the block's type (4CUT, 4RES); an empty block "4---" */
+static void lig_set_label(void *view, const wr_mach_t *M, int j, char *out)
+{
+    int t0, v0 = value(view, M->rid[0], &t0), k = fsc_knob(M, 0, v0);
+    (void)t0;
+    int i = (j - 8) >> 1, which = (j - 8) & 1;
+    int ty = (int)(lig_word(k, 2 * i) & 0xFF), n = 0;
+    out[n++] = lig_bchar[i];
+    int ti = -1;
+    for (int q = 0; q < LIG_NT; q++)
+        if (lig_types[q] == ty)
+            ti = q;
+    const char *nm = ti >= 0 ? lig_tset[ti][which] : "---";
+    for (int q = 0; q < 4 && nm[q]; q++)
+        out[n++] = nm[q];
+    out[n] = 0;
+}
+
 void fsc_page_draw(void *view, void *c, int page, int kind)
 {
     const wr_mach_t *M = wr_mach_kind(kind);
     if (!M)
         return;
+    if (M == &wr_mach_lig && page == 0) {       /* RIFT v0.12: LIGATURE's PATCH page, its own */
+        extern u32 lig_seen_draw, wr_draws;
+        lig_seen_draw = wr_draws;
+        ln_kind = kind;
+        ln_page = page;
+        lig_page1(view, c);
+        return;
+    }
     int fresh = kind != ln_kind || page != ln_page;
     ln_kind = kind;
     ln_page = page;
@@ -872,6 +902,11 @@ void fsc_page_draw(void *view, void *c, int page, int kind)
             int t0, v0 = value(view, M->rid[0], &t0), o0 = (fsc_knob(M, 0, v0) * 6) >> 7;
             (void)t0;
             lab = dgd_own[o0 > 5 ? 5 : o0][j - 4];
+        }
+        char llab[6];
+        if (M == &wr_mach_lig && j >= 8) {      /* RIFT v0.12: named by the block's type */
+            lig_set_label(view, M, j, llab);
+            lab = llab;
         }
         int ll = slen(lab, 5);
         if (n) {                                /* a choice: its word in a thin box; a change scrolls in */
@@ -3035,4 +3070,238 @@ void rec_screen_draw(void *c)
     else
         box(c, sx0 + 2, sy0 + 2, sx0 + 8, sy1 - 2, 0);
     LABEL(c, 113, 0, "%s", "ARM");
+}
+
+
+/* -- RIFT v0.12: LIGATURE's PATCH screen (lig.c) ------------------------------------------------------
+ * Rows below the header (r 10..63), columns 0..123:
+ *   the grid: tiles 24 x 9 at x 4 + 30 col, rows 12, 24, 36 (r..r+8); its number and 4-letter type
+ *   inside, one clear pixel from the frame; an empty block dotted, its number only; the OUT block a
+ *   second bar at its right; the selected one (EDIT) inverted.
+ *   cables: from a block's right edge (r + 4) to the A (r + 2) or B (r + 6) port at another's left;
+ *   the next tile on a row a straight line, else along the gutters: the right gutter's column
+ *   (x0 + 27), the channel row above the destination's row (r - 2; row 0's: the one below it, r + 10),
+ *   the destination's left gutter
+ *   (x0 - 3), then in. A cord to an earlier block or itself (one block late, as the DSP) dotted.
+ *   the strip: two rows of four cells (rows 47 and 56), each in its knob's place: an inverted
+ *   3-letter name, then the value. */
+#define LG_X(col) (4 + 30 * (col))
+#define LG_R(row) (12 + 12 * (row))
+
+static void lig_tile(void *c, int i, u32 w0, int is_out, int sel)
+{
+    int x0 = LG_X(i & 3), r = LG_R(i >> 2), ty = (int)(w0 & 0xFF), ti = -1;
+    for (int q = 0; q < LIG_NT; q++)
+        if (lig_types[q] == ty)
+            ti = q;
+    int dot = ti < 0 ? 2 : 0;
+    shl(c, x0, x0 + 23, r, dot);
+    shl(c, x0, x0 + 23, r + 8, dot);
+    svl(c, x0, r, r + 8, dot);
+    svl(c, x0 + 23, r, r + 8, dot);
+    char nb[2] = {lig_bchar[i], 0};
+    stext(c, x0 + 2, r + 2, nb, 1, 1, 10, 63);
+    if (ti >= 0)
+        stext(c, x0 + 7, r + 2, lig_tshort[ti], 4, 1, 10, 63);
+    if (is_out)
+        svl(c, x0 + 25, r + 2, r + 6, 0);
+    if (sel)
+        invert(c, x0 + 1, 63 - (r + 7), x0 + 22, 63 - (r + 1));
+}
+
+static void lig_cable(void *c, int s, int d, int port)
+{
+    int sx = LG_X(s & 3) + 23, sr = LG_R(s >> 2) + 4;
+    int dx = LG_X(d & 3), dr = LG_R(d >> 2) + (port ? 6 : 2);
+    int dot = s >= d ? 2 : 0;
+    if ((s >> 2) == (d >> 2) && (d & 3) == (s & 3) + 1) {
+        if (dot)
+            for (int x = sx + 1; x < dx; x += 2)
+                sp(c, x, sr + (dr - sr) * (x - sx) / (dx - sx));
+        else
+            sline(c, sx + 1, sr, dx - 1, dr);
+        return;
+    }
+    /* the channel: the gutter row above the destination's tile row; for the top row the one below
+     * it (nothing above row 0 but the header) */
+    int gx = LG_X(s & 3) + 27, hr = (d >> 2) ? LG_R(d >> 2) - 2 : LG_R(0) + 10, lx = dx - 3;
+    shl(c, sx + 1, gx, sr, dot);
+    if (sr < hr)
+        svl(c, gx, sr, hr, dot);
+    else
+        svl(c, gx, hr, sr, dot);
+    if (gx < lx)
+        shl(c, gx, lx, hr, dot);
+    else
+        shl(c, lx, gx, hr, dot);
+    if (hr < dr)
+        svl(c, lx, hr, dr, dot);
+    else
+        svl(c, lx, dr, hr, dot);
+    shl(c, lx, dx - 1, dr, dot);
+}
+
+static void lig_grid(void *c, int k, int sel)
+{
+    u32 last = lig_word(k, 2 * LIG_NB);
+    int out = (int)(last & 0xFF);
+    for (int i = 0; i < LIG_NB; i++) {
+        u32 w0 = lig_word(k, 2 * i), w1 = lig_word(k, 2 * i + 1);
+        int ty = (int)(w0 & 0xFF);
+        int known = 0;
+        for (int q = 0; q < LIG_NT; q++)
+            if (lig_types[q] == ty)
+                known = 1;
+        if (!known)
+            continue;
+        int sa = (int)(w0 >> 8 & 0xFF), sb = (int)(w0 >> 16 & 0xFF);
+        if (sa >= 1 && sa <= LIG_NB && (w1 & 0xFF))
+            lig_cable(c, sa - 1, i, 0);
+        if (sb >= 1 && sb <= LIG_NB && (w1 >> 8 & 0xFF))
+            lig_cable(c, sb - 1, i, 1);
+    }
+    for (int i = 0; i < LIG_NB; i++)
+        lig_tile(c, i, lig_word(k, 2 * i), i == out, i == sel);
+}
+
+static void lig_clear(void *c)
+{
+    for (int x = 0; x < 123; x++)
+        for (int y = 0; y <= 53; y++)
+            SET_PIXEL(c, x, y, 0);
+}
+
+/* a strip cell: knob Q's place (0..7), NAME inverted, then TEXT */
+static void lig_cell(void *c, int q, const char *name, const char *text)
+{
+    int x = 2 + 31 * (q & 3), r = q < 4 ? 47 : 56;
+    for (int rr = r - 1; rr <= r + 5; rr++)
+        shl(c, x, x + 12, rr, 0);
+    stext(c, x + 1, r, name, 3, 0, 10, 63);
+    stext(c, x + 14, r, text, 4, 1, 10, 63);
+}
+
+static void num_text(char *b, int v, int sign)
+{
+    int n = 0;
+    if (sign && v > 0)
+        b[n++] = '+';
+    if (v < 0) {
+        b[n++] = '-';
+        v = -v;
+    }
+    char t[6];
+    int m = 0;
+    do {
+        t[m++] = (char)('0' + v % 10);
+        v /= 10;
+    } while (v && m < 5);
+    while (m)
+        b[n++] = t[--m];
+    b[n] = 0;
+}
+
+static void lig_page1(void *view, void *c)
+{
+    lig_clear(c);
+    const wr_mach_t *M = &wr_mach_lig;
+    int t0, v0 = value(view, M->rid[0], &t0), k = fsc_knob(M, 0, v0);
+    (void)t0;
+    lig_grid(c, k, -1);
+    static const char nm[8][4] = {"PAT", "TUN", "FIN", "LF1", "LF2", "VSN", "DRV", "LEV"};
+    for (int q = 0; q < 8; q++) {
+        char vb[32];
+        vb[0] = 0;
+        if (q == 0)
+            num_text(vb, k + 1, 0);
+        else
+            val_text(view, M->rid[q], vb);
+        vb[4] = 0;
+        lig_cell(c, q, nm[q], vb);
+        int lk = locked(view, M->rid[q]);
+        if (lk) {
+            int x = 2 + 31 * (q & 3), r = q < 4 ? 47 : 56;
+            invert(c, x + 13, 63 - (r + 5), x + 30, 63 - (r - 1));
+        }
+    }
+}
+
+/* lig.c's EDIT (STATE 1) and BLOCK (2) screens, over the page */
+void smp_lig_draw(void *c, int state, int k, int blk)
+{
+    lig_clear(c);
+    u32 w0 = lig_word(k, 2 * blk), w1 = lig_word(k, 2 * blk + 1), last = lig_word(k, 2 * LIG_NB);
+    int ty = (int)(w0 & 0xFF), sa = (int)(w0 >> 8 & 0xFF), sb = (int)(w0 >> 16 & 0xFF);
+    int aa = (signed char)(w1 & 0xFF), ab = (signed char)(w1 >> 8 & 0xFF);
+    int out = (int)(last & 0xFF), mv = (int)(last >> (8 + blk) & 1), ti = -1;
+    for (int q = 0; q < LIG_NT; q++)
+        if (lig_types[q] == ty)
+            ti = q;
+    char b[8];
+    if (state == 1)
+        lig_grid(c, k, blk);
+    else {
+        /* the block up close: number and long name; A and B; its settings by name; where it goes */
+        char hd[16];
+        int n = 0;
+        hd[n++] = 'B';
+        hd[n++] = lig_bchar[blk];
+        hd[n++] = ' ';
+        const char *ln = ti >= 0 ? lig_tlong[ti] : "EMPTY";
+        for (int q = 0; q < 10 && ln[q]; q++)
+            hd[n++] = ln[q];
+        hd[n] = 0;
+        stext(c, 4, 12, hd, 13, 1, 10, 63);
+        const char *srcs[2] = {lig_srcname[sa < LIG_NSRC ? sa : 0], lig_srcname[sb < LIG_NSRC ? sb : 0]};
+        int am[2] = {aa, ab};
+        for (int p = 0; p < 2; p++) {
+            int r = 20 + 8 * p;
+            stext(c, 4, r, p ? "B" : "A", 1, 1, 10, 63);
+            stext(c, 12, r, srcs[p], 4, 1, 10, 63);
+            num_text(b, am[p], 1);
+            stext(c, 32, r, b, 4, 1, 10, 63);
+            if (p && mv)
+                stext(c, 52, r, "MOV", 3, 1, 10, 63);
+        }
+        if (ti >= 0) {
+            stext(c, 72, 20, lig_tset[ti][0], 4, 1, 10, 63);
+            stext(c, 72, 28, lig_tset[ti][1], 4, 1, 10, 63);
+            num_text(b, (int)(w0 >> 24), 0);
+            stext(c, 92, 20, b, 3, 1, 10, 63);
+            num_text(b, (int)(w1 >> 16 & 0xFF), 0);
+            stext(c, 92, 28, b, 3, 1, 10, 63);
+        }
+        char to[24];
+        int m = 0;
+        to[m++] = 'T';
+        to[m++] = 'O';
+        for (int i = 0; i < LIG_NB && m < 22; i++) {
+            u32 x0 = lig_word(k, 2 * i), x1 = lig_word(k, 2 * i + 1);
+            int a = (int)(x0 >> 8 & 0xFF), bb = (int)(x0 >> 16 & 0xFF);
+            if ((a == blk + 1 && (x1 & 0xFF)) || (bb == blk + 1 && (x1 >> 8 & 0xFF))) {
+                to[m++] = ' ';
+                to[m++] = lig_bchar[i];
+            }
+        }
+        if (blk == out && m < 21) {
+            to[m++] = ' ';
+            to[m++] = 'O';
+            to[m++] = 'U';
+            to[m++] = 'T';
+        }
+        to[m] = 0;
+        stext(c, 4, 37, to, 22, 1, 10, 63);
+    }
+    char bk[2] = {lig_bchar[blk], 0};
+    lig_cell(c, 0, "BLK", bk);
+    lig_cell(c, 1, "TYP", ti >= 0 ? lig_tshort[ti] : "----");
+    lig_cell(c, 2, "INA", lig_srcname[sa < LIG_NSRC ? sa : 0]);
+    num_text(b, aa, 1);
+    lig_cell(c, 3, "AMA", b);
+    lig_cell(c, 4, "INB", lig_srcname[sb < LIG_NSRC ? sb : 0]);
+    num_text(b, ab, 1);
+    lig_cell(c, 5, "AMB", b);
+    lig_cell(c, 6, "MOV", mv ? "ON" : "OFF");
+    char ob[2] = {lig_bchar[out < LIG_NB ? out : LIG_NB - 1], 0};
+    lig_cell(c, 7, "OUT", ob);
 }

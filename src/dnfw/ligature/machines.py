@@ -32,7 +32,10 @@ PAGES = {
 CONTROLS = tuple(c for page in PAGES.values() for c in page)
 RIDES = dict(zip(CONTROLS, OM.RIDES.values()))
 SLOTS = {c: FM.SLOTS[RIDES[c]] for c in CONTROLS}
-CHOICES = {"PATCH": PATCH_NAMES}
+# v0.12 (owner, 2026-11-19: "we dont need presets"): PATCH is a wiring slot, 1..128 shown (the
+# project's own wirings, edited on page 1's PATCH screen; seeded with the factory patches, so a
+# sound saved before plays as it did)
+CHOICES: dict = {}
 LABELS = {"PATCH": "PATCH", "TUNE": "TUNE", "FINE": "FINE", "LFO1": "LFO1", "LFO2": "LFO2", "VSNS": "VSNS",
           "DRIV": "DRIVE", "LEVL": "LEVEL",
           **{f"S{i}{x}": f"{i}{x}" for i in range(1, 13) for x in "AB"}}
@@ -42,8 +45,8 @@ LONG_NAMES = {"PATCH": "Patch", "TUNE": "Tune", "FINE": "Fine Tune", "LFO1": "LF
 BOX = {"INIT": "INIT", "SYNC LD": "SYNC", "DX BELL": "DXBL", "PH DIST": "PHDS", "DRONE": "DRON",
        "TANGLE": "TANG", "SH BLIP": "SHBL", "TOMSKIN": "TOMS", "PLONK": "PLNK", "MANGRVE": "MANG",
        "SPLIT": "SPLT", "CREASE": "CRES", "BENJOLN": "BENJ"}
-OPT_DEFAULTS = {"PATCH": 0}
-KNOB_DEFAULTS = {"TUNE": 64, "FINE": 64, "LFO1": 40, "LFO2": 60, "VSNS": 64, "DRIV": 0, "LEVL": 100,
+OPT_DEFAULTS: dict = {}
+KNOB_DEFAULTS = {"PATCH": 0, "TUNE": 64, "FINE": 64, "LFO1": 40, "LFO2": 60, "VSNS": 64, "DRIV": 0, "LEVL": 100,
                  **{f"S{i}{x}": 64 for i in range(1, 13) for x in "AB"}}
 NO_LFO = tuple(c for c in CONTROLS if RIDES[c] in FM.NO_LFO)
 BIPOLAR = ("TUNE", "FINE") + tuple(f"S{i}{x}" for i in range(1, 13) for x in "AB")
@@ -78,6 +81,60 @@ def default_words() -> dict[str, int]:
     out = {c: word_of(c, KNOB_DEFAULTS[c]) for c in KNOB_DEFAULTS}
     out.update({c: rep_word(c, o) for c, o in OPT_DEFAULTS.items()})
     return out
+
+
+# -- v0.12: the PATCH screen's names (dnfw.ligature.live's types and sources) -----------------------
+def _lv():
+    from . import wire as LV                 # no numpy (the browser patcher builds this)
+    return LV
+
+
+TYPE_SHORT = {"PHASE": "PHAS", "WAVE": "WAVE", "SLOPE": "SLOP", "CYCLE": "CYCL", "SLEW": "SLEW", "LP": "LP",
+              "BP": "BP", "HP": "HP", "ADD": "ADD", "MULT": "MULT", "MIX": "MIX", "FOLD": "FOLD", "COMP": "COMP",
+              "XOR": "XOR", "FLIP": "FLIP", "HOLD": "HOLD", "SKIN": "SKIN", "BAR": "BAR", "SAT": "SAT",
+              "RUNG": "RUNG", "IMPLS": "IMPL", "CREAS": "CRES"}
+TYPE_LONG = {"PHASE": "PHASE", "WAVE": "WAVE", "SLOPE": "SLOPE", "CYCLE": "CYCLE", "SLEW": "SLEW",
+             "LP": "LOW PASS", "BP": "BAND PASS", "HP": "HIGH PASS", "ADD": "ADD", "MULT": "MULTIPLY",
+             "MIX": "MIX", "FOLD": "FOLD", "COMP": "COMPARE", "XOR": "XOR", "FLIP": "FLIP", "HOLD": "HOLD",
+             "SKIN": "SKIN", "BAR": "BAR", "SAT": "SATURATE", "RUNG": "RUNGLER", "IMPLS": "IMPULSE",
+             "CREAS": "CREASE"}
+# each type's two settings (live.Voice._run's x1, x2), four letters at most
+TYPE_SETS = {"PHASE": ("RATI", "TUNE"), "WAVE": ("SHAP", "WARP"), "SLOPE": ("RISE", "FALL"),
+             "CYCLE": ("RATE", "SKEW"), "SLEW": ("RISE", "FALL"), "LP": ("CUT", "RES"), "BP": ("CUT", "RES"),
+             "HP": ("CUT", "RES"), "ADD": ("OFFS", "GAIN"), "MULT": ("OFFS", "GAIN"), "MIX": ("MIX", "GAIN"),
+             "FOLD": ("DRIV", "OFFS"), "COMP": ("LEVL", "THRS"), "XOR": ("LEVL", "THRS"), "FLIP": ("LEVL", "THRS"),
+             "HOLD": ("STEP", "GLID"), "SKIN": ("TUNE", "BRIT"), "BAR": ("TUNE", "BRIT"), "SAT": ("DRIV", "OFFS"),
+             "RUNG": ("LOOP", "LEN"), "IMPLS": ("RATE", "DCAY"), "CREAS": ("GAIN", "OFFS")}
+SOURCE_NAMES = ("----",) + tuple(f"B{i}" for i in range(1, 13)) + ("PTCH", "GATE", "TRIG", "VEL", "NOIS", "LFO1", "LFO2")
+BLOCK_CHARS = "123456789ABC"              # the grid's block numbers: 1..9, then A B C (WEFT's)
+
+
+def wire_header() -> str:
+    LV = _lv()
+    q = chr(34)
+    tl = list(LV.TYPES)
+    names = [LV.TYPE_NAMES[t] for t in tl]
+    assert len(SOURCE_NAMES) == LV.NSRC and all(len(x) <= 4 for x in SOURCE_NAMES)
+    assert all(len(TYPE_SHORT[n]) <= 4 and len(TYPE_LONG[n]) <= 10 for n in names)
+    fac = LV.factory()
+
+    def arr(xs):
+        return ", ".join(str(x) for x in xs)
+    return "\n".join([
+        "/* LIGATURE's wirings (v0.12: dnfw.ligature.live WSLOTS, encode) */",
+        f"#define LIG_NT {len(tl)}", f"#define LIG_NSRC {LV.NSRC}", f"#define LIG_NB {LV.NB}",
+        f"#define LIG_WSLOTS {LV.WSLOTS}", f"#define LIG_WWORDS {LV.WWORDS}", f"#define LIG_WHDR {LV.WHDR}",
+        f"#define LIG_WMAGIC 0x{LV.WMAGIC:08X}u", f"#define LIG_WVERSION {LV.WVERSION}u",
+        f"#define LIG_WTABLE_WORDS {LV.WTABLE_WORDS}", f"#define LIG_NP {LV.NP}",
+        f"static const unsigned char lig_types[LIG_NT] = {{{arr(tl)}}};",
+        f"static const char lig_tshort[LIG_NT][5] = {{{', '.join(q + TYPE_SHORT[n] + q for n in names)}}};",
+        f"static const char lig_tlong[LIG_NT][11] = {{{', '.join(q + TYPE_LONG[n] + q for n in names)}}};",
+        f"static const char lig_tset[LIG_NT][2][5] = {{{', '.join('{' + q + TYPE_SETS[n][0] + q + ', ' + q + TYPE_SETS[n][1] + q + '}' for n in names)}}};",
+        f"static const char lig_srcname[LIG_NSRC][5] = {{{', '.join(q + x + q for x in SOURCE_NAMES)}}};",
+        f"static const char lig_bchar[13] = {q}{BLOCK_CHARS}{q};",
+        f"static const unsigned int lig_factory[LIG_NP][LIG_WWORDS] = {{{', '.join('{' + arr(w) + '}' for w in fac)}}};",
+        "",
+    ])
 
 
 def c_header() -> str:
@@ -117,4 +174,4 @@ def c_header() -> str:
         f"#define LIG_NOLFO_N {len(nolfo)}",
         f"static const unsigned short lig_nolfo[LIG_NOLFO_N] = {{{arr(nolfo)}}};",
         "",
-    ])
+    ]) + wire_header()

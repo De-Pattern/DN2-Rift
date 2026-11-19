@@ -1945,6 +1945,13 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
             it[0] = IT_DROP;
             return (u32)it;
         }
+        extern int lig_pop(u8 *it);             /* RIFT v0.12: LIGATURE's PATCH screen (lig.c) */
+        if (lig_pop(it)) {
+            if (it[0] == IT_KEY && (flags & F_PRESS) && !(flags & F_RELEASE) && code < 32)
+                eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
     }
     if (rec_overlay && rec_phase != PH_REC)
         return after_pop(it, code, flags);
