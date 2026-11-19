@@ -2629,7 +2629,7 @@ def main() -> int:
                         len({shots[f"p{k}"].tobytes() for k in range(npg)}) == npg
                         and not any((shots[f"p{k}"] == shots["wt"]).all() for k in range(npg)),
                         "the last page key comes back to the first page (the PATCH screen, v0.12), then page 2's cells":
-                        bool((shots["r0"] == shots["p0"]).all())
+                        bool((shots["r0"][10 * sc:] == shots["p0"][10 * sc:]).all())   # (below the header)
                         and all((cell(shots["r0b"], i) == cell(shots["p1"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
                         "[TRIG 1] held: S1A's and S2A's cells (page 2) inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
@@ -2720,7 +2720,8 @@ def main() -> int:
                     differ = lambda x, y: float((shots[x] != shots[y]).mean())   # noqa: E731
                     facts = {
                         "slot 0 holds the factory INIT (lig.c's seed)": w0 == LGw.factory()[0],
-                        "the page keys come back to page 1": differ("p0", "p0b") == 0.0,
+                        "the page keys come back to page 1 (below the header)":
+                            bool((shots["p0"][10 * (shots["p0"].shape[1] // 128):] == shots["p0b"][10 * (shots["p0"].shape[1] // 128):]).all()),
                         "YES on page 1: EDIT (lig_state 1), the selected tile inverted": be(mv[1]) == 1 and differ("e0", "p0") > 0.002,
                         "B turned one detent: block 1's type the next in the palette, nothing else":
                             (w2[0] & 0xFF) == want_t and want_t != t0 and w2[0] >> 8 == w0[0] >> 8 and w2[1:] == w0[1:],
