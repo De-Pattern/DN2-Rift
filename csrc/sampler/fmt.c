@@ -600,6 +600,33 @@ static void f_slen(int v, char *buf)            /* GRID's LEN: how many slices, 
     put_num(buf, (coarse(v, SMP_SLEN_ID) >> 1) + 1);
 }
 
+/* RIFT v0.16 SMEAR (dnfw.smear.live._speed): SPD, -4.00..+4.00 (64 frozen, +-1 within 0.06);
+ * WIN, the grain window's name (live.WIN_NAMES, k * 7 >> 7) */
+static void f_spd(int v, char *buf)
+{
+    int k = coarse(v, 254), h = (k - 64) * 400 / 63;
+    if (h > 94 && h < 106) h = 100;
+    if (h < -94 && h > -106) h = -100;
+    if (k == 64) {
+        put(buf, "FRZ", 4);
+        return;
+    }
+    int a = h < 0 ? -h : h;
+    buf[0] = h < 0 ? '-' : '+';
+    buf[1] = (char)('0' + a / 100);
+    buf[2] = '.';
+    buf[3] = (char)('0' + a / 10 % 10);
+    buf[4] = (char)('0' + a % 10);
+    buf[5] = 0;
+}
+
+static void f_win(int v, char *buf)
+{
+    static const char *n[7] = {"GAUS", "BHAR", "EXPO", "TRI", "RAMP", "SINC", "RECT"};
+    int k = coarse(v, 262) * 7 >> 7;
+    put(buf, n[k > 6 ? 6 : k], 5);
+}
+
 static void f_buf(int v, char *buf)             /* v0.49 FLEX's BUF: 01..08, an eighth of the knob each */
 {
     extern unsigned int rt_buf_value(unsigned int v);
@@ -735,11 +762,17 @@ void smp_formats(int kind)
         if (smp && (!grid_only || kind == SMP_GRID_KIND)
             && (!slices || kind == SMP_GRID_KIND || kind == SMP_SLICE_KIND)
             && (fmt_ids[k] != SMP_MODE_REC || kind == SMP_WERP_KIND)
-            && (fmt_ids[k] != SMP_BUF_ID || kind == SMP_BOUNCE_KIND))     /* v0.46: 244 is stock's elsewhere */
+            && (fmt_ids[k] != SMP_BUF_ID || kind == SMP_BOUNCE_KIND)     /* v0.46: 244 is stock's elsewhere */
+            && !(kind == SMP_WERP_KIND && (fmt_ids[k] == SMP_PLAY_REC || fmt_ids[k] == SMP_BARS_REC
+                                           || fmt_ids[k] == SMP_SEG_REC || fmt_ids[k] == SMP_MODE_REC)))   /* RIFT v0.16: SMEAR's own */
             f = (void *)fmt_fns[k];
         RECORD_FMT(fmt_ids[k]) = f;
     }
     smp_fine(kind);
+    if (kind == SMP_WERP_KIND) {                /* RIFT v0.16: SMEAR's SPD and WIN */
+        RECORD_FMT(254) = (void *)f_spd;
+        RECORD_FMT(262) = (void *)f_win;
+    }
     if (kind == FSC_KIND)                       /* v0.45: FASCIA's, last */
         for (int j = 0; j < FSC_N; j++)
             RECORD_FMT(fsc_rid[j]) = (void *)fsc_fns[j];

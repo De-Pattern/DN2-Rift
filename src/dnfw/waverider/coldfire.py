@@ -59,7 +59,7 @@ NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _o
 CLONE = 1                               # WaveTone
 LONG_NAME, SHORT_NAME = "Perc", "PRC"           # v0.11: PERC in Waverider's place
 MACHINE_NAMES = {5: ("Perc", "PRC"),
-                 8: ("Oneshot", "ONE"), 9: ("Werp", "WRP"), 10: ("Stretch", "STR"),
+                 8: ("Oneshot", "ONE"), 9: ("Smear", "SMR"), 10: ("Stretch", "STR"),
                  11: ("Repitch", "RPT"), 12: ("Grid", "GRD"), 13: ("Slice", "SLC"),
                  _smpm.BOUNCE_TYPE: ("Flex", "FLX"),       # v0.44: a section of its own, after the sample machines
                  _fsc.TYPE: (_fsc.LONG, _fsc.SHORT),          # v0.45: FASCIA, in the synth section

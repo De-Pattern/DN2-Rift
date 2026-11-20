@@ -280,7 +280,7 @@ from ..sampler import machines as _smp
 SMP_FIRST = _smp.FIRST_TYPE
 SMP_PAGES = tuple(tuple(r for r, _sh, _lo in _smp.PAGES.get(n, _smp.PAGES["ONESHOT"])) for n in _smp.NAMES)
 SMP_TITLES = _smp.SHORT
-SMP_SUBTITLES = tuple(n.capitalize() for n in _smp.NAMES)
+SMP_SUBTITLES = tuple(_smp.DISPLAY.get(n, n).capitalize() for n in _smp.NAMES)
 SMP_REC_IDS = tuple(r for r, _sh, _lo in _smp.REC_PAGE)            # every sample machine's page 2
 
 
@@ -410,7 +410,7 @@ static inline const wr_mach_t *wr_mach_kind(int kind)
 
 def smp_named(name: str) -> dict[int, tuple[str, str]]:
     """record -> (long, short) on a sample machine's track"""
-    out = {r: (lo, sh) for r, sh, lo in _smp.PAGES.get(name, _smp.PAGES["ONESHOT"]) if r}
+    out = {r: (lo, sh) for r, sh, lo in _smp.PAGES.get(name, _smp.PAGES["ONESHOT"]) + _smp.PAGES2.get(name, ()) if r}
     out.update({r: (UNUSED_LONG, UNUSED_SHORT) for r in range(238, 263) if r not in out})
     return out
 
@@ -518,6 +518,7 @@ def smp_c_header() -> str:
             f"#define SMP_IDX(kind) ((kind) >= SMP_KIND0 && (kind) < SMP_KIND0 + SMP_N0 ? (kind) - SMP_KIND0 : (kind) == SMP_BOUNCE_KIND ? SMP_N0 : -1)\n"
             f"#define WR_TYPES_LAST {TYPES_LAST}\n"
             f"static const unsigned short smp_ids[SMP_N][8] = {{\n{ids}\n}};\n"
+            f"static const unsigned short smp_werp2_ids[8] = {{{', '.join(str(r) for r, _sh, _lo in _smp.PAGES2['WERP'])}}};\n#define SMP_SIZE_ID {_smp.SMEAR_RECORDS['SIZE']}\n"
             f"static const char smp_machine[SMP_N][8] = {{{names}}};\n"
             f"#define SMP_PLAY_ID {_smp.PLAY_REC}\n#define SMP_SAMP_ID {_smp.SAMP_REC}\n"
             f"#define SMP_STRT_ID {_smp.STRT_REC}\n#define SMP_LEN_ID {_smp.LEN_REC}\n"
@@ -696,6 +697,8 @@ def source(page_draw: int, cell: int) -> str:
     smp_page_data = "\n".join(f"    .long smp_title_{k}, smp_subtitle_{k}\n"
                               f"    .long {', '.join(str(e) for e in entries)}\n"
                               f"    .long {TAG}" for k, entries in enumerate(SMP_PAGES))
+    smp_page_data += ("\nsmp_werp2_descriptor:\n    .long smp_title_1, smp_subtitle_1\n"
+                      f"    .long {', '.join(str(r) for r, _sh, _lo in _smp.PAGES2['WERP'])}\n    .long {TAG}")
     smp_page_data += ("\nsmp_rec_descriptor:\n    .long smp_rec_title, smp_rec_subtitle\n"
                       f"    .long {', '.join(str(e) for e in SMP_REC_IDS)}\n    .long {TAG}")
     fsc_page_data = "\n".join(f"    .long fsc_title_{k}, fsc_subtitle_{k}\n"
@@ -917,7 +920,15 @@ wr_page:
     move.l  #smp_rec_descriptor,%d0
     bra.w   2f
 9:  subq.l  #1,%d0
-    moveq   #44,%d1
+    moveq   #{_smp.NAMES.index("WERP")},%d1               | RIFT v0.16: SMEAR's page 2 is its own
+    cmp.l   %d1,%d0
+    bne.s   19f
+    move.l  %sp@(16),%d1
+    subq.l  #1,%d1
+    bne.s   19f
+    move.l  #smp_werp2_descriptor,%d0
+    bra.w   2f
+19: moveq   #44,%d1
     mulu.w  %d1,%d0
     addi.l  #smp_descriptors,%d0
 2:  addq.l  #4,%sp

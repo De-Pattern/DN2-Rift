@@ -244,6 +244,25 @@ DIGIDRUM_TABLES_DDR = 0x81229000
 THOLET_TABLES_DDR = 0x8122A000
 THOLET_RING_DDR = 0x82600000
 THOLET_RING_SPAN = 16 * 0x10000
+# RIFT v0.16: SMEAR (type 9, dnfw.smear, docs/smear.md): smear.asm between smp.asm and fascia.asm.
+# Its code in the L2 room perc.asm's move left (0x200b1000..0x200bc000), lane 0's working frames
+# after it; its voice's scratch, the stage's words and the mailboxes in the Machinedrum's former
+# L2 (RIFT loads none of it); its tables, states and lane 1 in DDR after THOLET's ring.
+SMEAR_L2_LOAD = 0x200B1000
+SMEAR_SW = 0xB80000 + (SMEAR_L2_LOAD - 0x20000000) // 2
+SMEAR_LANE0_L2 = 0x200B7800                  # WF, WB (16 KB) to 0x200bb800
+SMEAR_L2_SPAN = SMEAR_LANE0_L2 - SMEAR_L2_LOAD   # the code's room: 26 KB
+SMEAR_VB_L2 = 0x200A0000                     # program.VLayout (9.2 KB)
+SMEAR_SCR_L2 = 0x200A2800                    # the stage's words (64 B)
+SMEAR_MBOX = 0x200A3000                      # 16 mailboxes x 128 B
+SMEAR_DDR = THOLET_RING_DDR + THOLET_RING_SPAN   # 0x82700000
+SMEAR_TABLES_DDR = SMEAR_DDR                 # WIN (computed), then the transform's: pairs (loaded), twiddles (computed)
+SMEAR_VTABLES_DDR = SMEAR_DDR + 0x10000      # the voice's control tables and grain windows (loaded)
+SMEAR_QSIN_DDR = SMEAR_DDR + 0x13000         # the quarter sine (loaded)
+SMEAR_STATE_DDR = SMEAR_DDR + 0x14000        # 16 x 512 B
+SMEAR_LANE0_DDR = SMEAR_DDR + 0x18000        # P, RING (16,392 B each lane)
+SMEAR_LANE1_DDR = SMEAR_DDR + 0x1C800
+SMEAR_LANE1_W = SMEAR_DDR + 0x21000          # lane 1's WF, WB (16 KB)
 
 IDLE_SITE_SW = 0xB88ABB                      # prvIdleTask's back edge: jump (pc,-0x10)
 IDLE_SITE_STOCK = bytes.fromhex("3e07ff00f0ff")
@@ -304,7 +323,7 @@ def objects() -> dict[str, bytes]:
     return {name: sharc_object.load_bytes(bytes.fromhex(spec[name]["object_parcels_be"]))
             for name in ("perc", "smp", "entry_jump", "idle_load", "idle_jump", "block_count",
                          "entry_mark", "emark_jump", "lookup_ptr", "ping",
-                         "pvmix", "pvmix_jump", "fascia")}
+                         "pvmix", "pvmix_jump", "fascia", "smear")}
 
 
 def pvmix_object() -> bytes:
@@ -396,6 +415,7 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("LIGATURE's patches (dnfw.ligature.program.tables_bytes; RIFT)", LIG_TABLES_DDR, _lig_tables()),
         ("DIGIDRUM's records and anchors (dnfw.digidrum.program.tables_bytes; RIFT)", DIGIDRUM_TABLES_DDR, _dgd_tables()),
         ("THOLET's records, strikes and partials (dnfw.tholet.program.tables_bytes; RIFT)", THOLET_TABLES_DDR, _tho_tables()),
+        *_smear_spans(),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -415,6 +435,28 @@ def _perc_sine() -> bytes:
     from ..shft import live as SL
     data, at = SL.tables_bytes()
     return data[at["sin"]:at["pow2"]]
+
+
+def _smear_spans() -> list:
+    """RIFT v0.16: what SMEAR's tables need from the image (the rest the stage computes at power-on)"""
+    from ..smear import stage as SG, fft as FT, program as SP
+    import struct as _st
+
+    def b(ws):
+        return b"".join(_st.pack("<I", w & 0xFFFFFFFF) for w in ws)
+    pairs = SMEAR_TABLES_DDR + 4 * SP.N + FT.T_PAIRS
+    return [("SMEAR's transform pairs (dnfw.smear.fft; RIFT v0.16)", pairs, b(SG.pairs_words())),
+            ("SMEAR's voice tables and grain windows (dnfw.smear.program; RIFT v0.16)", SMEAR_VTABLES_DDR,
+             b(SP.voice_tables_words())),
+            ("SMEAR's quarter sine (dnfw.smear.fft.QSIN; RIFT v0.16)", SMEAR_QSIN_DDR, b(SG.qsin_words()))]
+
+
+def smear_layout():
+    from ..smear import stage as SG
+    from ..perc import program as PP
+    return SG.SLayout(SMEAR_SCR_L2, SMEAR_MBOX, SMEAR_STATE_DDR, SMEAR_VB_L2, SMEAR_TABLES_DDR,
+                      SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
+                      ((SMEAR_LANE0_L2, SMEAR_LANE0_DDR), (SMEAR_LANE1_W, SMEAR_LANE1_DDR)), PP.BUFFERS)
 
 
 def _dgd_tables() -> bytes:
@@ -505,6 +547,11 @@ def l2_spans() -> list[tuple[str, int, bytes]]:
         raise DspError(f"fascia.asm ({len(code)} bytes) leaves fewer than 256 bytes of its L2 span")
     # RIFT: the code and 256 bytes of NOPs (zeros), not the whole span (the DSP image's room)
     out.append(("fascia.asm (wr_fsc), in L2 (v0.45; RIFT: in PERC's former room)", FSC_L2_LOAD, code + bytes(256)))
+    code = obj["smear"]                          # RIFT v0.16: SMEAR's stage
+    if SMEAR_L2_SPAN - len(code) < 256:
+        raise DspError(f"smear.asm ({len(code)} bytes) leaves fewer than 256 bytes of its L2 room")
+    out.append(("smear.asm (wr_smr), in L2 (RIFT v0.16)", SMEAR_L2_LOAD, code + bytes(256)))
+    out.append(("SMEAR's stage words, in L2 (zeros: the power-on flag; RIFT v0.16)", SMEAR_SCR_L2, bytes(64)))
     return out
 
 

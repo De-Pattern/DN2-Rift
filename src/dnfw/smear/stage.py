@@ -38,20 +38,22 @@ NTRACKS = 16
 
 
 class SLayout:
-    """Where the stage's words, the mailboxes, the voices' states and the lanes are.
+    """INIT must be a word the image loads as zero (the power-on block runs when it is not
+    INIT_MAGIC). Where the stage's words, the mailboxes, the voices' states and the lanes are.
 
     SCR: the stage's own words (fixed); MBOX: 16 mailboxes; STATE: 16 voice states (DDR);
     V: the voice's layout (program.VLayout); TABLES: the transform's tables (QSIN's image
     copy, the pairs, then what emit_init computes); BUFFERS: the track buffers' pointers."""
 
     def __init__(self, scr: int, mbox: int, state: int, vbase: int, tables: int, vtables: int,
-                 qsin: int, lanes: tuple, buffers: int):
+                 qsin: int, lanes: tuple, buffers: int, clears: tuple = ()):
         self.INIT, self.CLOCK, self.T, self.SEEN, self.LOWN0, self.LOWN1, self.LAGE0, self.LAGE1, self.CNT = (
             scr + 4 * k for k in range(9))
         self.scr_end = scr + 64
         self.MBOX, self.STATE, self.QSIN, self.BUFFERS = mbox, state, qsin, buffers
         self.V = P.VLayout(vbase, tables, vtables, lanes)
         self.tables = tables
+        self.clears = clears                    # (address, bytes): zeroed at power-on (FASCIA's voices)
 
     def mb(self, t: int, w: int) -> int:
         return self.MBOX + 4 * (MB_WORDS * t + w)
@@ -194,6 +196,14 @@ def stage(p: Prog, S: SLayout) -> None:
 
     def init():
         FT.emit_init(p, S.QSIN, FT.tabs(S.V.L.FFT), S.V.L.WIN)
+        # RIFT v0.16: the image no longer loads FASCIA's voices' zeros (63 KB of the DSP's 1 MiB):
+        # they are cleared here, at the first block after each load (INIT is a loaded zero),
+        # before fascia.asm's first walk
+        for at, n in S.clears:
+            p.iconst(0, 0)
+            p.iconst(9, at)
+            p.seti(1, 9)
+            p.loop_r(15, n // 4, lambda: p.stpost(1, 0))
         p.iconst(0, 0)
         for w in (S.CLOCK, S.LOWN0, S.LOWN1, S.LAGE0, S.LAGE1):
             p.st(w, 0)

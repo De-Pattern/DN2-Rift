@@ -22,7 +22,10 @@ FIRST_TYPE = 8
 # freeze was a new type a table missed), and an old project's BOUNCE track opens as a FLEX track
 # (the same records: BUF, SRC, R.LEN; recorder trigs in the lock store's record 202)
 NAMES = ("ONESHOT", "WERP", "STRETCH", "REPITCH", "GRID", "SLICE", "FLEX")
-SHORT = ("ONE", "WRP", "STRE", "RPI", "GRD", "SLC", "FLX")
+SHORT = ("ONE", "SMR", "STRE", "RPI", "GRD", "SLC", "FLX")    # RIFT v0.16: SMEAR in WERP's place (type 9)
+# RIFT v0.16 (owner, 2026-11-20: "the granular nebulae machine in place of werp"): type 9 keeps
+# its key "WERP" in these tables (every table and the DSP index it by name), shown as SMEAR
+DISPLAY = {"WERP": "SMEAR"}
 BOUNCE_TYPE = 17
 FLEX_TYPE = BOUNCE_TYPE
 # v0.45 (owner, 2026-11-08): listed again: v0.44's freeze on picking it (wr_label, pages.py) is
@@ -46,16 +49,18 @@ RECORDS = {238: (25, 4, 120), 254: (41, 0, 127), 256: (43, 0, 144), 239: (26, 0,
            # WAV2, SRC on DRIF, R.LEN on ATK, CHAN on TYPE (0..2), R.STRT on TBL2 -- all default 0
            247: (27, 0, 1), 248: (37, 0, 3), 243: (32, 0, 120), 252: (38, 0, 127), 253: (40, 0, 127),
            259: (46, 0, 2), 251: (33, 0, 1),
-           244: (35, 0, 7)}                  # v0.44 BOUNCE's BUF: buffer 1..8 (PERC's slot 35, free here)
+           244: (35, 0, 7),
+           245: (36, 0, 127), 261: (48, 0, 127), 262: (49, 0, 127)}   # RIFT v0.16: SMEAR's page 2                  # v0.44 BOUNCE's BUF: buffer 1..8 (PERC's slot 35, free here)
 
 # the eight controls each machine shows, in page order A..H: (record, short, long)
 PAGES = {        # v0.15: the DT2's own SRC layout -- A TUNE, B PLAY, C (empty), D SAMP on top
     "ONESHOT": ((238, "TUNE", "Tune"), (254, "PLAY", "Play Mode"), (0, "-", "Unused"),
                 (256, "SAMP", "Sample Slot"), (239, "STRT", "Start"), (258, "LEN", "Length"),
                 (257, "LOOP", "Loop Pos"), (241, "LEV", "Sample Level")),
-    "WERP": ((238, "TUNE", "Tune"), (254, "PLAY", "Play Mode"), (0, "-", "Unused"),
-             (256, "SAMP", "Sample Slot"), (242, "SEG", "Segment Size"), (255, "MODE", "Segment Mode"),
-             (240, "BARS", "Bars"), (241, "LEV", "Sample Level")),
+    # RIFT v0.16: SMEAR (dnfw.smear; docs/smear.md): page 1, then PAGES2's page 2
+    "WERP": ((238, "TUNE", "Tune"), (254, "SPD", "Speed"), (255, "BLND", "Blend"),
+             (256, "SAMP", "Sample Slot"), (239, "STRT", "Start"), (258, "SIZE", "Loop Size"),
+             (257, "DENS", "Grain Density"), (241, "LEV", "Sample Level")),
     "STRETCH": ((238, "TUNE", "Tune"), (254, "PLAY", "Play Mode"), (0, "-", "Unused"),
                 (256, "SAMP", "Sample Slot"), (239, "STRT", "Start"), (258, "LEN", "Length"),
                 (240, "BARS", "Bars"), (241, "LEV", "Sample Level")),
@@ -74,10 +79,20 @@ PAGES = {        # v0.15: the DT2's own SRC layout -- A TUNE, B PLAY, C (empty),
               (256, "SAMP", "Sample Slot"), (257, "SLCE", "Slice Select"), (260, "LEN", "Slice Length"),
               (0, "-", "Unused"), (241, "LEV", "Sample Level")),
 }
+# RIFT v0.16: a sample machine with a page 2 of its own (else page 2 is page 1 over the waveform)
+PAGES2 = {"WERP": ((260, "OVLP", "Grain Overlap"), (245, "SPRY", "Grain Spray"), (261, "PRND", "Pitch Random"),
+                   (262, "WIN", "Grain Window"), (0, "-", "Unused"), (0, "-", "Unused"), (0, "-", "Unused"),
+                   (0, "-", "Unused"))}
+# SMEAR's knobs in the voice's order (dnfw.smear.live.CONTROLS) -> their records; and the
+# values MACHINE SEL writes (the voice's DEFAULTS, live.DEFAULTS)
+SMEAR_RECORDS = dict(TUNE=238, SPD=254, BLND=255, SAMP=256, STRT=239, SIZE=258, DENS=257, OVLP=260,
+                     SPRY=245, PRND=261, WIN=262, LEV=241)
+WIN_NAMES = ("GAUS", "BHAR", "EXPO", "TRI", "RAMP", "SINC", "RECT")
 # how page.c draws each control (v0.15, after the DT2's widgets)
 WIDGETS = {238: "bipolar", 254: "play", 260: "knob", 256: "samp", 239: "knob", 258: "knob",
            257: "knob", 241: "fader", 242: "seg", 255: "play", 240: "bars",
-           244: "knob"}                           # v0.44 BOUNCE: BUF 1..8 as a knob
+           244: "knob",                           # v0.44 BOUNCE: BUF 1..8 as a knob
+           245: "knob", 261: "knob", 262: "knob"}  # RIFT v0.16: SMEAR's page 2
 # what each control's value means here
 TUNE_REC, PLAY_REC, SAMP_REC, LEV_REC = 238, 254, 256, 241
 BUF_REC = 244                              # v0.44 BOUNCE: its buffer (0..7 -> BUF 1..8)
@@ -270,10 +285,11 @@ def _zones(n, span):                           # v * n // span: the first v of e
 
 QUANT = (
     # (machines, record, zone starts (raw), the value set for each choice (raw))
-    (ALL, PLAY_REC, (32, 64, 96), (0, 32, 64, 127)),
-    (("WERP",), MODE_REC, (32, 64, 96), (0, 32, 64, 127)),
-    (("WERP", "STRETCH", "REPITCH"), BARS_REC, BARS_STEPS[:3], (0, 25, 50, 75)),
-    (("WERP",), SEG_REC, tuple(4 + x for x in SEG_STEPS[:2]), (24, 64, 104)),
+    # RIFT v0.16: SMEAR (type 9, "WERP") has no PLAY, MODE, BARS or SEG: SPD and BLND are knobs
+    (tuple(n for n in ALL if n != "WERP"), PLAY_REC, (32, 64, 96), (0, 32, 64, 127)),
+    (("STRETCH", "REPITCH"), BARS_REC, BARS_STEPS[:3], (0, 25, 50, 75)),
+    # its WIN: seven windows, one a detent (live: k * 7 >> 7)
+    (("WERP",), 262, _zones(7, 128), tuple(-(-128 * k // 7) + 9 for k in range(7))),
     (("GRID",), GRID_REC, (24, 48, 72, 96), (0, 24, 48, 72, 96)),
     # (v0.15..v0.21 had the recorder's SRC here: v0.22's recorder is a screen of its own)
 )

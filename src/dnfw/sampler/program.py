@@ -257,73 +257,203 @@ def voice(p: Prog, L: Layout, t: int | None = None) -> None:
     p.ld(8, C["tune"])                       # v0.18: TUNE alone (GRID's NOTE mode)
     PM.exp2(p, L, 9, 8)
     p.st(C["tr0"], 9)
-    # v0.18: a note while the voice sounds: the old note is rendered first, fading out over
-    # the block, and the new one is added to it (the DT2 gives a retrigger a second voice,
-    # and fades the first): two passes, the first only for that
-    p.iconst(0, 0)
-    p.st(C["kill"], 0)
-    p.st(C["add"], 0)
-    p.st(C["pass"], 0)
-    p.st(C["segnext"], 0)
-    p.ld(0, C["trig"])
-    p.ifz(0, "NE", lambda: (v(p, 0, "on"), p.ifz(0, "NE", lambda: (p.iconst(0, 1), p.st(C["kill"], 0)))),
-          lambda: werp_clock(p, L))
+    # RIFT v0.16: SMEAR (type 9): its mailbox for smear.asm, which renders it (dnfw.smear.stage)
+    p.ld(0, C["type"])
+    p.iconst(12, SM.TYPE_OF["WERP"])
 
-    def a_pass():
-        p.ld(0, C["pass"])
-        p.ld(1, C["kill"])
-        p.iop(0, 0, "OR", 1)
-        p.ifz(0, "NE", lambda: (v(p, 0, "on"), p.ifz(0, "NE", sounding, lambda: silence(p, L))))
-        p.ld(0, C["pass"])
-
-        def first():                          # a note: latch the machine, the slot and the region
-            p.ld(0, C["trig"])
-
-            p.ifz(0, "NE", lambda: start(p, L))
-            p.ld(0, C["segnext"])                 # WERP: the next segment starts (a note of its own)
-            p.ifz(0, "NE", lambda: werp_next(p, L))
-            p.ld(0, C["kill"])
-            p.st(C["add"], 0)
-            p.iconst(0, 0)
-            p.st(C["kill"], 0)
-        p.ifz(0, "EQ", first)
-        p.iconst(0, 1)
+    def rest():
+        # v0.18: a note while the voice sounds: the old note is rendered first, fading out over
+        # the block, and the new one is added to it (the DT2 gives a retrigger a second voice,
+        # and fades the first): two passes, the first only for that
+        p.iconst(0, 0)
+        p.st(C["kill"], 0)
+        p.st(C["add"], 0)
         p.st(C["pass"], 0)
+        p.st(C["segnext"], 0)
+        p.ld(0, C["trig"])
+        p.ifz(0, "NE", lambda: (v(p, 0, "on"), p.ifz(0, "NE", lambda: (p.iconst(0, 1), p.st(C["kill"], 0)))),
+              lambda: werp_clock(p, L))
 
-    def sounding():
-        live(p, L)
-        v(p, 0, "on")
-        p.ifz(0, "NE", sounding_on, lambda: silence(p, L))
+        def a_pass():
+            p.ld(0, C["pass"])
+            p.ld(1, C["kill"])
+            p.iop(0, 0, "OR", 1)
+            p.ifz(0, "NE", lambda: (v(p, 0, "on"), p.ifz(0, "NE", sounding, lambda: silence(p, L))))
+            p.ld(0, C["pass"])
 
-    def sounding_on():
-        p.ld(4, C["tr"])
-        v(p, 0, "fixed")
-        p.ifz(0, "NE", lambda: p.ld(4, C["tr0"]))
-        v(p, 5, "rate")
-        p.fop(4, 4, "*", 5)
-        p.st(C["rate"], 4)
-        # the time machines (WERP 9, STRETCH 10, REPITCH 11) take the tempo
-        v(p, 0, "mach")
-        p.iconst(12, SM.TYPE_OF["WERP"])
+            def first():                          # a note: latch the machine, the slot and the region
+                p.ld(0, C["trig"])
 
-        def maybe_timed():
+                p.ifz(0, "NE", lambda: start(p, L))
+                p.ld(0, C["segnext"])                 # WERP: the next segment starts (a note of its own)
+                p.ifz(0, "NE", lambda: werp_next(p, L))
+                p.ld(0, C["kill"])
+                p.st(C["add"], 0)
+                p.iconst(0, 0)
+                p.st(C["kill"], 0)
+            p.ifz(0, "EQ", first)
+            p.iconst(0, 1)
+            p.st(C["pass"], 0)
+
+        def sounding():
+            live(p, L)
+            v(p, 0, "on")
+            p.ifz(0, "NE", sounding_on, lambda: silence(p, L))
+
+        def sounding_on():
+            p.ld(4, C["tr"])
+            v(p, 0, "fixed")
+            p.ifz(0, "NE", lambda: p.ld(4, C["tr0"]))
+            v(p, 5, "rate")
+            p.fop(4, 4, "*", 5)
+            p.st(C["rate"], 4)
+            # the time machines (WERP 9, STRETCH 10, REPITCH 11) take the tempo
+            v(p, 0, "mach")
+            p.iconst(12, SM.TYPE_OF["WERP"])
+
+            def maybe_timed():
+                p.iconst(12, SM.TYPE_OF["REPITCH"])
+                p.if_(0, "LE", 12, lambda: tempo(p, L), kind="i")
+            p.if_(0, "GE", 12, maybe_timed, kind="i")
+            v(p, 0, "mach")
             p.iconst(12, SM.TYPE_OF["REPITCH"])
-            p.if_(0, "LE", 12, lambda: tempo(p, L), kind="i")
-        p.if_(0, "GE", 12, maybe_timed, kind="i")
-        v(p, 0, "mach")
-        p.iconst(12, SM.TYPE_OF["REPITCH"])
-        # REPITCH: the region in BARS, no TUNE, no note (as the DT2's)
-        p.if_(0, "EQ", 12, lambda: (p.ld(4, C["sr"]), p.st(C["rate"], 4)), kind="i")
-        v(p, 0, "mach")
-        p.iconst(12, SM.TYPE_OF["WERP"])
-        p.e("COMP(R0, R12);")
-
-        def not_werp():
-            p.iconst(12, SM.TYPE_OF["STRETCH"])
+            # REPITCH: the region in BARS, no TUNE, no note (as the DT2's)
+            p.if_(0, "EQ", 12, lambda: (p.ld(4, C["sr"]), p.st(C["rate"], 4)), kind="i")
+            v(p, 0, "mach")
+            p.iconst(12, SM.TYPE_OF["WERP"])
             p.e("COMP(R0, R12);")
-            p._branch(lambda: p.r[0] == p.r[12], "EQ", lambda: render_stretch(p, L), lambda: render(p, L))
-        p._branch(lambda: p.r[0] == p.r[12], "EQ", lambda: render(p, L), not_werp)
-    p.loop(C["lp"], 2, a_pass)
+
+            def not_werp():
+                p.iconst(12, SM.TYPE_OF["STRETCH"])
+                p.e("COMP(R0, R12);")
+                p._branch(lambda: p.r[0] == p.r[12], "EQ", lambda: render_stretch(p, L), lambda: render(p, L))
+            p._branch(lambda: p.r[0] == p.r[12], "EQ", lambda: render(p, L), not_werp)
+        p.loop(C["lp"], 2, a_pass)
+    p.if_(0, "EQ", 12, lambda: smear_glue(p, L), rest, kind="i")
+
+
+def smear_latch(p: Prog, L: Layout) -> None:
+    """RIFT v0.16: a SMEAR note: the slot SAMP names latched (start()'s pool and buffer reading,
+    without the regions and slices): base, frames, rate, format, checked by entry_check; on = a
+    playable slot."""
+    C = L.C
+    p.iconst(0, 0)
+    vs(p, "on", 0)
+    vs(p, "frames", 0)
+    p.ld(9, C["t"])
+    PP.t146(p, 10, 9)
+    ctl(p, 4, SM.SAMP_REC, 10)
+    p.iconst(12, -1)
+    p.iop(4, 12, "+", 4)                     # SAMP 0 is OFF
+    p.st(C["samp"], 4)
+    p.ld(0, L.pool)
+    p.iconst(12, SM.POOL_MAGIC)
+
+    def found():
+        p.ld(0, L.pool + 4)
+        p.ld(4, C["samp"])
+        p.iconst(12, SM.REC_FIRST)
+        p.if_(4, "GE", 12, lambda: p.iconst(0, SM.BUF_SLOT0 + SM.BUF_HALVES), kind="i")
+
+        def have():
+            p.ld(4, C["samp"])
+            p.iconst(12, SM.BUF_SLOT0)
+
+            def pool_entry():
+                p.lsh(4, 4, 4)
+                p.iconst(12, L.pool + 8)
+                p.iop(4, 12, "+", 4)
+                p.seti(1, 4)
+                p.ldi(5, 0, 1)
+                p.ldi(6, 1, 1)
+                p.ldi(7, 2, 1)
+                p.ldi(8, 3, 1)
+
+            def buf_entry():
+                p.iconst(12, -SM.BUF_SLOT0)
+                p.iop(4, 12, "+", 4)
+                p.lsh(5, 4, 3)
+                p.lsh(4, 4, 2)
+                p.ipass(12, 5)
+                p.iop(4, 12, "+", 4)
+                p.iconst(12, L.pool + SM.BUF_DIR)
+                p.iop(4, 12, "+", 4)
+                p.seti(1, 4)
+                p.ldi(5, 0, 1)
+                p.ldi(6, 1, 1)
+                p.fconst(7, 1.0)
+                p.iconst(8, SM.FMT_I16)
+            p.if_(4, "GE", 12, buf_entry, pool_entry, kind="i")
+            vs(p, "rate", 7)
+            entry_check(p, L)
+            vs(p, "base", 5)
+            vs(p, "frames", 6)
+            p.iconst(12, 0xFF)
+            p.iop(8, 8, "AND", 12)
+            vs(p, "fmt", 8)
+            p.iconst(0, 0)
+            p.ifz(6, "GT", lambda: p.iconst(0, 1))
+            vs(p, "on", 0)
+
+        def inrange():
+            p.ld(4, C["samp"])
+            p.ifz(4, "GE", have)
+        p.ld(4, C["samp"])
+        p.e("COMP(R4, R0);")
+        p._branch(lambda: s32(p.r[4]) < s32(p.r[0]), "LT", inrange, None)
+    p.e("COMP(R0, R12);")
+    p._branch(lambda: p.r[0] == p.r[12], "EQ", found, None)
+
+
+def smear_glue(p: Prog, L: Layout) -> None:
+    """RIFT v0.16: a SMEAR track: at a note the slot latched as every sample machine's (start:
+    base, frames, rate, format, checked against the pool; an empty or bad slot: on 0); then its
+    mailbox (dnfw.smear.stage): on, the trig, TR (the note and TUNE x the slot's rate), the rate,
+    base, frames (0 when the voice is off), format and the twelve knobs (0..127)."""
+    from ..smear import stage as SG
+    from ..waverider import dsp as _dsp
+    C = L.C
+    p.ld(0, C["trig"])
+    p.ifz(0, "NE", lambda: smear_latch(p, L))
+    p.ld(9, C["t"])
+    p.lsh(9, 9, 7)
+    p.iconst(12, _dsp.SMEAR_MBOX)
+    p.iop(9, 12, "+", 9)
+    p.seti(5, 9, "the track's mailbox")
+    p.ld(0, C["trig"])
+    p.ifz(0, "NE", lambda: p.iconst(0, 1))
+    p.sti(SG.MB_TRIG, 5, 0)
+    v(p, 4, "rate")
+    p.ld(0, C["tr"])
+    p.fop(0, 0, "*", 4)
+    p.sti(SG.MB_TR, 5, 0)
+    p.sti(SG.MB_RATE, 5, 4)
+    v(p, 0, "base")
+    p.sti(SG.MB_BASE, 5, 0)
+    v(p, 1, "on")
+    v(p, 0, "frames")
+    p.ifz(1, "EQ", lambda: p.iconst(0, 0))
+    p.sti(SG.MB_FRAMES, 5, 0)
+    v(p, 0, "fmt")
+    p.sti(SG.MB_FMT, 5, 0)
+    p.ld(9, C["t"])
+    PP.t146(p, 10, 9)
+    from ..smear import live as SLV
+    for k, name in enumerate(SLV.CONTROLS):
+        rec = SM.SMEAR_RECORDS[name]
+        if rec in (SM.TUNE_REC, SM.SAMP_REC):
+            continue                         # (TUNE is in TR, the slot latched: the voice reads neither)
+        ctl(p, 4, rec, 10)
+        _lo, top = SM.RECORDS[rec][1], SM.RECORDS[rec][2]
+        if top != 127:                     # STRT 0..120: to 0..127
+            p.iconst(12, 0)
+            p.float_(4, 4, 12)
+            p.fconst(12, 127.0 / top)
+            p.fop(4, 4, "*", 12)
+            p.trunc(4, 4)
+        p.sti(SG.MB_KN + k, 5, 4)
+    p.iconst(0, 1)
+    p.sti(SG.MB_ON, 5, 0)
 
 
 def out(p: Prog, L: Layout, x: int) -> None:
