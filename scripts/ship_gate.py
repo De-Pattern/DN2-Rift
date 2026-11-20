@@ -1777,7 +1777,7 @@ def main() -> int:
             # RIFT v0.16: type 9 is SMEAR (no MODE): its WIN, seven windows, one a detent from GAUS
             wslot = SMq.RECORDS[262][0]
             pst += [f"poke:{snd0 + 0xDE:#x}:{SMq.TYPE_OF['WERP']:02x}",
-                    f"poke:{snd0 + 0x14 + 2 * wslot:#x}:0900", "wait:4"]
+                    f"poke:{snd0 + 0x14 + 2 * wslot:#x}:0000", "wait:4"]
             pst += [f"call:{lay['smp_quant']:#x}:sound0:{wslot}:0x100:262"] * 2
             _ = (mrec, mslot)
             pjs = work / "playdet.json"
