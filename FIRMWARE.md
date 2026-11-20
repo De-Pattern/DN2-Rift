@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.11** | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
+| **v0.12** | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
+| v0.11 | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
 | v0.10 | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
 | v0.9 | 2026-11-19 | LINE, the new screens on every RIFT machine (thin lines, a moving icon per control, values the Syntakt way, p-locks highlighted); LIGATURE in MACHINE SEL; RESONATOR removed; the manual (MANUAL on the patcher) | `builds/v0.9-LINE/` | yes |
 | v0.8 | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
@@ -38,6 +39,51 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.12 · PATCHING
+
+- **File:** `RIFT_v0.12_PATCHING_OS1.11.syx` (`builds/v0.12-PATCHING/`)
+- **sha256:** `aac214284b76d3568f1e14a38e24325aeac8a891841a22d2a3f8c0e11f569c5b`
+- **Gated:** 2026-11-20, `CLEARED TO FLASH`
+- **Source:** `2b0e9ec` (this repository)
+
+**Adds**
+
+- **LIGATURE's PATCH screen** (owner, 2026-11-19: "just fix the ligature ui so its usable ... we dont
+  need presets"; `csrc/sampler/lig.c`, `smp_page.c`):
+  - page 1: the wiring as WEFT's grid (tiles 1-9, A, B, C; cables in the gutters, a back-cord dotted)
+    and the page's eight controls below in their knobs' places;
+  - EDIT (YES): A BLK, B TYP, C INA, D AMA / E INB, F AMB, G MOV, H OUT; the arrows; FUNC + NO
+    empties a block; YES the BLOCK view; NO leaves;
+  - pages 2-4: each knob named by its block's type (`TYPE_SETS`).
+- **The wirings, per project**: 128 (`dnfw.ligature.live` WSLOTS, 25 words each), PATCH 0..127
+  picks one (shown 1..128). Kept in each project's list after the slice area (`pools.c` F_WIRE,
+  L_WIRE; read on LOAD and at power-on; a NEW project's are the factory patches), sent by the
+  sample link into the pool's WIRE area (`link.c` K_WIRE, the magic last; a slot as it is edited).
+  Seeded with the factory patches, slot k the one PATCH k played before: a saved sound sounds the
+  same.
+- **The DSP** decodes the slot's wiring into the voice every block (`live.decode`, the contract:
+  any word reads as a safe wiring); with no table there, the factory patch as before.
+- Includes v0.11 (held voices keep the DSP's time).
+- Gate: `ligedit` (new: EDIT, BLOCK, the edits in the table, the list asked for, the screens);
+  `ligature` (page 1 the PATCH screen, its p-locks on page 2); `pools` W1..W6 (the wirings in the
+  lists, the DSP, LOAD, NEW, a power cycle, power cuts); the runner's `ligature` part (the seeded
+  table, random wirings and garbage, bit-exact on the assembled code); unit tests.
+
+**Known issues**
+
+- No MOVE (FUNC + BLK) yet: a block is rebuilt where you want it.
+- The BLOCK view shows a block's settings as the wiring holds them, not with page 2-4's offsets.
+- Not yet seen on hardware: the screens' legibility on the unit's display.
+
+**Tests**
+
+1. A LIGATURE track, page 1: the grid; PATCH changes it.
+2. YES: B, C-F and H edit the block; the sound follows at once.
+3. YES on a block: BLOCK; YES back; FUNC + NO empties it; NO leaves.
+4. SAVE, LOAD another project, LOAD back, power-cycle: the wiring is kept.
+5. A NEW project: the factory patches.
+6. Pages 2-4: names follow the blocks.
 
 ## v0.11 · VOICEKEEP
 
