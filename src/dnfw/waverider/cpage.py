@@ -78,7 +78,8 @@ def compile_page(header: str, *, base: int) -> tuple[bytes, dict[str, int], int]
         # RIFT: no MD/MnM tables chunk at TABLE_LOAD, so the sample link never reads it
         # (link.c tbl_bytes; ERASE MOD DATA faulted there)
         from ..perc import program as _pp
-        defines["WR_NO_TABLES"] = int(_pp.RIFT)
+        defines["WR_NO_TABLES"] = 0              # RIFT v0.16: its own tables chunk (ORGAN, THOLET, SMEAR)
+        _ = _pp
         from ..ligature import wire as _lw          # RIFT v0.12: LIGATURE's wirings (link.c, pools.c)
         for name in ("WSLOTS", "WHDR", "WWORDS", "WTABLE_WORDS"):
             defines["LIG_" + name] = int(getattr(_lw, name))

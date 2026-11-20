@@ -456,17 +456,21 @@ def emit_init(p: Prog, qsin: int, tables: int, win: int) -> None:
         p.loop_r(15, n, body)
 
     def cs(sign_sin: bool, shift_j):
-        """store cos(J), then +-sin(J) (J in R11)."""
-        def st():
+        """store cos(J), then +-sin(J) (J in R11). RIFT v0.16: one leaf subroutine for each sign,
+        called from every table's loop (the DSP image's room: about 6 KB less code)"""
+        def st_body():
             emit_cos(p, 4, 11, qsin)
             p.stpost(5, 4)
             p.iconst(12, -512)
-            p.iop(10, 11, "+", 12)
+            p.iop(10, 12, "+", 11)
             emit_cos(p, 4, 10, qsin)              # sin(J) = cos(J - 512)
             if sign_sin:
                 p.iconst(12, 0)
                 p.fop(4, 12, "-", 4)
             p.stpost(5, 4)
+
+        def st():
+            p.call("csn" if sign_sin else "csp", st_body)
         return st
 
     T = tabs(tables)
@@ -482,7 +486,7 @@ def emit_init(p: Prog, qsin: int, tables: int, win: int) -> None:
     p.comment("power-on: the Hann window")
 
     def hann():
-        emit_cos(p, 4, 11, qsin)
+        p.call("cos", lambda: emit_cos(p, 4, 11, qsin))
         p.fconst(6, 0.5)
         p.fop(4, 6, "*", 4)
         p.fop(4, 6, "-", 4)

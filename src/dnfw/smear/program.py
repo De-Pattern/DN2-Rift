@@ -632,7 +632,7 @@ class VLayout:
     Then the voice's state as copied in (PI, PF, then the grains' state words), the
     grains' and the vocoder's layouts, the outputs and the tables."""
 
-    def __init__(self, base: int, tables: int, vtables: int, lanes: tuple):
+    def __init__(self, base: int, tables: int, vtables: int, lanes: tuple, fft=None):
         a = base
         names = [f"KN{k}" for k in range(12)] + ["TR", "RATE", "TRIG", "SIZE", "BASE", "FMT",
                                                   "CLOCK", "LANE", "VSTATE", "LSTART", "LEND",
@@ -647,7 +647,7 @@ class VLayout:
         # the state copied in and out: MAGIC .. the grains' end (the grains' inputs ride along)
         self.STATE_WORDS = (self.G.G + 32 * LV.GRAINS - self.MAGIC) // 4
         a = self.G.end
-        self.L = Layout(a, tables, lane=(self.LW2, self.LWD))
+        self.L = Layout(a, tables, lane=(self.LW2, self.LWD), fft=fft)   # FFT: an fft.Tabs (RIFT v0.16: the pairs apart)
         a = self.L.end
         self.VOUT = a; a += 128
         self.OUT = a; a += 128

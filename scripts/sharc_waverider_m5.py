@@ -80,6 +80,7 @@ from dnfw.organ import program as OGP                           # noqa: E402  (R
 from dnfw.silt import program as SLP                            # noqa: E402  (RIFT: SILT's, in FASCIA's walk)
 from dnfw.ligature import program as LGP                        # noqa: E402  (RIFT: LIGATURE's, in FASCIA's walk)
 from dnfw.digidrum import program as DDP                           # noqa: E402  (RIFT: DIGIDRUM's, in FASCIA's walk)
+from dnfw.perc.program import RIFT as PP_RIFT                    # noqa: E402
 from dnfw.tholet import program as THP                          # noqa: E402  (RIFT: THOLET's, in FASCIA's walk)
 from dnfw.fascia import machines as FSM                         # noqa: E402
 
@@ -150,10 +151,16 @@ def init_on(snap, m2mach, image: Image, warm: bool = False):
     # v0.26: the tables the ColdFire sends over the link at power-on (the host's pitch table
     # and zpack, at the pool's table area), then the word that says they are whole
     Lm = PL.layout().md
-    shipped = MDK.tables_bytes()
-    for k in range(0, len(shipped), 4):
-        m2.poke(runner.state, Lm.T[MDK.SHIPPED] + k, struct.unpack_from("<I", shipped, k)[0])
-    m2.poke(runner.state, Lm.ready, SM.TABLE_MAGIC)
+    if PP_RIFT:      # RIFT v0.16: ORGAN's, THOLET's and SMEAR's (dsp.link_tables), as link.c sends them
+        shipped = dsp.link_tables()
+        for k in range(0, len(shipped), 4):
+            m2.poke(runner.state, dsp.LINK_TABLES_DDR + k, struct.unpack_from("<I", shipped, k)[0])
+        m2.poke(runner.state, dsp.LINK_READY_DDR, SM.TABLE_MAGIC)
+    else:
+        shipped = MDK.tables_bytes()
+        for k in range(0, len(shipped), 4):
+            m2.poke(runner.state, Lm.T[MDK.SHIPPED] + k, struct.unpack_from("<I", shipped, k)[0])
+        m2.poke(runner.state, Lm.ready, SM.TABLE_MAGIC)
     if warm:
         # v0.17: the Machinedrum's sine and tables as the DSP has them 0.7 s after power-on
         # (it fills them itself, 32 blocks; the "sine" run checks that fill word for word),

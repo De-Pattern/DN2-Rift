@@ -1038,6 +1038,16 @@ u32 smp_machine_commit(u32 model, u32 track, u32 type, u32 a, u32 b)
                 SET_VALUE(ps, mnm_rid[j], (u32)mnm_default[mi][j], track, 0, 0, 1);
         }
     }
+    /* RIFT v0.16: SMEAR (type 9) starts at its own (dnfw.smear.live.DEFAULTS: SPD +1, the loop the
+     * whole sample, the grains as made), not at WaveTone's records' defaults */
+    if (track < 16 && KIT && (int)type == SMP_WERP_KIND + 4 && SOUND_TYPE(track) == (int)type && was != (int)type) {
+        u32 owner = UI_OWNER();
+        for (int j = 0; owner && j < SMR_N; j++) {
+            u32 ps = PARAM_SET(owner, smr_rid[j], track);
+            if (ps)
+                SET_VALUE(ps, smr_rid[j], (u32)smr_default[j], track, 0, 0, 1);
+        }
+    }
     /* v0.45: FASCIA starts as its model's DEFAULTS (dnfw.fascia.machines), not at the records'
      * own defaults (WaveTone's and FM Tone's, for other machines' controls) */
     /* RIFT: ORGAN as FASCIA, on the same records (from FASCIA to ORGAN, or back, too) */

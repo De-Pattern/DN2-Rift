@@ -452,7 +452,7 @@ def smear_glue(p: Prog, L: Layout) -> None:
             p.fop(4, 4, "*", 12)
             p.trunc(4, 4)
         p.sti(SG.MB_KN + k, 5, 4)
-    p.iconst(0, 1)
+    p.iconst(0, SG.MB_MAGIC)
     p.sti(SG.MB_ON, 5, 0)
 
 

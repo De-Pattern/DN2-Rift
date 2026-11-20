@@ -227,7 +227,7 @@ FSC_SW = 0xB80000 + (FSC_L2_LOAD - 0x20000000) // 2
 FSC_SCRATCH_DM = MNM_RENDER_DM + MNM_RENDER_BYTES          # 0x2e6400 .. REGION's end 0x2e7000
 FSC_TABLES_DDR = 0x81220000
 # ORGAN (type 19, dnfw.organ.program): its pipes (5 stops x 3 tables x 256 floats), gains and ramp
-ORGAN_TABLES_DDR = 0x81222000
+ORGAN_TABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x0000   # RIFT v0.16: over the sample link (LINK_TABLES); 0x81222000 until v0.15
 # SILT (type 20, dnfw.silt.program): the players' constants (DDR, after ORGAN's 15.5 KB), and each slot's
 # lines, 48 KB a slot (docs/silt-dsp.md: above the old P-I delay lines, below the sample pool; cleared
 # by the DSP itself, 512 words a block, when a slot becomes SILT)
@@ -241,7 +241,7 @@ DIGIDRUM_TABLES_DDR = 0x81229000
 # THOLET (type 23, dnfw.tholet.program; the concept is Error Kit's): its records, mu-law's levels, the
 # six strikes and the partials' constants (after DIGIDRUM's); each slot's cloud ring, 64 KB a slot
 # (above SILT's lines, below the sample pool; cleared by the DSP itself, 512 words a block)
-THOLET_TABLES_DDR = 0x8122A000
+THOLET_TABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x5000  # RIFT v0.16: over the sample link; 0x8122a000 in v0.15
 THOLET_RING_DDR = 0x82600000
 THOLET_RING_SPAN = 16 * 0x10000
 # RIFT v0.16: SMEAR (type 9, dnfw.smear, docs/smear.md): smear.asm between smp.asm and fascia.asm.
@@ -257,8 +257,16 @@ SMEAR_SCR_L2 = 0x200A2800                    # the stage's words (64 B)
 SMEAR_MBOX = 0x200A3000                      # 16 mailboxes x 128 B
 SMEAR_DDR = THOLET_RING_DDR + THOLET_RING_SPAN   # 0x82700000
 SMEAR_TABLES_DDR = SMEAR_DDR                 # WIN (computed), then the transform's: pairs (loaded), twiddles (computed)
-SMEAR_VTABLES_DDR = SMEAR_DDR + 0x10000      # the voice's control tables and grain windows (loaded)
-SMEAR_QSIN_DDR = SMEAR_DDR + 0x13000         # the quarter sine (loaded)
+SMEAR_VTABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x8000   # the voice's tables and grain windows (over the link)
+SMEAR_QSIN_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0xA000      # the quarter sine (over the link)
+SMEAR_PAIRS_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0xB000     # the transform's swap pairs (over the link)
+# RIFT v0.16 (the DSP's 1 MiB upload: SMEAR left it 30 KB over): ORGAN's, THOLET's and SMEAR's
+# tables are no longer in the DSP image. The ColdFire sends them at power-on over the sample link
+# into the pool's table area (csrc/sampler/link.c K_TABLES, v0.26's route for the Machinedrum's),
+# then READY's magic; ORGAN, THOLET and SMEAR stay silent until it is there
+LINK_TABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA
+LINK_READY_DDR = 0x84000000 + _smp_types.TABLE_READY
+LINK_TABLES_BYTES = 0xC000
 SMEAR_STATE_DDR = SMEAR_DDR + 0x14000        # 16 x 512 B
 SMEAR_LANE0_DDR = SMEAR_DDR + 0x18000        # P, RING (16,392 B each lane)
 SMEAR_LANE1_DDR = SMEAR_DDR + 0x1C800
@@ -410,12 +418,9 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("the DT2 sample reader's coefficients (from the owner's DT2 image; v0.18)", SMP_TABLES_DDR,
          _smp_tables()),
         ("FASCIA's tables (dnfw.fascia.program.tables_bytes; v0.45)", FSC_TABLES_DDR, _fsc_tables()),
-        ("ORGAN's pipes, gains and ramp (dnfw.organ.program.tables_bytes; RIFT)", ORGAN_TABLES_DDR, _organ_tables()),
         ("SILT's players' constants (dnfw.silt.program.tables_bytes; RIFT)", SILT_TABLES_DDR, _silt_tables()),
         ("LIGATURE's patches (dnfw.ligature.program.tables_bytes; RIFT)", LIG_TABLES_DDR, _lig_tables()),
         ("DIGIDRUM's records and anchors (dnfw.digidrum.program.tables_bytes; RIFT)", DIGIDRUM_TABLES_DDR, _dgd_tables()),
-        ("THOLET's records, strikes and partials (dnfw.tholet.program.tables_bytes; RIFT)", THOLET_TABLES_DDR, _tho_tables()),
-        *_smear_spans(),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -437,18 +442,26 @@ def _perc_sine() -> bytes:
     return data[at["sin"]:at["pow2"]]
 
 
-def _smear_spans() -> list:
-    """RIFT v0.16: what SMEAR's tables need from the image (the rest the stage computes at power-on)"""
-    from ..smear import stage as SG, fft as FT, program as SP
+def link_tables() -> bytes:
+    """RIFT v0.16: the bytes the ColdFire sends to LINK_TABLES_DDR at power-on (dnfw.mods.waverider
+    _tables): ORGAN's at +0, THOLET's at +0x5000, SMEAR's voice tables at +0x8000, its quarter sine
+    at +0xA000, its swap pairs at +0xB000 (dnfw.waverider.dsp's *_DDR)"""
+    from ..smear import stage as SG, program as SP
     import struct as _st
 
     def b(ws):
         return b"".join(_st.pack("<I", w & 0xFFFFFFFF) for w in ws)
-    pairs = SMEAR_TABLES_DDR + 4 * SP.N + FT.T_PAIRS
-    return [("SMEAR's transform pairs (dnfw.smear.fft; RIFT v0.16)", pairs, b(SG.pairs_words())),
-            ("SMEAR's voice tables and grain windows (dnfw.smear.program; RIFT v0.16)", SMEAR_VTABLES_DDR,
-             b(SP.voice_tables_words())),
-            ("SMEAR's quarter sine (dnfw.smear.fft.QSIN; RIFT v0.16)", SMEAR_QSIN_DDR, b(SG.qsin_words()))]
+    out = bytearray(LINK_TABLES_BYTES)
+    for at, data in ((ORGAN_TABLES_DDR, _organ_tables()), (THOLET_TABLES_DDR, _tho_tables()),
+                     (SMEAR_VTABLES_DDR, b(SP.voice_tables_words())), (SMEAR_QSIN_DDR, b(SG.qsin_words())),
+                     (SMEAR_PAIRS_DDR, b(SG.pairs_words()))):
+        off = at - LINK_TABLES_DDR
+        nxt = min([x - LINK_TABLES_DDR for x in (THOLET_TABLES_DDR, SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
+                                                 SMEAR_PAIRS_DDR) if x > at] + [LINK_TABLES_BYTES])
+        if off + len(data) > nxt:
+            raise DspError(f"the link's tables: {len(data)} bytes at +{off:#x} run into +{nxt:#x}")
+        out[off:off + len(data)] = data
+    return bytes(out)
 
 
 def smear_layout():
@@ -456,7 +469,8 @@ def smear_layout():
     from ..perc import program as PP
     return SG.SLayout(SMEAR_SCR_L2, SMEAR_MBOX, SMEAR_STATE_DDR, SMEAR_VB_L2, SMEAR_TABLES_DDR,
                       SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
-                      ((SMEAR_LANE0_L2, SMEAR_LANE0_DDR), (SMEAR_LANE1_W, SMEAR_LANE1_DDR)), PP.BUFFERS)
+                      ((SMEAR_LANE0_L2, SMEAR_LANE0_DDR), (SMEAR_LANE1_W, SMEAR_LANE1_DDR)), PP.BUFFERS,
+                      pairs=SMEAR_PAIRS_DDR, ready=LINK_READY_DDR)
 
 
 def _dgd_tables() -> bytes:

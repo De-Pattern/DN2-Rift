@@ -32,7 +32,8 @@ def test_the_stage_is_the_contract():
         mem.put(BUFS + 4 * t, OUT0 + 128 * t)
     model = ST.Model()
     peaks = {}
-    ST.stage(Prog("run", mem=mem), S)        # the power-on block: the tables, silence
+    ST.stage(Prog("run", mem=mem), S)        # the power-on block: the tables, no track yet
+    model.clock = mem.get(S.CLOCK)
     rate = 44100 / 48000
     # tracks 0, 3 and 5 SMEAR; 5 plays an empty slot; notes take and steal the two lanes
     trigs = {(0, 0), (3, 2), (5, 4), (0, 30), (3, 31), (5, 40), (3, 60)}
@@ -49,7 +50,7 @@ def test_the_stage_is_the_contract():
             trig = (t, n) in trigs
             mail[t] = (buf, rate, tr, trig, k)
             base = POOLA if t == 0 else POOLB
-            mem.put(S.mb(t, ST.MB_ON), 1)
+            mem.put(S.mb(t, ST.MB_ON), ST.MB_MAGIC)
             mem.put(S.mb(t, ST.MB_TRIG), int(trig))
             mem.put(S.mb(t, ST.MB_TR), ST.u32(tr))
             mem.put(S.mb(t, ST.MB_RATE), ST.u32(np.float32(rate)))
@@ -77,3 +78,44 @@ def test_emits():
     n = sum(1 for ln in text.splitlines() if ln.startswith("      ") and not ln.strip().startswith("//"))
     print("instructions", n)
     assert "JUMP 0xbe0000;" in text
+
+
+def test_silent_until_the_tables_are_in():
+    """RIFT v0.16: before READY holds TABLE_MAGIC (the ColdFire's tables over the link), a SMEAR
+    track is silence (its mailbox consumed, its buffer zeroed, no lane); after it, the power-on block"""
+    from dnfw.sampler import machines as SM
+    READY = 0x0120_0000
+    S = ST.SLayout(SCR, MBOX, STATE, VB, TAB, VTAB, QS, LANES, BUFS, ready=READY)
+    mem = Mem()
+    ST.load_tables(mem, S)
+    for t in range(16):
+        mem.put(BUFS + 4 * t, OUT0 + 128 * t)
+        for s in range(32):
+            mem.put(OUT0 + 128 * t + 4 * s, 0x3F800000)      # 1.0: must be overwritten
+    buf = np.full(4000, 0.5, np.float32)
+    for k, x in enumerate(buf):
+        mem.put(POOLA + 4 * k, ST.u32(x))
+
+    def mail():
+        mem.put(S.mb(2, ST.MB_ON), ST.MB_MAGIC)
+        mem.put(S.mb(2, ST.MB_TRIG), 1)
+        mem.put(S.mb(2, ST.MB_TR), ST.u32(1.0))
+        mem.put(S.mb(2, ST.MB_RATE), ST.u32(1.0))
+        mem.put(S.mb(2, ST.MB_BASE), POOLA)
+        mem.put(S.mb(2, ST.MB_FRAMES), len(buf))
+        mem.put(S.mb(2, ST.MB_FMT), 0)
+        for c, name in enumerate(LV.CONTROLS):
+            mem.put(S.mb(2, ST.MB_KN + c), dict(LV.DEFAULTS, BLND=64)[name])
+    mail()
+    ST.stage(Prog("run", mem=mem), S)
+    assert mem.get(S.INIT) != ST.INIT_MAGIC
+    assert all(mem.get(OUT0 + 256 + 4 * s) == 0 for s in range(32))
+    assert mem.get(S.mb(2, ST.MB_ON)) == 0 and mem.get(S.LOWN0) in (0, None)
+    mem.put(S.mb(5, ST.MB_ON), 1)                               # not the magic: off, its buffer untouched
+    mem.put(READY, SM.TABLE_MAGIC)
+    for _ in range(3):
+        mail()
+        ST.stage(Prog("run", mem=mem), S)
+    assert mem.get(S.INIT) == ST.INIT_MAGIC
+    assert any(mem.get(OUT0 + 256 + 4 * s) for s in range(32))
+    assert mem.get(OUT0 + 128 * 5) == 0x3F800000

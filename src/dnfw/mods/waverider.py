@@ -116,7 +116,18 @@ def _chunks() -> list[tuple[int, bytes, str]]:
         if md is not None:
             out.append(md)
         out.append(_tables())
+    else:                 # RIFT v0.16: ORGAN's, THOLET's and SMEAR's tables, over the link at power-on
+        out.append(_rift_tables())
     return out
+
+
+def _rift_tables() -> tuple[int, bytes, str]:
+    import struct
+    from ..sampler import machines as SM
+    from ..waverider import dsp
+    data = dsp.link_tables()
+    return (SM.TABLE_LOAD, struct.pack("<II", SM.TABLE_MAGIC, len(data)) + data,
+            "ORGAN's, THOLET's and SMEAR's tables, sent to the DSP at power-on (RIFT v0.16)")
 
 
 def _tables() -> tuple[int, bytes, str]:

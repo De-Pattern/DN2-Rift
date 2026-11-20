@@ -32,6 +32,7 @@ from . import program as P
 # the mailbox smp.asm leaves a track (words)
 MB_ON, MB_TRIG, MB_TR, MB_RATE, MB_BASE, MB_FRAMES, MB_FMT, MB_KN = 0, 1, 2, 3, 4, 5, 6, 7
 MB_WORDS = 32                              # 7 + 12 knobs, rounded up
+MB_MAGIC = 0x534D4F4E                      # 'SMON' in MB_ON: written by smp.asm this block (anything else: off)
 STATE_BYTES = 512                          # a voice's state in DDR (program.VLayout.STATE_WORDS words, rounded)
 INIT_MAGIC = 0x534D5249                    # 'SMRI': the tables computed this power-on
 NTRACKS = 16
@@ -46,12 +47,18 @@ class SLayout:
     copy, the pairs, then what emit_init computes); BUFFERS: the track buffers' pointers."""
 
     def __init__(self, scr: int, mbox: int, state: int, vbase: int, tables: int, vtables: int,
-                 qsin: int, lanes: tuple, buffers: int, clears: tuple = ()):
+                 qsin: int, lanes: tuple, buffers: int, clears: tuple = (), pairs: int | None = None,
+                 ready: int | None = None):
         self.INIT, self.CLOCK, self.T, self.SEEN, self.LOWN0, self.LOWN1, self.LAGE0, self.LAGE1, self.CNT = (
             scr + 4 * k for k in range(9))
+        self.LSAVE = scr + 40                   # L0, L3, L5 as found (3 words)
         self.scr_end = scr + 64
         self.MBOX, self.STATE, self.QSIN, self.BUFFERS = mbox, state, qsin, buffers
-        self.V = P.VLayout(vbase, tables, vtables, lanes)
+        n = 4 * P.N                             # WIN at TABLES, then the transform's tables; PAIRS apart (loaded)
+        fft = FT.Tabs(pairs if pairs is not None else tables + n + FT.T_PAIRS, tables + n + FT.T_TWF,
+                      tables + n + FT.T_TWI, tables + n + FT.T_TWS)
+        self.V = P.VLayout(vbase, tables, vtables, lanes, fft=fft)
+        self.READY = ready                      # RIFT v0.16: the tables are in once this word is TABLE_MAGIC
         self.tables = tables
         self.clears = clears                    # (address, bytes): zeroed at power-on (FASCIA's voices)
 
@@ -118,10 +125,14 @@ def _track(p: Prog, S: SLayout) -> None:
     _mb_addr(p, S, 4, MB_ON)
     p.seti(4, 4, "track t's mailbox")
     p.ldi(0, MB_ON, 4)
+    p.iconst(1, MB_MAGIC)
 
     def on():
         p.iconst(0, 0)
         p.sti(MB_ON, 4, 0)                      # consumed
+        p.ld(0, S.INIT)                         # (before the power-on block: silence, below)
+        p.iconst(1, INIT_MAGIC)
+        p.if_(0, "NE", 1, lambda: p.sti(MB_FRAMES, 4, 0), kind="i")
         p.ld(0, S.SEEN)                         # the owners seen this block (bit t)
         p.iconst(1, 1)
         p.ld(9, S.T)
@@ -170,7 +181,7 @@ def _track(p: Prog, S: SLayout) -> None:
             p.ldpost(0, 1)
             p.stpost(4, 0)
         p.loop_r(15, 32, cp)
-    p.ifz(0, "NE", on)
+    p.if_(0, "EQ", 1, on, kind="i")
 
 
 def _zero_out(p: Prog, V) -> None:
@@ -187,36 +198,32 @@ def _shl_by(p: Prog, d: int, n: int) -> None:
 
 
 def stage(p: Prog, S: SLayout) -> None:
-    """one block of the stage (no entry label, no jump on). The power-on block only computes
-    the tables and clears the mailboxes (DDR and L2 hold anything at power-on: a mailbox is
-    trusted only once cleared), so the first block after power-on is silent."""
-    done = p.label("smrdone")
+    """one block of the stage (no entry label, no jump on). The power-on block computes the
+    tables (once the ColdFire's are in: READY); until then every SMEAR track is silence. A
+    mailbox is on only when smp.asm wrote MB_MAGIC this block (L2 holds anything at power-on)."""
+    from ..sampler import machines as SM
     p.ld(0, S.INIT)
     p.iconst(1, INIT_MAGIC)
 
     def init():
-        FT.emit_init(p, S.QSIN, FT.tabs(S.V.L.FFT), S.V.L.WIN)
-        # RIFT v0.16: the image no longer loads FASCIA's voices' zeros (63 KB of the DSP's 1 MiB):
-        # they are cleared here, at the first block after each load (INIT is a loaded zero),
-        # before fascia.asm's first walk
-        for at, n in S.clears:
+        def go():
+            FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN)
+            for at, n in S.clears:
+                p.iconst(0, 0)
+                p.iconst(9, at)
+                p.seti(1, 9)
+                p.loop_r(15, n // 4, lambda: p.stpost(1, 0))
             p.iconst(0, 0)
-            p.iconst(9, at)
-            p.seti(1, 9)
-            p.loop_r(15, n // 4, lambda: p.stpost(1, 0))
-        p.iconst(0, 0)
-        for w in (S.CLOCK, S.LOWN0, S.LOWN1, S.LAGE0, S.LAGE1):
-            p.st(w, 0)
-        p.iconst(9, S.MBOX)
-        p.seti(1, 9)
-        p.loop_r(15, NTRACKS * MB_WORDS, lambda: p.stpost(1, 0))
-        p.iconst(1, INIT_MAGIC)
-        p.st(S.INIT, 1)
-        if not p.run:
-            p.jump("", done)
-    if p.run and (p.mem.get(S.INIT) or 0) != INIT_MAGIC:
-        init()
-        return
+            for w in (S.CLOCK, S.LOWN0, S.LOWN1, S.LAGE0, S.LAGE1):
+                p.st(w, 0)
+            p.iconst(1, INIT_MAGIC)
+            p.st(S.INIT, 1)
+        if S.READY is None:
+            go()
+            return
+        p.ld(2, S.READY)
+        p.iconst(3, SM.TABLE_MAGIC)
+        p.if_(2, "EQ", 3, go, kind="i")
     p.if_(0, "NE", 1, init, kind="i")
     p.iconst(0, 0)
     p.st(S.SEEN, 0)
@@ -241,7 +248,6 @@ def stage(p: Prog, S: SLayout) -> None:
     p.iconst(12, 1)
     p.iop(0, 12, "+", 9)
     p.st(S.CLOCK, 0)
-    p.place(done)
 
 
 def _shr_by(p: Prog, d: int, n: int) -> None:
@@ -272,7 +278,14 @@ def program(S: SLayout, next_sw: int, prefix: str = "smr") -> str:
     p.raw("")
     p.raw(".GLOBAL wr_smr.;")
     p.raw("wr_smr.:")
+    # SMEAR's code post-modifies I0, I3 and I5 (the chain's other programs only pre-modify
+    # them): their L registers are made 0 for it (no circular buffer), and given back after
+    for k, r in enumerate(("L0", "L3", "L5")):
+        p.e(f"DM({S.LSAVE + 4 * k:#x}) = {r};", "as found")
+        p.e(f"{r} = 0;")
     stage(p, S)
+    for k, r in enumerate(("L0", "L3", "L5")):
+        p.e(f"{r} = DM({S.LSAVE + 4 * k:#x});", "given back")
     p.e(f"JUMP {next_sw:#x};", "fascia.asm's wr_fsc")
     p.emit_subs()
     p.raw(".wr_smr..end:")
@@ -337,7 +350,7 @@ def load_tables(mem: Mem, S: SLayout) -> None:
     for k, w in enumerate(qsin_words()):
         mem.put(S.QSIN + 4 * k, w)
     for k, w in enumerate(pairs_words()):
-        mem.put(FT.tabs(S.V.L.FFT).pairs + 4 * k, w)
+        mem.put(S.V.L.FFT.pairs + 4 * k, w)
     for k, w in enumerate(P.voice_tables_words()):
         mem.put(S.V.VT + 4 * k, w)
 

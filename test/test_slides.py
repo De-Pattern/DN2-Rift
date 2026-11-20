@@ -73,9 +73,12 @@ def test_sample_slides_are_continuous_only():
     from dnfw.sampler import machines as SM
     choices = {41, 43, 29, 31, 42}
     for t, slots in SL.SAMPLE_SLIDE.items():
+        if t == SM.TYPE_OF["WERP"]:                    # RIFT v0.16 SMEAR: SPD 41 and BLND 42 are knobs; WIN 49 its choice
+            assert 49 not in slots and 43 not in slots
+            continue
         assert not choices & set(slots), t
         assert 30 in slots                                # LEV: every block, every machine
-    at_note = {SM.TYPE_OF["GRID"], SM.TYPE_OF["SLICE"], SM.TYPE_OF["WERP"]}
+    at_note = {SM.TYPE_OF["GRID"], SM.TYPE_OF["SLICE"]}   # (RIFT v0.16: type 9 is SMEAR, every knob live)
     for t in at_note:
         assert set(SL.SAMPLE_SLIDE[t]) <= {25, 30}, t       # TUNE and LEV only
 

@@ -519,6 +519,7 @@ def smp_c_header() -> str:
             f"#define WR_TYPES_LAST {TYPES_LAST}\n"
             f"static const unsigned short smp_ids[SMP_N][8] = {{\n{ids}\n}};\n"
             f"static const unsigned short smp_werp2_ids[8] = {{{', '.join(str(r) for r, _sh, _lo in _smp.PAGES2['WERP'])}}};\n#define SMP_SIZE_ID {_smp.SMEAR_RECORDS['SIZE']}\n"
+            + smr_defaults_header() +
             f"static const char smp_machine[SMP_N][8] = {{{names}}};\n"
             f"#define SMP_PLAY_ID {_smp.PLAY_REC}\n#define SMP_SAMP_ID {_smp.SAMP_REC}\n"
             f"#define SMP_STRT_ID {_smp.STRT_REC}\n#define SMP_LEN_ID {_smp.LEN_REC}\n"
@@ -561,6 +562,17 @@ SMP_FIRST_KIND = 4                 # is_wr's answer for type 8; 5..8 for 9..12
 def _knob_word(x, top, lo):
     from ..perc import live as _pl
     return _pl.knob_word(x, top, lo)
+
+
+def smr_defaults_header() -> str:
+    """RIFT v0.16: SMEAR's start (dnfw.smear.live.DEFAULTS) on its records, which rec.c writes
+    when a track becomes SMEAR (the records' own defaults are WaveTone's: SPD would start at +4)"""
+    from ..smear import live as _sl
+    rows = [(r, _knob_word(round(_sl.DEFAULTS[c] * _smp.RECORDS[r][2] / 127), _smp.RECORDS[r][2], _smp.RECORDS[r][1]))
+            for c, r in _smp.SMEAR_RECORDS.items() if c not in ("TUNE", "SAMP")]
+    return (f"#define SMR_N {len(rows)}\n"
+            f"static const unsigned short smr_rid[SMR_N] = {{{', '.join(str(r) for r, _w in rows)}}};\n"
+            f"static const unsigned short smr_default[SMR_N] = {{{', '.join(str(w) for _r, w in rows)}}};\n")
 
 
 def smp_quant_header() -> str:
