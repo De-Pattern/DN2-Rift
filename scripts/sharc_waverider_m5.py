@@ -2927,7 +2927,15 @@ def step_mainmark(init, sound, machines) -> dict:
             for t in range(16):
                 f.put(0xA5A + 2 * t, t)
             return f.to_bytes()
-        r = run_blocks(init, fb, n + gap + w + 2, extra_hooks={m3.DISPATCH: at_dispatch})
+        mk = {"k": 0}
+
+        def at_master(r):                        # the stock's master mix: a known one (mainrec's way)
+            for kk in range(32):
+                x = 0.25 * _m.sin(2 * _m.pi * 220 * (mk["k"] + kk) / 48000)
+                m2.poke(r.state, SM.MIX_BUF + 4 * kk, struct.unpack("<I", struct.pack("<f", x))[0])
+                m2.poke(r.state, SM.MIX_BUF + 0x80 + 4 * kk, struct.unpack("<I", struct.pack("<f", x))[0])
+            mk["k"] += 32
+        r = run_blocks(init, fb, n + gap + w + 2, extra_hooks={m3.DISPATCH: at_dispatch, 0x1C3064: at_master})
         if not r["ok"]:
             return None
         st = r["state"].state
