@@ -201,15 +201,26 @@ void wr_screen(void *screen, void *canvas)
         sl_screen(1, 1);
         return;
     }
-    sl_screen(1, rec_visible() || slc_visible() || smp_fb_visible() || smp_list_visible());
-    if (rec_visible())
+    extern int lig_visible(void);
+    extern void lig_draw(void *canvas);
+    extern int tn_visible(void);                /* v0.61: TUNING (csrc/sampler/tune.c) */
+    extern void tn_draw(void *canvas);
+    extern void tn_kb_draw(void *canvas);
+    sl_screen(1, rec_visible() || slc_visible() || smp_fb_visible() || smp_list_visible() || lig_visible() || tn_visible());
+    if (tn_visible())
+        tn_draw(canvas);
+    else if (rec_visible())
         rec_screen_draw(canvas);
     else if (slc_visible())
         slc_draw(canvas);
+    else if (lig_visible())                     /* RIFT v0.12: LIGATURE's EDIT and BLOCK screens */
+        lig_draw(canvas);
     else if (smp_fb_visible())                  /* v0.25: the folder browser (ASSIGN SAMPLE) */
         smp_fb_draw(canvas, smp_samp_of(UI_TRACK));
     else if (smp_list_visible())                /* v0.25: the sample list, over the title bar too */
         smp_list_draw(canvas);
+    else
+        tn_kb_draw(canvas);                     /* KB SETUP's H slot, when KB SETUP is on top */
 }
 
 /* the UI loop's redraw test, as stock (and the names kept current, once a loop; and
@@ -236,15 +247,21 @@ int wr_poll(void *screen)
     extern int slc_visible(void);
     extern int slc_busy(void);
     slc_poll();
+    extern void lig_poll(void);
+    extern int lig_visible(void);
+    lig_poll();
     static int slc_was __attribute__((section(".data"))) = 0;
-    int slc = slc_visible() || slc_busy();      /* v0.23: SLICE's menus, and their notes */
+    int slc = slc_visible() || slc_busy() || lig_visible();   /* v0.12: LIGATURE's EDIT redrawn as SLICE's */      /* v0.23: SLICE's menus, and their notes */
     extern int smp_wants_redraw(void);          /* v0.25: a sample page's moving playhead */
     extern int smp_overlay_dirty;               /* v0.25: the sample list and the browser */
     extern int slc_state;                       /* v0.25: a SLICE/GRID menu opening or moving */
     static int slc_last __attribute__((section(".data"))) = 0;   /* on is drawn at once, not */
-    if (smp_overlay_dirty || slc_state != slc_last) {            /* at the next redraw tick */
+    extern int lig_state;                       /* v0.12: and LIGATURE's EDIT opening or closing */
+    static int lig_last __attribute__((section(".data"))) = 0;
+    if (smp_overlay_dirty || slc_state != slc_last || lig_state != lig_last) {   /* at the next redraw tick */
         smp_overlay_dirty = 0;
         slc_last = slc_state;
+        lig_last = lig_state;
         SET_DIRTY(screen);
     }
     if ((rec_visible() || slc || slc_was) && (int)(FRAMES_NOW - rec_next) >= 0) {
@@ -541,8 +558,7 @@ void wr_page_draw(void *view, void *canvas)
         extern void fsc_page_draw(void *view, void *canvas, int page, int kind);
         if (page >= fm->pages)
             page = 0;
-        fsc_page_draw(view, canvas, page, kind);
-        ((void (*)(void *, void *, int))method(view, 184))(view, canvas, 0);
+        fsc_page_draw(view, canvas, page, kind);   /* RIFT v0.9: the LINE page covers the left column too */
         int n = PAGE_COUNT(view);
         if (n > 1)
             PAGE_DOTS(view, canvas, n, page, 7);

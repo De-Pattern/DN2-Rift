@@ -138,10 +138,14 @@ SILT_SLIDE = tuple(_slt.SLOTS[c][1] for c in _slt.CONTROLS if not _slt.is_choice
 from .ligature import machines as _lig    # noqa: E402
 LIG_TYPE = _lig.TYPE
 LIG_SLIDE = tuple(_lig.SLOTS[c][1] for c in _lig.CONTROLS if not _lig.is_choice(c))
-# RIFT: RESONATOR (type 22): its eight knobs slide
-from .reson import machines as _res    # noqa: E402
-RES_TYPE = _res.TYPE
-RES_SLIDE = tuple(_res.SLOTS[c][1] for c in _res.CONTROLS if not _res.is_choice(c))
+# RIFT: DIGIDRUM (type 22): its eight knobs slide
+from .digidrum import machines as _dgd    # noqa: E402
+DGD_TYPE = _dgd.TYPE
+DGD_SLIDE = tuple(_dgd.SLOTS[c][1] for c in _dgd.CONTROLS if not _dgd.is_choice(c))
+# RIFT: THOLET (type 23): its knobs slide (HAMR, a choice, does not)
+from .tholet import machines as _tho    # noqa: E402
+THO_TYPE = _tho.TYPE
+THO_SLIDE = tuple(_tho.SLOTS[c][1] for c in _tho.CONTROLS if not _tho.is_choice(c))
 
 DEST_SLOTS = (4, 12, 20)                # LFO DEST: copied unsmoothed by 0x400db12a; never slid
 SHARED_PAGES = (0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0D, 0x0E, 0x0F, 0x1A, 0x1B, 0x1C)
@@ -210,5 +214,7 @@ def c_header(stock: bytes) -> str:
             f"static const unsigned int sl_slt[4] = {words(sum(1 << x for x in SILT_SLIDE))};\n"
             f"#define SL_LIG_TYPE {LIG_TYPE}\n"
             f"static const unsigned int sl_lig[4] = {words(sum(1 << x for x in LIG_SLIDE))};\n"
-            f"#define SL_RES_TYPE {RES_TYPE}\n"
-            f"static const unsigned int sl_res[4] = {words(sum(1 << x for x in RES_SLIDE))};\n#endif\n")
+            f"#define SL_DGD_TYPE {DGD_TYPE}\n"
+            f"static const unsigned int sl_dgd[4] = {words(sum(1 << x for x in DGD_SLIDE))};\n"
+            f"#define SL_THO_TYPE {THO_TYPE}\n"
+            f"static const unsigned int sl_tho[4] = {words(sum(1 << x for x in THO_SLIDE))};\n#endif\n")

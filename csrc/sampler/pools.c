@@ -70,6 +70,11 @@ _Static_assert(PL_END <= JUMP_SETTINGS, "the lists lie clear of Direct Jump's se
 #define L_META (L_DIR + DIR_BYTES / 512u)
 #define L_AREA (L_META + META_ROOM / 512u)
 _Static_assert(L_AREA + SLAREA_BYTES / 512u <= PL_SPAN, "a list fits its span");
+/* RIFT v0.12: LIGATURE's wirings (lig.c's table), after the slice area; a list without F_WIRE (written
+ * before v0.12) has none: the project gets the factory patches */
+#define L_WIRE (L_AREA + SLAREA_BYTES / 512u)
+#define WIRE_LBYTES (((4u * LIG_WTABLE_WORDS) + 511u) & ~511u)
+_Static_assert(L_WIRE + WIRE_LBYTES / 512u <= PL_SPAN, "the wirings fit a list's span");
 _Static_assert(META_BYTES <= META_ROOM, "the meta block fits a list");
 
 #define SB_MAGIC 0x444E324Au                                   /* 'DN2J' */
@@ -77,6 +82,7 @@ _Static_assert(META_BYTES <= META_ROOM, "the meta block fits a list");
 #define PL_VERSION 1u
 #define F_META 1u
 #define F_AREA 2u
+#define F_WIRE 4u
 
 /* our RAM */
 #define PLR (SMP_MIRROR + 0x140000u)
@@ -95,14 +101,19 @@ _Static_assert(META_BYTES <= META_ROOM, "the meta block fits a list");
 #define EXPECT ((u32 *)(PLR + 0xD2000u))                       /* the sums this load must meet */
 #define EXPECT_E(k) ((u8 *)(PLR + 0xD2200u + 16u * (u32)(k)))   /* .. for these entries */
 #define LINFO ((struct linfo *)(PLR + 0xD3000u))
+#define W_WIRE ((u8 *)(PLR + 0xD4000u))                        /* v0.12: a list's wirings, staged */
+_Static_assert(0xD4000u + WIRE_LBYTES <= 0xD8000u, "the wirings' staging fits below lig.c's table");
 _Static_assert(0x93000u + 0x200u + DIR_BYTES + META_ROOM + SLAREA_BYTES <= 0xB0000u, "the staging fits");
 _Static_assert(0xB0000u + RES_MAX * 4u <= 0xC1000u && 0xC1000u + RES_MAX * 4u <= 0xD2000u, "the reserved extents fit");
-_Static_assert(0x140000u + 0xD4000u <= 0x220000u, "below link.c's resident spans");
+_Static_assert(0x140000u + 0xD8000u <= 0x220000u, "below link.c's resident spans (lig.c's table above)");
 _Static_assert(RES_MAX >= (u32)PL_N * (POOL_SLOTS + 1u), "every list's extents fit");
 
 struct linfo { u8 valid, copy, flags, pad; u32 seq; u32 spare[2]; };   /* 16 B: no 8-byte index (ColdFire) */
 
 extern int smp_dir_ok, smp_meta_ok;
+extern const u8 *lig_wbytes(void);
+extern u32 lig_wsize(void);
+extern void lig_wire_loaded(const u8 *src);
 extern u32 smp_hi;
 extern u8 *smp_pl_dirp(void);
 extern u8 *smp_pl_metap(void);
@@ -149,6 +160,7 @@ u32 smp_pl_gen D_ = 0;
 static u32 sb_seq D_ = 0, sb_dirsum D_ = 0, sb_tdirsum D_ = 0;
 static int sb_cur D_ = -1;              /* the sector holding the newest superblock */
 static int sb_pend D_ = 0, sb_pslot D_ = -1;
+static int boot_applied D_ = 0;                 /* v0.12: apply() ran in this power-on's pl_boot */
 static int dirty D_ = 0;                /* the pool changed since its list was written */
 static u32 seen_loads D_ = 0, seen_news D_ = 0;
 static int sw_kind D_ = 0, sw_slot D_ = -1;
@@ -293,6 +305,10 @@ static int copy_read(int p, int c)
         if (pl_rd(s + L_AREA, SLAREA_BYTES, W_AREA) != 0 || csum(W_AREA, SLAREA_BYTES) != HBUF[9])
             return -1;
     }
+    if (fl & F_WIRE) {                          /* v0.12 */
+        if (pl_rd(s + L_WIRE, WIRE_LBYTES, W_WIRE) != 0 || csum(W_WIRE, WIRE_LBYTES) != HBUF[12])
+            return -1;
+    }
     return 0;
 }
 
@@ -339,12 +355,14 @@ static void empty_dir(u8 *d)
 static int snapshot(void)
 {
     u8 *dir = smp_pl_dirp();
-    int fl = 0;
+    int fl = F_WIRE;                            /* v0.12: the wirings, always */
+    zero(W_WIRE, WIRE_LBYTES);
+    copy(W_WIRE, lig_wbytes(), lig_wsize());
     if (!smp_dir_ok || !smp_hi || le32(dir) != POOL_MAGIC) {
         empty_dir(W_DIR);
         for (int k = 0; k < 128; k++)
             W_SUMS[k] = 0;
-        return 0;
+        return fl;
     }
     copy(W_DIR, dir, DIR_BYTES);
     for (int k = 0; k < 128; k++)
@@ -390,9 +408,11 @@ static int list_write(int p, int fl)
     h[9] = fl & F_AREA ? csum(W_AREA, SLAREA_BYTES) : 0;
     h[10] = META_ROOM;
     h[11] = h_check(h);
+    h[12] = fl & F_WIRE ? csum(W_WIRE, WIRE_LBYTES) : 0;   /* v0.12 (F_WIRE, in h[5], is checked) */
     if (pl_wr(s + L_SUMS, 512u + DIR_BYTES, (const void *)W_BASE) != 0
         || ((fl & F_META) && pl_wr(s + L_META, META_ROOM, W_META) != 0)
         || ((fl & F_AREA) && pl_wr(s + L_AREA, SLAREA_BYTES, W_AREA) != 0)
+        || ((fl & F_WIRE) && pl_wr(s + L_WIRE, WIRE_LBYTES, W_WIRE) != 0)
         || pl_wr(s, 512u, h) != 0) {
         li->seq = seq;                          /* that copy is not to be trusted now */
         if (li->valid && li->copy == (u8)c)
@@ -611,6 +631,8 @@ static int apply(int kind, int slot)
         copy(smp_pl_areap(), W_AREA, SLAREA_BYTES);
         smp_pl_image_write(SLICE_AREA, SLAREA_BYTES, W_AREA);
     }
+    lig_wire_loaded(kind == 1 && (fl & F_WIRE) ? W_WIRE : 0);   /* v0.12: its wirings, or the factory's */
+    boot_applied = 1;
     u32 hi = dir_extent_end(dir);
     if (hi < smp_hi)
         hi = smp_hi;
@@ -651,6 +673,13 @@ static int write_owner(void)
     return 0;
 }
 
+/* v0.12: lig.c, a wiring edited (two seconds after the last edit, or EDIT closed) */
+void smp_pl_wire_changed(void)
+{
+    if (smp_pl_on)
+        dirty = 1;
+}
+
 /* from link.c when it has written the image's directory (an edit, a recording kept) */
 void smp_pl_changed(void)
 {
@@ -662,7 +691,28 @@ void smp_pl_changed(void)
 
 /* link.c's smp_boot, once the library is read and before the pool loads. -> 1 if it has
  * started the load itself (a switch), 0: smp_boot loads the image as it is */
+static int pl_boot(void);
+/* v0.12: the wirings at power-on: the factory patches first (a first power-on's legacy list takes
+ * them), then, once the lists are read, the active project's list's (or the legacy list's), unless
+ * a switch at power-on has applied them already */
+static u32 wire_boot_loads D_ = 0;
 int smp_pl_boot(void)
+{
+    lig_wire_loaded(0);
+    boot_applied = 0;
+    int r = pl_boot();
+    if (smp_pl_on && !boot_applied) {
+        int p = smp_pl_owner >= 0 && smp_pl_owner < PL_N && LINFO[smp_pl_owner].valid ? smp_pl_owner
+              : LINFO[PL_LEGACY].valid ? PL_LEGACY : -1;
+        if (p >= 0 && (LINFO[p].flags & F_WIRE) && copy_read(p, LINFO[p].copy) == 0) {
+            lig_wire_loaded(W_WIRE);
+            wire_boot_loads++;
+        }
+    }
+    return r;
+}
+
+static int pl_boot(void)
 {
     smp_pl_on = 0;
     smp_pl_state = 0;

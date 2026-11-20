@@ -71,6 +71,12 @@ class Dsp:
         self.frame = {}
         self.steps = 0
 
+    def set_table(self, words) -> None:
+        """v0.12: the WIRE area's words (None: none sent, its magic word zero)"""
+        for k in range(LV.WTABLE_WORDS):
+            self.base[self.L.wire + 4 * k] = 0 if words is None else int(words[k]) & 0xFFFFFFFF
+            self.mem.w.pop(self.L.wire + 4 * k, None)
+
     def _read(self, a: int) -> int:
         if a in self.frame:
             return self.frame[a]
@@ -92,13 +98,17 @@ class Dsp:
 
 
 def compare(knobs_of, events: dict, blocks: int, slot: int = 0, dsp: Dsp | None = None,
-            offs=(), vels: dict | None = None, stop_at_first=True):
+            offs=(), vels: dict | None = None, stop_at_first=True, table_of=None):
     """slot SLOT for BLOCKS blocks; EVENTS: block -> note (a trig); OFFS: the blocks with a note-off;
     KNOBS_OF(block) -> the 32 knobs. -> (dsp output, live output, first mismatching block or None)"""
     dsp = dsp or Dsp()
     v = LV.SlotVoice(slot)
     a, b, first = [], [], None
     for k in range(blocks):
+        if table_of is not None:              # v0.12: the WIRE table as the block finds it
+            tb = table_of(k)
+            dsp.set_table(tb)
+            v.table = None if tb is None else list(tb)
         words = knobs_words(knobs_of(k))
         trig = k in events
         note = events.get(k, 60.0)

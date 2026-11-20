@@ -84,6 +84,23 @@ def extents(firmware=None, area_length: int = 0) -> list[Extent]:
     return out
 
 
+def _sel_note() -> str:
+    """The build log's MACHINE SEL line: RIFT's listed machines, else the mod's first."""
+    from ..perc import program as _pp
+    if _pp.RIFT:
+        from ..fascia import machines as _f
+        from ..organ import machines as _o
+        from ..silt import machines as _s
+        from ..ligature import machines as _l
+        from ..digidrum import machines as _d
+        from ..tholet import machines as _t
+        names = [m.LONG.upper() if hasattr(m, "LONG") else "FASCIA"
+                 for m in (_f, _o, _s, _l, _d, _t) if getattr(m, "LISTED", True)]
+        return f"MACHINE SEL offers {', '.join(names)} after SWARMER, then the sample machines"
+    return (f"MACHINE SEL offers {SPEC['names'][0].upper()} after SWARMER "
+            f"(type {SPEC['new_type']}; WaveTone's pages)")
+
+
 def _chunks() -> list[tuple[int, bytes, str]]:
     out = [(SPEC["chunk"]["load"], bytes.fromhex(SPEC["chunk"]["code"]),
             "our machines' SYN pages: code, descriptors, labels")]
@@ -92,7 +109,7 @@ def _chunks() -> list[tuple[int, bytes, str]]:
                     "our machines' page renderer (csrc/waverider/page.c)"))
     if "machines_chunk" in SPEC:
         out.append((SPEC["machines_chunk"]["load"], bytes.fromhex(SPEC["machines_chunk"]["code"]),
-                    "the machine shims, names, attributes and MACHINE SEL list (PERC, RESONATOR, CZ)"))
+                    "the machine shims, names, attributes and MACHINE SEL list"))
     from ..perc import program as _pp
     if not _pp.RIFT:      # RIFT: no Machinedrum or Monomachine engine reads these, so the build
         md = _md_ui()     # needs neither firmware file (the link sends no tables: smp_tables -1)
@@ -188,7 +205,6 @@ def apply(firmware) -> Result:
     area_length = len(content) - platform.STOCK_LENGTH
     return Result(payloads={MAIN_OS: content, DSP_STREAM: section7},
                   extents=extents(firmware, area_length),
-                  notes=[f"MACHINE SEL offers {SPEC['names'][0].upper()} after SWARMER "
-                         f"(type {SPEC['new_type']}; WaveTone's pages)",
+                  notes=[_sel_note(),
                          f"{len(SPEC['edits'])} edits in section 3, nothing appended; "
                          f"section 7 {len(stream):,} -> {len(section7):,} B"])

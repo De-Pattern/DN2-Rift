@@ -1,0 +1,2377 @@
+/* The recorder's ColdFire end (docs/sampler.md; v0.22: the DT2's SAMPLING screen, global).
+ *
+ * FUNC + VOICE (the DN2's unison toggle, replaced; VOICE alone still opens its menu)
+ * opens the RECORDER over whatever page is up, and closes it again. While it is up its
+ * eight knobs are the recorder's, not the track's (smp_ui_pop takes them out of the UI
+ * queue before any view sees them):
+ *
+ *   A SRC     EXT L+R, EXT L, EXT R, MAIN, TRK1..16
+ *   D THRES   0..120, the meter's tick
+ *   E DEST    the slot the recording goes into (SAMP 1..127); the next empty one
+ *   F R.LEN   MAX, or 1..128 sixteenth steps at the tempo
+ *   G R.STRT  THRES (when the input reaches THRES) or PLAY (the first note any track plays)
+ *   H ARM     a turn arms the recorder (or, armed or recording, stops it)
+ *   YES       records at once, or stops; NO closes the screen (a recording goes on)
+ *
+ * Any page key, [TRK], [PTN], [SONG], [PRESET] or [SETTINGS] closes it and does what it
+ * does; PLAY, STOP, the trigs and FUNC pass through and keep it up. FUNC + VOICE brings
+ * it back; a recording runs on behind any page, as on the DT2.
+ *
+ * A recording goes where there is room in the recordings' area (link.c's smp_rec_place:
+ * the largest free stretch; the slot's own old recording is freed), into the slot DEST
+ * names; when it ends it is saved to the +Drive with the name RECnnn (link.c), and DEST
+ * moves on to the next empty slot. The DSP answers in the SPI reply's tail (smp_status):
+ * its state, the command it last took, the frames recorded, the block's peak.
+ */
+#include "wr_gen.h"
+
+typedef unsigned int u32;
+typedef unsigned short u16;
+typedef unsigned char u8;
+
+#define FRAMES (*(volatile u32 *)0x4058E8D4u)                         /* frames since boot, 1,500 a second */
+#define REC_THR_FLOOR 33u                       /* v0.30: THRES 0's level, -60 dB, under any real input */
+#define CTL_FRAME ((volatile u16 *)0x80005E60u)
+#define FLEX_TRIG_LEN_AT 1153u                  /* v0.54: the pattern's per-track trig LEN byte (+1701 a track) */
+#define FLEX_TRIG_LEN 127u                      /* v0.54: INF, the TRIG page LEN knob's top (stock 1/16 is 14) */
+#define TEMPO_WORD 108                                               /* the frame's BPM x 120 (byte 216) */
+#define KEY_ORIG ((int (*)(void *, void *))0x40016480u)              /* the parameter page's key handler */
+/* the UI queue's receive: the item in d0. Declared as returning an integer: GCC takes a
+ * returned pointer from a0, where the stock code leaves nothing of the kind */
+#define UI_POP ((u32 (*)(void *))0x40001928u)
+
+#define CMD_ARM 1
+#define CMD_NOW 2
+#define CMD_STOP 3
+#define CMD_MONITOR 4
+#define CMD_ARM_PLAY 5
+
+/* UI-queue items (16 bytes): type, then code, flags (keys) or index, delta (knobs) */
+#define IT_KEY 0
+#define IT_KNOB 1
+#define IT_DROP 0xFF                                                 /* past every case: the loop skips it */
+#define F_PRESS 0x01
+#define F_REPEAT 0x08                           /* v0.35: a held key's repeat (stock's "fresh press" is bit 0 and not this) */
+#define F_RELEASE 0x10
+enum { K_TRIG = 1, K_MOD = 6, K_PRESET = 7, K_SETTINGS = 8, K_YES = 10, K_UP = 11, K_NO = 12,
+       K_LEFT = 13, K_DOWN = 14, K_RIGHT = 15, K_TRK = 16, K_PTN = 23, K_SONG = 24,
+       K_FUNC = 17, K_PLAY = 20, K_ENC_A = 41, K_ENC_H = 48 };
+
+extern u32 smp_command(u32 cmd, u32 src, u32 chan, u32 thres, u32 dest_frames);
+extern int smp_status(u16 *out);
+extern void smp_save_recording(int slot, u32 off, u32 frames);
+extern u32 smp_rec_place(int dest, u32 *room);
+extern int smp_slot_empty(int k);
+extern int smp_list_up(void *view);
+extern int smp_lst_open;
+extern void smp_list_hold(void);
+extern void smp_list_close(void);
+extern void smp_list_settle(int v);
+extern void *smp_list_view;
+extern int smp_lst_orig, smp_overlay_dirty;     /* v0.25: the list, the folder browser */
+extern int smp_fb_open, smp_fb_folder, smp_fb_cur;
+extern int smp_fb_item(int i, int *slot);
+extern int smp_fb_menu, smp_fb_mcur;
+extern int smp_fb_index_of(int f), smp_fb_up(void);
+extern int smp_fb_marked(int k), smp_fb_nactions(int on_folder), smp_fb_mark_count(void), smp_fb_moving;     /* v0.29: multi-select */
+extern int smp_fb_count(void);
+extern void smp_fb_mark(int k, int on), smp_fb_mark_folder(int folder), smp_fb_unmark_all(void);
+extern void smp_fb_mark_here(void);
+extern void smp_fb_delete(int slot, int folder);
+extern int smp_fb_store, smp_fb_last_store;                         /* v0.31: +DRIVE / PROJECT RAM */
+extern int smp_fb_action(int on_folder, int a), smp_fb_load_project(int slot, int folder);
+extern int smp_lib_slot_of(int k), smp_lib_used(int k), smp_lib_pending(void), smp_lib_load(int k);
+static int trk_pend_k __attribute__((section(".data"))) = -1;       /* LOAD TO TRK from +DRIVE: the entry, */
+static int trk_pend_t __attribute__((section(".data"))) = 0;        /* and the track, until it is in the pool */
+static u32 no_at __attribute__((section(".data"))) = 0;             /* NO pressed (held: to the top) */
+extern void smp_discard(int k);
+static void rename_start(int slot);
+static void sn_poll(void);                     /* v0.54: the stock NAME screen */
+static int lst_func __attribute__((section(".data"))) = 0;
+#define UI_TRACK_NOW (*(volatile unsigned char *)0x42431A6Cu)
+int smp_set_samp(int track, int value);
+int smp_samp_of(int track);
+extern u32 smp_frames(int k);
+extern int smp_trim(int k, u32 s, u32 e);
+extern void smp_discard(int k);
+extern void smp_rename(int k, const char *name);
+extern const char *smp_name(int k);
+extern int smp_saved;
+int smp_assign(int track, int slot);                 /* below: 0 done */
+
+/* v0.22: after a recording, the DT2's steps (manual 13.2, 9..11): TRIM, then NAME, then
+ * ASSIGN (a [TRIG] key: that track plays it; NO: none). rec_phase 0 is the RECORDER. */
+enum { PH_REC, PH_TRIM, PH_NAME, PH_ASSIGN, PH_WORK, PH_SNAME };   /* v0.25: WORK, NORMALIZING; v0.54: SNAME, the stock NAME screen up */
+int rec_phase __attribute__((section(".data"))) = PH_REC;
+int trim_slot __attribute__((section(".data"))) = -1;
+u32 trim_n __attribute__((section(".data"))) = 0;           /* its frames, as recorded */
+u32 trim_s __attribute__((section(".data"))) = 0;
+u32 trim_e __attribute__((section(".data"))) = 0;
+/* v0.46: names up to 35 characters (the +Drive library's and the pool's long names; the
+ * owner: as long as the DT2's), 14 in view, the field scrolling with the cursor */
+#define NM_LONG 35
+char nm_text[NM_LONG + 1] __attribute__((section(".data")));  /* the name being edited */
+int nm_cur __attribute__((section(".data"))) = 0;
+int nm_max __attribute__((section(".data"))) = 7;             /* this name's limit */
+int as_done __attribute__((section(".data"))) = -1;          /* the track it went to, for the screen */
+static const char NM_SET[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
+/* v0.25: the DT2's character grid, while FUNC is held on FILE NAME (the owner's photo):
+ * FUNC + the arrows move through it, and letting FUNC go puts the character at the cursor */
+const char nm_grid[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-_0123456789 ";
+#define NM_GRID_W 14
+int nm_gsel __attribute__((section(".data"))) = 0;          /* the grid's cell */
+static int nm_gpicked __attribute__((section(".data"))) = 0;  /* an arrow moved it this hold */
+
+/* the recorder's settings: the instrument's, not a sound's (none of it is saved) */
+int rec_overlay __attribute__((section(".data"))) = 0;      /* the screen is up */
+int rec_src __attribute__((section(".data"))) = 0;          /* SMP_REC_SOURCES choices */
+int rec_thres __attribute__((section(".data"))) = 0;        /* 0..120 */
+int rec_dest __attribute__((section(".data"))) = -1;        /* slot 0..126 (SAMP 1..127); -1 not chosen */
+static u32 work_at __attribute__((section(".data"))) = 0;   /* v0.33: when the save last moved */
+static u32 work_mark __attribute__((section(".data"))) = 0;
+int trim_zoom __attribute__((section(".data"))) = 0;      /* v0.33: TRIM's zoom, 0..3: 1x..8x */
+u32 trim_pos __attribute__((section(".data"))) = 0;       /* v0.33: its window's first frame */
+int rec_rlen __attribute__((section(".data"))) = 0;         /* 0 MAX, else steps */
+int rec_rstrt __attribute__((section(".data"))) = 0;        /* 0 THRES, 1 PLAY */
+/* v0.59 MON (the RECORDER's C, owner 2026-11-17): hear SRC IN through the main out while armed or
+ * recording (the DSP's pvmix adds it at unity); every recorder command carries it (bit 30 of the
+ * channel word); FLEX REC never sets it. OFF at power-on. */
+int rec_mon __attribute__((section(".data"))) = 0;
+#define MON_BIT (1u << 30)
+u32 rec_sent_chan __attribute__((section(".data"))) = 0;   /* the last command's channel word (the gate's) */
+/* v0.50 FLEX REC's G: a buffer take's GAIN in dB, -24..+38 (0: unity at the FLEX track's defaults).
+ * Sent as the record command's channel word bits 24..29, GAIN + 25 (1..63); 0 there, the RECORDER's
+ * own commands, keeps the DSP's v0.49 scaling exactly (dnfw.sampler.program settings()) */
+int rec_gain __attribute__((section(".data"))) = 0;
+u32 rec_gain_bits(void)
+{
+    int g = rec_gain < -24 ? -24 : rec_gain > 38 ? 38 : rec_gain;
+    return (u32)(g + 25) << 24;
+}
+u32 rec_room __attribute__((section(".data"))) = 0;         /* bytes free for the next recording */
+
+/* what the DSP last said */
+int rec_state __attribute__((section(".data"))) = 0;        /* 0 idle, 1 armed, 2 recording, 3 done */
+u32 rec_frames __attribute__((section(".data"))) = 0;
+int rec_peak __attribute__((section(".data"))) = 0;         /* 0..32767 */
+u32 rec_heard __attribute__((section(".data"))) = 0;        /* FRAMES of the last good status, + 1 */
+int rec_link __attribute__((section(".data"))) = 0;         /* the DSP took our last command: 1, -1 no, 0 ? */
+int rec_saved_slot __attribute__((section(".data"))) = -1;  /* the last recording's slot, for the screen */
+
+static u32 sent_seq __attribute__((section(".data"))) = 0;
+static u32 sent_at __attribute__((section(".data"))) = 0;
+static int mon_known __attribute__((section(".data"))) = 0;
+static int mon_src __attribute__((section(".data"))) = -1;
+static u16 st[16] __attribute__((section(".data")));
+static int rec_taken __attribute__((section(".data"))) = -1;   /* the slot the recording goes into */
+static u32 rec_off __attribute__((section(".data"))) = 0;      /* .. its place in the area */
+static int was_recording __attribute__((section(".data"))) = 0;
+static u32 eaten __attribute__((section(".data"))) = 0;        /* keys whose press we took: their release too */
+static u32 enc_eaten __attribute__((section(".data"))) = 0;    /* v0.39: the encoders' (K_ENC_A + bit) */
+
+int rec_visible(void)
+{
+    return rec_overlay && rec_phase != PH_SNAME;   /* v0.54: not over the stock NAME screen */
+}
+
+/* the DSP's source and channel: v0.33, SRC (IN, MAIN, TRK1..16: the DSP's 0, 1, 2 + t) and
+ * CHAN (L+R, L, R) apart, as the DT2's newer OS */
+int rec_chan __attribute__((section(".data"))) = 0;
+static void src_of(int s, u32 *src, u32 *chan)
+{
+    *src = (u32)(s < 0 ? 0 : s);
+    *chan = (u32)(rec_chan < 0 ? 0 : rec_chan > 2 ? 2 : rec_chan);
+}
+
+/* the frames R.LEN asks for: MAX the most the DSP records (66 s), else that many sixteenth
+ * steps at the tempo (BPM x 120 in the frame: 48,000 x 60 / 4 x 120 / that = 86,400,000 / it) */
+static u32 rec_length(void)
+{
+    u32 full = 0xFFFFFFu;
+    if (rec_rlen <= 0)
+        return full;
+    u32 bpm120 = CTL_FRAME[TEMPO_WORD];
+    if (bpm120 < 1200)
+        bpm120 = 14400;
+    /* v0.52 (impbox: "R.LEN 64 with R.STRT on PLAY: the take does not stop after 64 steps"): the
+     * steps at the pattern's scale, as the sequencer plays them (slide.c ticks_a_step: 6 ticks a
+     * step at 1x; 2x 3, 1/2x 12 ...). v0.15..v0.51 counted 1x sixteenths: at 2x, 64 steps took
+     * twice the pattern's 64 */
+    u32 ticks = 6;
+    const u8 *pat = (const u8 *)*(volatile u32 *)0x42C5A9A0u;   /* the pattern playing */
+    if (pat) {
+        signed char i = (signed char)pat[122202];
+        if (i >= 0 && i <= 6) {
+            u32 n = ((const u8 *)0x401F6B08u)[4 * i + 3];
+            if (n >= 3 && n <= 48)
+                ticks = n;
+        }
+    }
+    u32 f = (u32)rec_rlen * ticks * (86400000u / bpm120) / 6u;
+    return f > full ? full : f;
+}
+
+/* v0.41: SAMP 1..123 (slots 0..122): the four recorder slots past them are the REC
+ * buffers' (rectrig.c); a recording put there (v0.33..v0.40, a full pool) turned them off */
+static int next_empty(int from)
+{
+    for (int j = 0; j < REC_FIRST; j++) {
+        int k = (from + j) % REC_FIRST;
+        if (smp_slot_empty(k))
+            return k;
+    }
+    return from % REC_FIRST;
+}
+
+/* v0.48 (Error Kit: a guitar never started a take at THRES 1 or 10): THRES is where its tick
+ * sits on the meter, and the meter is logarithmic (meter_x, smp_page.c: 60 dB across, 6 dB a
+ * twelfth of THRES's travel), but v0.15..v0.47 sent THRES as a straight fraction of full scale:
+ * THRES 10, its tick near the meter's left end (about -55 dB), asked for -21.6 dB, and a quiet
+ * input whose bar passed the tick never reached it. Now the level is the tick's: THRES t is
+ * -60 + t/2 dB (2^((t - 120)/12) of full scale); THRES 0 is still the floor the DSP takes as
+ * "above the noise" (under its REC_AUTO_BELOW, 64); THRES 1.. never under that */
+static const unsigned short thr_frac[12] = {   /* 65536 x 2^(-i/12) */
+    65535, 61858, 58386, 55109, 52016, 49097, 46341, 43740, 41285, 38968, 36781, 34716 };
+static u32 thr_word(int t)
+{
+    if (t <= 0)
+        return REC_THR_FLOOR;                   /* v0.30: THRES 0 waits for a sound, not for silence */
+    if (t > 120)
+        t = 120;
+    u32 v = (32767u >> ((120 - t) / 12)) * thr_frac[(120 - t) % 12] >> 16;
+    return v < 64u ? 64u : v;
+}
+
+static int mon_thres __attribute__((section(".data"))) = -1;   /* v0.48: the THRES last sent */
+
+static void send(int cmd)
+{
+    u32 src, chan, thr = thr_word(rec_thres);
+    src_of(rec_src, &src, &chan);
+    /* v0.33: no DEST (the owner: choosing a slot by number risked writing over a sample; the
+     * DT2 has none). A recording goes into the first empty slot, found as it starts; when
+     * none is empty, nothing is recorded */
+    if (cmd == CMD_NOW || cmd == CMD_ARM || cmd == CMD_ARM_PLAY) {
+        extern u32 smp_save_mark(void);
+        extern int smp_pl_busy(void);
+        if (smp_save_mark() || smp_pl_busy())   /* v0.33: the last take still saving: */
+            return;                             /* not a new one into a slot it may take (v0.38: nor during a project switch) */
+        rec_dest = next_empty(0);
+        if (!smp_slot_empty(rec_dest)) {
+            rec_room = 0;
+            return;
+        }
+    }
+    if (rec_dest < 0)
+        rec_dest = next_empty(0);
+    u32 place = 0;
+    if (cmd == CMD_NOW || cmd == CMD_ARM || cmd == CMD_ARM_PLAY) {
+        u32 room;
+        place = smp_rec_place(rec_dest, &room);
+        rec_room = room;
+        if (room < 0x10000u)                    /* no room: nothing is recorded */
+            return;
+        rec_taken = rec_dest;
+        rec_off = place;
+        extern void smp_count_cover(int k);
+        smp_count_cover(rec_dest);              /* v0.38: so the DSP plays it as it records */
+    }
+    u32 len = rec_length();
+    if (cmd == CMD_NOW || cmd == CMD_ARM || cmd == CMD_ARM_PLAY) {
+        /* v0.41: never past the room found (v0.22..v0.40 sent R.LEN alone, and the DSP stops
+         * only at the area's end: a long take in a fragmented area ran into the recording
+         * after it, in the DSP's RAM, until the next power-on) */
+        if (len > rec_room / 2u)
+            len = (rec_room / 2u) & ~31u;
+    }
+    extern int rt_quantised(void);
+    extern void rt_cut(void);
+    if ((cmd == CMD_NOW && !rt_quantised()) || cmd == CMD_ARM || cmd == CMD_ARM_PLAY)
+        rt_cut();                               /* v0.41: a manual take's turn: a buffer take ends here */
+    if (cmd == CMD_NOW && rt_quantised()) {     /* v0.41 QREC: at the next boundary (rectrig.c) */
+        extern u32 smp_command_words(u32 *w, u32 cmd, u32 src, u32 chan, u32 thres, u32 dest_frames);
+        extern void rt_q_set(const u32 *w);
+        u32 w[6];
+        extern int bn_active(void);
+        u32 m = rec_mon && !bn_active() ? MON_BIT : 0u;   /* v0.59 MON */
+        rec_sent_chan = chan | (place / 512u) << 8 | m;
+        sent_seq = smp_command_words(w, (u32)cmd, src, rec_sent_chan, thr, (u32)rec_dest << 24 | len);
+        rt_q_set(w);
+    } else {
+        /* v0.50: FLEX REC's monitoring carries GAIN, so H's meter is the take's level */
+        extern int bn_active(void);
+        u32 g = cmd == CMD_MONITOR && bn_active() ? rec_gain_bits() : 0u;
+        u32 m = rec_mon && !bn_active() ? MON_BIT : 0u;   /* v0.59 MON */
+        rec_sent_chan = chan | (place / 512u) << 8 | g | m;
+        sent_seq = smp_command((u32)cmd, src, rec_sent_chan, thr, (u32)rec_dest << 24 | len);
+    }
+    sent_at = FRAMES;
+    mon_thres = rec_thres;
+    if (rec_link < 0)
+        rec_link = 0;
+    mon_src = rec_src;
+}
+
+/* v0.38 (pools.c): a project switch stops a recording (it is kept, in the pool it was made
+ * in) and waits until it has been saved; no new one starts until the switch is done */
+int rec_running(void) { return rec_state == 1 || rec_state == 2; }
+int rec_busy(void)
+{
+    extern u32 smp_save_mark(void);
+    return rec_running() || was_recording || smp_save_mark() != 0;
+}
+void rec_halt(void)
+{
+    if (rec_running())
+        send(CMD_STOP);
+}
+
+int rec_rt_take __attribute__((section(".data"))) = 0;   /* v0.41: the DSP's take is a buffer's */
+int rec_view __attribute__((section(".data"))) = 0;      /* v0.41's REC TRIGS view; v0.44: always 0 (the
+                                                         * RECORDER has one page; BOUNCE tracks their panel) */
+/* v0.44 BOUNCE (rectrig.c): on a BOUNCE track's RECORDER the sixteen [TRIG] keys are the
+ * track's recorder trigs on the page shown (bn_page: PAGE steps it, the playing page when
+ * the screen opens while the sequencer plays), FUNC + [TRIG] one-shots; YES YES (two within
+ * 0.4 s) arms the spent one-shots again; a single YES is RECORD NOW, taken once the 0.4 s
+ * have passed with no second YES */
+int bn_page __attribute__((section(".data"))) = 0;
+int bn_sub __attribute__((section(".data"))) = 0;          /* v0.49 FLEX REC: 0 REC TRIGS, 1 REC SETUP */
+/* v0.51 (owner; Error Kit: "how do I delete a buffer?"): FUNC + NO on REC SETUP asks CLEAR BUF n?
+ * for the track's buffer (the one BUF names); YES empties it (rectrig.c rt_clear), NO or any
+ * other key leaves it. bn_cleared: 1 emptied, 2 refused (it was recording), at bn_cleared_at */
+int bn_clear_ask __attribute__((section(".data"))) = 0;
+int bn_cleared __attribute__((section(".data"))) = 0;
+u32 bn_cleared_at __attribute__((section(".data"))) = 0;
+u32 bn_yes_at __attribute__((section(".data"))) = 0;    /* a YES waiting for a second (0: none) */
+u32 bn_said_at __attribute__((section(".data"))) = 0;   /* the line's last word, when (ARMED n) */
+int bn_said_n __attribute__((section(".data"))) = 0;
+extern int rt_is_bounce(u32 t);
+extern unsigned char *sl_ui_table_now(void);
+extern u32 rt_trig_toggle(unsigned char *table, u32 t, u32 step, int oneshot);
+extern u32 rt_rearm(unsigned char *table, u32 t);
+#define UI_TRACK_B (*(volatile unsigned char *)0x42431A6Cu)
+#define TRACK_CUR_B ((volatile unsigned char *)0x42C5A984u)
+#define SEQ_PLAYING_B (*(volatile u32 *)0x42C5A918u)
+#define SEQ_PATTERN_B (*(volatile u32 *)0x42C5A9A0u)
+
+void bn_save(void);                             /* FUNC + YES: the take into a pool slot (below) */
+
+int bn_active(void)                             /* the RECORDER of a BOUNCE track is up */
+{
+    return rec_overlay && rec_phase == 0 && rt_is_bounce(UI_TRACK_B);
+}
+
+static u32 bn_len(void)                         /* the pattern's length for the track, 1..128 */
+{
+    const unsigned char *p = (const unsigned char *)SEQ_PATTERN_B;
+    if (!p)
+        return 16;
+    int n = p[122201] == 0 ? *(const short *)(p + 122196) : *(const short *)(p + 1701u * UI_TRACK_B + 1164u);
+    return n >= 1 && n <= 128 ? (u32)n : 16u;
+}
+
+u32 bn_pages(void)
+{
+    return (bn_len() + 15u) / 16u;
+}
+
+/* v0.45 (owner: "Can't we just do a different color for rec trigs ... only visible when rec
+ * window is open?"): while the BOUNCE REC panel is up, the 16 [TRIG] LEDs show the page's
+ * recorder trigs (stock's LED path, docs/leds.md): the per-refresh compose (0x4002c854)
+ * clears the LedManager's arrays, then walks the views (jsr 0x4011d3b2, LED_SITE), each
+ * view claiming the LEDs it sets, the first write winning (0x4002c318 returns at once for an
+ * LED already set this refresh). bn_led_walk is that jsr: it claims the 16 trig LEDs (logical
+ * ids 26..41) first, then the walk runs as stock's, so no stock view can light them while
+ * the panel is up. Closed, it does nothing and stock's LEDs are exactly stock's. Colours are
+ * palette indices (2..17 red, 50..65 yellow, 98..113 white, 16 levels each, brightest last):
+ * a recorder trig red, a one-shot armed yellow, spent dim yellow, the playing step white,
+ * an empty step or one past the pattern unlit (stock's mode 1). */
+#define LED_WALK ((void (*)(void *))0x4011D3B2u)
+#define LED_MGR ((u32 (*)(void))0x4018AABCu)
+#define LED_SET ((void (*)(u32, u32, u32, u32))0x4002C318u)
+#define LED_DIRTY ((void (*)(void *))0x4011D314u)
+#define LED_TRIG0 26u
+#define LED_REC 17u
+#define LED_ONE 65u
+#define LED_SPENT 54u
+#define LED_HEAD 113u
+/* v0.53 (NiKo: FLEX REC's PAGE LED stayed on stock's page): the eight page LEDs, logical ids
+ * 42..49, as stock lights them in grid recording (measured, docs/leds.md): the page edited bright
+ * green (2, 33), the pattern's other pages dim red (2, 10), the pages past its length (2, 2) */
+#define LED_PAGE0 42u
+#define LED_PG_EDIT 33u
+#define LED_PG_ON 10u
+#define LED_PG_OFF 2u
+u32 bn_led_claims __attribute__((section(".data"))) = 0;      /* refreshes claimed (for the gate) */
+static u32 bn_led_sig __attribute__((section(".data"))) = 0xFFFFFFFFu;
+
+static u32 bn_led_val(u32 k, u32 *mode)         /* step k of the page shown -> palette index */
+{
+    u32 t = UI_TRACK_B, step = (u32)bn_page * 16u + k;
+    unsigned char *table = sl_ui_table_now();
+    extern u32 rt_trig_get(const unsigned char *table, u32 t, u32 step);
+    u32 v = table && step < bn_len() ? rt_trig_get(table, t, step) : 0xFFFFu;
+    int head = SEQ_PLAYING_B && t < 16 && TRACK_CUR_B[t] % bn_len() == step;
+    *mode = 2u;
+    if (v == 1)
+        return LED_REC;
+    if (v == 2)
+        return LED_ONE;
+    if (v == 3)
+        return LED_SPENT;
+    if (head)
+        return LED_HEAD;
+    *mode = 1u;
+    return 1u;
+}
+
+void bn_led_walk(void *screen)
+{
+    if (bn_active()) {
+        u32 lm = LED_MGR();
+        if (lm) {
+            for (u32 k = 0; k < 16; k++) {
+                u32 mode, val = bn_led_val(k, &mode);
+                LED_SET(lm, LED_TRIG0 + k, mode, val);
+            }
+            for (u32 p = 0, n = bn_pages(); p < 8; p++)
+                LED_SET(lm, LED_PAGE0 + p, 2u,
+                        p == (u32)bn_page ? LED_PG_EDIT : p < n ? LED_PG_ON : LED_PG_OFF);
+            bn_led_claims++;
+        }
+    }
+    LED_WALK(screen);
+}
+
+/* the UI loop (rt_poll): when what the LEDs should show changes -- the panel opened or
+ * closed, a trig placed, the page turned, the playing step moved -- the screen's LEDs are
+ * asked for again (stock's View::ledsDirty path), so they follow at once and go back to
+ * stock's the moment the panel closes */
+void bn_led_poll(void)
+{
+    extern void *wr_screen_obj;
+    u32 sig = 0x5EEDu;
+    if (bn_active()) {
+        sig = 0x1000000u | (u32)bn_page << 16 | bn_pages() << 8;
+        for (u32 k = 0; k < 16; k++) {
+            u32 mode, val = bn_led_val(k, &mode);
+            sig = sig * 31u + val * 4u + mode;
+        }
+    }
+    if (sig != bn_led_sig && wr_screen_obj) {
+        bn_led_sig = sig;
+        LED_DIRTY(wr_screen_obj);
+    }
+}
+
+void bn_open(void)                              /* the screen opened: the page shown */
+{
+    u32 t = UI_TRACK_B;
+    bn_page = SEQ_PLAYING_B && t < 16 ? (TRACK_CUR_B[t] % bn_len()) / 16u : 0;
+    if ((u32)bn_page >= bn_pages())
+        bn_page = 0;
+    bn_yes_at = 0;
+    bn_clear_ask = 0;
+}
+
+void rec_yes(void)
+{
+    extern int rt_q_waiting(void);
+    extern void rt_q_cancel(void);
+    if (rt_q_waiting()) {                       /* v0.41: a QREC take waiting: YES again cancels it */
+        rt_q_cancel();
+        sent_seq = 0;
+        return;
+    }
+    /* v0.41: a buffer's take is not this screen's to stop: YES records over it */
+    send(rec_state == 2 && !rec_rt_take ? CMD_STOP : CMD_NOW);
+}
+
+/* v0.30: H's turn, as one action a turn (a user: "the knob acceleration is wonky on ARM":
+ * every detent toggled it, so a quick turn armed, stopped and armed again). Right arms,
+ * left stops; after an action the knob is left alone for 0.4 s. */
+static u32 arm_at __attribute__((section(".data"))) = 0;
+
+static void rec_arm_turn(int delta)
+{
+    u32 now = FRAMES;
+    if (arm_at && now - arm_at < 600u)
+        return;
+    if (delta > 0 && rec_state != 1 && rec_state != 2)
+        send(rec_rstrt ? CMD_ARM_PLAY : CMD_ARM);
+    else if (delta < 0 && (rec_state == 1 || rec_state == 2))
+        send(CMD_STOP);
+    else
+        return;
+    arm_at = now ? now : 1u;
+}
+
+/* v0.44 BOUNCE, FUNC + YES on its RECORDER: the buffer's playing take into the next empty
+ * pool slot. The slot takes the take's frames where they lie (no copy: the buffer goes on
+ * playing them, its next take goes elsewhere), and the take is saved to the +Drive and
+ * named as a manual recording is (SAVING, TRIM, FILE NAME, ASSIGN). v0.63 (the owner): never
+ * normalised -- the playing buffer shares those frames, and normalising them made it jump to
+ * full scale; a FLEX take is recorded at its source's level, so it is kept as it is. Nothing to save, or a take still recording or waiting: the line says so */
+u32 bn_nothing_at __attribute__((section(".data"))) = 0;
+void bn_save(void)
+{
+    extern u32 rt_take_handover(u32 t, u32 *bytes, u32 *steps);
+    extern void smp_push_slot(int k);
+    u32 bytes, steps;
+    u32 place = rt_take_handover(UI_TRACK_B, &bytes, &steps);
+    if (!bytes || rec_state == 2 || rec_state == 1) {
+        bn_nothing_at = FRAMES | 1u;
+        return;
+    }
+    int slot = next_empty(0);
+    if (slot < 0 || !smp_slot_empty(slot)) {
+        bn_nothing_at = FRAMES | 1u;
+        return;
+    }
+    u32 frames = bytes / 2u;
+    extern u32 smp_save_keep;
+    smp_save_keep = 1;                               /* v0.63: kept as it lies, never normalised */
+    smp_save_recording(slot, place, frames);
+    smp_push_slot(slot);
+    rec_saved_slot = slot;
+    rec_phase = PH_WORK;
+    work_at = FRAMES | 1u;
+    trim_slot = slot;
+    trim_n = frames;
+    trim_s = 0;
+    trim_e = frames;
+    rec_dest = next_empty(0);
+    smp_overlay_dirty = 1;
+}
+
+/* FUNC + VOICE (coldfire.py's REC_COMBO_SITE, in the main key handler's VOICE case) */
+static void preview(int on);
+void rec_combo(void)
+{
+    preview(0);
+    rec_overlay = !rec_overlay;
+    rec_phase = PH_REC;                         /* a recording mid-TRIM keeps what it is */
+    if (rec_overlay) {
+        extern void bn_open(void);
+        bn_open();                              /* v0.44 BOUNCE: the page of steps shown */
+        mon_known = 0;
+        rec_dest = next_empty(0);               /* v0.33: the first empty slot, shown */
+        u32 room;
+        smp_rec_place(rec_dest, &room);
+        rec_room = room;
+    }
+}
+
+/* v0.25: the RECORDING screen's waveform, as the DT2 draws it while it records: the
+ * peak of each column's stretch, REC_WAVE_W columns of rec_wave_span frames; when the
+ * recording passes the last, the columns pair up and each spans twice as long */
+#define REC_WAVE_W 120
+u8 rec_wave[REC_WAVE_W] __attribute__((section(".data")));
+u32 rec_wave_span __attribute__((section(".data"))) = 2400;    /* 50 ms a column to start */
+extern int smp_overlay_dirty;
+
+static void rec_wave_reset(void)
+{
+    for (int j = 0; j < REC_WAVE_W; j++)
+        rec_wave[j] = 0;
+    rec_wave_span = 2400;
+}
+
+static void rec_wave_add(u32 frames, int peak)
+{
+    while (frames / rec_wave_span >= REC_WAVE_W) {
+        for (int j = 0; j < REC_WAVE_W / 2; j++)
+            rec_wave[j] = rec_wave[2 * j] > rec_wave[2 * j + 1] ? rec_wave[2 * j] : rec_wave[2 * j + 1];
+        for (int j = REC_WAVE_W / 2; j < REC_WAVE_W; j++)
+            rec_wave[j] = 0;
+        rec_wave_span *= 2u;
+    }
+    u32 c = frames / rec_wave_span;
+    u8 v = (u8)(peak >> 7);
+    if (v > rec_wave[c])
+        rec_wave[c] = v;
+}
+
+/* from the UI loop (page.c's wr_poll), every pass */
+static void rpt_poll(void);
+
+static void fb_pv_poll(void);
+/* v0.51 (impbox; owner: per track): FLEX REC's settings are the FLEX track's, kept in its sound
+ * (rectrig.c fx_get / fx_set): with the panel up on a FLEX track the panel's values are loaded from
+ * it (rec_poll, every pass: a pattern change shows the new pattern's), and a knob turned there
+ * writes them back. The RECORDER's own (another machine) stay the instrument's, unsaved */
+extern int fx_get(u32 t, int k);
+extern void fx_set(u32 t, int k, int v);
+extern int fx_valid(u32 t);
+extern int rt_qrec, rt_arm;
+int bn_mute __attribute__((section(".data"))) = 0;     /* v0.52: H MUTE SRC (FX_MUTE) as the panel shows it */
+static void fx_load(void)
+{
+    u32 t = UI_TRACK_B;
+    rec_src = fx_get(t, FX_SRC);
+    rec_chan = fx_get(t, FX_CHAN);
+    rec_rlen = fx_get(t, FX_RLEN);
+    rec_gain = fx_get(t, FX_GAIN);
+    rt_qrec = fx_get(t, FX_QREC);
+    rt_arm = fx_get(t, FX_ARM);
+    bn_mute = fx_get(t, FX_MUTE);
+}
+static void fx_save(void)
+{
+    u32 t = UI_TRACK_B;
+    int v[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm, bn_mute};
+    for (int k = 0; k < FX_N; k++)
+        if (!fx_valid(t) || fx_get(t, k) != v[k])
+            fx_set(t, k, v[k]);
+}
+
+
+
+void rec_poll(void)
+{
+    extern void tn_poll(void);                  /* v0.61: the project's tuning (tune.c) */
+    tn_poll();
+    /* v0.48: a turned control's value shows for a second (smp_page.c shows()); then its
+     * label again, drawn once more when the second is up */
+    static int val_shown __attribute__((section(".data"))) = 0;
+    extern int smp_knob_code;
+    extern u32 smp_knob_at;
+    if (smp_knob_code && *(volatile u32 *)0x4058E8D4u - smp_knob_at < 1500u)
+        val_shown = 1;
+    else if (val_shown) {
+        val_shown = 0;
+        smp_knob_code = 0;
+        smp_overlay_dirty = 1;
+    }
+    extern void smp_marquee_poll(void);
+    rpt_poll();
+    sn_poll();                                  /* v0.54: the stock NAME screen's answer */
+    smp_marquee_poll();                         /* v0.39: the selected long name's marquee */
+    fb_pv_poll();
+    extern void rt_poll(void);
+    extern int rt_manual, rt_q_waiting(void);
+    if (bn_active()) {                          /* v0.51: FLEX REC shows the track's own settings */
+        int was[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm, bn_mute};
+        fx_load();
+        int now[FX_N] = {rec_src, rec_chan, rec_rlen, rec_gain, rt_qrec, rt_arm, bn_mute};
+        for (int k = 0; k < FX_N; k++)
+            if (was[k] != now[k]) {
+                smp_overlay_dirty = 1;
+                mon_known = 0;                  /* the meter's MONITOR for the new SRC, CHAN, GAIN */
+            }
+    }
+    rt_poll();                                  /* v0.41: the REC buffers (rectrig.c) */
+    if (bn_yes_at && FRAMES - bn_yes_at >= 600u) {   /* v0.44: a single YES on a BOUNCE track */
+        bn_yes_at = 0;
+        if (bn_active()) {                      /* v0.49 FLEX: into the track's buffer (Q.REC: at its boundary) */
+            extern void rt_flex_req(u32 t);
+            rt_flex_req(UI_TRACK_B);
+        }
+    }
+    if (smp_status(st)) {
+        rec_state = st[0] & 3;
+        rec_frames = (u32)st[2] << 6;              /* 64 frames a unit (v0.16) */
+        rec_peak = st[3] & 0x7FFF;
+        rec_heard = FRAMES + 1u;
+        if (sent_seq && st[1] == (u16)sent_seq)
+            rec_link = 1;
+        /* v0.41: the command the DSP last took was a REC trig's (bit 15 of the echo): its take
+         * is a buffer's, not saved nor shown as this screen's (and our last command, sent
+         * before it, was taken: the link is fine) */
+        rec_rt_take = (st[1] & 0x8000u) != 0;
+        if (rec_rt_take && sent_seq && rec_link == 0)
+            rec_link = 1;
+        rt_manual = (!rec_rt_take && (rec_state == 1 || rec_state == 2)) || rt_q_waiting();
+        /* a recording has ended: it is kept on the +Drive, as the DT2 keeps its
+         * recordings, and is there again after a power cycle; DEST moves on (v0.41: a
+         * buffer's take is not one: a manual take before it ended, and is saved) */
+        if (rec_state == 2 && !rec_rt_take) {
+            if (!was_recording)
+                rec_wave_reset();
+            rec_wave_add(rec_frames, rec_peak);
+            was_recording = 1;
+        }
+        else if (was_recording) {
+            was_recording = 0;
+            if (rec_taken >= 0) {
+                smp_save_recording(rec_taken, rec_off, rec_frames);
+                rec_saved_slot = rec_taken;
+                if (rec_overlay) {                  /* NORMALIZING, then TRIM, as the DT2 */
+                    rec_phase = PH_WORK;
+                    work_at = FRAMES | 1u;
+                    trim_slot = rec_taken;
+                    trim_n = rec_frames;
+                    trim_s = 0;
+                    trim_e = rec_frames;
+                }
+                rec_dest = next_empty(0);           /* v0.33: the next recording's, shown */
+            }
+        }
+    }
+    if (rec_phase == PH_WORK && smp_saved == 0) {
+        /* v0.33: a save that has stopped moving for 20 s: the RECORDER again, not
+         * NORMALIZING for good. Only when it does not move: a long take's save takes long
+         * (the review: a total limit cut real saves short) */
+        extern u32 smp_save_mark(void);
+        u32 mk = smp_save_mark();
+        if (mk != work_mark) {
+            work_mark = mk;
+            work_at = FRAMES | 1u;
+        } else if ((int)(FRAMES - work_at) > 30000) {   /* v0.40: signed (FRAMES unchanged since: -1) */
+            rec_phase = PH_REC;
+            smp_overlay_dirty = 1;
+        }
+    }
+    if (rec_phase == PH_WORK && smp_saved != 0) {   /* v0.25: saved (and normalised): TRIM */
+        u32 n = smp_frames(trim_slot);
+        if (n) {
+            trim_n = n;
+            trim_s = 0;
+            trim_e = n;
+        }
+        rec_phase = PH_TRIM;
+        trim_zoom = 0;                          /* v0.33: whole, and its fine waveform read */
+        trim_pos = 0;
+        extern int smp_analyse(int k);
+        smp_analyse(trim_slot);
+        smp_overlay_dirty = 1;
+    }
+    if (sent_seq && rec_link == 0 && FRAMES - sent_at > 1500u)
+        rec_link = -1;                          /* sent, and no echo within a second */
+    if (!rec_overlay) {                         /* off the screen: no monitoring is sent */
+        mon_known = 0;
+        return;
+    }
+    /* v0.48: THRES moved while armed: sent at once (MONITOR carries it; the DSP's armed take
+     * takes its rule), not only at the next ARM (Error Kit) */
+    if (!mon_known || rec_src != mon_src || (rec_state == 1 && rec_thres != mon_thres)) {
+        mon_known = 1;
+        if (rec_state != 2)                     /* not while recording: the source stays */
+            send(CMD_MONITOR);
+        mon_src = rec_src;
+    }
+}
+
+static int clamp(int v, int lo, int hi)
+{
+    return v < lo ? lo : v > hi ? hi : v;
+}
+
+/* v0.41 (the owner: "a little tough to choose which option I want with the encoder"): SRC
+ * and CHAN, the recorder's choices, four detents a choice as the other choice controls since
+ * v0.26 (fmt.c smp_quant's CHOICE_DETENTS). A turn back, or a pause of 2 s, starts the
+ * count again; a fast turn's item carries several detents and counts them all */
+#define REC_CHOICE_DETENTS 4
+static int rk_acc __attribute__((section(".data"))) = 0;
+static int rk_index __attribute__((section(".data"))) = 0;
+static u32 rk_at __attribute__((section(".data"))) = 0;
+
+static int rec_choice_step(int index, int delta)    /* -> the choices to move */
+{
+    u32 now = *(volatile u32 *)0x4058E8D4u;
+    if (rk_index != index || now - rk_at > 3000u || (rk_acc > 0 && delta < 0) || (rk_acc < 0 && delta > 0))
+        rk_acc = 0;
+    rk_index = index;
+    rk_at = now;
+    rk_acc += delta;
+    int n = rk_acc / REC_CHOICE_DETENTS;        /* (toward 0: the remainder kept) */
+    rk_acc -= n * REC_CHOICE_DETENTS;
+    return n;
+}
+
+/* a knob on the recorder's screen: INDEX 1..8 (A..H), DELTA detents */
+static void buf_turn(int delta);               /* v0.50: FLEX REC's C, BUF (below) */
+
+
+/* v0.50: no jump tables here (data in .text: cbuild's ColdFire check reads a table's words as
+ * instructions, and one read as a scaled-8 mode once FLEX REC's knobs filled indexes 1..7) */
+__attribute__((optimize("no-jump-tables"))) static void knob(int index, int delta)
+{
+    /* v0.41 (docs/rectrig.md): a step held, H is its REC trig's lock (slide.c), on either
+     * view; on the REC TRIGS view E and F are QREC and QPLAY (rectrig.c) */
+    extern int sl_rec_knob(int delta);
+    extern void rt_knob(int index, int delta);
+    if (index == 8 && sl_rec_knob(delta))
+        return;
+    if (bn_active()) {                          /* v0.49 FLEX REC (both pages): A SRC, B CHAN, D R.LEN, E ARM, F Q.REC; v0.52 H MUTE SRC */
+        fx_load();                              /* v0.51: the track's own, then kept in its sound */
+        if (index == 1)
+            rec_src = clamp(rec_src + rec_choice_step(1, delta), 0, SMP_REC_SOURCES - 1);
+        else if (index == 2) {
+            rec_chan = clamp(rec_chan + rec_choice_step(2, delta), 0, 2);
+            mon_known = 0;
+        } else if (index == 6)
+            rt_knob(5, delta);                  /* Q.REC: four detents a choice */
+        else if (index == 5)
+            rt_knob(7, delta);                  /* ARM: four detents a choice */
+        else if (index == 4) {
+            /* v0.54 (owner): FUNC + turn moves R.LEN a bar (16 steps) a detent, onto the bars:
+             * 0 (MAX), 16, 32 .. 128; from 20, up is 32 and down 16 */
+            extern int smp_func_held;
+            if (smp_func_held && delta)
+                rec_rlen = clamp(delta > 0 ? (rec_rlen / 16 + delta) * 16
+                                           : ((rec_rlen + 15) / 16 + delta) * 16, 0, 128);
+            else
+                rec_rlen = clamp(rec_rlen + delta, 0, 128);
+        } else if (index == 3)
+            buf_turn(delta);                    /* v0.50: C BUF, the SYN page's (record 244) */
+        else if (index == 7) {
+            rec_gain = clamp(rec_gain + delta, -24, 38);   /* v0.50: G GAIN, a dB a detent */
+            mon_known = 0;                      /* the meter's MONITOR again, with it */
+        } else if (index == 8) {
+            extern int rt_mute_knob(int delta);
+            bn_mute = rt_mute_knob(delta);      /* v0.52: H MUTE SRC, OFF / ON, four detents a choice */
+        }
+        fx_save();
+        return;
+    }
+    /* (v0.44: the REC TRIGS view is gone; REC trigs, Q.REC and Q.PLAY are the BOUNCE REC panel's) */
+    if (index == 1)
+        rec_src = clamp(rec_src + rec_choice_step(1, delta), 0, SMP_REC_SOURCES - 1);
+    else if (index == 2) {
+        rec_chan = clamp(rec_chan + rec_choice_step(2, delta), 0, 2);   /* v0.33: CHAN */
+        mon_known = 0;
+    } else if (index == 4)
+        rec_thres = clamp(rec_thres + delta, 0, 120);
+    /* E: v0.33, no DEST (send() takes the first empty slot) */
+    else if (index == 6)
+        rec_rlen = clamp(rec_rlen + delta, 0, 128);
+    else if (index == 7)
+        rec_rstrt = delta > 0 ? 1 : 0;
+    else if (index == 8)
+        rec_arm_turn(delta);
+    else if (index == 3 && delta) {             /* v0.59: C MON, OFF / ON (as R.STRT) */
+        rec_mon = delta > 0 ? 1 : 0;
+        mon_known = 0;                          /* the DSP hears it with the next MONITOR */
+    }
+}
+
+static int closes(u32 code)
+{
+    return (code >= K_TRIG && code <= K_MOD) || code == K_PRESET || code == K_SETTINGS
+           || code == K_TRK || code == K_PTN || code == K_SONG;
+}
+
+/* -- v0.22: TRIM, NAME, ASSIGN ------------------------------------------------------------- */
+
+#define K_TRIG1 25                              /* the sixteen [TRIG] keys: 25..40 (digikit's panel map) */
+
+/* the recording to track TRACK: its SAMP, and ONESHOT if it plays no sample (-> 0 done) */
+/* the stock calls a knob turn and MACHINE SEL make (found and called in the emulator):
+ * the UI's owner (a singleton, built long before), its model, a parameter's set on a track,
+ * setValue(set, id, value << 8, track, rec 0, midi 0, announce 1) as the knob path, and
+ * MACHINE SEL's commit(model, track, type, 1, 1), which resets the sound to the machine's
+ * defaults (so SAMP is set after it) */
+#define UI_OWNER   ((u32 (*)(void))0x4018A97Au)
+#define PARAM_SET  ((u32 (*)(u32, u32, u32))0x40041A40u)
+#define SET_VALUE  ((u32 (*)(u32, u32, u32, u32, u32, u32, u32))0x40037326u)
+#define MACHINE_COMMIT ((u32 (*)(u32, u32, u32, u32, u32))0x40031880u)
+#define KIT (*(volatile u32 *)0x800052A0u)
+#define SOUND_TYPE(t) (*(volatile signed char *)(KIT + 52u + 1163u * (u32)(t) + 0xDEu))
+
+/* RIFT: a machine of FASCIA's kind's own defaults written into track TRACK's sound (MACHINE SEL's
+ * commit; TRK + CLEAR's, fsc_cleared). The choices as written, not stepped to a detent. */
+static void fsc_write_defaults(const wr_mach_t *M, u32 track)
+{
+    extern int fsc_q_off;
+    u32 owner = UI_OWNER();
+    fsc_q_off = 1;
+    for (int j = 0; owner && j < M->n; j++) {
+        u32 ps = PARAM_SET(owner, M->rid[j], track);
+        if (ps)
+            SET_VALUE(ps, M->rid[j], (u32)M->def[j], track, 0, 0, 1);
+    }
+    fsc_q_off = 0;
+}
+
+/* RIFT v0.4: TRK + CLEAR has re-initialised TRACK's sound from stock's record defaults
+ * (hooks.S fsc_clear_hook): a FASCIA or ORGAN track gets its machine's own instead */
+void fsc_cleared(u32 track)
+{
+    const wr_mach_t *M = track < 16 && KIT ? wr_mach_type(SOUND_TYPE(track)) : 0;
+    if (M)
+        fsc_write_defaults(M, track);
+}
+
+/* v0.50 (impbox: "can't set the record buffer"): FLEX REC's C turns the track's BUF, the SYN page's
+ * record 244, through the knob's own path (setValue: undo, the kit, the frame all see it), a
+ * buffer per four detents as every choice knob (the owner, v0.26). BUF n is the value
+ * ceil(n x span / 8) of the record's range, the first value rt_buf_value reads as n */
+static int bt_acc __attribute__((section(".data"))) = 0;
+static u32 bt_at __attribute__((section(".data"))) = 0;
+static void buf_turn(int delta)
+{
+    extern u32 rt_buf_of(u32 t);
+    u32 t = UI_TRACK_B, now = *(volatile u32 *)0x4058E8D4u;     /* rectrig.c's FRAMES */
+    if (now - bt_at > 3000u || (bt_acc > 0 && delta < 0) || (bt_acc < 0 && delta > 0))
+        bt_acc = 0;
+    bt_at = now;
+    bt_acc += delta;
+    int n = bt_acc / 4;
+    bt_acc -= n * 4;
+    if (!n || t > 15u || !KIT)
+        return;
+    int b = (int)rt_buf_of(t) + n;
+    b = b < 0 ? 0 : b > 7 ? 7 : b;
+    const int *rw = (const int *)(0x401F7F94u + 60u * SMP_BUF_ID);
+    int lo = rw[2] >> 8, top = rw[3] >> 8, span = top - lo + 1;
+    if (span < 8)
+        span = 8;
+    u32 v = (u32)(lo + (b * span + 7) / 8);
+    u32 owner = UI_OWNER();
+    u32 ps = owner ? PARAM_SET(owner, SMP_BUF_ID, t) : 0;
+    if (ps)
+        SET_VALUE(ps, SMP_BUF_ID, v << 8, t, 0, 0, 1);
+}
+#define ONESHOT 8                               /* dnfw.sampler.machines.TYPE_OF; the pool-playing sample
+                                                 * machines are 8..13 (v0.44: SMP_N is 7 with BOUNCE, type 17,
+                                                 * which plays its buffer, not a SAMP: not one of these; 14 is
+                                                 * a Monomachine machine) */
+#define SAMP_MACHINE(ty) ((ty) >= ONESHOT && (ty) <= 13)
+
+int smp_assign(int track, int slot)
+{
+    if (track < 0 || track > 15 || slot < 0 || slot > 126 || !KIT)
+        return -1;
+    u32 owner = UI_OWNER();
+    if (!owner)
+        return -1;
+    int ty = SOUND_TYPE(track);
+    if (!SAMP_MACHINE(ty)) {                    /* not a sample machine (BOUNCE too): ONESHOT, as the DT2's audio tracks */
+        MACHINE_COMMIT(owner + 0xF4u, (u32)track, ONESHOT, 1, 1);
+        if (SOUND_TYPE(track) != ONESHOT)
+            return -1;                          /* refused (stock's permission): nothing set */
+    }
+    u32 ps = PARAM_SET(owner, SMP_SAMP_ID, (u32)track);
+    if (!ps)
+        return -1;
+    SET_VALUE(ps, SMP_SAMP_ID, (u32)(slot + 1) << 8, (u32)track, 0, 0, 1);
+    return 0;
+}
+
+/* v0.25: SAMP on TRACK set to VALUE (0 OFF, k slot k - 1) as the knob sets it, and read */
+int smp_set_samp(int track, int value)
+{
+    extern int rt_samp_buf(u32 samp);
+    if (track < 0 || track > 15 || value < 0 || (value > 127 && rt_samp_buf((u32)value) < 0) || !KIT)
+        return -1;                              /* v0.55: or a FLEX buffer's code */
+    int ty = SOUND_TYPE(track);
+    if (!SAMP_MACHINE(ty))
+        return -1;                              /* not a sample machine: nothing to set */
+    u32 owner = UI_OWNER();
+    if (!owner)
+        return -1;
+    u32 ps = PARAM_SET(owner, SMP_SAMP_ID, (u32)track);
+    if (!ps)
+        return -1;
+    /* v0.55: smp_quant writes VALUE as it is; a FLEX buffer's code (above the record's 127,
+     * where the stock setter would clamp it) goes in through smp_quant's own write, the stock
+     * call made with a value in range and other than the one held (so it is not skipped) */
+    extern int smp_samp_direct;
+    u32 sent = (u32)value;
+    if (value > 127) {
+        smp_samp_direct = value;
+        sent = smp_samp_of(track) == 127 ? 126u : 127u;
+    } else
+        smp_samp_direct = -1;
+    SET_VALUE(ps, SMP_SAMP_ID, sent << 8, (u32)track, 0, 0, 1);
+    smp_samp_direct = 0;
+    return 0;
+}
+
+/* v0.30: MACHINE SEL's commit (its call at 0x4005bba0): from one sample machine to another
+ * the sample stays (the owner: switching between DT2 machines lost it; the commit resets the
+ * sound to the new machine's defaults, SAMP to OFF). Anything else is stock's. */
+u32 smp_machine_commit(u32 model, u32 track, u32 type, u32 a, u32 b)
+{
+    int keep = 0;
+    if (track < 16 && KIT) {
+        int old = SOUND_TYPE(track);
+        int ty = (int)type;
+        if (old != ty && SAMP_MACHINE(old) && SAMP_MACHINE(ty))
+            keep = smp_samp_of((int)track);
+    }
+    int was = track < 16 && KIT ? SOUND_TYPE(track) : -1;
+    u32 r = MACHINE_COMMIT(model, track, type, a, b);
+    if (keep > 0 && SOUND_TYPE(track) == (int)type && smp_samp_of((int)track) != keep)
+        smp_set_samp((int)track, keep);
+    /* v0.48: a fresh ONESHOT/STRETCH/REPITCH/BOUNCE starts at the DT2's LEN, 120.00 (fmt.c
+     * smp_fine). The commit sets the shared record's default, WaveTone's 0x7f00 while the
+     * records are still stock; anything left above 120.00 is put at it. */
+    extern int smp_fine_mask(int kind);
+    if (track < 16 && KIT && SOUND_TYPE(track) == (int)type && was != (int)type
+        && (smp_fine_mask((int)type - 4) & 2)) {
+        volatile unsigned short *len = (volatile unsigned short *)(KIT + 52u + 1163u * track + 0x14u + 2u * 45u);
+        u32 owner = UI_OWNER();
+        u32 ps = owner && *len > 0x7800 ? PARAM_SET(owner, SMP_LEN_ID, track) : 0;
+        if (ps)
+            SET_VALUE(ps, SMP_LEN_ID, 0x7800u, track, 0, 0, 1);
+    }
+    /* v0.49: a fresh FLEX track starts on BUF 01 (docs/flex-design.md): BUF sits on PERC's slot 35,
+     * whose shared default is not 0 (it read BUF 06) */
+    if (track < 16 && KIT && SOUND_TYPE(track) == (int)type && was != (int)type && (int)type == SMP_BOUNCE_KIND + 4) {
+        /* the sound's BUF word where the knob writes it and rectrig.c's ctl() reads it (sound + 20 +
+         * 2 x slot 35; v0.49 wrote + 48, slot 49, and BUF stayed at its shared default) */
+        volatile unsigned short *buf = (volatile unsigned short *)(KIT + 52u + 1163u * track + 20u + 2u * 35u);
+        *buf = 0;
+        /* v0.51: and FLEX REC's settings at their defaults (rectrig.c fx_get: unmarked, whatever
+         * the words held) */
+        volatile unsigned short *src = (volatile unsigned short *)(KIT + 52u + 1163u * track + 20u + 2u * 38u);
+        *src = (unsigned short)(*src & 0xFF00u);
+        /* v0.54 (owner: "so the user hears the playback trig playing by default"): the track's
+         * trig LEN (TRIG page 1, the pattern's per-track byte stock's setter 0x4004eecc writes:
+         * pattern + 1153 + 1701 x track; stock's default 14 is 1/16) at INF (127, the knob's
+         * top), so a note plays the whole take. Only here, on a switch to FLEX: a loaded
+         * pattern, an existing FLEX track and a trig's own LEN lock are left as they are */
+        u32 pat = *(volatile u32 *)0x42C5A9A0u;
+        if (pat)
+            *(volatile unsigned char *)(pat + FLEX_TRIG_LEN_AT + 1701u * track) = FLEX_TRIG_LEN;
+    }
+    /* v0.33: a Monomachine machine starts as its own (dnfw.mnm DEFAULTS: SID on a square
+     * wave), not at the shared records' defaults (the owner: SID silent at first, on MIX) */
+    int mi = track < 16 && KIT && SOUND_TYPE(track) == (int)type && was != (int)type ? mnm_index((int)type - 4) : -1;
+    if (mi >= 0) {
+        u32 owner = UI_OWNER();
+        for (int j = 0; owner && j < 8; j++) {
+            u32 ps = PARAM_SET(owner, mnm_rid[j], track);
+            if (ps)
+                SET_VALUE(ps, mnm_rid[j], (u32)mnm_default[mi][j], track, 0, 0, 1);
+        }
+    }
+    /* v0.45: FASCIA starts as its model's DEFAULTS (dnfw.fascia.machines), not at the records'
+     * own defaults (WaveTone's and FM Tone's, for other machines' controls) */
+    /* RIFT: ORGAN as FASCIA, on the same records (from FASCIA to ORGAN, or back, too) */
+    const wr_mach_t *M = track < 16 ? wr_mach_type((int)type) : 0;
+    if (M && KIT && SOUND_TYPE(track) == M->type && was != M->type)
+        fsc_write_defaults(M, track);
+    return r;
+}
+
+int smp_samp_of(int track)
+{
+    if (track < 0 || track > 15 || !KIT)
+        return 0;
+    return *(volatile u8 *)(KIT + 52u + 1163u * (u32)track + 20u + 2u * 43u);
+}
+
+/* a [TRIG] key's track, or -1 */
+int smp_trig_track(u32 code)
+{
+    return code >= K_TRIG1 && code < K_TRIG1 + 16u ? (int)(code - K_TRIG1) : -1;
+}
+
+
+/* v0.54: the DN2's own NAME screen for our names (owner, 2026-11-14: "identical to the stock
+ * elektron namer"; docs/name-screen.md). Stock's naming screen is a view of its own class,
+ * NameView, made as PATTERN NAME makes it (0x400795ba): the shared block and the view in one
+ * allocation, NameView(title, name, id, max, prefixed, prefix, callback), then opened over the
+ * main screen's view. The callback (a std::function<void(std::string, int)>) runs on YES with
+ * the name; NO closes the view without it. While the view is up every key is stock's
+ * (smp_question_up) and none of our screens draws (page.c's wr_screen). Anything not as
+ * expected (no main screen view yet, or one whose controller is not the screen we draw over)
+ * leaves our own naming screen in use. */
+#define SN_NEW       ((u32 (*)(u32))0x40120264u)    /* operator new (as u32: stock returns in d0; a pointer return here would read a0) */
+#define SN_STR       ((void (*)(void *, const char *, void *))0x401CE69Eu)   /* std::string(const char *, alloc) */
+#define SN_STR_FREE  ((void (*)(void *))0x401CCBEEu)                    /* ~std::string */
+#define SN_FN_FREE   ((void (*)(void *))0x40188086u)                    /* ~std::function */
+#define SN_VIEW      ((void (*)(void *, void *, void *, int, int, int, void *, void *))0x40119156u)
+#define SN_OPEN      ((void (*)(void *, void *, int))0x4011C8BEu)       /* View::open(child shared_ptr, 0) */
+#define SN_COUNT_FREE ((void (*)(void *))0x401880CCu)                  /* ~__shared_count */
+#define SN_MAIN_VIEW 0x44647980u                                        /* MainScreenView's shared_ptr */
+#define SN_BLOCK_VT  0x401E0BC8u                                        /* _Sp_counted_ptr_inplace<NameView> */
+#define SN_VIEW_VT   0x40206AC0u                                        /* NameView */
+#define SN_BYTES     0xB0u                                              /* the block (16) and the view (160) */
+static char sn_name[NM_LONG + 1] __attribute__((section(".data")));
+static int sn_state __attribute__((section(".data"))) = 0;     /* 1 open, 2 named (YES) */
+static int sn_seen __attribute__((section(".data"))) = 0;      /* the view seen in the screen's list */
+static u32 sn_at __attribute__((section(".data"))) = 0;
+u32 sn_opens __attribute__((section(".data"))) = 0;            /* (the gate reads these) */
+u32 sn_results __attribute__((section(".data"))) = 0;
+
+static void sn_invoke(void *functor, u32 *str, int id)        /* the view's YES: the name */
+{
+    (void)functor;
+    (void)id;
+    const char *n = str ? (const char *)*str : 0;
+    int j = 0;
+    for (; n && j < NM_LONG && n[j]; j++) {
+        char ch = n[j];
+        if (ch >= 'a' && ch <= 'z')
+            ch = (char)(ch - 32);
+        sn_name[j] = ch >= ' ' && ch <= '~' ? ch : ' ';
+    }
+    sn_name[j] = 0;
+    sn_state = 2;
+    sn_results++;
+}
+
+static int sn_manage(u32 *dest, const u32 *src, int op)       /* std::function's manager: an empty functor */
+{
+    if (op == 0)                                /* __get_type_info: none */
+        dest[0] = 0;
+    else if (op == 1)                           /* __get_functor_ptr */
+        dest[0] = (u32)src;
+    else if (op == 2) {                         /* __clone_functor */
+        dest[0] = src[0];
+        dest[1] = src[1];
+    }
+    return 0;
+}
+
+static int ram_ok(u32 a);
+int sn_up(void)                                 /* a NameView in the screen's list */
+{
+    extern void *wr_screen_obj;
+    u32 s = (u32)wr_screen_obj;
+    if (!ram_ok(s))
+        return 0;
+    u32 node = *(volatile u32 *)(s + 28);
+    for (int n = 0; n < 32 && ram_ok(node) && node != s + 20; n++) {
+        u32 v = *(volatile u32 *)(node + 8);
+        if (ram_ok(v) && *(volatile u32 *)v == SN_VIEW_VT)
+            return 1;
+        node = *(volatile u32 *)node;
+    }
+    return 0;
+}
+
+/* the stock NAME screen over everything, titled TITLE, on TEXT (MAX characters at most); 1 if
+ * it opened (rec_poll's sn_poll finishes it), 0 to use ours */
+static int sn_open(const char *title, const char *text, int max)
+{
+    extern void *wr_screen_obj;
+    u32 main_view = *(volatile u32 *)SN_MAIN_VIEW;
+    if (sn_state || !ram_ok(main_view) || !wr_screen_obj
+        || *(volatile u32 *)(main_view + 44) != (u32)wr_screen_obj)
+        return 0;
+    u32 *blk = (u32 *)SN_NEW(SN_BYTES);
+    if (!blk)
+        return 0;
+    blk[0] = SN_BLOCK_VT;
+    blk[1] = 1;                                 /* use */
+    blk[2] = 1;                                 /* weak */
+    blk[3] = (u32)blk + 16u;                    /* the view, in place */
+    char alloc = 0;
+    u32 s_title = 0, s_name = 0, s_prefix = 0;
+    u32 fn[4];                                  /* std::function: the functor's 8 bytes, manager, invoker */
+    fn[0] = 0;
+    fn[1] = 0;
+    fn[2] = (u32)sn_manage;
+    fn[3] = (u32)sn_invoke;
+    SN_STR(&s_title, title, &alloc);
+    SN_STR(&s_name, text, &alloc);
+    SN_STR(&s_prefix, "%03d:", &alloc);         /* (not shown: prefixed 0) */
+    SN_VIEW(blk + 4, &s_title, &s_name, 0, max, 0, &s_prefix, fn);
+    SN_STR_FREE(&s_prefix);
+    SN_STR_FREE(&s_name);
+    SN_STR_FREE(&s_title);
+    SN_FN_FREE(fn);
+    u32 sp[2];                                  /* shared_ptr<View> (NameView's View is at +0) */
+    sp[0] = (u32)blk + 16u;
+    sp[1] = (u32)blk;
+    SN_OPEN((void *)main_view, sp, 0);
+    SN_COUNT_FREE(&sp[1]);
+    sn_state = 1;
+    sn_seen = 0;
+    sn_at = *(volatile u32 *)0x4058E8D4u;
+    sn_opens++;
+    return 1;
+}
+
+/* MAX: 35 for a recording (its name goes with it into +DRIVE > RECORDED), the pool's long
+ * names' 35 for a rename where the pool keeps them, else the short name's 7 */
+static void name_start_max(int max)
+{
+    extern const char *smp_long_name(int k);
+    const char *n = smp_long_name(trim_slot);
+    nm_max = max;
+    int j = 0;
+    for (; j < max && n && n[j]; j++)
+        nm_text[j] = n[j] >= 'a' && n[j] <= 'z' ? (char)(n[j] - 32) : n[j];
+    for (; j <= NM_LONG; j++)
+        nm_text[j] = 0;
+    nm_cur = 0;
+    rec_phase = PH_NAME;
+}
+/* v0.54: the stock NAME screen on the name as set up (sn_open), when it opens */
+static void name_open(const char *title)
+{
+    char t[NM_LONG + 1];
+    int j, last = -1;
+    for (j = 0; j < nm_max && j < NM_LONG; j++) {
+        t[j] = nm_text[j] ? nm_text[j] : ' ';
+        if (t[j] != ' ')
+            last = j;
+    }
+    t[last + 1] = 0;
+    if (sn_open(title, t, nm_max))
+        rec_phase = PH_SNAME;
+}
+static void name_start(void)
+{
+    name_start_max(NM_LONG);
+    name_open("FILE NAME");
+}
+
+static void name_step(int d)
+{
+    char ch = nm_text[nm_cur] ? nm_text[nm_cur] : ' ';
+    int i = 0, n = (int)sizeof NM_SET - 1;
+    while (i < n && NM_SET[i] != ch)
+        i++;
+    i = ((i + d) % n + n) % n;
+    nm_text[nm_cur] = NM_SET[i];
+    for (int j = 0; j < nm_cur; j++)            /* no hole before the cursor */
+        if (!nm_text[j])
+            nm_text[j] = ' ';
+}
+
+static int nm_only __attribute__((section(".data"))) = 0;   /* v0.25: the browser's RENAME */
+
+/* v0.33: CREATE FOLDER's name, on the naming screen (nm_only 2); the browser stays under it */
+static void folder_name_start(void)
+{
+    if (rec_phase != PH_REC)
+        return;
+    for (int j = 0; j <= NM_LONG; j++)
+        nm_text[j] = 0;
+    nm_text[0] = 'N', nm_text[1] = 'E', nm_text[2] = 'W';
+    nm_cur = 3;
+    nm_max = 30;                                /* v0.46: a folder's name inside a folder: 30 */
+    nm_gsel = 0;
+    nm_gpicked = 0;
+    nm_only = 2;
+    rec_phase = PH_NAME;
+    rec_overlay = 1;
+    name_open("FOLDER NAME");
+}
+
+static void rename_start(int slot)
+{
+    if (slot < 0 || slot > 126 || rec_phase != PH_REC)
+        return;
+    trim_slot = slot;
+    extern int smp_meta_ok;
+    name_start_max(smp_meta_ok ? NM_LONG : 7);  /* v0.46: long where the pool keeps long names */
+    nm_only = 1;
+    rec_overlay = 1;
+    name_open("SAMPLE NAME");
+}
+
+extern void smp_rec_store_named(int k, const char *name);
+static void name_done(void)
+{
+    char t[NM_LONG + 1];
+    int j, last = -1;
+    for (j = 0; j < nm_max && j < NM_LONG; j++) {
+        t[j] = nm_text[j] ? nm_text[j] : ' ';
+        if (t[j] != ' ')
+            last = j;
+    }
+    if (last >= 0 && nm_only == 2) {           /* v0.33: CREATE FOLDER */
+        extern int smp_lib_folder_make_in(int parent, const char *name);
+        extern int smp_fb_store, smp_fb_folder;
+        t[last + 1] = 0;                        /* v0.40: in the folder that is open (none past */
+        smp_lib_folder_make_in(smp_fb_store == 1 ? smp_fb_folder : -1, t);    /* the depth limit) */
+        extern void smp_lib_refresh(void);
+        smp_lib_refresh();
+    } else if (last >= 0) {                     /* trailing spaces off; an empty name stays as it was */
+        t[last + 1] = 0;
+        extern void smp_name_set(int k, const char *name);
+        smp_name_set(trim_slot, t);             /* v0.46: its short name and, where kept, its long one */
+    }
+    as_done = -1;
+    rec_phase = PH_ASSIGN;
+    if (!nm_only) {                             /* v0.46: a recording named: into +DRIVE > RECORDED */
+        extern const char *smp_long_name(int k);
+        smp_rec_store_named(trim_slot, last >= 0 ? t : smp_long_name(trim_slot));
+    }
+    if (nm_only) {                              /* the browser's RENAME: done, back to the page */
+        nm_only = 0;
+        rec_phase = PH_REC;
+        rec_overlay = 0;
+    }
+}
+
+/* NO on the naming screen: a rename or a new folder left as it was; a recording keeps the
+ * name it has and goes on to ASSIGN */
+static void name_cancel(void)
+{
+    if (nm_only) {
+        nm_only = 0;
+        rec_phase = PH_REC;
+        rec_overlay = 0;
+    } else {
+        as_done = -1;
+        rec_phase = PH_ASSIGN;
+        extern const char *smp_long_name(int k);   /* v0.46: into +DRIVE > RECORDED, under it */
+        smp_rec_store_named(trim_slot, smp_long_name(trim_slot));
+    }
+}
+
+/* v0.54: the stock NAME screen's answer, once a UI pass: YES gave a name (the view's callback),
+ * or the view closed without one (NO). Finished here, outside stock's key handling. */
+static void sn_poll(void)
+{
+    extern int smp_overlay_dirty;
+    if (!sn_state)
+        return;
+    int up = sn_up();
+    if (up)
+        sn_seen = 1;
+    if (sn_state == 2) {
+        sn_state = 0;
+        if (rec_phase != PH_SNAME)
+            return;
+        int j = 0;
+        for (; j < NM_LONG && sn_name[j]; j++)
+            nm_text[j] = sn_name[j];
+        for (; j <= NM_LONG; j++)
+            nm_text[j] = 0;
+        rec_phase = PH_NAME;
+        name_done();
+        smp_overlay_dirty = 1;
+        return;
+    }
+    if (!up && (sn_seen || *(volatile u32 *)0x4058E8D4u - sn_at > 3000u)) {
+        sn_state = 0;
+        if (rec_phase == PH_SNAME) {
+            rec_phase = PH_NAME;
+            name_cancel();
+        }
+        smp_overlay_dirty = 1;
+    }
+}
+
+/* v0.25: FUNC as it is held now, kept from every FUNC press and release the UI queue
+ * carries (they all pass here, and on to stock). The DN2's own key items' bit 1 is not a
+ * FUNC chord: on the instrument a plain YES carries it (the owner's v0.24: YES on TRIM and
+ * on a SLICE track did nothing), so nothing here reads it. */
+int smp_func_held __attribute__((section(".data"))) = 0;
+/* v0.35: SYN held long enough that stock's pages show their values (its held item, bit 3,
+ * is what turns them on; the key's release turns them off): ours show theirs (O14) */
+int smp_syn_values __attribute__((section(".data"))) = 0;
+#define K_SRC 2
+int smp_values_held(void)                       /* (and SYN still down: a release that went elsewhere ends it) */
+{
+    extern u32 smp_held_lo;
+    return smp_syn_values && (smp_held_lo >> K_SRC & 1);
+}
+int rec_pv_on __attribute__((section(".data"))) = 0;      /* a preview playing, while held */
+static u32 knob_at __attribute__((section(".data"))) = 0;    /* the last trim knob's FRAMES */
+#define CMD_PREVIEW 9
+extern int smp_overlay_dirty;
+
+/* v0.33: the browser's preview (FUNC + YES on a sample, while held): a PROJECT RAM sample,
+ * or a library sample already in the pool, from its slot; any other library sample through
+ * link.c's +DRIVE preview. The first ten seconds, as the DT2's. */
+#define FB_PV_FRAMES (10u * 48000u)
+static int fb_pv __attribute__((section(".data"))) = 0;    /* 1 from a slot, 2 from the +Drive */
+extern int smp_lib_preview(int k);
+extern void smp_lib_preview_stop(void);
+extern u32 smp_lib_frames(int k);
+extern u32 smp_slot_frames(int k, int *i16);
+
+static void fb_preview_stop(void)
+{
+    if (fb_pv == 1)
+        smp_command(CMD_PREVIEW, 0, 0, 0, 0);
+    else if (fb_pv == 2)
+        smp_lib_preview_stop();
+    fb_pv = 0;
+}
+
+static void fb_preview(int slot)
+{
+    fb_preview_stop();
+    int s = smp_fb_store == 1 ? smp_lib_slot_of(slot) : slot;
+    if (s >= 0 && !smp_slot_empty(s)) {
+        int i16 = 0;
+        u32 fr = smp_slot_frames(s, &i16);
+        if (!i16)
+            return;                             /* the preview reads int16 (a float32 slot: none) */
+        smp_command(CMD_PREVIEW, (u32)s, 0, fr < FB_PV_FRAMES ? fr : FB_PV_FRAMES, 0);
+        fb_pv = 1;
+    } else if (smp_fb_store == 1 && smp_lib_preview(slot) == 0) {
+        fb_pv = 2;
+    }
+}
+
+static void fb_pv_poll(void)                    /* the browser closed: its preview stops */
+{
+    if (fb_pv && !smp_fb_open)
+        fb_preview_stop();
+}
+
+/* v0.40: where the TRIM preview is, for TRIM's playhead (smp_page.c). The DSP plays it from
+ * trim_s to trim_e once and reports no position, only that a preview plays (its status
+ * word's +16), and the sample page's playhead (smp_playhead) is a voice's: the preview is
+ * none, so v0.25..v0.39's TRIM drew nothing that moved (the owner: "the playhead does not
+ * move"). As the slice editor's (slice.c): 32 frames a 1.5 kHz tick since it started, from
+ * the start it was sent with; -1 when none plays, once it is let go, and past its end. */
+static u32 pv_at __attribute__((section(".data"))) = 0;
+static u32 pv_s __attribute__((section(".data"))) = 0;
+static u32 pv_e __attribute__((section(".data"))) = 0;
+
+int rec_pv_frame(void)
+{
+    if (!rec_pv_on || rec_phase != PH_TRIM)
+        return -1;
+    u32 run = (FRAMES - pv_at) * 32u, at = pv_s + run;
+    if (run >= 0x40000000u || at >= pv_e)
+        return -1;
+    return (int)at;
+}
+
+static void preview(int on)
+{
+    if (on && trim_slot >= 0) {
+        smp_command(CMD_PREVIEW, (u32)trim_slot, trim_s, trim_e, 0);
+        pv_at = FRAMES;
+        pv_s = trim_s;
+        pv_e = trim_e;
+    } else if (rec_pv_on)
+        smp_command(CMD_PREVIEW, (u32)(trim_slot < 0 ? 0 : trim_slot), 0, 0, 0);
+    rec_pv_on = on && trim_slot >= 0;
+}
+
+/* a TRIM knob: E START, H END. A detent moves a 1000th of the recording, more the faster
+ * the knob turns (as a sample machine's start moves), a 10,000th with FUNC held */
+/* v0.33: TRIM's zoom (F: 1, 2, 4, 8 times, as the DT2's) and the window's place (G); the
+ * window follows the end last moved. smp_page.c draws it from the slot's fine waveform. */
+
+static void trim_follow(u32 at)                 /* keep AT inside the window */
+{
+    u32 span = trim_n >> trim_zoom;
+    if (at < trim_pos || at >= trim_pos + span)
+        trim_pos = at > span / 2u ? at - span / 2u : 0u;
+    if (trim_pos + span > trim_n)
+        trim_pos = trim_n > span ? trim_n - span : 0u;
+}
+
+static void trim_knob(int index, int delta, int fine)
+{
+    u32 now = FRAMES, dt = now - knob_at;
+    knob_at = now;
+    int ad = delta < 0 ? -delta : delta;
+    if (index == 6) {                           /* F: zoom */
+        int z = trim_zoom + (delta > 0 ? 1 : -1);
+        trim_zoom = z < 0 ? 0 : z > 3 ? 3 : z;
+        trim_follow(trim_s);
+        smp_overlay_dirty = 1;
+        return;
+    }
+    if (index == 7) {                           /* G: the window along the sample */
+        u32 span = trim_n >> trim_zoom, mv = span / 8u * (u32)ad;
+        if (delta < 0)
+            trim_pos = trim_pos > mv ? trim_pos - mv : 0u;
+        else
+            trim_pos = trim_pos + mv + span > trim_n ? (trim_n > span ? trim_n - span : 0u) : trim_pos + mv;
+        smp_overlay_dirty = 1;
+        return;
+    }
+    u32 mul = fine ? 1u : dt < 12u ? 12u : dt < 30u ? 5u : dt < 60u ? 2u : 1u;
+    u32 step = (trim_n >> trim_zoom) / (fine ? 10000u : 1000u) * mul * (u32)ad;   /* finer when zoomed */
+    if (step < 2u)
+        step = 2u;
+    int sgn = delta < 0 ? -1 : 1;
+    if (index == 5) {
+        int v = (int)trim_s + sgn * (int)step;
+        if (v < 0) v = 0;
+        if ((u32)v + 64u > trim_e) v = (int)trim_e - 64;
+        trim_s = (u32)(v < 0 ? 0 : v);
+        trim_follow(trim_s);
+    } else if (index == 8) {
+        int v = (int)trim_e + sgn * (int)step;
+        if ((u32)(v < 0 ? 0 : v) < trim_s + 64u) v = (int)trim_s + 64;
+        if ((u32)v > trim_n) v = (int)trim_n;
+        trim_e = (u32)v;
+        trim_follow(trim_e > 0u ? trim_e - 1u : 0u);
+    }
+    smp_overlay_dirty = 1;                      /* drawn at once, not at the next tick */
+}
+
+/* the DT2's FILE NAME keys: a character at the cursor removed (FUNC + NO), a space put in
+ * (FUNC + YES) */
+static void name_delete(void)
+{
+    for (int j = nm_cur; j < nm_max - 1; j++)
+        nm_text[j] = nm_text[j + 1];
+    nm_text[nm_max - 1] = 0;
+}
+
+/* v0.33: FUNC + NO also steps the cursor back (the owner: held, it clears letter after
+ * letter, right to left, as the naming screen's character pick steps forward) */
+static void name_backdel(void)
+{
+    name_delete();
+    if (nm_cur > 0)
+        nm_cur--;
+}
+
+static void name_insert(void)
+{
+    for (int j = nm_max - 1; j > nm_cur; j--)
+        nm_text[j] = nm_text[j - 1];
+    nm_text[nm_cur] = ' ';
+}
+
+/* the name grid: an arrow moves the selection (v0.26: LEFT/RIGHT round its row) */
+static void grid_move(u32 code)
+{
+    int n = (int)sizeof nm_grid - 1;
+    if (code == K_LEFT || code == K_RIGHT) {
+        int r0 = nm_gsel / NM_GRID_W * NM_GRID_W;
+        int w = n - r0 < NM_GRID_W ? n - r0 : NM_GRID_W;
+        int col = nm_gsel - r0 + (code == K_RIGHT ? 1 : -1);
+        nm_gsel = r0 + (col + w) % w;
+    } else {
+        int g = nm_gsel + (code == K_UP ? -NM_GRID_W : NM_GRID_W);
+        if (g >= 0 && g < n)
+            nm_gsel = g;
+    }
+    nm_gpicked = 1;
+}
+
+/* v0.27: LEFT/RIGHT held on FILE NAME repeat (owner: as the DN2's own naming screen), a
+ * short wait and then a steady step; rec_poll steps them, the key's release stops them */
+#define RPT_WAIT 600u                           /* 0.4 s, in the 1.5 kHz ticks of 0x4058e8d4 */
+#define RPT_STEP 120u                           /* then 12.5 a second */
+static u32 rpt_code __attribute__((section(".data"))) = 0;
+static u32 rpt_next __attribute__((section(".data"))) = 0;
+static int rpt_grid __attribute__((section(".data"))) = 0;
+
+static void rpt_start(u32 code)
+{
+    rpt_code = code;
+    rpt_grid = smp_func_held;
+    rpt_next = *(volatile u32 *)0x4058E8D4u + RPT_WAIT;
+}
+
+/* v0.30: UP/DOWN held in the sample list or the folder browser step on by themselves, as
+ * FILE NAME's arrows (owner): 0.4 s, then 12.5 a second, until let go */
+static u32 lrpt_code __attribute__((section(".data"))) = 0;
+static u32 lrpt_next __attribute__((section(".data"))) = 0;
+static void lst_step(u32 code);
+/* v0.39: one step, then (held) on by itself: the browser's every level and its action menu
+ * (v0.30..v0.38 repeated only the browser's list: the two stores and the action menu, LOAD
+ * TO PROJECT's among them, stepped once a press; the owner) */
+static void lst_press(u32 code)
+{
+    lst_step(code);
+    lrpt_code = code;
+    lrpt_next = *(volatile u32 *)0x4058E8D4u + RPT_WAIT;
+}
+#define FB_PAGE 6                               /* v0.39: the browser's rows: FUNC + an arrow, a pushed knob */
+
+/* v0.41 (a user's v0.38 video: hands off, the cursor going up and down between two rows by
+ * itself): the browser moves on ANY of the nine encoders, a detent a row, so one encoder that
+ * jitters (the panel reports +1, -1, +1 ... while it rests between detents) moves the cursor
+ * to and fro -- at the top, between the top two rows -- where stock would only nudge that one
+ * knob's own value. Each knob now has a little hysteresis: it moves the cursor on every detent
+ * in the way it last moved, and turned back it moves only once it is two detents back from
+ * where it last moved. A jitter of a detent either way then moves it once at most; a turn
+ * back by hand loses one detent. Reset when the browser opens. */
+static int fbk_pos[10] __attribute__((section(".data"))), fbk_at[10] __attribute__((section(".data")));
+static signed char fbk_dir[10] __attribute__((section(".data")));
+
+void fb_knob_reset(void)
+{
+    for (int k = 0; k < 10; k++)
+        fbk_pos[k] = fbk_at[k] = fbk_dir[k] = 0;
+}
+
+static int fb_knob_step(u32 code, int delta)    /* -> -1, 0 or 1: the rows to move */
+{
+    int k = code >= 1 && code <= 9 ? (int)code : 0;
+    if (delta == 0)
+        return 0;
+    fbk_pos[k] += delta > 0 ? 1 : -1;           /* (a step an item, as before: its sign) */
+    int off = fbk_pos[k] - fbk_at[k], d = off > 0 ? 1 : off < 0 ? -1 : 0;
+    if (d == 0 || (d != fbk_dir[k] && fbk_dir[k] != 0 && (off > -2 && off < 2)))
+        return 0;                               /* back to where it moved, or one detent back */
+    fbk_at[k] = fbk_pos[k];
+    fbk_dir[k] = (signed char)d;
+    if (fbk_pos[k] > (1 << 20) || fbk_pos[k] < -(1 << 20))
+        fbk_pos[k] = fbk_at[k] = 0;             /* (never far from 0) */
+    return d;
+}
+
+static void lrpt_poll(void)
+{
+    extern u32 smp_held_lo;
+    if (trk_pend_k >= 0) {                      /* v0.31: the sample is in the pool: the track's */
+        int s = smp_lib_slot_of(trk_pend_k);
+        if (!smp_lib_used(trk_pend_k))
+            trk_pend_k = -1;
+        else if (s >= 0 && !smp_lib_pending()) {
+            smp_set_samp(trk_pend_t, s + 1);
+            trk_pend_k = -1;
+        }
+    }
+    if (no_at && smp_fb_open) {                 /* v0.31: NO held half a second: the top */
+        if (!(smp_held_lo & (1u << K_NO)))
+            no_at = 0;
+        else if (*(volatile u32 *)0x4058E8D4u - no_at > 750u) {
+            no_at = 0;
+            smp_fb_store = -1;
+            smp_fb_folder = -1;
+            smp_fb_menu = 0;
+            smp_fb_cur = smp_fb_last_store == 1 ? 0 : 1;
+            smp_overlay_dirty = 1;
+        }
+    }
+    if (!lrpt_code)
+        return;
+    u32 now = *(volatile u32 *)0x4058E8D4u;
+    if ((int)(now - lrpt_next) < 0)
+        return;
+    lrpt_next = now + RPT_STEP;
+    lst_step(lrpt_code);
+}
+
+static void rpt_poll(void)
+{
+    lrpt_poll();
+    if (!rpt_code)
+        return;
+    if (!rec_overlay || rec_phase != PH_NAME || rpt_grid != smp_func_held) {
+        rpt_code = 0;
+        return;
+    }
+    u32 now = *(volatile u32 *)0x4058E8D4u;
+    if ((int)(now - rpt_next) < 0)
+        return;
+    rpt_next = now + RPT_STEP;
+    if (rpt_code == K_NO)
+        name_backdel();
+    else if (rpt_grid)
+        grid_move(rpt_code);
+    else if (rpt_code == K_UP || rpt_code == K_DOWN)   /* v0.44: UP/DOWN held scroll the character */
+        name_step(rpt_code == K_UP ? 1 : -1);
+    else if (rpt_code == K_LEFT && nm_cur > 0)
+        nm_cur--;
+    else if (rpt_code == K_RIGHT && nm_cur < nm_max - 1)
+        nm_cur++;
+    smp_overlay_dirty = 1;
+}
+
+static u32 after_pop(u8 *it, u32 code, u32 flags)
+{
+    if (it[0] == IT_KNOB) {
+        int delta = (signed char)it[8];
+        if (code >= 1 && code <= 9) {                /* A..H, and LEVEL/DATA (9) */
+            if (rec_phase == PH_TRIM)
+                trim_knob((int)code, delta, smp_func_held);
+            else if (rec_phase == PH_NAME) {
+                name_step(delta);
+                smp_overlay_dirty = 1;
+            }
+            it[0] = IT_DROP;
+        }
+        return (u32)it;
+    }
+    if (it[0] != IT_KEY)
+        return (u32)it;
+    int press = (flags & F_PRESS) && !(flags & F_RELEASE);
+    if (code == K_FUNC)                         /* FUNC goes on to stock (noted in smp_ui_pop) */
+        return (u32)it;
+    int ours = code == K_YES || code == K_NO || (code >= K_UP && code <= K_RIGHT)
+               || (code >= K_ENC_A && code <= K_ENC_H);
+    if (rec_phase == PH_ASSIGN && smp_trig_track(code) >= 0)
+        ours = 1;
+    if (rec_phase == PH_NAME && code == K_PLAY && smp_func_held)
+        ours = 1;                               /* v0.26: FUNC + PLAY clears the name */
+    if (rec_phase == PH_WORK)                   /* NORMALIZING: the keys wait */
+        ours = ours || code == K_SETTINGS;
+    if (!ours) {
+        if (press && closes(code) && rec_phase != PH_WORK) {
+            preview(0);
+            rec_overlay = 0;
+            rec_phase = PH_REC;
+        }
+        return (u32)it;
+    }
+    if (press && code < 32)
+        eaten |= 1u << code;
+    it[0] = IT_DROP;
+    if (!press)
+        return (u32)it;
+    smp_overlay_dirty = 1;
+    if (rec_phase == PH_TRIM) {
+        if (code == K_YES && smp_func_held) {           /* FUNC + YES: heard while held */
+            preview(1);
+        } else if (code == K_YES) {                     /* YES: saved, START..END */
+            preview(0);
+            if (trim_s > 0 || trim_e < trim_n)
+                smp_trim(trim_slot, trim_s, trim_e);
+            name_start();
+        } else if (code == K_NO && smp_func_held) {     /* FUNC + NO: the recording is dropped */
+            preview(0);
+            smp_discard(trim_slot);
+            rec_saved_slot = -1;
+            rec_dest = trim_slot;
+            rec_phase = PH_REC;
+        } else if (code == K_LEFT || code == K_RIGHT) {
+            trim_knob(code == K_LEFT ? 5 : 8, code == K_LEFT ? -1 : 1, 1);
+        }
+    } else if (rec_phase == PH_NAME) {
+        if (code == K_PLAY) {                   /* v0.26, FUNC + PLAY: the name cleared */
+            for (int j = 0; j <= NM_LONG; j++)
+                nm_text[j] = 0;
+            nm_cur = 0;
+            nm_gsel = 0;
+            nm_gpicked = 0;
+        } else if (code == K_YES && smp_func_held)
+            name_insert();
+        else if (code == K_NO && smp_func_held) {
+            name_backdel();
+            rpt_start(code);                    /* v0.33: held, it goes on */
+        }
+        else if (code == K_YES)
+            name_done();
+        else if (code == K_NO)                  /* the browser's RENAME left as it was; a recording */
+            name_cancel();                      /* keeps the name it has */
+        else if (smp_func_held && code >= K_UP && code <= K_RIGHT) {  /* the grid */
+            grid_move(code);
+            if (code == K_LEFT || code == K_RIGHT)
+                rpt_start(code);
+        } else if (code == K_LEFT && nm_cur > 0) {
+            nm_cur--;
+            rpt_start(code);
+        } else if (code == K_RIGHT && nm_cur < nm_max - 1) {
+            nm_cur++;
+            rpt_start(code);
+        }
+        else if (code == K_UP || code == K_DOWN) {   /* the character at the cursor, as the DN2's own
+                                                     * naming screen; v0.44: held, it scrolls on */
+            name_step(code == K_UP ? 1 : -1);
+            rpt_start(code);
+        }
+    } else if (rec_phase == PH_ASSIGN) {
+        int t = smp_trig_track(code);
+        if (t >= 0) {
+            if (smp_assign(t, trim_slot) == 0)
+                as_done = t;
+            rec_phase = PH_REC;
+        } else if (code == K_NO || code == K_YES) {
+            rec_phase = PH_REC;
+        }
+    }
+    return (u32)it;
+}
+
+/* the UI loop's queue receive (coldfire.py's UI_POP_SITE): every item passes here before
+ * any view sees it. With the recorder up, its keys and knobs are taken; with the sample
+ * list up, UP and DOWN become SAMP's knob (D) a detent, and pushing that knob closes the
+ * list. A taken item's type becomes IT_DROP, which the loop passes over. */
+/* v0.30: a stock question up (a user's report: on a SLICE track, the OS update's "UPGRADE
+ * OS NOW?" answered by our page: "NO SAMPLE ON SAMP"; and FUNC + SETTINGS's save question,
+ * v0.29). The screen (0x4011d32a's first argument, page.c's wr_screen_obj) keeps its views
+ * in a list: node +0 the next, +8 the view; the sentinel at screen + 20, the first node at
+ * screen + 28 (0x4011d32a's own walk). A question (0x40112a2e: "SAVE ALL PATTERNS AND
+ * PROJ SETTINGS? Y/N", "UPGRADE OS NOW?") is a view of class 0x40206264 put at the list's
+ * end while it is up (measured: FUNC + SETTINGS in the emulator, the list grows from 7 to
+ * 8 views, the question's NO takes it out again). While one is up every key is stock's. */
+#define QUESTION_VTABLE 0x40206264u
+/* v0.41 (the owner, v0.40: on a SLICE/GRID track, FUNC + SETTINGS, then "YES opens the slice
+ * menu, sometimes"): the question is seen, but a YES while stock's SAVING bar is up (a second
+ * or more on the unit), or on the message after it (PROJECT SAVED, ERROR), found the page
+ * under it and opened the menu over the save. Those are views of their own classes, put at
+ * the list's end as the question is (measured in the emulator: the harness's walk: step).
+ * While any of them is up every key is stock's */
+#define PROGRESS_VTABLE 0x40206E94u
+#define MESSAGE_VTABLE 0x40206DDCu
+static int ram_ok(u32 a)
+{
+    return a >= 0x40000000u && a < 0x48000000u && !(a & 3);
+}
+int smp_question_up(void)
+{
+    extern void *wr_screen_obj;
+    u32 s = (u32)wr_screen_obj;
+    if (!ram_ok(s))
+        return 0;
+    u32 node = *(volatile u32 *)(s + 28);
+    for (int n = 0; n < 32 && ram_ok(node) && node != s + 20; n++) {
+        u32 v = *(volatile u32 *)(node + 8);
+        if (ram_ok(v)) {
+            u32 cls = *(volatile u32 *)v;
+            if (cls == QUESTION_VTABLE || cls == PROGRESS_VTABLE || cls == MESSAGE_VTABLE
+                || cls == SN_VIEW_VT)           /* v0.54: the stock NAME screen */
+                return 1;
+        }
+        node = *(volatile u32 *)node;
+    }
+    return 0;
+}
+
+/* v0.30: the keys held now (codes 0..63), every key item seen here: TRIG + YES (stock's
+ * sound preview) opened GRID's lock menu (a user's report); a YES with another key held is
+ * stock's */
+u32 smp_held_lo __attribute__((section(".data"), aligned(4))) = 0;
+u32 smp_trig_at[16] __attribute__((section(".data"), aligned(4)));
+
+/* v0.33: a [TRIG] held now: down, and pressed in the last 10 s (a release that went elsewhere
+ * leaves its bit set; TRIG + YES is a quick chord, so an old one is not held) */
+int smp_trig_held(void)
+{
+    extern u32 smp_held_hi;
+    u32 now = *(volatile u32 *)0x4058E8D4u;
+    for (int k = 0; k < 16; k++) {
+        u32 code = 25u + (u32)k;
+        u32 on = code < 32 ? (smp_held_lo >> code) & 1u : (smp_held_hi >> (code - 32)) & 1u;
+        if (on && now - smp_trig_at[k] < 15000u)
+            return 1;
+    }
+    return 0;
+}
+u32 smp_held_hi __attribute__((section(".data"), aligned(4))) = 0;
+
+int smp_knob_d __attribute__((section(".data"))) = 0;       /* v0.32: the last knob turn (fmt.c func_turn) */
+u32 smp_knob_at __attribute__((section(".data"))) = 0;
+int smp_knob_code __attribute__((section(".data"))) = 0;     /* v0.48: which knob (1..8: A..H), its value shown */
+
+u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock receive returns it */
+{
+    u8 *it = (u8 *)UI_POP(queue);
+    if (!it)
+        return (u32)it;
+    u32 code = (u32)it[4] << 24 | (u32)it[5] << 16 | (u32)it[6] << 8 | it[7];
+    if (it[0] == IT_KNOB && code >= 1 && code <= 8) {           /* A..H */
+        smp_knob_d = (signed char)it[8];
+        smp_knob_at = *(volatile u32 *)0x4058E8D4u;
+        smp_knob_code = (int)code;
+        /* v0.55: SAMP at 127 turned up on a sample machine's SRC page: on to the FLEX buffers
+         * (the stock knob stops at the record's 127, so this turn never reaches the setter) */
+        extern int smp_samp_page(void);
+        extern u32 rt_buf_code(u32 b);
+        int t = (int)UI_TRACK_NOW;
+        if (code == 4 && smp_knob_d > 0 && !rec_overlay && !smp_fb_open && smp_samp_page()
+            && SAMP_MACHINE(SOUND_TYPE(t)) && smp_samp_of(t) == 127) {
+            int r = 127 + smp_knob_d;
+            smp_set_samp(t, (int)rt_buf_code((u32)((r > 135 ? 135 : r) - 128)));
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+    }
+    u32 flags = (u32)it[8] << 24 | (u32)it[9] << 16 | (u32)it[10] << 8 | it[11];
+    /* v0.25: a key's item: bit 0 while it is down (a press), bit 4 on most keys' release,
+     * bit 1 while FUNC is held. FUNC's own release carries neither bit 0 nor bit 4 (the
+     * emulator's panel, read through smp_ui_pop): v0.22..v0.24 waited for bit 4 and so
+     * kept FUNC "held" for good after its first use -- YES on TRIM, a SLICE track's YES
+     * and the list's YES then did nothing (the owner's v0.24 report). Released is "not
+     * down", for every key. */
+    int down = (flags & F_PRESS) && !(flags & F_RELEASE);
+    if (it[0] == IT_KEY && code < 64) {
+        u32 *h = code < 32 ? &smp_held_lo : &smp_held_hi;
+        u32 bit = 1u << (code & 31);
+        *h = down ? *h | bit : *h & ~bit;
+        if (down && code >= 25 && code <= 40)   /* v0.33: when each [TRIG] went down */
+            smp_trig_at[code - 25] = *(volatile u32 *)0x4058E8D4u;
+    }
+    if (it[0] == IT_KEY && code == K_SRC) {     /* v0.35: SYN held: the pages' values (O14) */
+        if (down && (flags & F_REPEAT))
+            smp_syn_values = 1;
+        else if (!down)
+            smp_syn_values = 0;
+    }
+    if (it[0] == IT_KEY && code == K_FUNC) {
+        if (rec_overlay && rec_phase == PH_NAME) {
+            if (down && !smp_func_held) {       /* the grid opens on the cursor's character */
+                char ch = nm_text[nm_cur] ? nm_text[nm_cur] : ' ';
+                int g = 0;
+                while (nm_grid[g] && nm_grid[g] != ch)
+                    g++;
+                nm_gsel = nm_grid[g] && ch != ' ' ? g : 0;   /* a blank: from A */
+                nm_gpicked = 0;
+            } else if (!down && nm_gpicked) {   /* let go: the picked character goes in */
+                nm_text[nm_cur] = nm_grid[nm_gsel];
+                for (int j = 0; j < nm_cur; j++)
+                    if (!nm_text[j])
+                        nm_text[j] = ' ';
+                nm_gpicked = 0;
+                if (nm_cur < nm_max - 1)        /* v0.26: and the cursor moves on */
+                    nm_cur++;
+            }
+            smp_overlay_dirty = 1;
+        }
+        smp_func_held = down;
+    }
+    if (it[0] == IT_KEY && !down && code == rpt_code)
+        rpt_code = 0;                           /* v0.27: the held arrow let go */
+    if (it[0] == IT_KEY && !down && code == lrpt_code)
+        lrpt_code = 0;                          /* v0.30: and the list's */
+    if (rec_pv_on && it[0] == IT_KEY && !down && (code == K_YES || code == K_FUNC))
+        preview(0);                             /* FUNC + YES let go: the preview stops */
+    if (fb_pv && it[0] == IT_KEY && !down && (code == K_YES || code == K_FUNC))
+        fb_preview_stop();                      /* v0.33: and the browser's */
+    /* v0.35: a held key's repeat (bit 3 with bit 0: the stock UI's key task sends these
+     * while a key stays down, and stock's own handlers take them only where a hold means
+     * something, its lists' arrows). Ours read every bit-0 item as a press, so a held
+     * FUNC + YES in +DRIVE restarted its preview on each (misterairplane, v0.33), a held
+     * YES ticked and unticked, and a held arrow stepped twice (our own timed repeat, v0.30,
+     * and stock's). A repeat of a key whose press we took is ours and does nothing. */
+    if (it[0] == IT_KEY && down && (flags & F_REPEAT) && code < 32 && (eaten >> code & 1)) {
+        it[0] = IT_DROP;
+        return (u32)it;
+    }
+    if (it[0] == IT_KEY && code < 32 && (eaten >> code & 1)) {
+        eaten &= ~(1u << code);
+        if (!down) {                            /* the release of a key we took */
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        /* v0.33: a press of a key whose release we were still waiting for: that release
+         * went elsewhere (a stock screen takes some keys' releases itself, as MACHINE SEL
+         * does SRC's). v0.25..v0.32 handed this press, and every later one, to stock until
+         * a release came through: our menus on that key went dead. It is a new press. */
+    }
+    if (it[0] == IT_KEY && smp_question_up()) {
+        extern int slc_stock_asked;             /* v0.30: a stock question's keys; its */
+        slc_stock_asked = 0;                    /* answer is not left for the next YES */
+        return (u32)it;
+    }
+    if (!rec_overlay && it[0] == IT_KEY && (code == K_ENC_A + 4 || code == K_ENC_A + 5)) {
+        /* v0.50: E or F pushed with a trig held on TRIG page 2 clears SLD / SLEN (slide.c); its
+         * release goes with it */
+        extern int sl_knob_push(u32 index);
+        u32 b = 1u << (code - K_ENC_A);
+        if (down && !(flags & F_REPEAT) && sl_knob_push(code - K_ENC_A + 1)) {
+            enc_eaten |= b;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (!down && (enc_eaten & b)) {
+            enc_eaten &= ~b;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+    }
+    if (!rec_overlay && it[0] == IT_KNOB) {     /* parameter slides: E and F on TRIG page 2 */
+        extern int sl_knob(u32 index, int delta);
+        if (sl_knob(code, (signed char)it[8])) {
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+    }
+    if (!rec_overlay && !smp_lst_open && !smp_fb_open) {   /* v0.61: TUNING, KB SETUP's H (tune.c) */
+        extern int tn_pop(u8 *it);
+        if (tn_pop(it)) {
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+    }
+    if (!rec_overlay) {                          /* v0.23: SLICE's menus (slice.c) */
+        extern int slc_pop(u8 *it);
+        if (slc_pop(it)) {
+            if (it[0] == IT_KEY && (flags & F_PRESS) && !(flags & F_RELEASE) && code < 32)
+                eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        extern int lig_pop(u8 *it);             /* RIFT v0.12: LIGATURE's PATCH screen (lig.c) */
+        if (lig_pop(it)) {
+            if (it[0] == IT_KEY && (flags & F_PRESS) && !(flags & F_RELEASE) && code < 32)
+                eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+    }
+    if (rec_overlay && rec_phase != PH_REC)
+        return after_pop(it, code, flags);
+    if (rec_overlay) {
+        if (it[0] == IT_KNOB) {
+            u32 index = code;
+            int delta = (signed char)it[8];
+            if (index >= 1 && index <= 8) {
+                knob((int)index, delta);
+                it[0] = IT_DROP;
+            }
+            return (u32)it;
+        }
+        if (it[0] != IT_KEY)
+            return (u32)it;
+        int press = (flags & F_PRESS) && !(flags & F_RELEASE);
+        if (bn_clear_ask && press) {            /* v0.51: CLEAR BUF n? up: YES empties it, any other key leaves it */
+            bn_clear_ask = 0;
+            smp_overlay_dirty = 1;
+            if (code == K_YES || code == K_NO) {
+                if (code == K_YES && bn_active()) {
+                    extern int rt_clear(u32 b);
+                    extern u32 rt_buf_of(u32 t);
+                    bn_cleared = rt_clear(rt_buf_of(UI_TRACK_B)) ? 1 : 2;
+                    bn_cleared_at = FRAMES | 1u;
+                }
+                eaten |= 1u << code;
+                it[0] = IT_DROP;
+                return (u32)it;
+            }
+        }
+        if (bn_active() && bn_sub && press && code == K_NO && smp_func_held) {   /* v0.51: FUNC + NO: CLEAR BUF n? */
+            bn_clear_ask = 1;
+            bn_yes_at = 0;
+            smp_overlay_dirty = 1;
+            eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (bn_active() && press && code >= K_TRIG1 && code <= K_TRIG1 + 15) {   /* v0.44: a recorder trig */
+            u32 step = (u32)bn_page * 16u + (u32)(code - K_TRIG1);
+            unsigned char *table = sl_ui_table_now();
+            if (table && step < bn_len())
+                rt_trig_toggle(table, UI_TRACK_B, step, !smp_func_held);   /* v0.49: a one-shot; FUNC + [TRIG] a trig every pass */
+            smp_overlay_dirty = 1;
+            eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (bn_active() && press && (code == K_LEFT || code == K_RIGHT)) {   /* v0.49: REC TRIGS / REC SETUP */
+            extern int bn_sub;
+            bn_sub = code == K_RIGHT;
+            smp_overlay_dirty = 1;
+        }
+        if (bn_active() && press && code == 22) {         /* PAGE: the next page of steps */
+            bn_page = (bn_page + 1) % (int)bn_pages();
+            smp_overlay_dirty = 1;
+            eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (code == K_YES || code == K_NO || (code >= K_UP && code <= K_RIGHT)
+            || (code >= K_ENC_A && code <= K_ENC_H)) {
+            extern int rt_q_waiting(void);
+            extern void rt_q_cancel(void);
+            if (press && code == K_YES && bn_active() && smp_func_held) {   /* v0.44: FUNC + YES saves the take */
+                extern void bn_save(void);
+                bn_save();
+            } else if (press && code == K_YES && bn_active()) {
+                u32 now = FRAMES;
+                if (bn_yes_at && now - bn_yes_at < 600u) {   /* YES YES: the one-shots armed again */
+                    unsigned char *table = sl_ui_table_now();
+                    bn_said_n = table ? (int)rt_rearm(table, UI_TRACK_B) : 0;
+                    bn_said_at = now | 1u;
+                    bn_yes_at = 0;
+                } else
+                    bn_yes_at = now | 1u;       /* a first YES: RECORD NOW once 0.4 s pass (rec_poll) */
+            } else if (press && code == K_YES)
+                rec_yes();
+            if (press && code == K_NO) {
+                extern int rt_req_waiting(void);
+                extern volatile u32 rt_req;
+                if (rt_req_waiting())           /* v0.49: a FLEX take waiting for Q.REC: NO cancels it */
+                    rt_req = 0;
+                else if (rt_q_waiting()) {      /* v0.41: a QREC take waiting: NO cancels it */
+                    rt_q_cancel();
+                    sent_seq = 0;
+                } else
+                    rec_overlay = 0;            /* the screen closes; a recording goes on */
+            }
+            if (press && code < 32)
+                eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (press && closes(code))
+            rec_overlay = 0;                    /* the key does what it does, and the page shows */
+        return (u32)it;
+    }
+    lst_func = smp_func_held;                   /* v0.25: the list's FUNC + YES */
+    /* v0.25: the folder browser (smp_page.c): over everything while it is up */
+    if (smp_fb_open) {
+        smp_overlay_dirty = 1;
+        /* v0.39: ERASE MOD DATA (erase.c) under way, or its result up: the screen takes every
+         * key and knob; once it has ended, YES or NO closes the browser */
+        extern int smp_er_state;
+        if (smp_fb_menu >= 6 || smp_er_state != 0) {
+            if (it[0] == IT_KEY) {
+                int press = (flags & F_PRESS) && !(flags & F_RELEASE);
+                if (press && code < 32)
+                    eaten |= 1u << code;
+                if (press && (code == K_YES || code == K_NO) && smp_er_state != 1 && smp_er_state != 2) {
+                    if (smp_er_state == 4)
+                        smp_er_state = 0;       /* a failure seen: it may be asked again (its details kept) */
+                    smp_fb_open = 0;
+                    smp_fb_menu = 0;
+                    smp_fb_unmark_all();
+                    smp_list_close();
+                }
+                it[0] = IT_DROP;
+            } else if (it[0] == IT_KNOB) {
+                it[0] = IT_DROP;
+            }
+            return (u32)it;
+        }
+        if (it[0] == IT_KNOB) {                 /* any knob: through the items (or the menu) */
+            int delta = (signed char)it[8], d = fb_knob_step(code, delta);
+            /* v0.39: turned while pushed in, a page a detent (as Elektron's lists) */
+            if (code >= 1 && code <= 8 && (smp_held_hi >> (K_ENC_A + code - 1 - 32) & 1u))
+                d *= FB_PAGE;
+            if (smp_fb_menu == 1) {
+                int ks, kf = smp_fb_item(smp_fb_cur, &ks), last = smp_fb_nactions(ks < 0) - 1;
+                (void)kf;
+                smp_fb_mcur += d;
+                if (smp_fb_mcur < 0) smp_fb_mcur = 0;
+                if (smp_fb_mcur > last) smp_fb_mcur = last;
+            } else if (!smp_fb_menu) {
+                smp_fb_cur += d;
+                if (smp_fb_cur < 0)
+                    smp_fb_cur = 0;             /* (the last item: held there when drawn) */
+            }
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (it[0] != IT_KEY)
+            return (u32)it;
+        int press = (flags & F_PRESS) && !(flags & F_RELEASE);
+        /* v0.39: an encoder pushed is the browser's (held, its knob pages; above): stock took
+         * D's push, and +DRIVE closed under the owner. Its release goes with it; NO is the
+         * way out */
+        if (code >= K_ENC_A && code <= K_ENC_H) {
+            u32 b = 1u << (code - K_ENC_A);
+            if (press && !(flags & F_REPEAT))
+                enc_eaten |= b;
+            if (press || (enc_eaten & b)) {
+                if (!press)
+                    enc_eaten &= ~b;
+                it[0] = IT_DROP;
+            }
+            return (u32)it;
+        }
+        if (code == K_YES || code == K_NO || (code >= K_UP && code <= K_RIGHT)) {
+            if (press && code < 32)
+                eaten |= 1u << code;
+            it[0] = IT_DROP;
+            if (!press)
+                return (u32)it;
+            int slot, f = smp_fb_item(smp_fb_cur, &slot);
+            int t = (int)UI_TRACK_NOW;
+            int on_folder = slot < 0 && f != -1;
+            if (smp_fb_menu >= 3) {             /* v0.39: ERASE MOD DATA's menu and its two questions */
+                extern int smp_er_start(void);
+                if (code == K_YES && smp_fb_menu == 5) {
+                    smp_fb_menu = 6;            /* asked twice: erase (erase.c) */
+                    smp_er_start();
+                } else if (code == K_YES) {
+                    smp_fb_menu++;              /* 3 the menu -> 4 "ERASE ALL ...?" -> 5 "ARE YOU SURE?" */
+                } else if (code == K_NO || (code == K_LEFT && smp_fb_menu == 3)) {
+                    smp_fb_menu = 0;            /* NO at either question: nothing erased */
+                }
+                return (u32)it;
+            }
+            if (smp_fb_store == -1) {           /* v0.31: the top: +DRIVE, PROJECT RAM */
+                if (code == K_UP || code == K_DOWN)
+                    lst_press(code);
+                else if (code == K_RIGHT && f == -4) {
+                    smp_fb_menu = 3;            /* v0.39: +DRIVE's menu: ERASE MOD DATA */
+                }
+                else if (code == K_YES && (f == -4 || f == -5)) {
+                    smp_fb_store = f == -4 ? 1 : 0;
+                    smp_fb_last_store = smp_fb_store;
+                    smp_fb_folder = -1;
+                    smp_fb_cur = 0;
+                    smp_fb_unmark_all();
+                } else if (code == K_NO) {
+                    smp_fb_open = 0;
+                    smp_fb_unmark_all();
+                    smp_list_close();
+                }
+                return (u32)it;
+            }
+            if (smp_fb_menu == 2) {             /* DELETE asked */
+                if (code == K_YES && (slot >= 0 || on_folder))
+                    smp_fb_delete(slot, f);     /* v0.29: the marked ones, or this one, or the folder's */
+                smp_fb_menu = 0;
+            } else if (smp_fb_menu == 1) {      /* SAMPLE ACTION */
+                int act = smp_fb_action(on_folder, smp_fb_mcur);
+                if (code == K_UP || code == K_DOWN)
+                    lst_press(code);            /* v0.39: held, it goes on */
+                else if (code == K_NO || code == K_LEFT)
+                    smp_fb_menu = 0;
+                else if (code == K_YES && act == 3) {      /* v0.29: SELECT ALL (or CLEAR ALL) */
+                    smp_fb_menu = 0;
+                    if (on_folder)
+                        smp_fb_mark_folder(f);  /* (a folder: all it holds) */
+                    else
+                        smp_fb_mark_here();     /* v0.40: the list's own samples */
+                } else if (code == K_YES && act == 8) {     /* v0.45: SELECT UNUSED, then UNLOAD n? */
+                    extern int smp_fb_mark_unused(void);
+                    smp_fb_menu = smp_fb_mark_unused() > 0 && (slot >= 0 || on_folder) ? 2 : 0;
+                } else if (code == K_YES && act == 2 && (slot >= 0 || on_folder)) {
+                    smp_fb_menu = 2;            /* DELETE: asked first */
+                } else if (code == K_YES && act == 5) {     /* v0.33: MOVE SELECTED: these, */
+                    smp_fb_menu = 0;                        /* (this one if none is ticked) */
+                    if (!smp_fb_mark_count() && slot >= 0)
+                        smp_fb_mark(slot, 1);
+                    smp_fb_moving = smp_fb_mark_count() > 0;
+                } else if (code == K_YES && act == 6) {     /* v0.33: MOVE HERE */
+                    smp_fb_menu = 0;
+                    int to = on_folder ? f : smp_fb_folder;
+                    extern int smp_lib_move(int k, int f);
+                    if (to >= 0)
+                        for (int k = 0; k < 16384; k++)    /* v0.45: the library's 16,384 */
+                            if (smp_fb_marked(k) && smp_lib_used(k))
+                                smp_lib_move(k, to);
+                    smp_fb_unmark_all();
+                } else if (code == K_YES && act == 7) {     /* v0.33: CREATE FOLDER: its name */
+                    smp_fb_menu = 0;
+                    folder_name_start();
+                } else if (code == K_YES && act == 4) {     /* v0.31: LOAD TO PROJECT */
+                    smp_fb_menu = 0;
+                    smp_fb_load_project(slot, on_folder ? f : -1);
+                } else if (code == K_YES && slot >= 0 && smp_fb_store == 1) {
+                    smp_fb_menu = 0;
+                    if (act == 0) {             /* v0.31: LOAD TO TRK from +DRIVE: into the pool, */
+                        int s = smp_lib_slot_of(slot);      /* then the track's SAMP */
+                        if (s >= 0) {
+                            smp_set_samp(t, s + 1);
+                        } else if (smp_lib_load(slot) == 0) {
+                            trk_pend_k = slot;
+                            trk_pend_t = t;
+                        }
+                    }
+                } else if (code == K_YES && slot >= 0) {
+                    smp_fb_menu = 0;
+                    if (act == 0) {             /* LOAD TO TRK */
+                        smp_set_samp(t, slot + 1);
+                        smp_fb_open = 0;
+                        smp_fb_unmark_all();    /* v0.33: closed, so its ticks go (as a page key's) */
+                        smp_list_settle(slot + 1);
+                    } else if (act == 1) {      /* RENAME: the NAME screen, alone */
+                        smp_fb_open = 0;
+                        smp_list_close();
+                        rename_start(slot);
+                    }
+                }
+            } else if (code == K_UP || code == K_DOWN) {
+                lst_press(code);                /* v0.30: held, it goes on */
+            }
+            else if (code == K_YES && smp_func_held && slot >= 0)
+                fb_preview(slot);                   /* v0.33: FUNC + YES previews while held, as the DT2's */
+            else if (code == K_YES && slot >= 0)    /* v0.33: YES ticks in both stores, as the DT2's */
+                smp_fb_mark(slot, !smp_fb_marked(slot));    /* (13.6.2: PROJECT RAM too); RIGHT acts */
+            else if (code == K_YES && smp_func_held && on_folder)
+                smp_fb_mark_folder(f);
+            else if (code == K_RIGHT && (slot >= 0 || on_folder)) {
+                smp_fb_menu = 1;                /* v0.29: on a folder too (SELECT ALL, DELETE) */
+                smp_fb_mcur = 0;
+            } else if (code == K_YES && on_folder) {
+                smp_fb_folder = f;              /* into the folder */
+                smp_fb_cur = 0;
+            } else if (code == K_LEFT) {        /* up a folder; at the top it stays (v0.26) */
+                smp_fb_up();                    /* v0.40: to the folder it is in */
+            } else if (code == K_NO) {          /* v0.31: NO goes up a level: a folder to its */
+                no_at = *(volatile u32 *)0x4058E8D4u;   /* store's top, a store's top to the two */
+                if (smp_fb_up()) {              /* stores; held, straight to them (lrpt_poll); */
+                    /* v0.40: a folder inside a folder to that folder */
+                } else {
+                    smp_fb_store = -1;
+                    smp_fb_cur = smp_fb_last_store == 1 ? 0 : 1;
+                    smp_fb_unmark_all();
+                }
+            }
+            return (u32)it;
+        }
+        if (press && closes(code)) {
+            smp_fb_open = 0;
+            smp_fb_menu = 0;
+            smp_fb_unmark_all();
+            smp_list_close();
+        }
+        return (u32)it;
+    }
+    /* the sample list (smp_page.c): UP / DOWN a slot, YES keeps, NO puts SAMP back, FUNC +
+     * YES the browser, SAMP's push keeps; a page key closes it as YES */
+    /* v0.33: the list takes keys only on its own track's page. Left open when another
+     * track became active (a stock machine's page, which never closes it) it went on taking
+     * UP, DOWN, YES and NO, unseen, for up to 20 s */
+    extern int smp_list_elsewhere(void);
+    if (it[0] == IT_KEY && smp_list_elsewhere())
+        smp_list_close();
+    if (it[0] == IT_KEY && smp_list_view && smp_list_up(smp_list_view)) {
+        int press = (flags & F_PRESS) && !(flags & F_RELEASE);
+        int t = (int)UI_TRACK_NOW;
+        if (code == K_UP || code == K_DOWN || code == K_YES || code == K_NO) {
+            if (press && code < 32)
+                eaten |= 1u << code;
+            it[0] = IT_DROP;
+            if (!press)
+                return (u32)it;
+            smp_list_hold();
+            if (code == K_UP || code == K_DOWN) {
+                lst_step(code);
+                lrpt_code = code;               /* v0.30: held, it goes on */
+                lrpt_next = *(volatile u32 *)0x4058E8D4u + RPT_WAIT;
+            } else if (code == K_YES && lst_func) {
+                smp_fb_open = 1;
+                fb_knob_reset();               /* v0.41: each knob's hysteresis afresh */
+                smp_fb_unmark_all();
+                smp_fb_folder = -1;
+                smp_fb_store = -1;              /* v0.31: the two stores first */
+                smp_fb_cur = smp_fb_last_store == 1 ? 0 : 1;
+            } else if (code == K_YES) {
+                smp_list_close();
+            } else {                            /* NO: as it was */
+                smp_set_samp(t, smp_lst_orig);
+                smp_list_settle(smp_lst_orig);
+            }
+            return (u32)it;
+        }
+        if (press && code == K_ENC_A + 3)
+            smp_list_close();
+        else if (press && closes(code))
+            smp_list_close();
+    }
+    return (u32)it;
+}
+
+/* v0.30: one UP/DOWN step in the folder browser (its items, or the action menu) or the
+ * sample list (SAMP); a held arrow's repeat comes here too, and stops when neither is up */
+static void lst_step(u32 code)
+{
+    if (smp_fb_open) {
+        smp_overlay_dirty = 1;
+        if (smp_fb_menu >= 2)                   /* DELETE asked, or ERASE's menu (v0.39): nothing to move */
+            return;
+        /* v0.39: FUNC + an arrow, a page (the menu: its first or last), as Elektron's lists */
+        int n = smp_func_held ? FB_PAGE : 1;
+        if (smp_fb_menu == 1) {
+            int ks, kf = smp_fb_item(smp_fb_cur, &ks), last = smp_fb_nactions(ks < 0 && kf != -1) - 1;
+            smp_fb_mcur += code == K_UP ? -n : n;
+            if (smp_fb_mcur > last)
+                smp_fb_mcur = last;
+            if (smp_fb_mcur < 0)
+                smp_fb_mcur = 0;
+            return;
+        }
+        if (code == K_UP)
+            smp_fb_cur = smp_fb_cur > n ? smp_fb_cur - n : 0;
+        else if (code == K_DOWN) {
+            int last = smp_fb_count() - 1;
+            smp_fb_cur += n;                    /* (held at the last item when drawn) */
+            if (last >= 0 && smp_fb_cur > last)
+                smp_fb_cur = last;
+        }
+        return;
+    }
+    if (smp_list_view && smp_list_up(smp_list_view)) {
+        int t = (int)UI_TRACK_NOW;
+        smp_list_hold();
+        /* v0.55: by rows: SAMP 0..127, then the FLEX buffers B1..B8 (rows 128..135) */
+        extern int rt_samp_buf(u32 samp);
+        extern u32 rt_buf_code(u32 b);
+        int s0 = smp_samp_of(t), b0 = rt_samp_buf((u32)s0);
+        int r = (b0 >= 0 ? 128 + b0 : s0) + (code == K_DOWN ? 1 : -1);
+        if (r >= 0 && r <= 135)
+            smp_set_samp(t, r >= 128 ? (int)rt_buf_code((u32)(r - 128)) : r);
+        return;
+    }
+    lrpt_code = 0;                              /* neither up: the repeat ends */
+}
+
+/* the parameter page's key handler (its vtable slot at 0x401d49a8 points here): stock's,
+ * as it was before v0.15 (the recorder's keys arrive through smp_ui_pop now) */
+int smp_key(void *view, void *ev)
+{
+    return KEY_ORIG(view, ev);
+}

@@ -230,10 +230,11 @@ each region checked against its bounds before the stock block driver (`0x4012c59
 | `0x600001` .. `0x6C8000` | the sample link | the pool image (400 MB, `POOL_BYTES`) |
 | `0x6D0000`, `0x6D0001` | the per-project sample pools (`csrc/sampler/pools.c`, `docs/project-pools.md`) | the superblock (`DN2J`), two copies: owner, generation, a switch's intent |
 | `0x6D0100` .. `0x6E02FF` | the per-project sample pools | 129 lists (128 projects + the legacy list) x 2 copies x 256 sectors (`DN2K` header, sums, directory page, meta block, slice area) |
+| `0x6E0400` .. `0x6E04FF` | microtuning (`csrc/sampler/tune.c`, `docs/microtuning.md`; RIFT v0.14, from the DN2 mk2 mod's v0.61) | each project's tuning record, its own sectors |
 | `0x6FF000` | DIRECT JUMP (`csrc/jump/jump.c`, `docs/jump.md`) | the mod's settings sector (`DN2S`, version, flags, check); bit 0: DIRECT JUMP |
 | `0x700000` .. the device's end | the +Drive library (`csrc/sampler/lib.c`) | superblock (`DN2L`), index, folders, then the samples' frames |
 
-Free between them: `0x6C8001..0x6CFFFF`, `0x6D0002..0x6D00FF`, `0x6E0300..0x6FEFFF`. A new region takes a range
+Free between them: `0x6C8001..0x6CFFFF`, `0x6D0002..0x6D00FF`, `0x6E0300..0x6E03FF`, `0x6E0500..0x6FEFFF`. A new region takes a range
 from there and adds its row here and a `_Static_assert` against its neighbours in its C.
 
 **v0.39, ERASE MOD DATA** (`csrc/sampler/erase.c`, `docs/erase-mod-data.md`) TRIMs exactly the four

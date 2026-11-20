@@ -4,7 +4,7 @@ Every RIFT build, newest first, with what it adds and what to test after flashin
 Each build **contains everything before it**, so you only ever flash the newest one. All
 builds are on stock Digitone II **OS 1.11**.
 
-**Get it:** the **DN2 Mod Patcher**, section 6 (RIFT), https://de-pattern.github.io/dn2mk2/patcher.html#rift (or this repository's own Pages site), builds the file in
+**Get it:** the **DN2 Mod Patcher**, its RIFT section, https://de-pattern.github.io/dn2mk2/patcher.html#rift (or this repository's own Pages site), builds the file in
 your browser from your own Digitone II OS 1.11, Digitakt II OS 1.17 and Machinedrum UW OS 1.63 files (the
 sample machines still read tables built from the Machinedrum's), and only lets
 you save it when it is byte for byte the cleared file. The cleared files are also on the
@@ -28,13 +28,211 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.8** | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
+| **v0.13** | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
+| v0.12 | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
+| v0.11 | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
+| v0.10 | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
+| v0.9 | 2026-11-19 | LINE, the new screens on every RIFT machine (thin lines, a moving icon per control, values the Syntakt way, p-locks highlighted); LIGATURE in MACHINE SEL; RESONATOR removed; the manual (MANUAL on the patcher) | `builds/v0.9-LINE/` | yes |
+| v0.8 | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
 | v0.7 | 2026-11-18 | FLEX buffers B1..B8 in every sample machine's SAMP, MUTE SRC only while the FLEX track plays, the stock NAME screen for file names (from the DN2 mk2 mod's v0.54-v0.57); ORGAN: BLOM is the breath's attack; turned knobs show their value (a lock with its trig held) on RIFT's machines; the campfire start-up animation | `builds/v0.7-FLEXPOOL/` | yes |
 | v0.6 | 2026-11-17 | SILT, RIFT's third machine (material synthesis: FIBER, SILT, SKIN, FLUID played by ten gestures, alone or as an ensemble); ORGAN: BLOM a slow swell (breath from EDGE), MTUN replaces PHRM, MCHR replaces VELO | `builds/v0.6-SILT/` | yes |
 | v0.5 | 2026-11-17 | ORGAN pages 3 (ATTACK: PERC, PDEC, PHRM, KCLK, VELO, MIXT, ROTR, RSPD) and 4 (BREATH: BRTH, TURB, BREK, BDEP, PRES, BLOM, EDGE, PVEL), all off at 0; v0.4 organ sounds unchanged; CELESTE fades instead of switching | `builds/v0.5-BREATH/` | yes |
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.13 · PARITY
+
+- **File:** `RIFT_v0.13_PARITY_OS1.11.syx` (`builds/v0.13-PARITY/`)
+- **sha256:** `195fe44faa3c4abaeb26160a7ae6f844d0fd81abc1f559b9ec409774766fe092`
+- **Gated:** 2026-11-20, `CLEARED TO FLASH`
+- **Source:** `341cfc1` (this repository)
+
+**Adds** (the DN2 mk2 mod's updates, ported as is from dn2mk2-firmware ff1ffe5, 6e8baa6,
+e354e03, 40c2a91, 2a37c41, cd0779d, 754b31c, 53374d2, 1fd9d24; the generated SHARC and ColdFire
+code regenerated here)
+
+- **EDIT SLICE POINTS** (the mod's v0.62, impbox): edits play 0.2 s after the knobs rest (no YES);
+  a played slice is selected; ZOOM to a 128-frame view drawn from the sample's own frames (read
+  from the +Drive); FUNC + START / END snaps to the nearest zero crossing (`slice.c`, `link.c`).
+- **CREATE SLICE GRID:** FUNC + E jumps SLICES 2 / 4 / 8 / 16 / 32 / 64 (Wolljamin; `slc_grid_jumps`).
+- **GRID's ALLOCATE SLICE:** NO exits keeping RANDOM's locks, as the DT2 (the mod's v0.60, impbox).
+- **FLEX level** (the mod's v0.63): a take of a track 24 dB louder (`TRK_HW_DB`, the owner's number:
+  GAIN +24 made a take match its source by ear); GAIN 0 is what was +24.
+- **FLEX save:** a FLEX buffer saved to a slot keeps its take as it lies, never normalised
+  (`smp_save_keep`; `rec.c` `bn_save`).
+- The page renderer's span grows to 0x3C000 (the MD graphics move to 0x46afc000).
+- Gate: `slicefine` (new: live edits, zero crossings, deep zoom, a played slice, FUNC + E);
+  `alloc` (NO keeps RANDOM's locks); `sharc:flexlevel` (GAIN -24 at the runner's unity, GAIN 0 the
+  same take x 15.85 where unclipped, a 0 dB negative control); `link16` norm's fifth take (a FLEX
+  save kept as it lies).
+
+**Known issues**
+
+- Playing the same note again on the same voice doesn't re-select its slice (a different note does).
+- MAIN and IN FLEX takes unchanged (still quiet).
+
+**Tests**
+
+1. EDIT SLICE POINTS: move START, stop, play the key: the change is heard without YES.
+2. Play the track: the editor selects the slice that plays.
+3. ZOOM fully in: single cycles; FUNC + E / FUNC + H land on zero crossings.
+4. CREATE SLICE GRID: FUNC + E steps 2 / 4 / 8 / 16 / 32 / 64; E alone one.
+5. ALLOCATE SLICE, RANDOM, NO: RANDOM's locks stay.
+6. FLEX of a track, GAIN 0: about the track's level. A boosted FLEX track: 24 dB hotter, GAIN 0 brings it back.
+7. Save the FLEX buffer while it plays: no jump; the saved sample loads at the same level.
+
+## v0.12 · PATCHING
+
+- **File:** `RIFT_v0.12_PATCHING_OS1.11.syx` (`builds/v0.12-PATCHING/`)
+- **sha256:** `aac214284b76d3568f1e14a38e24325aeac8a891841a22d2a3f8c0e11f569c5b`
+- **Gated:** 2026-11-20, `CLEARED TO FLASH`
+- **Source:** `2b0e9ec` (this repository)
+
+**Adds**
+
+- **LIGATURE's PATCH screen** (owner, 2026-11-19: "just fix the ligature ui so its usable ... we dont
+  need presets"; `csrc/sampler/lig.c`, `smp_page.c`):
+  - page 1: the wiring as WEFT's grid (tiles 1-9, A, B, C; cables in the gutters, a back-cord dotted)
+    and the page's eight controls below in their knobs' places;
+  - EDIT (YES): A BLK, B TYP, C INA, D AMA / E INB, F AMB, G MOV, H OUT; the arrows; FUNC + NO
+    empties a block; YES the BLOCK view; NO leaves;
+  - pages 2-4: each knob named by its block's type (`TYPE_SETS`).
+- **The wirings, per project**: 128 (`dnfw.ligature.live` WSLOTS, 25 words each), PATCH 0..127
+  picks one (shown 1..128). Kept in each project's list after the slice area (`pools.c` F_WIRE,
+  L_WIRE; read on LOAD and at power-on; a NEW project's are the factory patches), sent by the
+  sample link into the pool's WIRE area (`link.c` K_WIRE, the magic last; a slot as it is edited).
+  Seeded with the factory patches, slot k the one PATCH k played before: a saved sound sounds the
+  same.
+- **The DSP** decodes the slot's wiring into the voice every block (`live.decode`, the contract:
+  any word reads as a safe wiring); with no table there, the factory patch as before.
+- Includes v0.11 (held voices keep the DSP's time).
+- Gate: `ligedit` (new: EDIT, BLOCK, the edits in the table, the list asked for, the screens);
+  `ligature` (page 1 the PATCH screen, its p-locks on page 2); `pools` W1..W6 (the wirings in the
+  lists, the DSP, LOAD, NEW, a power cycle, power cuts); the runner's `ligature` part (the seeded
+  table, random wirings and garbage, bit-exact on the assembled code); unit tests.
+
+**Known issues**
+
+- No MOVE (FUNC + BLK) yet: a block is rebuilt where you want it.
+- The BLOCK view shows a block's settings as the wiring holds them, not with page 2-4's offsets.
+- Not yet seen on hardware: the screens' legibility on the unit's display.
+
+**Tests**
+
+1. A LIGATURE track, page 1: the grid; PATCH changes it.
+2. YES: B, C-F and H edit the block; the sound follows at once.
+3. YES on a block: BLOCK; YES back; FUNC + NO empties it; NO leaves.
+4. SAVE, LOAD another project, LOAD back, power-cycle: the wiring is kept.
+5. A NEW project: the factory patches.
+6. Pages 2-4: names follow the blocks.
+
+## v0.11 · VOICEKEEP
+
+- **File:** `RIFT_v0.11_VOICEKEEP_OS1.11.syx` (`builds/v0.11-VOICEKEEP/`)
+- **sha256:** `e0e477dcd82356a01681de3485b15a61a04cd1e70663b94822bbe27c3e206165`
+- **Gated:** 2026-11-19, `CLEARED TO FLASH`
+- **Source:** `5807099` (this repository)
+
+**Adds**
+
+- **Held voices keep the DSP's time** (dreamsaremaps, Discord 2026-11-19). The frame guard
+  renders our voices in ORDER and leaves out, then steals, the ones that do not fit. ORDER was
+  newest first (v0.29), so a melody over a held chord, or a REUSE re-strike, took the time and the
+  held notes were stolen. Now each slot's note-off (the frame's mask 36) marks it released until its
+  next note, and ORDER puts every released voice after every held one, newest first within each
+  (`src/dnfw/perc/program.py`: RELS_OFF, SORTS_OFF, RELEASED_BIAS).
+- SHARC runner part `fkeep` (gate group `sharc:fkeep`): two held FASCIA notes under a melody, the
+  clock made to move so about three voices fit: the held notes sound to the end (on v0.10 both die
+  within four blocks); three held with one re-struck over and over.
+
+**Known issues**
+
+- More notes held at once than the DSP can run: the newest still win.
+- The REUSE report itself was not reproduced at the emulator's CPU level; its case is in `fkeep`.
+
+**Tests**
+
+1. A busy FASCIA or SILT track: hold a two-note chord, play a melody over it: the chord keeps sounding.
+2. Hold a chord, re-strike one of its notes several times (REUSE): the others keep sounding.
+3. Every RIFT machine plays as before.
+
+## v0.10 · DIGIDRUM
+
+- **File:** `RIFT_v0.10_DIGIDRUM_OS1.11.syx` (`builds/v0.10-DIGIDRUM/`)
+- **sha256:** `783eafd2c4ea8f89cdbca9aa4a54316d84513ce31b369ef100f23160632dba52`
+- **Gated:** 2026-11-19, `CLEARED TO FLASH`
+- **Source:** `c81ef3a` (this repository)
+
+**Adds**
+
+- **DIGIDRUM** (type 22, where RESONATOR was), in MACHINE SEL after LIGATURE: six digital drum
+  voices after the Syntakt's, BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon
+  (`src/dnfw/digidrum/`: `model.py` the design, `live.py` the float32 contract, `program.py` the
+  DSP program in FASCIA's walk, bit-exact to `live.Voice` for all six types).
+  - Page 1 DRUM: TYPE (a choice, p-lockable per trig), TUNE, PNCH, DEC, and O1..O4, named and
+    used by the TYPE (`dgd_own`, `smp_page.c` relabels them as TYPE turns).
+  - Page 2 TONE: OVER, EQF, EQG (a peaking EQ), AMD, AMF (a tremolo), FLTF, FLTW (a base/width
+    filter), LEV.
+  - On the LINE pages, its formatters in `fmt.c`, its slides, its DDR records.
+- `scripts/ship_gate.py`: the unit step runs `test/test_digidrum_program.py`; step `digidrum`
+  (MACHINE SEL, the page, p-locks, LFO names, TRK + CLEAR on the ColdFire); the SHARC runner's
+  `digidrum` (bit-exact to the live model) and `dstress` (every slot on DIGIDRUM at once).
+
+**Known issues**
+
+- A v0.8 RESONATOR track never re-saved in v0.9 opens as DIGIDRUM, with its old values read as
+  DIGIDRUM's.
+- The voices are matched to the Syntakt by ear, not yet by measurement against recordings.
+- The CPU-limit voice drop (newest first) can take held notes on a busy track: see the
+  dreamsaremaps report in the work queue; not changed in this version.
+
+**Tests**
+
+1. MACHINE SEL: DIGIDRUM after LIGATURE; each TYPE plays.
+2. P-lock TYPE on several trigs: each trig plays its own voice.
+3. Turn TYPE: page 1's last four labels follow it.
+4. Page 2: OVER, EQ, tremolo, filter and LEV each act.
+5. With other tracks running: no new clicks or dropouts.
+6. The other machines: unchanged from v0.9 (the gate's SHARC parts hold them bit for bit).
+
+## v0.9 · LINE
+
+- **File:** `RIFT_v0.9_LINE_OS1.11.syx` (`builds/v0.9-LINE/`)
+- **sha256:** `7dd50b8d21cbf187e44a975d44fcaaab2f4740559e2a434ddf74acf0c7be9e1d`
+- **Gated:** 2026-11-19, `CLEARED TO FLASH`
+- **Source:** `9005794` (this repository)
+
+**Adds**
+
+- **LIGATURE listed** in MACHINE SEL (`LISTED = True`, `src/dnfw/ligature/machines.py`).
+- **RESONATOR removed** (owner, 2026-11-18; 75210b9 and 3d4e6b1 reverted). A v0.8 RESONATOR track loads as FM Tone, as any type RIFT lacks.
+- **The manual:** `rift-manual.html`, behind the MANUAL button on the patcher's RIFT version row.
+
+- **LINE**, the new page style for RIFT's machines: FASCIA, ORGAN, SILT and LIGATURE. It is drawn by `fsc_page_draw` in
+  `csrc/sampler/smp_page.c`; the glyphs are listed in `pages.py` (`LINE_GLYPHS`, each machine's
+  `lglyph`).
+  - Two rows of four cells in the knobs' layout. Each cell is a 17 x 12 glyph that moves with
+    its value, and its label under it.
+  - Choices are drawn as boxes with the word inside, scrolling when the choice changes.
+  - No side panel, and the stock SYN box is not drawn under it. The page dots stay.
+  - Values show the Syntakt way: while a knob turns, while SYN is held, or while a trig is
+    held. A p-locked cell is drawn inverted while its trig is held, with its locked value.
+- `scripts/ship_gate.py`: the five machine UI steps read the new cells.
+
+**Known issues**
+
+- Not yet seen on hardware: the new screens' timing and legibility on the unit's display.
+
+**Tests**
+
+1. Every RIFT machine's pages: nothing overlaps, nothing is clipped, the track number is clean.
+2. Turn each knob: its glyph moves and its value shows, then hides.
+3. Hold SYN: every value shows.
+4. P-lock controls, then hold that trig: the locked cells are inverted, with their values.
+5. A choice control (FASCIA's modes, SILT's): the box scrolls to the new word.
+6. LIGATURE from MACHINE SEL: plays, its pages draw, its p-locks hold.
+7. Sound: unchanged from v0.8 (the gate's SHARC parts hold every engine bit for bit).
 
 ## v0.8 · RESONATOR
 

@@ -48,17 +48,20 @@ BW = ("ph", "y", "st", "prev", "prevb", "s1", "s2", "hold", "g2", "d2") + tuple(
 BSTRIDE = 24                                  # a block's words
 assert len(BW) <= BSTRIDE
 BOFF = {n: j for j, n in enumerate(BW)}
-VOICE.w("blk", n=NB * BSTRIDE).w("buf", n=NB * BLOCK)
+ROW = 8                                       # a block's row: type, a, b, amt a, amt b, d1, d2, (0)
+PROW = NB * ROW + 2                           # a patch: its 12 rows, OUT, BMOVE
+# v0.12: "rows" is the wiring this block plays, decoded from the WIRE area (or a copy's address
+# of a factory patch's): after "buf", so reset() (blk, buf) leaves it
+VOICE.w("blk", n=NB * BSTRIDE).w("buf", n=NB * BLOCK).w("rows", n=PROW)
 VOICE_WORDS = VOICE.n
 assert 4 * VOICE_WORDS <= STRIDE, VOICE_WORDS
 
 # -- the tables (DDR) ----------------------------------------------------------------------------
-ROW = 8                                       # a block's row: type, a, b, amt a, amt b, d1, d2, (0)
-PROW = NB * ROW + 2                           # a patch: its 12 rows, OUT, BMOVE
 TAB = {"KREC": (0, 4 * NK)}
 TAB["RATIO"] = (TAB["KREC"][0] + TAB["KREC"][1], 16)
 TAB["PATCH"] = (TAB["RATIO"][0] + 16, LV.NP * PROW)
-TABLE_WORDS = TAB["PATCH"][0] + TAB["PATCH"][1]
+TAB["TYPEMAP"] = (TAB["PATCH"][0] + TAB["PATCH"][1], 256)       # v0.12: a raw type -> itself or 0
+TABLE_WORDS = TAB["TYPEMAP"][0] + TAB["TYPEMAP"][1]
 
 
 def _krec() -> list[int]:
@@ -68,7 +71,7 @@ def _krec() -> list[int]:
     for j, ride in enumerate(OL.RIDES):
         _rid, slot, lo, top = FM.SLOTS[ride]
         assert lo == 0
-        n = LV.NP if j == 0 else 0
+        n = 0                                 # v0.12: PATCH raw (0..127): a wiring slot
         scale = 0 if top == 127 else bits(f32(254.0 / (200 if top == 100 else 240)))
         out += [168 + 2 * slot, top, n, scale]
     return out
@@ -86,7 +89,7 @@ def _patch_words() -> list[int]:
 
 
 def tables_bytes() -> bytes:
-    vals = _krec() + [bits(f32(float(x))) for x in LV.RATIO] + _patch_words()
+    vals = _krec() + [bits(f32(float(x))) for x in LV.RATIO] + _patch_words() + list(LV.TYPEMAP)
     assert len(vals) == TABLE_WORDS
     return struct.pack(f"<{len(vals)}I", *vals)
 
@@ -126,7 +129,8 @@ ARRAYS = {"eff": NK, "ain": BLOCK, "bin": BLOCK, "tg": BLOCK, "nz": BLOCK, "mc":
 
 
 class Layout:
-    def __init__(self, fascia: FP_.Layout, tables: int):
+    def __init__(self, fascia: FP_.Layout, tables: int, wire: int):
+        self.wire = wire                      # v0.12: the WIRE area (dsp.SMP_POOL_DDR + WIRE_AREA)
         self.fl = fascia
         self.state, self.state2 = fascia.state, fascia.state2
         self.t_word = fascia.C["t"]
@@ -504,22 +508,25 @@ class LG(OP.OG):
     def render(self) -> None:
         p, C, L = self.p, self.L.C, self.L
         V, c = self.V, self.c
-        # the patch (eff[0] is its number already), and a new one starts clean
+        # v0.12: PATCH (eff[0], 0..127) is a wiring slot: with the WIRE table there (its magic),
+        # slot k decoded into the voice's rows (pk k); else the factory patch (k NP) >> 7, read in
+        # place (pk 256 + it), as v0.7..v0.11. A new pk starts clean.
         self.ev(self.a("eff", 0), 0)
         p.trunc(0, 0)
-        p.st(C["pk"], 0)
+        p.iconst(12, 0)
+        p.iop(0, 0, "MAX", 12)
+        p.iconst(12, 127)
+        p.iop(0, 0, "MIN", 12)
+        p.st(C["kraw"], 0)
+        p.iconst(12, L.wire)
+        p.seti(1, 12)
+        p.ldi(9, 0, 1)
+        p.iconst(12, LV.WMAGIC)
+        p.if_(9, "EQ", 12, self.wired, self.factory, kind="i")
+        p.ld(0, C["pk"])
         self.ld(1, V("lastp"))
         p.if_(0, "NE", 1, lambda: (self.icmp(V("lastp"), "GE", 0, self.reset),
                                    p.ld(0, C["pk"]), self.st(V("lastp"), 0)), kind="i")
-        # the patch's table: tables + 4 (PATCH + PROW pk)
-        p.ld(0, C["pk"])
-        p.iconst(12, PROW)
-        p.mul_ssi(0, 0, 12)
-        p.lsh(0, 0, 2)
-        p.ipass(8, 0)
-        p.iconst(12, L.tables + 4 * TAB["PATCH"][0])
-        p.iop(0, 8, "+", 12)
-        p.st(C["prow"], 0)
         # TUNE, FINE, the note, hz
         self.set(c("tune"), (self.a("eff", 1) - k(64.0)) * k(24.0 / 63.0))
         self.set(c("fine"), (self.a("eff", 2) - k(64.0)) * k(50.0 / 63.0))
@@ -547,6 +554,111 @@ class LG(OP.OG):
             p.st(C["bi"], 9)
         self.ivloop("cnt2", one)
         self.output()
+
+    def factory(self) -> None:
+        """pk = 256 + (k NP) >> 7; prow = the factory patch's row in the tables"""
+        p, C, L = self.p, self.L.C, self.L
+        p.ld(0, C["kraw"])
+        p.iconst(12, LV.NP)
+        p.mul_ssi(0, 0, 12)
+        p.lsh(0, 0, -7)
+        p.iconst(12, LV.NP - 1)
+        p.iop(0, 0, "MIN", 12)
+        p.ipass(9, 0)
+        p.iconst(12, 256)
+        p.iop(9, 9, "+", 12)
+        p.st(C["pk"], 9)
+        p.iconst(12, PROW)
+        p.mul_ssi(0, 0, 12)
+        p.lsh(0, 0, 2)
+        p.ipass(8, 0)
+        p.iconst(12, L.tables + 4 * TAB["PATCH"][0])
+        p.iop(0, 8, "+", 12)
+        p.st(C["prow"], 0)
+
+    def wired(self) -> None:
+        """pk = k; slot k's WWORDS words (live.decode) into the voice's rows; prow = rows"""
+        p, C, L = self.p, self.L.C, self.L
+        p.ld(0, C["kraw"])
+        p.st(C["pk"], 0)
+        p.iconst(12, 4 * LV.WWORDS)
+        p.mul_ssi(0, 0, 12)
+        p.ipass(8, 0)
+        p.iconst(12, L.wire + 4 * LV.WHDR)
+        p.iop(0, 8, "+", 12)
+        p.st(C["wsrc"], 0)                     # the slot's first word
+        # rows: the voice's base + 4 VOICE["rows"]
+        p.ld(12, C["vba"])
+        p.iconst(13, 4 * VOICE["rows"])
+        p.iop(0, 12, "+", 13)
+        p.st(C["prow"], 0)
+        p.st(C["wdst"], 0)
+        p.iconst(0, NB)
+        p.st(C["cnt3"], 0)
+
+        def row():
+            p.ld(12, C["wsrc"])
+            p.seti(1, 12)
+            p.ldi(9, 0, 1)                     # w0
+            p.ldi(10, 1, 1)                    # w1
+            p.ld(12, C["wdst"])
+            p.seti(4, 12)
+            # type: TYPEMAP[w0 & 0xFF]
+            p.iconst(12, 0xFF)
+            p.iop(0, 9, "AND", 12)
+            p.lsh(0, 0, 2)
+            p.ipass(8, 0)
+            p.iconst(12, L.tables + 4 * TAB["TYPEMAP"][0])
+            p.iop(0, 8, "+", 12)
+            p.seti(1, 0)
+            p.ldi(0, 0, 1)
+            p.sti(0, 4, 0)
+            # A (col 1) and B (col 2): (w0 >> 8 | 16) & 0xFF, 0 past NSRC
+            for col, sh in ((1, -8), (2, -16)):
+                p.lsh(0, 9, sh)
+                p.iconst(12, 0xFF)
+                p.iop(0, 0, "AND", 12)
+                p.iconst(12, LV.NSRC)
+                p.if_(0, "GE", 12, lambda: p.iconst(0, 0), kind="i")
+                p.sti(col, 4, 0)
+            # amounts (cols 3, 4): float(s8) x 0.01
+            for col, sh in ((3, 24), (4, 16)):
+                p.lsh(0, 10, sh)
+                p.ash(0, 0, -24)
+                p.iconst(13, 0)
+                p.float_(0, 0, 13)
+                p.fconst(1, float(F(0.01)))
+                p.fop(0, 0, "*", 1)
+                p.sti(col, 4, 0)
+            # settings (cols 5, 6): float(w0 >> 24), float((w1 >> 16) & 0xFF)
+            p.lsh(0, 9, -24)
+            p.iconst(13, 0)
+            p.float_(0, 0, 13)
+            p.sti(5, 4, 0)
+            p.lsh(0, 10, -16)
+            p.iconst(12, 0xFF)
+            p.iop(0, 0, "AND", 12)
+            p.iconst(13, 0)
+            p.float_(0, 0, 13)
+            p.sti(6, 4, 0)
+            self.bump("wsrc", 8)
+            self.bump("wdst", 4 * ROW)
+        self.ivloop("cnt3", row)
+        # OUT: min(last & 0xFF, NB - 1); BMOVE: (last >> 8) & 0xFFF
+        p.ld(12, C["wsrc"])
+        p.seti(1, 12)
+        p.ldi(9, 0, 1)
+        p.ld(12, C["wdst"])
+        p.seti(4, 12)
+        p.iconst(12, 0xFF)
+        p.iop(0, 9, "AND", 12)
+        p.iconst(12, NB - 1)
+        p.iop(0, 0, "MIN", 12)
+        p.sti(0, 4, 0)
+        p.lsh(0, 9, -8)
+        p.iconst(12, 0xFFF)
+        p.iop(0, 0, "AND", 12)
+        p.sti(1, 4, 0)
 
     def block_i(self) -> None:
         """block bi: its row, its settings, its inputs, its kernel"""
@@ -1365,4 +1477,5 @@ def run_voice(L: Layout, read, t: int, mem=None):
 
 def layout() -> Layout:
     from ..waverider import dsp
-    return Layout(FP_.layout(), dsp.LIG_TABLES_DDR)
+    from ..sampler import machines as SM
+    return Layout(FP_.layout(), dsp.LIG_TABLES_DDR, dsp.SMP_POOL_DDR + SM.WIRE_AREA)

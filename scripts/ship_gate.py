@@ -177,7 +177,11 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_libtree.py", "test/test_web_tool.py",   # v0.40: nested folders (the model, the page's levels)
          "test/test_fascia_coldfire.py",                    # v0.45: FASCIA on the ColdFire (type 18)
          "test/test_fascia_program.py",                     # v0.45: FASCIA's DSP program (run mode = live.py)
-         "test/test_reson_live.py", "test/test_reson_program.py"]   # RIFT v0.8: RESONATOR (run mode = live.py)
+         "test/test_digidrum_program.py", "test/test_tholet_program.py",   # RIFT v0.15: THOLET (run mode = live.py)
+         # RIFT v0.12: LIGATURE's wirings (the DSP's decode = live, garbage safe, the seeded table the
+         # factory patches; the build's wire.json = live's) and its machine table
+         "test/test_ligature_program.py", "test/test_ligature_machines.py", "test/test_ligature_live.py",
+         "test/test_mon.py", "test/test_tunings.py"]                                # RIFT v0.14: MON on the RECORDER (the mod's v0.59)                  # RIFT: DIGIDRUM (run mode = live.py)
 HIT = re.compile(r"^\s+([0-9a-f]{8}):", re.M)
 
 # v0.38 (owner, 2026-11-01): the steps by name, for --only and --list, in the order a full run
@@ -211,7 +215,9 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("organ", "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire)"),
        ("silt", "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("ligature", "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
-       ("reson", "RESONATOR: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
+       ("ligedit", "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)"),
+       ("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
+       ("tholet", "THOLET: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("alloc", "GRID allocate slice locks (ColdFire)"),
        ("multisel", "multi-select delete (ColdFire)"),
        ("unused", "SELECT UNUSED (ColdFire)"),
@@ -229,6 +235,10 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("flexcore", "FLEX on the ColdFire: recorder trigs, ARM, the panel, an older BOUNCE track's trigs (ColdFire)"),
        ("rectext", "RECORDER text inside its places, every state and R.LEN value (ColdFire)"),
        ("kbrec", "KEYBOARD kept through grid recording (ColdFire)"),
+       ("kbhold", "KEYBOARD HOLD: PTN + KEYBOARD, held notes, chords, release (ColdFire)"),
+       ("tune", "microtuning: KB SETUP's TUNE, the TUNING page, the frame's retune (ColdFire)"),
+       ("tunerec", "microtuning: each project's tuning record (ColdFire)"),
+       ("slicefine", "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)"),
        ("thres", "THRES on both processors (coupled)"),
        ("flex", "FLEX: a recorder trig's take played by a note, on both processors (coupled)"),
        ("flexplay", "FLEX buffers played by a ONESHOT track, on both processors (coupled)"),
@@ -560,7 +570,10 @@ def main() -> int:
                               ("smp_machine_commit", "SAMP kept across sample machines (ColdFire)"),
                               ("smp_knob_at", "FUNC + turn (ColdFire)"),
                               ("smp_pl_on", "per-project pools (ColdFire)"),
-                              ("jmp_on", "DIRECT JUMP (ColdFire)")):
+                              ("jmp_on", "DIRECT JUMP (ColdFire)"),
+                              ("tn_retune", "microtuning: KB SETUP's TUNE, the TUNING page, the frame's retune (ColdFire)"),
+                              ("tn_poll", "microtuning: each project's tuning record (ColdFire)"),
+                              ("slc_live_sends", "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)")):
                 if re.search(rf"\b{sym}\b", csrc_text) and sym not in lay:
                     gate(what, False, f"{sym} is in the C but not in the layout: the check cannot run")
             results["symbols"] = "PASS: every C-keyed check has its symbol in the layout"
@@ -851,8 +864,11 @@ def main() -> int:
         # drawing throughout (scripts/emu_waverider_menu.py, keys and knob as the panel)
         if "rec_overlay" in lay:
             ov, src = hex(lay["rec_overlay"]), hex(lay["rec_src"])
+            # v0.59: then C (MON) on and off, each time the next command's channel word read
+            mon, sch = hex(lay["rec_mon"]), hex(lay["rec_sent_chan"])
             steps = (f"wait:5,png:p0,mem:{ov}:4,press:17,wait:3,tap:49,wait:3,release:17,"
-                     f"wait:30,mem:{ov}:4,png:a1,spin:0:3,wait:5,mem:{src}:4,spin:0:9,wait:5,mem:{src}:4,png:a2,no,"
+                     f"wait:30,mem:{ov}:4,png:a1,spin:0:3,wait:5,mem:{src}:4,spin:0:9,wait:5,mem:{src}:4,png:a2,"
+                     f"spin:2:3,wait:10,mem:{mon}:4,mem:{sch}:4,png:m1,spin:2:-3,wait:10,mem:{mon}:4,mem:{sch}:4,no,"
                      f"wait:30,mem:{ov}:4,png:a3,wait:5,png:a4")
             js = work / "recorder.json"
             rec_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT,
@@ -866,14 +882,18 @@ def main() -> int:
                 if rc == 0 and js.exists():
                     r = json.loads(js.read_text())
                     m = r["memory"]
-                    seen = [int(m[k], 16) for k in (ov, f"{ov}@1", f"{ov}@4")]
+                    seen = [int(m[k], 16) for k in (ov, f"{ov}@1", f"{ov}@8")]
                     srcs = [int(m[k], 16) for k in (src, f"{src}@3")]     # v0.41: 3 detents, then 9 more
-                    shots = [pathlib.Path(r["screens"][n]).read_bytes() for n in ("p0", "a2", "a4")]
-                    good = (seen == [0, 1, 0] and srcs == [0, 3] and not r["setter_writes"]
-                            and r["screen_frames"] > 0 and shots[1] != shots[0] and shots[1] != shots[2])
-                    why = (f"overlay {seen}, src {srcs}, setter writes "
+                    mons = [int(m[k], 16) for k in (mon, f"{mon}@6")]      # v0.59: C on, then off
+                    chans = [int(m[k], 16) >> 30 & 1 for k in (sch, f"{sch}@7")]   # MON's bit in the next command
+                    shots = [pathlib.Path(r["screens"][n]).read_bytes() for n in ("p0", "a2", "a4", "m1")]
+                    good = (seen == [0, 1, 0] and srcs == [0, 3] and mons == [1, 0] and chans == [1, 0]
+                            and not r["setter_writes"] and r["screen_frames"] > 0
+                            and shots[1] != shots[0] and shots[1] != shots[2] and shots[3] != shots[1])
+                    why = (f"overlay {seen}, src {srcs}, MON {mons}, its bit sent {chans}, setter writes "
                            f"{len(r['setter_writes'])}, frames {r['screen_frames']}")
-                return good, ("FUNC+VOICE opens it, knob A moves SRC four detents a choice (3: none, 12: three; v0.41) with no write to the sound, NO closes it, "
+                return good, ("FUNC+VOICE opens it, knob A moves SRC four detents a choice (3: none, 12: three; v0.41) with no write to the sound, "
+                 "C turns MON on and off, the next command carrying it (v0.59), NO closes it, "
                  "the screen drawn throughout"
                               if good else why)
             later("recorder", "recorder screen (ColdFire)", "recorder screen (ColdFire)", [rec_cmd, sorted(EMU_ENV.items())], rec_body)
@@ -1126,8 +1146,8 @@ def main() -> int:
 
         # 6g. v0.25, GRID's ALLOCATE SLICE (YES on a GRID track's page): trigs placed on steps
         # 1, 3, 5 in GRID RECORDING; CREATE LINEAR LOCKS locks slices 1, 2, 3 on them (the
-        # stock's own lock calls, read back through its GET); RANDOM again, then NO puts
-        # back the linear ones
+        # stock's own lock calls, read back through its GET); RANDOM twice, then NO exits with
+        # RANDOM's locks kept (v0.60, impbox: as the DT2; NO used to put the linear ones back)
         if "slc_alloc_n" in lay:
             from dnfw.sampler import machines as SMx    # noqa: PLC0415
             sid = SMx.SLICE_REC
@@ -1135,7 +1155,7 @@ def main() -> int:
             get = ",".join(f"call:0x40037c52:0:{sid}:{k},wait:2" for k in (0, 2, 4))
             steps = (f"wait:3,poke:{kit + 52 + 0xDE:#x}:0c,wait:4,tap:2,wait:6,tap:19,wait:6,tap:25,wait:4,"
                      f"tap:27,wait:4,tap:29,wait:4,tap:19,wait:6,yes,wait:6,png:m,yes,wait:6,"
-                     f"mem:{lay['slc_alloc_n']:#x}:4,{get},yes,wait:6,down,wait:3,yes,wait:6,yes,wait:6,"
+                     f"mem:{lay['slc_alloc_n']:#x}:4,{get},yes,wait:6,down,wait:3,yes,wait:6,yes,wait:6,{get},"
                      f"no,wait:6,mem:{lay['slc_state']:#x}:4,{get}")
             # v0.42 (NiKo, v0.40): CREATE RANDOM LOCKS stays open after its YES; another track
             # (TRACK + [TRIG 2]) must close it, YES there must not open it again, and back on the
@@ -1164,7 +1184,10 @@ def main() -> int:
                     facts = {"three trigs locked": int(m[hex(lay["slc_alloc_n"])], 16) == 3,
                              "linear: slices 1, 2, 3": d0[:3] == [512, 1024, 1536],
                              "closed": sts[:1] == [0],
-                             "NO puts the locks back": d0[4:6] == [1024, 1536]}
+                             # v0.60 (impbox): NO exits and keeps RANDOM's locks, as the DT2 does
+                             "RANDOM changed the locks": d0[3:6] != [512, 1024, 1536],
+                             "RANDOM's locks are slices": all(v % 512 == 0 and 512 <= v <= 63 * 512 for v in d0[3:6]),
+                             "NO keeps RANDOM's locks": len(d0) >= 9 and d0[6:9] == d0[3:6]}
                     if letgo:
                         trk = [int(v, 16) for k, v in m.items() if k.split("@")[0] == "0x42431a6c"]
                         lgv = [int(v, 16) for k, v in m.items() if k.split("@")[0] == hex(lay["slc_letgo"])]
@@ -1178,8 +1201,8 @@ def main() -> int:
                                       "YES off the page opens nothing": sts[7:8] == [0]})
                     good = all(facts.values())
                     why = str(facts) + f" {d0} states {sts}"
-                return good, ("GRID's ALLOCATE SLICE: LINEAR locks slices 1..3 on three placed trigs; NO after "
-                              "RANDOM puts them back" + ("; v0.42: open RANDOM lets go on another track and on another "
+                return good, ("GRID's ALLOCATE SLICE: LINEAR locks slices 1..3 on three placed trigs; RANDOM "
+                              "changes them and NO exits keeping them" + ("; v0.42: open RANDOM lets go on another track and on another "
                               "page, and YES there opens nothing" if letgo else "") if good else why)
             later("alloc", "GRID allocate slice locks (ColdFire)", "GRID allocate slice locks (ColdFire)", [al_cmd, sorted(EMU_ENV.items())], al_body)
 
@@ -2186,10 +2209,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2326,10 +2349,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2463,10 +2486,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2537,7 +2560,9 @@ def main() -> int:
             tyg = snd0 + 0xDE
             tb0 = 0x4121898C + 97872                     # pattern 0's lock table (6i2's)
             recs = 0x401F7F94
-            hard, dust = FSg.SLOTS["TUNE"][1], FSg.SLOTS["LFO1"][1]
+            # v0.12: page 1 is the PATCH screen (the grid, the controls as text): the locks are on
+            # page 2's cells, S1A and S2A (knobs A and C there)
+            hard, dust = FSg.SLOTS["S1A"][1], FSg.SLOTS["S2A"][1]
             lk_hard, lk_dust = 0x7F00, 0x7F00
             cm = lay["smp_machine_commit"]
             gs = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10", "png:wt",
@@ -2549,7 +2574,7 @@ def main() -> int:
             gs += ["no", "wait:10", "png:p0"]
             for k in range(1, npg):
                 gs += ["tap:2", "wait:10", f"png:p{k}"]
-            gs += ["tap:2", "wait:10", "png:r0"]
+            gs += ["tap:2", "wait:10", "png:r0", "tap:2", "wait:10", "png:r0b"]
             # (as stock p-locks: RECORD on (grid recording), a trig placed on step 1, the locks
             # written into the playing pattern's table, then [TRIG 1] held; emu_slides' way)
             gs += ["tap:19", "wait:10", "tap:25", "wait:10", "mem:0x42c5a9a0:4",
@@ -2591,10 +2616,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2602,8 +2627,8 @@ def main() -> int:
                     want = [FSg.default_words()[c] for c in FSg.CONTROLS]
                     types = m.get("types@0") or [None]
                     flip = [float((cell(shots["l0"], i) != cell(shots["r1"], i)).mean()) for i in range(8)]
-                    page = FSg.CONTROLS[:8]
-                    locked = {page.index("TUNE"), page.index("LFO1")}
+                    page = FSg.CONTROLS[8:16]
+                    locked = {page.index("S1A"), page.index("S2A")}
                     vals = [int(m[k], 16) for k in keys[len(FSg.CONTROLS):]]
                     nn = len(named) + len(FSg.UNUSED_RECORDS)
                     short_p, long_p = vals[:nn], vals[nn:nn + len(named)]
@@ -2625,10 +2650,11 @@ def main() -> int:
                         f"{npg} pages, each its own, none the stock grid":
                         len({shots[f"p{k}"].tobytes() for k in range(npg)}) == npg
                         and not any((shots[f"p{k}"] == shots["wt"]).all() for k in range(npg)),
-                        "the last page key comes back to the first page's cells":
-                        all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
+                        "the last page key comes back to the first page (the PATCH screen, v0.12), then page 2's cells":
+                        bool((shots["r0"][10 * sc:] == shots["p0"][10 * sc:]).all())   # (below the header)
+                        and all((cell(shots["r0b"], i) == cell(shots["p1"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
-                        "[TRIG 1] held: TUNE's and LFO1's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held: S1A's and S2A's cells (page 2) inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
                         "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
                             int(m.get(kc, "0") or "0", 16) == 3
                             and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
@@ -2650,22 +2676,110 @@ def main() -> int:
                            f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
                 return good, ("LIGATURE (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
                               "v0.14's: the real list is not driven here); its "
-                              f"{npg} pages drawn, each its own (labels, knobs, PATCH's box); p-locked TUNE and LFO1 lit "
+                              f"{npg} pages drawn, each its own (page 1 the PATCH screen, v0.12; labels, knobs); p-locked S1A and S2A lit "
                               f"as stock lights a lock, nothing else; SYN held shows values; its {len(FSg.CONTROLS)} records "
                               "named and offered to the LFOs, the unused ones named - "
                               "and left out" if good else why)
             later("ligature", "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)",
                   "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
 
-        # 6f5. RIFT: RESONATOR (type 22, dnfw.reson.machines): LIGATURE's step on RESONATOR's table
+        # 6f4b. RIFT v0.12: LIGATURE's PATCH screen (csrc/sampler/lig.c; owner, 2026-11-19: "just fix the
+        # ligature ui so its usable"): YES on page 1 opens EDIT over it; the knobs edit the wiring PATCH
+        # plays (B the type, H the output), RIGHT moves to the next block, YES the BLOCK view and back,
+        # FUNC + NO empties the block, NO leaves: the edits are in lig.c's table (the DSP's words), the
+        # project's list is asked for, and the grid and page 2's names show them
+        if "lig_state" in lay and "smp_machine_commit" in lay:
+            from dnfw.ligature import machines as LGm, wire as LGw   # noqa: PLC0415
+            from dnfw.sampler import machines as SMg   # noqa: PLC0415
+            kit = 0x4210C08C
+            snd0 = kit + 52
+            tyg = snd0 + 0xDE
+            cm = lay["smp_machine_commit"]
+            wram0 = SMg.MIRROR + 0x218000 + 4 * LGw.WHDR        # slot 0 (PATCH's default)
+            ls = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10",
+                  f"poke:{tyg:#x}:08", f"poke:{snd0 + 20 + 2 * 43:#x}:0500", "wait:4", "tap:2", "wait:6",
+                  "func-src", "wait:20", "down", "wait:4", "yes", "wait:20",
+                  f"call:{cm:#x}:arg1@{cm:#x}:0:{LGm.TYPE}:arg4@{cm:#x}:arg5@{cm:#x}", "wait:10", "types",
+                  "no", "wait:10", "png:p0", "tap:2", "wait:10", "png:q0", "tap:2", "wait:6", "tap:2", "wait:6",
+                  "tap:2", "wait:10", "png:p0b",
+                  f"mem:{wram0:#x}:100",                                   # 0: the wiring before
+                  "yes", "wait:10", "png:e0", f"mem:{lay['lig_state']:#x}:4",   # 1
+                  "spin:1:1", "wait:10", "png:e1", f"mem:{wram0:#x}:100",   # 2: B (TYP) one on
+                  "right", "wait:6", f"mem:{lay['lig_blk']:#x}:4",          # 3
+                  "spin:7:1", "wait:10", f"mem:{wram0:#x}:100",             # 4: H (OUT) one on
+                  "yes", "wait:10", "png:b0", f"mem:{lay['lig_state']:#x}:4",   # 5
+                  "yes", "wait:6", f"mem:{lay['lig_state']:#x}:4",         # 6
+                  "press:17", "wait:4", "no", "wait:6", "release:17", "wait:6",
+                  f"mem:{wram0:#x}:100", f"mem:{lay['lig_state']:#x}:4",   # 7, 8: FUNC + NO
+                  "no", "wait:10", "png:x0", f"mem:{lay['lig_state']:#x}:4",    # 9
+                  f"mem:{lay['lig_saves']:#x}:4", f"mem:{lay['lig_edits']:#x}:4",   # 10, 11
+                  "tap:2", "wait:10", "png:q1"]
+            ljs, lsf = work / "ligedit.json", work / "ligedit.steps"
+            lsf.write_text(",".join(ls))
+            l_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                     "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{lsf}", "--png-dir", work / "ligedit",
+                     "--json", ljs]
+
+            def l_body(tdir):
+                rc, out = run("ligedit", l_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and ljs.exists():
+                    import numpy as np                     # noqa: PLC0415
+                    from PIL import Image                  # noqa: PLC0415
+                    r = json.loads(ljs.read_text())
+                    mv = [bytes.fromhex(v) for k, v in r["memory"].items() if not k.startswith("types")]
+                    shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
+
+                    def words(b):
+                        return list(struct.unpack("<25I", b))
+
+                    def be(b):
+                        return struct.unpack(">i", b)[0]
+                    w0, w2, w4, w7 = words(mv[0]), words(mv[2]), words(mv[4]), words(mv[7])
+                    tl = list(LGw.TYPES)
+                    t0 = w0[0] & 0xFF
+                    want_t = tl[tl.index(t0) + 1] if t0 in tl and tl.index(t0) + 1 < len(tl) else t0
+                    differ = lambda x, y: float((shots[x] != shots[y]).mean())   # noqa: E731
+                    facts = {
+                        "slot 0 holds the factory INIT (lig.c's seed)": w0 == LGw.factory()[0],
+                        "the page keys come back to page 1 (below the header)":
+                            bool((shots["p0"][10 * (shots["p0"].shape[1] // 128):] == shots["p0b"][10 * (shots["p0"].shape[1] // 128):]).all()),
+                        "YES on page 1: EDIT (lig_state 1), the selected tile inverted": be(mv[1]) == 1 and differ("e0", "p0") > 0.002,
+                        "B turned one detent: block 1's type the next in the palette, nothing else":
+                            (w2[0] & 0xFF) == want_t and want_t != t0 and w2[0] >> 8 == w0[0] >> 8 and w2[1:] == w0[1:],
+                        "RIGHT: block 2 selected": be(mv[3]) == 1,
+                        "H turned one detent: OUT one on (block 2's), nothing else":
+                            (w4[24] & 0xFF) == (w2[24] & 0xFF) + 1 and w4[:24] == w2[:24],
+                        "YES: the BLOCK view (lig_state 2), its own screen; YES again: EDIT": be(mv[5]) == 2 and be(mv[6]) == 1
+                            and differ("b0", "e1") > 0.01,
+                        "FUNC + NO: block 2 empty (its two words 0, its B MOVES bit off), EDIT stays":
+                            w7[2] == 0 and w7[3] == 0 and not (w7[24] >> 9) & 1 and w7[:2] == w4[:2] and be(mv[8]) == 1,
+                        "NO: EDIT closes (lig_state 0); the grid shows the edited wiring": be(mv[9]) == 0 and differ("x0", "p0") > 0.002,
+                        "the project's list asked for (lig_saves), three edits counted": be(mv[10]) >= 1 and be(mv[11]) == 3,
+                        "page 2's knobs named by the new wiring (block 1's type, block 2 empty)": differ("q1", "q0") > 0.002,
+                        "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),
+                    }
+                    good = all(facts.values())
+                    why = (json.dumps({k: v for k, v in facts.items() if not v}) + f" w0={[hex(x) for x in w0[:4]]} "
+                           f"w2={[hex(x) for x in w2[:4]]} last={[hex(w[24]) for w in (w0, w2, w4, w7)]} "
+                           f"states={[be(mv[i]) for i in (1, 3, 5, 6, 8, 9, 10, 11)]}")[:1500]
+                return good, ("LIGATURE's PATCH screen: YES opens EDIT, B and H edit block 1's type and the output, "
+                              "RIGHT moves, YES shows the BLOCK view and back, FUNC + NO empties a block, NO leaves; "
+                              "the table holds exactly those edits, the list is asked for, the grid and page 2's names "
+                              "follow" if good else why)
+            later("ligedit", "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)",
+                  "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)",
+                  [l_cmd, sorted(EMU_ENV.items())], l_body)
+
+        # 6f5. RIFT: DIGIDRUM (type 22, dnfw.digidrum.machines): LIGATURE's step on DIGIDRUM's table
         if "smp_machine_commit" in lay and "wr_lfo_mask" in lay:
-            from dnfw.reson import machines as FSg       # noqa: PLC0415  (RIFT: RESONATOR, as LIGATURE's step)
+            from dnfw.digidrum import machines as FSg       # noqa: PLC0415  (RIFT: DIGIDRUM, as LIGATURE's step)
             kit = 0x4210C08C
             snd0 = kit + 52
             tyg = snd0 + 0xDE
             tb0 = 0x4121898C + 97872                     # pattern 0's lock table (6i2's)
             recs = 0x401F7F94
-            hard, dust = FSg.SLOTS["LEV"][1], FSg.SLOTS["BRIT"][1]
+            hard, dust = FSg.SLOTS["TUNE"][1], FSg.SLOTS["DEC"][1]
             lk_hard, lk_dust = 0x7F00, 0x7F00
             cm = lay["smp_machine_commit"]
             gs = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10", "png:wt",
@@ -2702,14 +2816,14 @@ def main() -> int:
             gs += ["wait:4", "press:16", "wait:4", "press:17", "wait:4", "tap:20", "wait:10", "release:17",
                    "wait:4", "release:16", "wait:30", "png:cleared"]
             gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in FSg.CONTROLS]
-            gjs, gsf = work / "reson.json", work / "reson.steps"
+            gjs, gsf = work / "digidrum.json", work / "digidrum.steps"
             gsf.write_text(",".join(gs))
             g_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
-                     "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{gsf}", "--png-dir", work / "reson",
+                     "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{gsf}", "--png-dir", work / "digidrum",
                      "--json", gjs]
 
             def g_body(tdir):
-                rc, out = run("reson", g_cmd, logs, env=EMU_ENV, trace=tdir)
+                rc, out = run("digidrum", g_cmd, logs, env=EMU_ENV, trace=tdir)
                 why, good = out[-800:], False
                 if rc == 0 and gjs.exists():
                     import numpy as np                     # noqa: PLC0415
@@ -2719,10 +2833,10 @@ def main() -> int:
                     shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
                     sc = shots["p0"].shape[1] // 128
 
-                    def cell(img, i):                      # cell i's area (smp_page.c: x - 1..x + 24, y - 8..y + 19)
-                        x0 = 20 + 26 * (i & 3)             # screen rows (y down): the top row's canvas 53..26,
-                        y0, h = (10, 28) if i < 4 else (38, 26)   # the bottom row's 25..0 (its own, unshared)
-                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 26) * sc]
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
                     kc = f"{lay['smp_knob_code']:#x}"
                     keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
                     words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
@@ -2731,7 +2845,7 @@ def main() -> int:
                     types = m.get("types@0") or [None]
                     flip = [float((cell(shots["l0"], i) != cell(shots["r1"], i)).mean()) for i in range(8)]
                     page = FSg.CONTROLS[:8]
-                    locked = {page.index("LEV"), page.index("BRIT")}
+                    locked = {page.index("TUNE"), page.index("DEC")}
                     vals = [int(m[k], 16) for k in keys[len(FSg.CONTROLS):]]
                     nn = len(named) + len(FSg.UNUSED_RECORDS)
                     short_p, long_p = vals[:nn], vals[nn:nn + len(named)]
@@ -2748,7 +2862,7 @@ def main() -> int:
                     masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
                     cleared = [int(m[k], 16) for k in keys[-len(FSg.CONTROLS):]]   # after TRK + CLEAR
                     facts = {
-                        "MACHINE SEL's commit to RESONATOR: track 1 is RESONATOR": types[0] == FSg.TYPE,
+                        "MACHINE SEL's commit to DIGIDRUM: track 1 is DIGIDRUM": types[0] == FSg.TYPE,
                         f"its {len(FSg.CONTROLS)} controls at its model's DEFAULTS": words == want,
                         f"{npg} pages, each its own, none the stock grid":
                         len({shots[f"p{k}"].tobytes() for k in range(npg)}) == npg
@@ -2756,7 +2870,7 @@ def main() -> int:
                         "the last page key comes back to the first page's cells":
                         all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
                         "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
-                        "[TRIG 1] held: LEV's and BRIT's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held: TUNE's and DEC's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
                         "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
                             int(m.get(kc, "0") or "0", 16) == 3
                             and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
@@ -2776,14 +2890,142 @@ def main() -> int:
                     good = all(facts.values())
                     why = (json.dumps({k: v for k, v in facts.items() if not v}) + f" types={types[:2]} words="
                            f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
-                return good, ("RESONATOR (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
+                return good, ("DIGIDRUM (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
                               "v0.14's: the real list is not driven here); its "
-                              f"{npg} pages drawn, each its own (labels, knobs); p-locked LEV and BRIT lit "
+                              f"{npg} pages drawn, each its own (labels, knobs); p-locked TUNE and DEC lit "
                               f"as stock lights a lock, nothing else; SYN held shows values; its {len(FSg.CONTROLS)} records "
                               "named and offered to the LFOs, the unused ones named - "
                               "and left out" if good else why)
-            later("reson", "RESONATOR: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)",
-                  "RESONATOR: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
+            later("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)",
+                  "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
+
+        # 6f6. RIFT: THOLET (type 23, dnfw.tholet.machines): DIGIDRUM's step on THOLET's table
+        if "smp_machine_commit" in lay and "wr_lfo_mask" in lay:
+            from dnfw.tholet import machines as FSg       # noqa: PLC0415  (RIFT: THOLET, as LIGATURE's step)
+            kit = 0x4210C08C
+            snd0 = kit + 52
+            tyg = snd0 + 0xDE
+            tb0 = 0x4121898C + 97872                     # pattern 0's lock table (6i2's)
+            recs = 0x401F7F94
+            hard, dust = FSg.SLOTS["TUNE"][1], FSg.SLOTS["DEC"][1]
+            lk_hard, lk_dust = 0x7F00, 0x7F00
+            cm = lay["smp_machine_commit"]
+            gs = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10", "png:wt",
+                  f"poke:{tyg:#x}:08", f"poke:{snd0 + 20 + 2 * 43:#x}:0500", "wait:4", "tap:2", "wait:6",
+                  "func-src", "wait:20", "down", "wait:4", "yes", "wait:20",
+                  f"call:{cm:#x}:arg1@{cm:#x}:0:{FSg.TYPE}:arg4@{cm:#x}:arg5@{cm:#x}", "wait:10", "types"]
+            gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in FSg.CONTROLS]
+            npg = len(FSg.PAGES)                         # RIFT: THOLET's two
+            gs += ["no", "wait:10", "png:p0"]
+            for k in range(1, npg):
+                gs += ["tap:2", "wait:10", f"png:p{k}"]
+            gs += ["tap:2", "wait:10", "png:r0"]
+            # (as stock p-locks: RECORD on (grid recording), a trig placed on step 1, the locks
+            # written into the playing pattern's table, then [TRIG 1] held; emu_slides' way)
+            gs += ["tap:19", "wait:10", "tap:25", "wait:10", "mem:0x42c5a9a0:4",
+                   f"poke:{tb0 + 20640:#x}:" + "ff" * (101 * 16),
+                   f"poke:{tb0 + 258 * 78:#x}:{hard:02x}00{lk_hard:04x}" + "ffff" * 127,
+                   f"poke:{tb0 + 258 * 79:#x}:{dust:02x}00{lk_dust:04x}" + "ffff" * 127,
+                   f"poke:{tb0 + 20640 + hard:#x}:4e", f"poke:{tb0 + 20640 + dust:#x}:4f",
+                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0",
+                   # RIFT v0.7 (owner, 2026-11-17): with the locked trig held, knob C turned shows
+                   # its value in its cell, as stock does (smp_page.c smp_value_shows)
+                   "spin:2:1", "wait:10", "png:k0", f"mem:{lay['smp_knob_code']:#x}:4", "release:25", "wait:10",
+                   "tap:19", "wait:10", "png:r2", "press:2", "wait:30", "png:v0", "release:2", "wait:10"]
+            named = [FSg.SLOTS[c][0] for c in FSg.CONTROLS]
+            gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named + list(FSg.UNUSED_RECORDS)]
+            gs += [f"mem:{recs + 60 * r + 0x28:#x}:4" for r in named]
+            gs += [f"call:{lay['wr_lfo_mask']:#x}:{r}" for r in named + list(FSg.UNUSED_RECORDS)]
+            # RIFT v0.4: TRK + CLEAR (hooks.S fsc_clear_hook): every control's word moved off its
+            # default, then [TRK] held with [FUNC] + [PLAY] (CLEAR): the machine's defaults come back
+            # (stock's would leave WaveTone's and FM Tone's; no clear would leave the moved words)
+            dwm = FSg.default_words()
+            gs += [f"poke:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:{(dwm[c] ^ 0x1000) & 0xFFFF:04x}" for c in FSg.CONTROLS]
+            gs += ["wait:4", "press:16", "wait:4", "press:17", "wait:4", "tap:20", "wait:10", "release:17",
+                   "wait:4", "release:16", "wait:30", "png:cleared"]
+            gs += [f"mem:{snd0 + 20 + 2 * FSg.SLOTS[c][1]:#x}:2" for c in FSg.CONTROLS]
+            gjs, gsf = work / "tholet.json", work / "tholet.steps"
+            gsf.write_text(",".join(gs))
+            g_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                     "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{gsf}", "--png-dir", work / "tholet",
+                     "--json", gjs]
+
+            def g_body(tdir):
+                rc, out = run("tholet", g_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and gjs.exists():
+                    import numpy as np                     # noqa: PLC0415
+                    from PIL import Image                  # noqa: PLC0415
+                    r = json.loads(gjs.read_text())
+                    m = r["memory"]
+                    shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
+                    sc = shots["p0"].shape[1] // 128
+
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
+                    kc = f"{lay['smp_knob_code']:#x}"
+                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
+                    words = [int(m[k], 16) for k in keys[:len(FSg.CONTROLS)]]
+                    playing = int(m.get("0x42c5a9a0", "0") or "0", 16)
+                    want = [FSg.default_words()[c] for c in FSg.CONTROLS]
+                    types = m.get("types@0") or [None]
+                    flip = [float((cell(shots["l0"], i) != cell(shots["r1"], i)).mean()) for i in range(8)]
+                    page = FSg.CONTROLS[:8]
+                    locked = {page.index("TUNE"), page.index("DEC")}
+                    vals = [int(m[k], 16) for k in keys[len(FSg.CONTROLS):]]
+                    nn = len(named) + len(FSg.UNUSED_RECORDS)
+                    short_p, long_p = vals[:nn], vals[nn:nn + len(named)]
+                    blobs = list(platform.runtime(sec3))
+
+                    def cstr(ptr):
+                        for va, blob in blobs:
+                            if va <= ptr < va + len(blob):
+                                end = blob.index(b"\0", ptr - va)
+                                return blob[ptr - va:end].decode("ascii", "replace")
+                        return f"<{ptr:#x}: not ours>"
+                    shorts = [cstr(x) for x in short_p]
+                    longs = [cstr(x) for x in long_p]
+                    masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
+                    cleared = [int(m[k], 16) for k in keys[-len(FSg.CONTROLS):]]   # after TRK + CLEAR
+                    facts = {
+                        "MACHINE SEL's commit to THOLET: track 1 is THOLET": types[0] == FSg.TYPE,
+                        f"its {len(FSg.CONTROLS)} controls at its model's DEFAULTS": words == want,
+                        f"{npg} pages, each its own, none the stock grid":
+                        len({shots[f"p{k}"].tobytes() for k in range(npg)}) == npg
+                        and not any((shots[f"p{k}"] == shots["wt"]).all() for k in range(npg)),
+                        "the last page key comes back to the first page's cells":
+                        all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
+                        "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
+                        "[TRIG 1] held: TUNE's and DEC's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
+                            int(m.get(kc, "0") or "0", 16) == 3
+                            and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
+                            and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
+                        "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
+                        "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
+                        "the LFO list names each control (short)": shorts[:len(named)] == [FSg.LABELS[c] for c in FSg.CONTROLS],
+                        "... and long": longs == [FSg.LONG_NAMES[c] for c in FSg.CONTROLS],
+                        "... and its unused records -": all(x == "-" for x in shorts[len(named):]),
+                        "every control an LFO destination": len(masks) == nn and all((x != 0) == (c not in FSg.NO_LFO)
+                                                                for c, x in zip(FSg.CONTROLS, masks[:len(named)])),
+                        "... the unused records left out": all(x == 0 for x in masks[len(named):]),
+                        "TRK + CLEAR: every control back at its machine's defaults (RIFT v0.4), not stock's":
+                            cleared == want,
+                        "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),
+                    }
+                    good = all(facts.values())
+                    why = (json.dumps({k: v for k, v in facts.items() if not v}) + f" types={types[:2]} words="
+                           f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
+                return good, ("THOLET (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
+                              "v0.14's: the real list is not driven here); its "
+                              f"{npg} pages drawn, each its own (labels, knobs); p-locked TUNE and DEC lit "
+                              f"as stock lights a lock, nothing else; SYN held shows values; its {len(FSg.CONTROLS)} records "
+                              "named and offered to the LFOs, the unused ones named - "
+                              "and left out" if good else why)
+            later("tholet", "THOLET: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)",
+                  "THOLET: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
 
         # 6p. v0.33: our overlays let go when the page under them goes (docs/freeze-hunt.md).
         # The sample list opened on track 1 (a SAMP turn), then TRK + [TRIG 2] to track 2, a
@@ -3143,6 +3385,242 @@ def main() -> int:
                           "RECORD twice leaves it off")
         later("kbrec", "KEYBOARD kept through grid recording (ColdFire)",
               "KEYBOARD kept through grid recording (ColdFire)", [kb_cmd, sorted(EMU_ENV.items())], kb_body)
+
+        # v0.64 KEYBOARD HOLD (docs/kbhold.md; csrc/sampler/rec.c smp_ui_pop, jump.c): PTN held +
+        # KEYBOARD turns HOLD on and off: stock's own sustain (MIDI CC 64's 0x40126d4a) on all 16
+        # tracks. The screens first (after the harness's own ISR entry, frame:, the panel's
+        # picture stops following the UI: measured): KB HOLD ON / OFF on the PTN view's line
+        # (10 waits after the tap: measured), the PTN view up while PTN is held and closed at its
+        # release (left open, the next [TRIG] picked a pattern: measured), KEYBOARD left on,
+        # DIRECT JUMP's setting untouched. Then the ISR's frame (bytes 0x22..0x25: the trig and
+        # release masks): [TRIG 1] held BEFORE HOLD comes on, let go after: no release (a note
+        # already playing is latched); [TRIG 5] played and let go: held too; MIDI in: a note-off
+        # on channel 1 (track 1's), through stock's MIDI note-off entry 0x40121aae, is kept in
+        # track 1's sustain list; HOLD off: both voices released, every sustain off, every list
+        # empty. Negative controls: HOLD off, a MIDI note-off is not kept and [TRIG 1] let go is
+        # released at once
+        if "kh_on" in lay:
+            HL = {n: lay[n] for n in ("kh_on", "kh_close", "jmp_on", "wr_screen_obj")}
+            SUS, LISTS, MSG = 0x445FE6E0, 0x445FE6F0, 0x46A08000
+            hw = f"walk:{HL['wr_screen_obj']:#x}"
+            combo = ["press:23", "wait:10", "tap:18", "wait:10", "release:23", "wait:10"]
+            midi = [f"poke:{MSG:#x}:803c40", f"call:0x40121aae:{MSG:#x}", f"mem:{LISTS:#x}:8"]
+            state = [f"mem:{HL['kh_on']:#x}:4", f"mem:{SUS:#x}:16"]
+            hs = ["wait:6", "tap:18", "wait:6", f"mem:{HL['jmp_on']:#x}:4", "png:before",
+                  "press:23", "wait:10", hw, "tap:18", "wait:10", "png:holdon", "release:23", "wait:10", hw,
+                  "press:23", "wait:10", hw, "tap:18", "wait:10", "png:holdoff", "release:23", "wait:10", hw,
+                  "press:25", "wait:4", "frame:p1", *combo, *state,
+                  "release:25", "wait:4", "frame:r1",
+                  "press:29", "wait:4", "frame:p5", "release:29", "wait:4", "frame:r5", *midi,
+                  *combo, "frame:off", *state, f"mem:{LISTS:#x}:128", *midi,
+                  "press:25", "wait:4", "frame:q1", "release:25", "wait:4", "frame:qr1",
+                  f"mem:{HL['kh_close']:#x}:4", f"mem:{HL['jmp_on']:#x}:4", "mem:0x42431a99:4"]
+            kh_js = work / "kbhold.json"
+            kh_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", ",".join(hs), "--png-dir", work / "kbhold", "--json", kh_js]
+
+            def kh_body(tdir):
+                rc, out = run("keyboard hold", kh_cmd, logs, env=EMU_ENV, trace=tdir)
+                if rc != 0 or not kh_js.exists():
+                    return False, out[-900:]
+                r = json.loads(kh_js.read_text())
+                mem = list(r["memory"].items())
+                walks = [v for k, v in mem if k.startswith("walk")]
+                v = [bytes.fromhex(x) for k, x in mem if not k.startswith("walk")]
+                if len(v) != 11:
+                    return False, f"{len(v)} memory reads, wanted 11"
+                u = lambda b: int.from_bytes(b, "big")                  # noqa: E731
+                fr = {}
+                for f in ("p1", "r1", "p5", "r5", "off", "q1", "qr1"):
+                    b = pathlib.Path(r["frames"][f]["file"]).read_bytes()
+                    fr[f] = struct.unpack(">2H", b[0x22:0x26])            # (trig, release)
+                shots = {n: pathlib.Path(r["screens"][n]).read_bytes() if n in r["screens"] else b""
+                         for n in ("before", "holdon", "holdoff")}
+                ptn = "402008c4"
+                t1, t5, tq = fr["p1"][0], fr["p5"][0], fr["q1"][0]
+                facts = {
+                    "PTN + KEYBOARD: the PTN view up while PTN is held, closed at its release, both times":
+                        len(walks) == 4 and ptn in walks[0] and ptn not in walks[1] and ptn in walks[2]
+                        and ptn not in walks[3],
+                    "KB HOLD ON / OFF on the PTN view's line (each screen its own)":
+                        all(shots.values()) and len(set(shots.values())) == 3,
+                    "HOLD on: stock's sustain on all 16 tracks": u(v[1]) == 1 and v[2] == b"\x01" * 16,
+                    "a note already held when HOLD came on is latched when let go":
+                        t1 and fr["p1"][1] == 0 and fr["r1"] == (0, 0),
+                    "a note played while HOLD is on is held too": t5 and t5 != t1 and fr["r5"] == (0, 0),
+                    "MIDI in: a note-off on track 1's channel is kept in its sustain list": u(v[3][:4]) != 0,
+                    "HOLD off: every held voice released, every sustain off, every list empty":
+                        fr["off"] == (0, t1 | t5) and u(v[4]) == 0 and v[5] == bytes(16) and v[6] == bytes(128),
+                    "negative control: HOLD off, a MIDI note-off is not kept": u(v[7][:4]) == 0,
+                    "negative control: HOLD off, a key let go is released at once":
+                        tq and fr["q1"][1] == 0 and fr["qr1"] == (0, tq),
+                    "KEYBOARD left on; DIRECT JUMP's setting untouched; nothing pending":
+                        u(v[10]) == 1 and v[9] == v[0] and u(v[8]) == 0,
+                }
+                good = all(facts.values())
+                return good, ("PTN + KEYBOARD turns stock's sustain on and off on every track (KEYBOARD and DIRECT "
+                              "JUMP untouched, the PTN view closed, the message shown); a note already held is "
+                              "latched, a new one held, a MIDI note-off kept; HOLD off releases all; off, keys and "
+                              "MIDI release as stock's" if good else
+                              json.dumps({k: x for k, x in facts.items() if not x}) + f" frames={fr} "
+                              f"mem={[x.hex()[:40] for x in v]} walks={walks}")
+            later("kbhold", "KEYBOARD HOLD: PTN + KEYBOARD, held notes, chords, release (ColdFire)",
+                  "KEYBOARD HOLD: PTN + KEYBOARD, held notes, chords, release (ColdFire)",
+                  [kh_cmd, sorted(EMU_ENV.items())], kh_body)
+
+        # v0.61: microtuning (csrc/sampler/tune.c, docs/microtuning.md). The frame: tn_retune on 16
+        # voices (voice 15 of no track), POOLE ROD12 at ROOT D with every track tuned but track 4:
+        # each tuned voice its pitch class's offset, track 4's and voice 15's NOTE words as they
+        # were (the negative controls), and 12-TET on every track: nothing moved. The UI: KB SETUP
+        # (FUNC + KEYBOARD) draws TUNE in its empty H slot; H turned tunes this track (JUST MAJOR,
+        # then JUST MINOR), pushed opens TUNING; A, B, C, D there; YES on a factory tuning stays,
+        # on USER 8 opens EDIT, whose B moves the note's cents; NO, NO closes; FUNC + YES copies
+        # FROM in. And on the main page (KB SETUP closed) H and its push are stock's: nothing of
+        # ours moves (the negative control)
+        if "tn_retune" in lay:
+            from dnfw.waverider import tunings as TUg     # noqa: PLC0415
+            L = {n: lay[n] for n in ("tn_retune", "tn_set", "tn_mask", "tn_cur", "tn_root", "tn_ui", "tn_user", "tn_opens")}
+            scratch, vt_va = 0x46A08000, 0x80005308
+            vtrack = "".join(f"{v if v < 15 else 0xFF:08x}" for v in range(16))
+            words = [((60 + v) << 8) | 0x10 for v in range(16)]
+            nw = "0000" + "".join(f"{w:04x}" for w in words)
+            M = lambda n, k=4: f"mem:{L[n]:#x}:{k}"                       # noqa: E731
+            ts = ["wait:3", f"poke:{vt_va:#x}:{vtrack}"]
+            from dnfw.sampler import machines as SMt     # noqa: PLC0415
+            ty5 = 0x4210C08C + 52 + 1163 * 5 + 0xDE      # track 6's machine (the snapshot's kit)
+            for tun, mask in ((9, 0xFFFF & ~(1 << 3)), (0, 0xFFFF)):
+                ts += [f"call:{L['tn_set']:#x}:{tun}:2:{mask}", f"poke:{scratch:#x}:{nw}",
+                       f"call:{L['tn_retune']:#x}:{scratch:#x}", f"mem:{scratch:#x}:34"]
+            # track 6 made a SLICE track: its voice never retuned (the note picks the slice)
+            ts += [f"mem:{ty5:#x}:1", f"poke:{ty5:#x}:{SMt.TYPE_OF['SLICE']:02x}",
+                   f"call:{L['tn_set']:#x}:9:2:{0xFFFF & ~(1 << 3)}", f"poke:{scratch:#x}:{nw}",
+                   f"call:{L['tn_retune']:#x}:{scratch:#x}", f"mem:{scratch:#x}:34"]
+            ts += [f"call:{L['tn_set']:#x}:0:0:0"]
+            # the negative control first: the main page, H turned and pushed
+            ts += ["spin:7:4", "wait:3", "tap:48", "wait:3", M("tn_mask"), M("tn_ui"), "png:main_h"]
+            ts += ["press:17", "tap:18", "release:17", "wait:6", "png:kb0",
+                   "spin:7:2", "wait:3", M("tn_mask"), M("tn_cur"), "png:kb1",
+                   "spin:7:2", "wait:3", M("tn_cur"),
+                   "tap:48", "wait:3", M("tn_ui"), "png:tuning",
+                   "spin:1:3", "wait:2", "spin:3:2", "wait:2", M("tn_root"), M("tn_mask"),
+                   "tap:10", "wait:2", M("tn_ui"),
+                   "spin:0:30", "wait:2", M("tn_cur"), "tap:10", "wait:2", M("tn_ui"), "png:edit",
+                   "spin:1:4", "wait:2", M("tn_user", 192),
+                   "spin:3:9", "wait:2", "press:17", "tap:10", "release:17", "wait:2", M("tn_user", 192), "png:edit2",
+                   "tap:12", "wait:2", M("tn_ui"), "tap:12", "wait:3", M("tn_ui"), "png:closed"]
+            tu_js = work / "tune.json"
+            tu_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", ",".join(ts), "--png-dir", work / "tune", "--json", tu_js]
+
+            def tu_body(tdir):
+                rc, out = run("microtuning", tu_cmd, logs, env=EMU_ENV, trace=tdir)
+                if rc != 0 or not tu_js.exists():
+                    return False, out[-900:]
+                r = json.loads(tu_js.read_text())
+                mem = r["memory"]
+
+                def seq(addr):
+                    a_ = hex(addr)
+                    ks = sorted((k for k in mem if k == a_ or k.startswith(a_ + "@")),
+                                key=lambda k: int(k.split("@")[1]) if "@" in k else -1)
+                    return [bytes.fromhex(mem[k]) for k in ks]
+                frames = [list(struct.unpack(">17H", b))[1:] for b in seq(scratch)]
+                i32s = {n: [struct.unpack(">i", b)[0] for b in seq(L[n])] for n in ("tn_mask", "tn_cur", "tn_root", "tn_ui")}
+                users = [list(struct.unpack(">96h", b)) for b in seq(L["tn_user"])]
+                pr = TUg.tenths(TUg.FACTORY[9][2])
+
+                def want(skip):
+                    o = []
+                    for v, w in enumerate(words):
+                        pc = ((w >> 8) - 2) % 12
+                        n = pr[pc] * 256
+                        f = (n + 500) // 1000 if n >= 0 else -((-n + 500) // 1000)
+                        o.append(w if v == 15 or v in skip else max(0, min(0x7FFF, w + f)))
+                    return o
+                shots = {n: pathlib.Path(r["screens"][n]).read_bytes() if n in r["screens"] else b""
+                         for n in ("main_h", "kb0", "kb1", "tuning", "edit", "edit2", "closed")}
+                mk, cu, ui = i32s["tn_mask"], i32s["tn_cur"], i32s["tn_ui"]
+                u8 = TUg.USER_SLOTS - 1                # USER 8
+                facts = {
+                    "POOLE ROD12 at ROOT D: each tuned voice its offset; track 4's and voice 15's as they were":
+                        len(frames) == 3 and frames[0] == want({3}) and frames[0] != words,
+                    "12-TET on every track: no NOTE word moved": len(frames) == 3 and frames[1] == words,
+                    "a SLICE track's voice never retuned; the others as before":
+                        len(frames) == 3 and frames[2] == [w if v == 5 else x for v, (w, x) in enumerate(zip(words, want({3})))]
+                        and frames[2] != frames[0],
+                    "the main page: H turned and pushed, nothing of ours moved (stock's)":
+                        mk[:1] == [0] and ui[:1] == [0],
+                    "KB SETUP: H tunes this track (JUST MAJOR, then JUST MINOR)":
+                        mk[1:2] == [1] and cu[:2] == [1, 2],
+                    "H pushed: TUNING; B ROOT D#, D ALL on": ui[1:2] == [1] and i32s["tn_root"] == [3] and mk[2:3] == [0xFFFF],
+                    "YES on a factory tuning: TUNING stays; on USER 8: EDIT":
+                        ui[2:4] == [1, 2] and cu[2:3] == [TUg.USER_SLOTS + len(TUg.FACTORY) - 1],
+                    "EDIT: B moves the note's cents by whole cents; FUNC + YES copies FROM (POOLE ROD12) in":
+                        len(users) == 2 and users[0][12 * u8] == 40
+                        and users[1][12 * u8:12 * u8 + 12] == TUg.tenths(TUg.FACTORY[9][2]),
+                    "NO back to TUNING, NO closes": ui[4:6] == [1, 0],
+                    "the screens drawn, each its own": all(shots.values()) and len(set(shots.values())) == len(shots),
+                }
+                good = all(facts.values())
+                return good, ("tn_retune tunes only tuned tracks' voices by their pitch class; KB SETUP's H and the "
+                              "TUNING / EDIT pages work; H elsewhere is stock's" if good else
+                              json.dumps({k: v for k, v in facts.items() if not v}) + f" frames={frames} i32={i32s} "
+                              f"users={[u[84:96] for u in users]}")
+            later("tune", "microtuning: KB SETUP's TUNE, the TUNING page, the frame's retune (ColdFire)",
+                  "microtuning: KB SETUP's TUNE, the TUNING page, the frame's retune (ColdFire)",
+                  [tu_cmd, sorted(EMU_ENV.items())], tu_body)
+
+        # v0.61: each project's tuning record (scripts/emu_tune.py: power-on, a change written
+        # after two seconds into its own sectors, LOAD / NEW / a power cycle, a corrupted copy, both
+        # corrupted, another project's record refused, ERASE's lock, every write in its region)
+        if "tn_poll" in lay:
+            tr_syms = work / "tune_syms.json"
+            tr_syms.write_text(json.dumps({k: v for k, v in lay.items() if k.startswith(("smp_", "tn_"))}))
+            tr_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", f"link16:{tr_syms}:tune", "--png-dir", work / "tunerec"]
+
+            def tr_body(tdir):
+                rc, out = run("tuning record", tr_cmd, logs, env=EMU_ENV, trace=tdir)
+                res = work / "tunerec" / "link16_tune.json"
+                if rc != 0 or not res.exists():
+                    return False, out[-900:]
+                r = json.loads(res.read_text())
+                facts = r.get("facts", {})
+                good = bool(r.get("ok")) and len(facts) >= 9 and all(facts.values())
+                return good, ("each project's tuning: written after two seconds into its own sectors, read on "
+                              "LOAD and at power-on, reset by NEW, a corrupted copy falls back, another project's "
+                              "refused, nothing written under ERASE's lock, every write in its region" if good else
+                              json.dumps({k: v for k, v in facts.items() if not v})[:800] + f" writes={r.get('writes')}")
+            later("tunerec", "microtuning: each project's tuning record (ColdFire)",
+                  "microtuning: each project's tuning record (ColdFire)", [tr_cmd, sorted(EMU_ENV.items())], tr_body)
+
+        # v0.62: the slice editor's requests (impbox; scripts/emu_slicefine.py, the +Drive and the
+        # DSP played by Python): an edit goes to the DSP and the +Drive 0.2 s after the knobs rest
+        # (not while they move); FUNC + END lands on a zero crossing, the linked start with it
+        # (END alone: no snap); ZOOM to a view of 128..255 frames, the view's own frames read and
+        # drawn as the sample's lowest and highest per column (zoom 0: none read); a note on the
+        # editor's track picks its slice (another track's, or SLCE fixed: nothing); NO keeps it all
+        if "slc_live_sends" in lay:
+            sf_syms = work / "slicefine_syms.json"
+            sf_syms.write_text(json.dumps({k: v for k, v in lay.items() if k.startswith(("smp_", "slc_", "wr_"))}))
+            sf_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", f"link16:{sf_syms}:slicefine", "--png-dir", work / "slicefine"]
+
+            def sf_body(tdir):
+                rc, out = run("slice editor", sf_cmd, logs, env=EMU_ENV, trace=tdir)
+                res = work / "slicefine" / "link16_slicefine.json"
+                if rc != 0 or not res.exists():
+                    return False, out[-900:]
+                r = json.loads(res.read_text())
+                facts = r.get("facts", {})
+                good = bool(r.get("ok")) and len(facts) >= 6 and all(facts.values())
+                return good, ("the slice editor: live edits 0.2 s after the knobs rest, FUNC + END on a zero "
+                              "crossing, the view's own frames at deep zoom, a played slice picked, all kept" if good else
+                              json.dumps({k: v for k, v in facts.items() if not v})[:600] + f" {r.get('detail')}"[:300])
+            later("slicefine", "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)",
+                  "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)",
+                  [sf_cmd, sorted(EMU_ENV.items())], sf_body)
+
 
         # v0.48 (Error Kit): THRES on the coupled emulator (emu_coupled.py: the ColdFire and the
         # DSP together, block by block): a -34 dB tone on IN; THRES 30 (tick -45 dB) starts the

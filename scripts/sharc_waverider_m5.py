@@ -79,7 +79,8 @@ from dnfw.fascia import program as FSP                          # noqa: E402  (v
 from dnfw.organ import program as OGP                           # noqa: E402  (RIFT: ORGAN's, in FASCIA's walk)
 from dnfw.silt import program as SLP                            # noqa: E402  (RIFT: SILT's, in FASCIA's walk)
 from dnfw.ligature import program as LGP                        # noqa: E402  (RIFT: LIGATURE's, in FASCIA's walk)
-from dnfw.reson import program as RSP                           # noqa: E402  (RIFT: RESONATOR's, in FASCIA's walk)
+from dnfw.digidrum import program as DDP                           # noqa: E402  (RIFT: DIGIDRUM's, in FASCIA's walk)
+from dnfw.tholet import program as THP                          # noqa: E402  (RIFT: THOLET's, in FASCIA's walk)
 from dnfw.fascia import machines as FSM                         # noqa: E402
 
 OUT = ROOT / "out" / "waverider"
@@ -103,7 +104,8 @@ FSC_L = FSP.layout()            # v0.45: and FASCIA
 OG_L = OGP.layout()             # RIFT: ORGAN (type 19), in FASCIA's walk
 SL_L = SLP.layout()             # RIFT: SILT (type 20), in FASCIA's walk
 LG_L = LGP.layout()             # RIFT: LIGATURE (type 21), in FASCIA's walk
-RS_L = RSP.layout()             # RIFT: RESONATOR (type 22), in FASCIA's walk
+DD_L = DDP.layout()             # RIFT: DIGIDRUM (type 22), in FASCIA's walk
+TH_L = THP.layout()             # RIFT: THOLET (type 23), in FASCIA's walk
 
 
 def fsc_base(t: int) -> int:
@@ -330,7 +332,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 lt = FSC_L.lasttype + 4 * t
                 if mem.get(lt) != ty:
                     mem.put(lt, ty)
-                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], RSP.VOICE["magic"]):
+                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], THP.VOICE["magic"]):
                         mem.put(fsc_base(t) + 4 * k_, 0)
                 if ty == FSM.TYPE:
                     p_, mem = FSP.run_voice(FSC_L, None, t, mem)
@@ -344,9 +346,12 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 elif ty == LGP.TYPE:                 # RIFT: LIGATURE (dnfw.ligature.program), in the same walk
                     p_, mem = LGP.run_voice(LG_L, None, t, mem)
                     nw = LGP.VOICE_WORDS
-                elif ty == RSP.TYPE:                 # RIFT: RESONATOR (dnfw.reson.program), in the same walk
-                    p_, mem = RSP.run_voice(RS_L, None, t, mem)
-                    nw = RSP.VOICE_WORDS
+                elif ty == DDP.TYPE:                 # RIFT: DIGIDRUM (dnfw.digidrum.program), in the same walk
+                    p_, mem = DDP.run_voice(DD_L, None, t, mem)
+                    nw = DDP.VOICE_WORDS
+                elif ty == THP.TYPE:                 # RIFT: THOLET (dnfw.tholet.program), in the same walk
+                    p_, mem = THP.run_voice(TH_L, None, t, mem)
+                    nw = THP.VOICE_WORDS
                 else:
                     continue
                 buf = m2.word(st, PP.BUFFERS + 4 * t) or 0
@@ -598,7 +603,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,organ,silt,sstress,ligature,lstress,reson,rstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,tholet,tstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -723,6 +728,8 @@ def main(argv=None):
                                 lambda: step_fsilence(warm(), sound, machines)),
                                ("fstress", "sixteen FASCIA voices, the clock made to move (v0.45)",
                                 lambda: step_fstress(warm(), sound, machines)),
+                               ("fkeep", "a held chord kept under a melody, the clock made to move (v0.11)",
+                                lambda: step_fkeep(warm(), sound, machines)),
                                ("fcost", "a FASCIA voice's cost, each audition patch (v0.45)",
                                 lambda: step_fcost(warm(), sound, machines)),
                                ("organ", "ORGAN bit-exact to live.Voice, in FASCIA's walk (RIFT)",
@@ -735,10 +742,14 @@ def main(argv=None):
                                 lambda: step_ligature(warm(), sound, machines)),
                                ("lstress", "sixteen LIGATURE voices under the guard (RIFT)",
                                 lambda: step_lstress(warm(), sound, machines)),
-                               ("reson", "RESONATOR bit-exact to live.Voice, in FASCIA's walk (RIFT)",
-                                lambda: step_reson(warm(), sound, machines)),
-                               ("rstress", "sixteen RESONATOR voices under the guard (RIFT)",
-                                lambda: step_rstress(warm(), sound, machines))):
+                               ("digidrum", "DIGIDRUM bit-exact to live.Voice, in FASCIA's walk (RIFT)",
+                                lambda: step_digidrum(warm(), sound, machines)),
+                               ("dstress", "sixteen DIGIDRUM voices under the guard (RIFT)",
+                                lambda: step_dstress(warm(), sound, machines)),
+                               ("tholet", "THOLET bit-exact to live.Voice, in FASCIA's walk (RIFT)",
+                                lambda: step_tholet(warm(), sound, machines)),
+                               ("tstress", "sixteen THOLET voices under the guard (RIFT)",
+                                lambda: step_tstress(warm(), sound, machines))):
             if key in steps:
                 print(f"\nstep 3{key}: {title}")
                 results[f"3_{key}"] = fn()
@@ -791,6 +802,12 @@ def main(argv=None):
             results["3f_flexlevel"] = step_flexlevel(init, sound, machines)
             gc.collect()
             show(results["3f_flexlevel"])
+
+        if "mainmark" in steps:
+            print("\nstep 3f2: a FLEX take of MAIN, played MAIN_PLAY_DB louder (RIFT v0.14)")
+            results["3f2_mainmark"] = step_mainmark(init, sound, machines)
+            gc.collect()
+            show(results["3f2_mainmark"])
 
         if "mainrec" in steps:
             print("\nstep 3m: MAIN recorded, previewed and played, in the instrument's order (v0.38)")
@@ -2776,8 +2793,8 @@ def step_flexlevel(init, sound, machines) -> dict:
     take's playback at the amp's output against the source's there, RMS over the same stretch (the
     take a block late: the bucket is the last block's): within 0.5 dB. Negative control: the same
     with index 0 (the RECORDER's command, v0.49's scaling): 6 dB under, and
-    must fail the 0.5 dB test; and GAIN -6 (index 19) plays 6 dB under, within 0.5 dB (+6 would
-    clip this loud a source: the meter's CLIP).
+    must fail the 0.5 dB test. v0.63: that unity is GAIN -24 now (index 1); GAIN 0 is 24 dB over
+    it (TRK_HW_DB, the owner's number from his unit), frame for frame where it does not clip.
     Measured 2026-11-12 (v0.50's first take on it): v0.49's scaling 0.4991 of the source; a
     x 12.44 first guess clipped (+9.4 dB); x 2.0 (the output's ratio) came out -1.8 dB (the
     chain compresses a little); TRK_UNITY is the render's ratio, 2.339."""
@@ -2836,23 +2853,140 @@ def step_flexlevel(init, sound, machines) -> dict:
         return {"out_db": db(flat[per * (n - w): per * n], flat[per * p0: per * (p0 + w)]),
                 "render_db": db(ren[per * (n - w): per * n], ren[per * p0: per * (p0 + w)]),
                 "take_rms": rms(take[per * (n - w): per * n]), "take_frames": ent[1],
-                "take_peak": max((abs(v) for v in take), default=0.0)}
-    unity, recorder, minus6 = run(SM.GAIN_ZERO), run(0), run(SM.GAIN_ZERO - 6)
+                "take_peak": max((abs(v) for v in take), default=0.0), "take": take[: per * n]}
+    # v0.63: GAIN 0 is TRK_HW_DB (24 dB) over v0.50's unity, the owner's number from his unit, where
+    # the stages the runner lacks take those 24 dB. On the runner v0.50's unity is GAIN -TRK_HW_DB
+    # (index GAIN_ZERO - 24 = 1); GAIN 0's take is the same recording 24 dB up, clipping this loud a
+    # source, so it is compared sample by sample where it does not clip
+    low = SM.GAIN_ZERO - SM.TRK_HW_DB
+    unity, recorder, zero = run(low), run(0), run(SM.GAIN_ZERO)
+    want = 10.0 ** (SM.TRK_HW_DB / 20.0)
+
+    def ratio_ok(a, b, k):
+        """b's unclipped frames are a's x k within 1 % (at least 200 of them, a's at 0.01 or more:
+        an int16 frame's step, 1 / 32768, is 0.3 % of that)"""
+        if a is None or b is None:
+            return False
+        pairs = [(x, y) for x, y in zip(a["take"], b["take"]) if abs(y) < 0.99 and abs(x) >= 0.01]
+        return len(pairs) >= 200 and all(abs(y / x - k) <= 0.01 * k for x, y in pairs)
     checks = {
-        "v0.50: a FLEX take of a track (GAIN 0) reaches its track's chain at its source's level: the "
-        "take's render against the source's, within 0.5 dB (RMS)":
+        "v0.50: a FLEX take of a track at v0.50's unity (GAIN -24 since v0.63) reaches its track's chain "
+        "at its source's level: the take's render against the source's, within 0.5 dB (RMS)":
             unity is not None and abs(unity["render_db"]) <= 0.5,
         "v0.50: .. and comes out of the amp within 1 dB of its source (the chain compresses a little)":
             unity is not None and abs(unity["out_db"]) <= 1.0,
         "v0.50 negative control: the RECORDER's command (no GAIN: v0.49's scaling) renders the same take "
         "over 4 dB under its source":
             recorder is not None and recorder["render_db"] < -4.0,
-        "v0.50: GAIN -6 records the take 6 dB under GAIN 0's (its frames' RMS, within 0.1 dB), unclipped":
-            unity is not None and minus6 is not None and unity["take_peak"] < 1.0
-            and abs(20 * _m.log10((minus6["take_rms"] or 1e-30) / (unity["take_rms"] or 1e-30)) + 6.0) <= 0.1,
+        "v0.63: GAIN 0 records the same take 24 dB over GAIN -24, frame for frame where unclipped "
+        "(within 1 %), and clipped at full scale, never past it":
+            ratio_ok(unity, zero, want) and zero["take_peak"] <= 1.0,
+        "v0.63 (TRK_HW_DB, the owner's number): GAIN 0's take plays far over its source on the runner "
+        "(over 12 dB, the 24 dB the unit loses after the per-track buffer; clipped here) -- the check "
+        "above at GAIN -24 holds only because TRK_HW_DB is applied":
+            zero is not None and zero["render_db"] > 12.0,
+        "v0.63 negative control: the frame-for-frame comparison at 0 dB is refused":
+            not ratio_ok(unity, zero, 1.0),
     }
+    for r in (unity, recorder, zero):
+        if r:
+            r.pop("take", None)
     return {"ok": all(checks.values()), "checks": checks,
-            "numbers": {"unity": unity, "recorder": recorder, "minus6": minus6}}
+            "numbers": {"unity": unity, "recorder": recorder, "zero": zero}}
+
+
+def step_mainmark(init, sound, machines) -> dict:
+    """RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet; GAIN +12 to
+    make it up clipped it): a FLEX take of MAIN is recorded as it is and played MAIN_PLAY_DB louder.
+    Track 0 ONESHOT looping into the mix; RECORD NOW into buffer half 0 (as FLEX sends it: the
+    GAIN index set) from MAIN, then from TRK1 (the negative control); the directory's steps word
+    carries MAIN_MARK for MAIN only. Then the MAIN take played by track 0 (SAMP on the half) twice,
+    with the mark and with it cleared: the voice's render is MAIN_PLAY_DB louder with it, sample
+    for sample (within 0.1 %), and the take itself is the same recording either way."""
+    import math as _m
+    ONE = SM.TYPE_OF["ONESHOT"]
+    cmd_at = dsp.SMP_POOL_DDR + SM.CMD_OFFSET
+    dir0 = dsp.SMP_POOL_DDR + SM.BUF_DIR
+    n, gap, w = 16, 3, 10
+    loop = {SM.SAMP_REC: 3, SM.PLAY_REC: 80, SM.LOOP_REC: 20}
+
+    def command(r, seq, cmd, src=0, chan=0, dest=0, frames=SM.REC_FRAMES, steps=16):
+        for kk, word in enumerate((seq, cmd, src, chan, 33 | steps << 16, dest << 24 | frames)):
+            m2.poke(r.state, cmd_at + 4 * kk, word)
+
+    def run(src, clear_mark=False):
+        state = {"b": 0}
+
+        def at_dispatch(r):
+            b = state["b"]
+            # MAIN's tap (and IN's buffer): a known sine each block, where the recorder reads it
+            for kk in range(32):
+                x = struct.unpack("<I", struct.pack("<f", 0.25 * _m.sin(2 * _m.pi * 220 * (32 * b + kk) / 48000)))[0]
+                for at in (SM.MAIN_TAP, SM.MAIN_TAP + 0x80):
+                    m2.poke(r.state, at + 4 * kk, x)
+            if b == 0:
+                command(r, 1, SM.CMD_NOW, src=src, chan=SM.GAIN_ZERO << 24, dest=SM.BUF_SLOT0)
+            if b == n:
+                command(r, 2, SM.CMD_STOP)
+            if b == n + 1 and clear_mark:
+                m2.poke(r.state, dir0 + 8, (m2.word(r.state, dir0 + 8) or 0) & ~SM.MAIN_MARK)
+            state["b"] += 1
+
+        def fb(b):
+            if b < n + gap:
+                f = base_frame(sound, machines, t0=ONE, trigger=b == 1, overrides=smp_words(loop))
+            else:
+                take = {**loop, SM.SAMP_REC: SM.BUF_SAMP0}
+                f = base_frame(sound, machines, t0=ONE, trigger=b == n + gap, overrides=smp_words(take))
+            for t in range(16):
+                f.put(0xA5A + 2 * t, t)
+            return f.to_bytes()
+        r = run_blocks(init, fb, n + gap + w + 2, extra_hooks={m3.DISPATCH: at_dispatch})
+        if not r["ok"]:
+            return None
+        st = r["state"].state
+        steps_word = m2.word(st, dir0 + 8) or 0
+        ent = [m2.word(st, dir0 + 4 * kk) or 0 for kk in range(2)]
+        take = []
+        for kk in range(min(ent[1], 4096) // 2):
+            word = m2.word(st, ent[0] + 4 * kk) or 0
+            take += [((h ^ 0x8000) - 0x8000) / 32768.0 for h in (word & 0xFFFF, word >> 16)]
+        ren = smp_series(r, 0)
+        p0 = (n + gap) * BLOCK
+        r.pop("state", None)
+        return {"steps_word": steps_word, "frames": ent[1], "take": take,
+                "play": list(ren[p0 + BLOCK: p0 + w * BLOCK])}
+    main, trk, cleared, inp = run(1), run(2), run(1, clear_mark=True), run(0)
+    k = 10.0 ** (SM.MAIN_PLAY_DB / 20.0)
+
+    def louder(a, b):
+        pairs = [(x, y) for x, y in zip(b["play"], a["play"]) if abs(x) >= 1e-4]
+        return len(pairs) >= 100 and all(abs(y / x - k) <= 0.001 * k for x, y in pairs)
+    ok_runs = all(r is not None for r in (main, trk, cleared, inp))
+    checks = {
+        "a FLEX take of MAIN marks its buffer half (MAIN_MARK in the steps word), its steps kept":
+            ok_runs and bool(main["steps_word"] & SM.MAIN_MARK) and (main["steps_word"] & 0x7FFF) == 16,
+        "a FLEX take of IN marks its buffer half too (the owner: IN as quiet as MAIN)":
+            ok_runs and bool(inp["steps_word"] & SM.MAIN_MARK) and (inp["steps_word"] & 0x7FFF) == 16,
+        "negative control: a FLEX take of a track leaves no mark":
+            ok_runs and not (trk["steps_word"] & SM.MAIN_MARK) and (trk["steps_word"] & 0x7FFF) == 16,
+        "the MAIN take is recorded as it is: the same frames with the mark or without (and something there)":
+            ok_runs and main["take"] == cleared["take"] and max((abs(v) for v in main["take"]), default=0) > 0.01,
+        f"the marked take plays MAIN_PLAY_DB ({SM.MAIN_PLAY_DB} dB) louder, sample for sample (within 0.1 %)":
+            ok_runs and louder(main, cleared),
+        "negative control: the same comparison at 0 dB is refused":
+            ok_runs and not (lambda kk: all(abs(y - x) <= 0.001 * abs(x) for x, y in zip(cleared["play"], main["play"])
+                                            if abs(x) >= 1e-4))(None),
+    }
+    for r in (main, trk, cleared, inp):
+        if r:
+            r["take_peak"] = max((abs(v) for v in r["take"]), default=0.0)
+            r["play_peak"] = max((abs(v) for v in r["play"]), default=0.0)
+            r["play_head"] = [round(v, 6) for v in r["play"][:6]]
+            r.pop("take", None)
+            r.pop("play", None)
+    return {"ok": all(checks.values()), "checks": checks,
+            "numbers": {"main": main, "trk": trk, "cleared": cleared, "in": inp}}
 
 
 # -- step 3e: the fast link (v0.16, docs/sampler.md) -------------------------------------------------
@@ -2873,8 +3007,22 @@ def step_pvmix(snap, m2mach, m5: Image, stock: Image) -> dict:
 
     mix_in = [struct.unpack("<I", struct.pack("<f", 0.01 * k - 0.3))[0] for k in range(64)]
 
-    def run(image, words_left, mix0=mix_in, loop=False):
+    # v0.59 MON: the input block, and (mon, rsrc, rst) as the recorder leaves them
+    in_blk = [struct.unpack("<I", struct.pack("<f", 0.003 * k - 0.07))[0] for k in range(64)]
+
+    def poke_mon(put, mon):
+        if mon is None:
+            return
+        on, src, st = mon
+        put(SM.REC_MON, on)
+        put(C["rsrc"], src)
+        put(C["rst"], st)
+        for k in range(64):
+            put(SM.IN_BUF + 4 * k, in_blk[k])
+
+    def run(image, words_left, mix0=mix_in, loop=False, mon=None):
         r = init_on(snap, m2mach, image).fresh_call(dsp.PVMIX_SITE_SW, regs=regs)
+        poke_mon(lambda a, v: m2.poke(r.state, a, v), mon)
         for k in range(64):
             m2.poke(r.state, SM.MIX_BUF + 4 * k, mix0[k])
         for k, w in enumerate(pairs):
@@ -2900,9 +3048,10 @@ def step_pvmix(snap, m2mach, m5: Image, stock: Image) -> dict:
     def mix(r):
         return [m2.word(r.state, SM.MIX_BUF + 4 * k) or 0 for k in range(64)]
 
-    def model(words_left, mix0, loop=False):
+    def model(words_left, mix0, loop=False, mon=None):
         from dnfw.perc.dsl import Mem
         mem = Mem(lambda a: 0)
+        poke_mon(mem.put, mon)
         for k in range(64):
             mem.put(SM.MIX_BUF + 4 * k, mix0[k])
         for k, w in enumerate(pairs):
@@ -2919,10 +3068,26 @@ def step_pvmix(snap, m2mach, m5: Image, stock: Image) -> dict:
                           "pvl0", "pvln")}
     own |= {SM.MAIN_TAP + 4 * k for k in range(64)}     # v0.37: the MAIN tap is the preview's too
     out, checks = {}, {}
-    for name, left, loop in (("none", 0, False), ("full", 40, False), ("tail", 5, False), ("loop", 5, True)):
-        want, pva, pvn = model(left, mix_in, loop)
-        rs, hs, _ = run(stock, 0, want)        # stock, given the mix the preview makes
-        rm, hm, _ = run(m5, left, loop=loop)
+    # v0.59 MON: on, IN, armed (1) / recording (2): the input added; off, MAIN (1), a track (2),
+    # idle (0) or done (3): nothing (each its own case, so a MON that ignored any of them fails)
+    MON_CASES = (("mon armed", 0, False, (1, 0, 1)), ("mon recording", 5, False, (1, 0, 2)),
+                 ("mon off", 0, False, (0, 0, 2)), ("mon MAIN", 0, False, (1, 1, 2)),
+                 ("mon TRK1", 0, False, (1, 2, 2)), ("mon idle", 0, False, (1, 0, 0)),
+                 ("mon done", 0, False, (1, 0, 3)))
+    from dnfw.perc.dsl import f32
+    added = [struct.unpack("<I", struct.pack("<f", f32(struct.unpack("<f", struct.pack("<I", a))[0]
+                                                            + struct.unpack("<f", struct.pack("<I", b))[0])))[0]
+             for a, b in zip(mix_in, in_blk)]
+    for name, left, loop, *mon in (("none", 0, False), ("full", 40, False), ("tail", 5, False), ("loop", 5, True),
+                                   *MON_CASES):
+        mon = mon[0] if mon else None
+        want, pva, pvn = model(left, mix_in, loop, mon)
+        if mon is not None and left == 0:
+            hears = mon[0] == 1 and mon[1] == 0 and mon[2] in (1, 2)
+            checks[f"{name}: the model's mix {'is the mix + the input' if hears else 'untouched'}"] = (
+                want == (added if hears else mix_in))
+        rs, hs, _ = run(stock, 0, want, mon=mon)   # stock, given the mix the preview makes (v0.59: MON's words too)
+        rm, hm, _ = run(m5, left, loop=loop, mon=mon)
         ok = hs[0] == "stop" and hm[0] == "stop"
         same_regs = ok and rm.state.uregs == rs.state.uregs
         diff = sorted(a for a in set(rm.state.overlay) | set(rs.state.overlay)
@@ -2937,7 +3102,7 @@ def step_pvmix(snap, m2mach, m5: Image, stock: Image) -> dict:
         checks[f"{name}: the mix as the model's ({min(left, 16)} words added)"] = ok and got == want
         tap = [m2.word(rm.state, SM.MAIN_TAP + 4 * k) or 0 for k in range(64)]
         checks[f"{name}: v0.37: the MAIN tap holds the mix as it came, before the preview"] = ok and tap == mix_in
-        if left == 0:
+        if left == 0 and mon is None:
             checks["none: the mix untouched"] = ok and got == mix_in
         if loop:                                # v0.30: at its end it starts again
             checks["loop: at its end the preview starts again (pva back at its start, pvn its length)"] = (
@@ -3383,7 +3548,7 @@ def fsc_audition():
     return FA.PATCHES
 
 
-def fsc_frame(sound, machines, tracks: dict, trig=(), others=None) -> bytes:
+def fsc_frame(sound, machines, tracks: dict, trig=(), others=None, offs=()) -> bytes:
     """a frame: TRACKS = {t: (panel, note, vel)} on FASCIA, OTHERS = {t: (type, words)}; TRIG the
     tracks triggered this block"""
     from dnfw.fascia import bench as FB          # noqa: PLC0415
@@ -3403,6 +3568,8 @@ def fsc_frame(sound, machines, tracks: dict, trig=(), others=None) -> bytes:
         f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
     for t in trig:
         f.trigger(t)
+    for t in offs:                               # v0.11: a note-off (mask 36 alone)
+        f.trigger(t, masks=(36,))
     return f.to_bytes()
 
 
@@ -3824,13 +3991,14 @@ def lg_frame(sound, machines, ligs: dict, trig=(), offs=(), fascias=None) -> byt
     return f.to_bytes()
 
 
-def lg_live(knobs_of, notes: dict, blocks: int, slot: int, offs=(), vel: int = 127, skew=0):
+def lg_live(knobs_of, notes: dict, blocks: int, slot: int, offs=(), vel: int = 127, skew=0, table=None):
     """live.SlotVoice for SLOT: KNOBS_OF(b), NOTES = {block: note}, OFFS the note-off blocks. SKEW (the
     negative control) moves knob 8 (block 1's setting A) by that much in live only"""
     import numpy as np                           # noqa: PLC0415
     from dnfw.fascia import bench as FB          # noqa: PLC0415
     from dnfw.ligature import bench as LB, live as LGV   # noqa: PLC0415
     v = LGV.SlotVoice(slot)
+    v.table = None if table is None else list(table)       # v0.12: the WIRE area's words
     out = []
     for b in range(blocks):
         seen = list(LB.knobs_seen(LB.knobs_words(knobs_of(b))))
@@ -3909,7 +4077,49 @@ def step_ligature(init, sound, machines) -> dict:
     if not ok_sw:
         bad.append("switch")
     print(f"    ligature FASCIA -> LIGATURE: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    # RIFT v0.12: the wirings you make, in the pool's WIRE area (as the ColdFire's link puts them):
+    # the seeded table plays each factory patch exactly as without one; wirings made at random, and
+    # garbage words under the magic, bit-exact to live reading the same table; no fault
+    import random                                # noqa: PLC0415
+    from dnfw.sampler import machines as SMw     # noqa: PLC0415
+    wire = dsp.SMP_POOL_DDR + SMw.WIRE_AREA
+
+    def with_table(tb):
+        def poke(r, tb=tb):
+            for k_, w_ in enumerate(tb):
+                m2.poke(r.state, wire + 4 * k_, int(w_) & 0xFFFFFFFF)
+        return {dsp.PERC_SW: poke}
+    seedt = LGV.seed_table()
+    wired_ok = True
+    for pk in (0, 5, 12):
+        base = LB.panel_knobs(PATCH=pk)
+        rr = run_blocks(init, lambda b, base=base, pk=pk: lg_frame(sound, machines, {0: (base, 44.0 + pk, 100)},
+                                                                   trig=(0,) if b == 1 else ()), 10,
+                        extra_hooks=with_table(seedt))
+        nm = f"seeded table: {LGV.PATCHES[pk][0]} as the factory patch"
+        judge(nm, rr, lg_live(lambda b, base=base: base, {1: 44.0 + pk}, 10, 0, vel=100))
+        wired_ok = wired_ok and res[nm]["ok"]
+    rnd = random.Random(12)
+    made = list(seedt)
+    for k_ in range(LGV.WSLOTS):
+        rows = []
+        nb_ = rnd.randrange(1, LGV.NB + 1)
+        for _i in range(nb_):
+            rows.append((rnd.choice(LGV.TYPES), rnd.randrange(LGV.NSRC), rnd.randrange(-100, 101),
+                         rnd.randrange(LGV.NSRC), rnd.randrange(-100, 101), rnd.randrange(128), rnd.randrange(128)))
+        made[LGV.WHDR + LGV.WWORDS * k_: LGV.WHDR + LGV.WWORDS * (k_ + 1)] = LGV.encode(rows, rnd.randrange(1, nb_ + 1),
+                                                                                     rnd.randrange(1 << LGV.NB))
+    garb = [LGV.WMAGIC, LGV.WVERSION] + [rnd.getrandbits(32) for _ in range(LGV.WTABLE_WORDS - 2)]
+    for nm, tb, slot_k in (("wirings made at random (slot 37)", made, 37), ("wirings made at random (slot 100)", made, 100),
+                           ("garbage under the magic (slot 9)", garb, 9)):
+        kn_ = [slot_k] + LB.panel_knobs()[1:]
+        rr = run_blocks(init, lambda b, kn_=kn_: lg_frame(sound, machines, {0: (kn_, 52.0, 120)},
+                                                          trig=(0,) if b == 1 else ()), 12, extra_hooks=with_table(tb))
+        judge(nm, rr, lg_live(lambda b, kn_=kn_: kn_, {1: 52.0}, 12, 0, vel=120, table=tb), need_sound=False)
+        wired_ok = wired_ok and res[nm]["ok"]
     checks = {
+        "v0.12: the WIRE table read as live reads it (the seeded table, wirings made, garbage): bit-exact":
+            wired_ok,
         "INIT (the note, the note-off, the release): bit-exact to the model and live":
             res["INIT: note, note-off, release"]["ok"],
         "the comparison tells live with 1A one step off apart (negative control)":
@@ -3979,16 +4189,16 @@ def step_lstress(init, sound, machines) -> dict:
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 
-def rs_frame(sound, machines, res: dict, trig=(), fascias=None) -> bytes:
-    """a frame: RES = {t: (knobs, note)} on RESONATOR, FASCIAS = {t: (panel, note, vel)} on FASCIA; TRIG the
+def dd_frame(sound, machines, res: dict, trig=(), fascias=None) -> bytes:
+    """a frame: RES = {t: (knobs, note)} on DIGIDRUM, FASCIAS = {t: (panel, note, vel)} on FASCIA; TRIG the
     tracks triggered (mask 34)"""
     from dnfw.fascia import bench as FB          # noqa: PLC0415
-    from dnfw.reson import bench as RB           # noqa: PLC0415
-    t0 = RSP.TYPE if 0 in res else FSM.TYPE
+    from dnfw.digidrum import bench as DB           # noqa: PLC0415
+    t0 = DDP.TYPE if 0 in res else FSM.TYPE
     f = base_frame(sound, machines, t0=t0, trigger=False)
     for t, (kn, note) in res.items():
-        f.header(FR.MACHINE, t, RSP.TYPE)
-        for w, ride in zip(RB.knobs_words(kn), RB.RIDES):
+        f.header(FR.MACHINE, t, DDP.TYPE)
+        for w, ride in zip(DB.knobs_words(kn), DB.RIDES):
             f.param(t, FSM.SLOTS[ride][1], w)
         f.header(FR.NOTE, t, FB.note_word(note))
         f.header(FSP.VEL_OFFSET, t, 127 << 8)
@@ -4003,31 +4213,31 @@ def rs_frame(sound, machines, res: dict, trig=(), fascias=None) -> bytes:
     return f.to_bytes()
 
 
-def rs_live(knobs_of, notes: dict, blocks: int, slot: int, skew=0):
-    """live.Voice for SLOT: KNOBS_OF(b), NOTES = {block: note}. SKEW (the negative control) moves STRC by
+def dd_live(knobs_of, notes: dict, blocks: int, slot: int, skew=0):
+    """live.Voice for SLOT: KNOBS_OF(b), NOTES = {block: note}. SKEW (the negative control) moves O1 by
     that much in live only"""
     import numpy as np                           # noqa: PLC0415
     from dnfw.fascia import bench as FB          # noqa: PLC0415
-    from dnfw.reson import bench as RB, live as RSV   # noqa: PLC0415
-    v = RSV.Voice(slot)
+    from dnfw.digidrum import bench as DB, live as DDV   # noqa: PLC0415
+    v = DDV.Voice(slot)
     out, note = [], 60.0
     for b in range(blocks):
-        seen = list(RB.knobs_seen(RB.knobs_words(knobs_of(b))))
-        seen[2] = min(127, seen[2] + skew)
+        seen = list(DB.knobs_seen(DB.knobs_words(knobs_of(b))))
+        seen[4] = min(127, seen[4] + skew)               # O1, the type's first own control
         if b in notes:
             note = notes[b]
-        out.append(np.asarray(v.block(seen, b in notes, FB.note_seen(note)), np.float32))
+        out.append(np.asarray(v.block(DB.live_knobs(seen), b in notes, FB.note_seen(note), DDV.F(DDV.F(127.0) * DDV.INV127)), np.float32))
     return out
 
 
-def step_reson(init, sound, machines) -> dict:
-    """RIFT: RESONATOR's assembled code against live.Voice, bit for bit, in FASCIA's walk: the defaults (a
+def step_digidrum(init, sound, machines) -> dict:
+    """RIFT: DIGIDRUM's assembled code against live.Voice, bit for bit, in FASCIA's walk: the defaults (a
     note, a retrigger); every knob moving; extreme panels; two voices at once; a track switched from
-    FASCIA to RESONATOR (the walk's reset); and a negative control (live with STRC one step off must be
+    FASCIA to DIGIDRUM (the walk's reset); and a negative control (live with O1 one step off must be
     told apart)."""
     import random                                # noqa: PLC0415
     import numpy as np                           # noqa: PLC0415
-    from dnfw.reson import bench as RB           # noqa: PLC0415
+    from dnfw.digidrum import bench as DB           # noqa: PLC0415
     res, bad = {}, []
 
     def judge(name, rr, want, t=0, need_sound=True):
@@ -4040,75 +4250,75 @@ def step_reson(init, sound, machines) -> dict:
                      "peak": pk, "halt": rr.get("halt")}
         if not ok:
             bad.append(name)
-        print(f"    reson {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
+        print(f"    digidrum {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
         return lb
     n = 20
-    dk = RB.panel_knobs()
-    rr = run_blocks(init, lambda b: rs_frame(sound, machines, {0: (dk, 55.0)}, trig=(0,) if b in (1, 12) else ()), n)
-    judge("defaults: a note, a retrigger", rr, rs_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0))
-    lb_neg = fsc_vs_live(rr, 0, rs_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0, skew=1))[0]
-    res["negative control: STRC + 1 in live only"] = {"ok": lb_neg > 0, "live_blocks_differing": lb_neg}
-    print(f"    reson negative control: {'ok' if lb_neg > 0 else 'FAIL'} ({lb_neg} blocks told apart)", flush=True)
+    dk = DB.panel_knobs()
+    rr = run_blocks(init, lambda b: dd_frame(sound, machines, {0: (dk, 55.0)}, trig=(0,) if b in (1, 12) else ()), n)
+    judge("defaults: a note, a retrigger", rr, dd_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0))
+    lb_neg = fsc_vs_live(rr, 0, dd_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0, skew=1))[0]
+    res["negative control: O1 + 1 in live only"] = {"ok": lb_neg > 0, "live_blocks_differing": lb_neg}
+    print(f"    digidrum negative control: {'ok' if lb_neg > 0 else 'FAIL'} ({lb_neg} blocks told apart)", flush=True)
 
     def moving(b):
-        return [(dk[j] + 7 * b * (j + 1)) % 128 for j in range(8)]
+        return [(dk[j] + 7 * b * (j + 1)) % 128 for j in range(16)]
     m = 16
-    rr = run_blocks(init, lambda b: rs_frame(sound, machines, {0: (moving(b), 48.0)}, trig=(0,) if b in (1, 8) else ()), m)
-    judge("every knob moving", rr, rs_live(moving, {1: 48.0, 8: 48.0}, m, 0))
+    rr = run_blocks(init, lambda b: dd_frame(sound, machines, {0: (moving(b), 48.0)}, trig=(0,) if b in (1, 8) else ()), m)
+    judge("every knob moving", rr, dd_live(moving, {1: 48.0, 8: 48.0}, m, 0))
     ok_x = True
     for seed in range(3):
         r0 = random.Random(seed)
-        kx = [r0.choice([0, 127, r0.randrange(128)]) for _ in range(8)]
+        kx = [r0.choice([0, 127, r0.randrange(128)]) for _ in range(16)]
         note = (24.0, 72.0, 120.0)[seed]
-        rr = run_blocks(init, lambda b, kx=kx, note=note: rs_frame(sound, machines, {0: (kx, note)}, trig=(0,) if b == 1 else ()), 10)
-        judge(f"extreme panel {seed}", rr, rs_live(lambda b, kx=kx: kx, {1: note}, 10, 0), need_sound=False)
+        rr = run_blocks(init, lambda b, kx=kx, note=note: dd_frame(sound, machines, {0: (kx, note)}, trig=(0,) if b == 1 else ()), 10)
+        judge(f"extreme panel {seed}", rr, dd_live(lambda b, kx=kx: kx, {1: note}, 10, 0), need_sound=False)
         ok_x = ok_x and res[f"extreme panel {seed}"]["ok"]
-    k2 = RB.panel_knobs(STRC=100, DAMP=90, EXCT=110)
-    rr = run_blocks(init, lambda b: rs_frame(sound, machines, {0: (dk, 45.0), 1: (k2, 64.0)},
+    k2 = DB.panel_knobs(TYPE=70, O1=100, DEC=90, EQG=110, FLTF=20)
+    rr = run_blocks(init, lambda b: dd_frame(sound, machines, {0: (dk, 45.0), 1: (k2, 64.0)},
                                              trig=(0, 1) if b == 1 else ()), 14)
-    judge("two at once (track 1)", rr, rs_live(lambda b: dk, {1: 45.0}, 14, 0))
-    judge("two at once (track 2)", rr, rs_live(lambda b: k2, {1: 64.0}, 14, 1), t=1)
+    judge("two at once (track 1)", rr, dd_live(lambda b: dk, {1: 45.0}, 14, 0))
+    judge("two at once (track 2)", rr, dd_live(lambda b: k2, {1: 64.0}, 14, 1), t=1)
     fpanel = fsc_audition()["01_tubular_bell"][0]
     n_sw = 20
 
     def sw(b):
         if b < 5:
-            return rs_frame(sound, machines, {}, trig=(0,) if b == 1 else (), fascias={0: (fpanel, 60, 1.0)})
-        return rs_frame(sound, machines, {0: (dk, 50.0)}, trig=(0,) if b == 6 else ())
+            return dd_frame(sound, machines, {}, trig=(0,) if b == 1 else (), fascias={0: (fpanel, 60, 1.0)})
+        return dd_frame(sound, machines, {0: (dk, 50.0)}, trig=(0,) if b == 6 else ())
     rr = run_blocks(init, sw, n_sw)
-    want = rs_live(lambda b: dk, {1: 50.0}, n_sw - 5, 0)
+    want = dd_live(lambda b: dk, {1: 50.0}, n_sw - 5, 0)
     got = fsc_bits(rr, 0)
     ex = fsc_exact(rr)
     exact = len(got) == n_sw and all(got[b] is not None and np.array_equal(np.array(got[b], np.uint32),
                                                                              want[b - 5].view(np.uint32))
                                      for b in range(5, n_sw))
     ok_sw = bool(rr["ok"] and ex[1:] == (0, 0) and exact and np.max(np.abs(want[-1])) > 0.0005)
-    res["FASCIA -> RESONATOR on one track"] = {"ok": ok_sw, "model_mismatch": ex[1:], "res_exact": exact}
+    res["FASCIA -> DIGIDRUM on one track"] = {"ok": ok_sw, "model_mismatch": ex[1:], "dgd_exact": exact}
     if not ok_sw:
         bad.append("switch")
-    print(f"    reson FASCIA -> RESONATOR: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    print(f"    digidrum FASCIA -> DIGIDRUM: {'ok' if ok_sw else 'FAIL'}", flush=True)
     checks = {
         "the defaults (a note, a retrigger): bit-exact to the model and live": res["defaults: a note, a retrigger"]["ok"],
-        "the comparison tells live with STRC one step off apart (negative control)":
-            res["negative control: STRC + 1 in live only"]["ok"],
+        "the comparison tells live with O1 one step off apart (negative control)":
+            res["negative control: O1 + 1 in live only"]["ok"],
         "every knob moving: bit-exact": res["every knob moving"]["ok"],
         "extreme panels (low, middle, top notes): bit-exact": ok_x,
         "two at once: both bit-exact": res["two at once (track 1)"]["ok"] and res["two at once (track 2)"]["ok"],
-        "a track switched from FASCIA to RESONATOR: a fresh voice, then bit-exact": ok_sw,
+        "a track switched from FASCIA to DIGIDRUM: a fresh voice, then bit-exact": ok_sw,
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
 
 
-def step_rstress(init, sound, machines) -> dict:
-    """RIFT: sixteen RESONATOR voices under the guard, as lstress (the clock made to move, K = 2): a new
-    note on the next track every block, low notes (all 24 modes sound), the mallet and noise both. Every
+def step_dstress(init, sound, machines) -> dict:
+    """RIFT: sixteen DIGIDRUM voices under the guard, as lstress (the clock made to move, K = 2): a new
+    note on the next track every block, CY ALLOY (its six squares, the heaviest type) with page 2 all on. Every
     block must end, our voices done by 0.8 of the frame, voices left out (and counted) when time is
     short, the newest note heard in most blocks, every buffer finite."""
     from dnfw.perc import guard as G
-    from dnfw.reson import bench as RB           # noqa: PLC0415
+    from dnfw.digidrum import bench as DB           # noqa: PLC0415
     K, P = 2, 666_667
     sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
-    kn = RB.panel_knobs(EXCT=64, DAMP=127)
+    kn = DB.panel_knobs(TYPE=90, DEC=127, OVER=60, EQG=100, AMD=50, FLTF=10, FLTW=80)
     b_now = {"b": 0}
 
     def clock(r):
@@ -4126,7 +4336,7 @@ def step_rstress(init, sound, machines) -> dict:
 
     def fb(b):
         b_now["b"] = b
-        return rs_frame(sound, machines, tracks, trig=(b % 16,) if b >= 2 else ())
+        return dd_frame(sound, machines, tracks, trig=(b % 16,) if b >= 2 else ())
     rr = run_blocks(init, fb, nb, extra_hooks=hooks)
     st = rr.get("state")
     skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
@@ -4144,7 +4354,191 @@ def step_rstress(init, sound, machines) -> dict:
     out = {"ok": rr["ok"], "skips": skips, "our_end_over_P": round(((end - mark0) & 0xFFFFFFFF) / P, 3)
            if end is not None else None, "newest_heard": heard / max(tot, 1), "finite": fin,
            "instructions_per_block": rr.get("instructions", 0) // nb}
-    print(f"    rstress: {out}", flush=True)
+    print(f"    dstress: {out}", flush=True)
+    checks = {
+        "every block returns": out["ok"],
+        "our voices done by 0.8 of the frame (the guard's limit holds)":
+            out["our_end_over_P"] is not None and out["our_end_over_P"] <= 0.8,
+        "with time short, voices are left out and counted": bool(out["skips"]),
+        "the newest note heard in most blocks (newest first)": out["newest_heard"] >= 0.8,
+        "every buffer finite": out["finite"],
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+def th_frame(sound, machines, res: dict, trig=(), fascias=None, offs=()) -> bytes:
+    """a frame: RES = {t: (knobs, note)} on THOLET, FASCIAS = {t: (panel, note, vel)} on FASCIA; TRIG the
+    tracks triggered (mask 34)"""
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.tholet import bench as DB           # noqa: PLC0415
+    t0 = THP.TYPE if 0 in res else FSM.TYPE
+    f = base_frame(sound, machines, t0=t0, trigger=False)
+    for t, (kn, note) in res.items():
+        f.header(FR.MACHINE, t, THP.TYPE)
+        for w, ride in zip(DB.knobs_words(kn), DB.RIDES):
+            f.param(t, FSM.SLOTS[ride][1], w)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, 127 << 8)
+    for t, (panel, note, vel) in (fascias or {}).items():
+        f.header(FR.MACHINE, t, FSM.TYPE)
+        for c, word in FB.panel_words(panel).items():
+            f.param(t, FSM.SLOTS[c][1], word)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
+    for t in trig:
+        f.trigger(t, masks=(34,))
+    for t in offs:                               # THOLET: a note-off (mask 36) lets its dampers fall
+        f.trigger(t, masks=(36,))
+    return f.to_bytes()
+
+
+def th_live(knobs_of, notes: dict, blocks: int, slot: int, skew=0, offs=()):
+    """live.Voice for SLOT: KNOBS_OF(b), NOTES = {block: note}. SKEW (the negative control) moves O1 by
+    that much in live only (TONE: THOLET's first knob)"""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.tholet import bench as DB, live as THV   # noqa: PLC0415
+    v = THV.Voice(slot)
+    out, note = [], 60.0
+    for b in range(blocks):
+        seen = list(DB.knobs_seen(DB.knobs_words(knobs_of(b))))
+        seen[2] = min(127, seen[2] + skew)               # TONE
+        if b in notes:
+            note = notes[b]
+        out.append(np.asarray(v.block(DB.live_knobs(seen), b in notes, FB.note_seen(note), 127, b in offs), np.float32))
+    return out
+
+
+def step_tholet(init, sound, machines) -> dict:
+    """RIFT: THOLET's assembled code against live.Voice, bit for bit, in FASCIA's walk: the defaults (a
+    note, a retrigger); every knob moving; extreme panels; two voices at once; a track switched from
+    FASCIA to THOLET (the walk's reset); and a negative control (live with TONE one step off must be
+    told apart)."""
+    import random                                # noqa: PLC0415
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.tholet import bench as DB           # noqa: PLC0415
+    res, bad = {}, []
+
+    def judge(name, rr, want, t=0, need_sound=True):
+        ex = fsc_exact(rr)
+        lb, dmax = fsc_vs_live(rr, t, want)
+        got = [np.array(b_, np.uint32).view(np.float32) for b_ in fsc_bits(rr, t) if b_ is not None]
+        pk = float(max((np.max(np.abs(g)) for g in got), default=0.0))
+        ok = bool(rr["ok"] and ex[1:] == (0, 0) and lb == 0 and (pk > 0.001 or not need_sound))
+        res[name] = {"ok": ok, "model_mismatch": ex[1:], "live_blocks_differing": lb, "max_abs_diff": dmax,
+                     "peak": pk, "halt": rr.get("halt")}
+        if not ok:
+            bad.append(name)
+        print(f"    tholet {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
+        return lb
+    n = 20
+    dk = DB.panel_knobs()
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (dk, 55.0)}, trig=(0,) if b in (1, 12) else ()), n)
+    judge("defaults: a note, a retrigger", rr, th_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0))
+    lb_neg = fsc_vs_live(rr, 0, th_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0, skew=1))[0]
+    res["negative control: TONE + 1 in live only"] = {"ok": lb_neg > 0, "live_blocks_differing": lb_neg}
+    print(f"    tholet negative control: {'ok' if lb_neg > 0 else 'FAIL'} ({lb_neg} blocks told apart)", flush=True)
+
+    def moving(b):
+        return [(dk[j] + 7 * b * (j + 1)) % 128 for j in range(16)]
+    m = 16
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (moving(b), 48.0)}, trig=(0,) if b in (1, 8) else ()), m)
+    judge("every knob moving", rr, th_live(moving, {1: 48.0, 8: 48.0}, m, 0))
+    ok_x = True
+    for seed in range(3):
+        r0 = random.Random(seed)
+        kx = [r0.choice([0, 127, r0.randrange(128)]) for _ in range(16)]
+        note = (24.0, 72.0, 120.0)[seed]
+        rr = run_blocks(init, lambda b, kx=kx, note=note: th_frame(sound, machines, {0: (kx, note)}, trig=(0,) if b == 1 else ()), 10)
+        judge(f"extreme panel {seed}", rr, th_live(lambda b, kx=kx: kx, {1: note}, 10, 0), need_sound=False)
+        ok_x = ok_x and res[f"extreme panel {seed}"]["ok"]
+    k2 = DB.panel_knobs(HAMR=110, TONE=100, DEC=90, GRAN=110, GDEN=90)
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (dk, 45.0), 1: (k2, 64.0)},
+                                             trig=(0, 1) if b == 1 else ()), 14)
+    judge("two at once (track 1)", rr, th_live(lambda b: dk, {1: 45.0}, 14, 0))
+    judge("two at once (track 2)", rr, th_live(lambda b: k2, {1: 64.0}, 14, 1), t=1)
+    n_off = 24
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (dk, 60.0)}, trig=(0,) if b == 1 else (),
+                                             offs=(0,) if b == 9 else ()), n_off)
+    judge("a note, then its note-off (the dampers)", rr, th_live(lambda b: dk, {1: 60.0}, n_off, 0, offs=(9,)))
+    fpanel = fsc_audition()["01_tubular_bell"][0]
+    n_sw = 20
+
+    def sw(b):
+        if b < 5:
+            return th_frame(sound, machines, {}, trig=(0,) if b == 1 else (), fascias={0: (fpanel, 60, 1.0)})
+        return th_frame(sound, machines, {0: (dk, 50.0)}, trig=(0,) if b == 6 else ())
+    rr = run_blocks(init, sw, n_sw)
+    want = th_live(lambda b: dk, {1: 50.0}, n_sw - 5, 0)
+    got = fsc_bits(rr, 0)
+    ex = fsc_exact(rr)
+    exact = len(got) == n_sw and all(got[b] is not None and np.array_equal(np.array(got[b], np.uint32),
+                                                                             want[b - 5].view(np.uint32))
+                                     for b in range(5, n_sw))
+    ok_sw = bool(rr["ok"] and ex[1:] == (0, 0) and exact and np.max(np.abs(want[-1])) > 0.0005)
+    res["FASCIA -> THOLET on one track"] = {"ok": ok_sw, "model_mismatch": ex[1:], "dgd_exact": exact}
+    if not ok_sw:
+        bad.append("switch")
+    print(f"    tholet FASCIA -> THOLET: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    checks = {
+        "the defaults (a note, a retrigger): bit-exact to the model and live": res["defaults: a note, a retrigger"]["ok"],
+        "the comparison tells live with TONE one step off apart (negative control)":
+            res["negative control: TONE + 1 in live only"]["ok"],
+        "every knob moving: bit-exact": res["every knob moving"]["ok"],
+        "extreme panels (low, middle, top notes): bit-exact": ok_x,
+        "two at once: both bit-exact": res["two at once (track 1)"]["ok"] and res["two at once (track 2)"]["ok"],
+        "a track switched from FASCIA to THOLET: a fresh voice, then bit-exact": ok_sw,
+        "a note-off (mask 36): the dampers fall, bit-exact": res["a note, then its note-off (the dampers)"]["ok"],
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
+
+
+def step_tstress(init, sound, machines) -> dict:
+    """RIFT: sixteen THOLET voices under the guard, as lstress (the clock made to move, K = 2): a new
+    note on the next track every block, the grain cloud at its fullest, the strike hardest. Every
+    block must end, our voices done by 0.8 of the frame, voices left out (and counted) when time is
+    short, the newest note heard in most blocks, every buffer finite."""
+    from dnfw.perc import guard as G
+    from dnfw.tholet import bench as DB           # noqa: PLC0415
+    K, P = 2, 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    kn = DB.panel_knobs(DEC=127, GRAN=127, GDEN=127, GSIZ=127, EP=100, STRK=127)
+    b_now = {"b": 0}
+
+    def clock(r):
+        base = (b_now["b"] + 1) * P
+        r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const((base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+    def at_perc(r):
+        base = (b_now["b"] + 1) * P
+        m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+        m2.poke(r.state, G.MARK, (base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+    hooks = {dsp.PERC_SW: at_perc}
+    hooks.update({s_: clock for s_ in sites})
+    tracks = {t: (kn, 36.0 + (t * 5) % 24) for t in range(16)}
+    nb = 40
+
+    def fb(b):
+        b_now["b"] = b
+        return th_frame(sound, machines, tracks, trig=(b % 16,) if b >= 2 else ())
+    rr = run_blocks(init, fb, nb, extra_hooks=hooks)
+    st = rr.get("state")
+    skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+    end = m2.word(st.state, G.OURS_END) if rr["ok"] else None
+    mark0 = m2.word(st.state, G.MARK0) if rr["ok"] else None
+    rr.pop("state", None)
+    heard = tot = 0
+    for b in range(4, nb - 1):
+        t = b % 16
+        tot += 1
+        blks = [rr["fsc"][x] if x < len(rr["fsc"]) else {} for x in (b, b + 1)]
+        if any(t in blk and V.peak(blk[t]["out"]) > 1e-4 for blk in blks):
+            heard += 1
+    fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    out = {"ok": rr["ok"], "skips": skips, "our_end_over_P": round(((end - mark0) & 0xFFFFFFFF) / P, 3)
+           if end is not None else None, "newest_heard": heard / max(tot, 1), "finite": fin,
+           "instructions_per_block": rr.get("instructions", 0) // nb}
+    print(f"    tstress: {out}", flush=True)
     checks = {
         "every block returns": out["ok"],
         "our voices done by 0.8 of the frame (the guard's limit holds)":
@@ -4343,6 +4737,75 @@ def step_fcost(init, sound, machines) -> dict:
            for K in (1, 3)}
     return {"ok": ok, "checks": {"every audition patch measured (every block returned)": ok},
             "numbers": {"per_patch": rows, "typical": typical, "worst": worst, "voices_in_0.6P": fit}}
+
+
+def step_fkeep(init, sound, machines, K: float = 1.0) -> dict:
+    """RIFT v0.11 (dreamsaremaps, 2026-11-19): two FASCIA notes struck and held (no note-off);
+    then a melody, a note a block on the next track, each block's note-off ending the one
+    before (its tail rings on), the clock moved as fstress's so time runs short. The held
+    voices must be rendered before the melody's released tails, so they keep sounding to the
+    end; the newest melody note must sound too. Also REUSE: one track re-struck and released
+    over and over beside two held."""
+    from dnfw.perc import guard as G
+    P = 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    pats = fsc_audition()
+    panel = pats["20_snare_wires"][0]
+    out = {}
+    for label in ("melody", "reuse"):
+        b_now = {"b": 0}
+
+        def clock(r):
+            base = (b_now["b"] + 1) * P
+            r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const(int(base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+        def at_perc(r):
+            base = (b_now["b"] + 1) * P
+            m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+            m2.poke(r.state, G.MARK, int(base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+        hooks = {dsp.PERC_SW: at_perc}
+        hooks.update({s_: clock for s_ in sites})
+        tracks = {t: (panel, 48 + (t * 5) % 24, 0.9) for t in range(16)}
+        nb = 24
+
+        def fb(b, tracks=tracks, label=label):
+            b_now["b"] = b
+            if b == 0:
+                return fsc_frame(sound, machines, tracks, trig=(0, 1) if label == "melody" else (0, 1, 2))
+            if label == "melody":
+                t = 2 + (b - 1) % 14
+                prev = 2 + (b - 2) % 14 if b > 1 else None
+                return fsc_frame(sound, machines, tracks, trig=(t,), offs=() if prev is None else (prev,))
+            # reuse: three held; track 2 released on odd blocks, struck again on even ones
+            return fsc_frame(sound, machines, tracks, trig=() if b % 2 else (2,), offs=(2,) if b % 2 else ())
+        rr = run_blocks(init, fb, nb, extra_hooks=hooks)
+        st = rr.get("state")
+        skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+        rr.pop("state", None)
+
+        def heard(b, t):
+            blk = rr["fsc"][b] if b < len(rr["fsc"]) else {}
+            return t in blk and V.peak(blk[t]["out"]) > 1e-4
+        last = range(nb - 6, nb)
+        held = all(heard(b, t) for b in last for t in (0, 1))
+        print("    fkeep " + label + " heard: " + " ".join("".join("x" if heard(b, t) else "." for t in range(6)) for b in range(nb)), flush=True)
+        if label == "melody":
+            newest = sum(heard(b, 2 + (b - 1) % 14) for b in range(2, nb)) / (nb - 2)
+        else:
+            newest = sum(heard(b, 2) for b in range(2, nb, 2)) / len(range(2, nb, 2))
+        fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+        out[label] = {"ok": rr["ok"], "skips": skips, "held_to_the_end": held, "newest_heard": round(newest, 3),
+                      "finite": fin}
+        print(f"    fkeep {label}: {out[label]}", flush=True)
+    checks = {
+        "every block returns": all(o["ok"] for o in out.values()),
+        "time ran short (voices left out)": all(o["skips"] for o in out.values()),
+        "the two held notes sound to the end (melody)": out["melody"]["held_to_the_end"],
+        "the two held notes sound to the end (REUSE re-strikes)": out["reuse"]["held_to_the_end"],
+        "the newest note heard in most blocks": all(o["newest_heard"] >= 0.8 for o in out.values()),
+        "every buffer finite": all(o["finite"] for o in out.values()),
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 
 
 def step_fstress(init, sound, machines) -> dict:

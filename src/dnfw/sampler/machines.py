@@ -146,6 +146,10 @@ TABLE_ROOM = 512 << 10
 TABLE_AREA = SLICE_AREA - TABLE_ROOM
 TABLE_READY = SLICE_AREA - 512
 TABLE_MAGIC = 0x4D4E5442                   # "BTNM" in memory
+# RIFT v0.12: LIGATURE's wirings (dnfw.ligature.live WTABLE_WORDS words: WMAGIC, WVERSION, 128 x 25),
+# sent by the ColdFire from the project's list; in the table area's free room, past the tables
+WIRE_AREA = TABLE_AREA + (256 << 10)
+WIRE_BYTES = 16 << 10
 TABLE_LOAD = 0x47000000                    # their bytes in the ColdFire's RAM (a CODE chunk): magic, length, data
 REC_BYTES = TABLE_AREA - REC_OFFSET        # v0.23: the recordings' area ends at the slice area (v0.26: the tables)
 USER_HOLE = (REC_OFFSET, REC_END)           # yours: 0..96 MB, then 128..400 MB (dn2samples.py skips the hole)
@@ -167,6 +171,11 @@ TRK_ROUTE = 0x257898                       # k = the s16 at TRK_ROUTE + 2t (the 
 TRK_GAIN = 11.627                          # 0x1c244d's gain into that buffer, between triggers
 REC_STAGE = 0x2DF800                       # 32 floats of the block being recorded (dnfw.waverider.dsp)
 REC_GAIN = 0x2E0080                        # v0.50: a FLEX take's GAIN index (0 none) and factor (dnfw.waverider.dsp)
+# v0.59 MON (the RECORDER's C): the command's channel word's bit MON_BIT, kept here by every
+# recorder command (REC_GAIN's gap); with it, SRC IN and the recorder armed or recording, pvmix
+# adds the input (IN_BUF, L and R) to the main mix at unity, after the MAIN tap
+REC_MON = REC_GAIN + 8
+MON_BIT = 30
 # v0.50 (impbox: FLEX takes far quieter than their source): measured on the SHARC runner
 # (2026-11-12, step 3f flexlevel: track 0 ONESHOT looping at its defaults, each track routed to
 # its own slot, RMS past the amp envelope's attack). A take of TRK1 made with the RECORDER's
@@ -178,6 +187,20 @@ REC_GAIN = 0x2E0080                        # v0.50: a FLEX take's GAIN index (0 
 # measured on hardware: the runner does not model everything after the per-track buffer; GAIN's
 # range (-24..+38 dB) covers either way
 TRK_UNITY = 0.1696 / 0.0725                # 2.339 (+7.4 dB): x the 1 / TRK_GAIN the RECORDER keeps
+# v0.63 (the owner, measured on his unit 2026-11-19: "the number for flex gain is +24"): on the
+# DN2 itself a v0.62 take of a single track at GAIN 0 played 24 dB under its source; GAIN +24 made
+# it match by ear. The loss is in stages the SHARC runner does not model (on the runner the same
+# take came out at its source's level, and a synth track's 7 dB over: scratch probe, bench STATE
+# 2026-11-19 09:30), so it is the unit's number, not the runner's. A FLEX take of a track is made
+# TRK_HW_DB louder on top of TRK_UNITY: GAIN 0 is what was +24; GAIN -24 is v0.50..v0.62's unity
+TRK_HW_DB = 24
+# RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet, and GAIN
+# +12 to make it up clips the take): a MAIN take is recorded as it is (never boosted into the
+# clamp) and played back MAIN_PLAY_DB louder; so is a take of IN (the owner, the same day: IN as
+# quiet as MAIN, at the mixer page's highest input level). The DSP's recorder marks its buffer half (the
+# directory's steps word, bit 15: MAIN_MARK); a voice on a marked half plays it that much louder
+MAIN_PLAY_DB = 12
+MAIN_MARK = 0x8000
 GAIN_ZERO = 25                             # the index of 0 dB: 1..63 is -24..+38 dB
 CMD_OFFSET = 0xF00                         # the command block in the pool's directory page:
 CMD_WORDS = 6                              #   seq, cmd, src, chan, thres (0..32767), dest << 24 | frames

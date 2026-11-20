@@ -710,7 +710,7 @@ static u16 st[16] __attribute__((section(".data")));
  * the count, so the page can name the slots, and nothing points at frames not yet there);
  * then each used slot's frames, the recorder's included, and at once that slot's entry,
  * so a slot plays as soon as it is in; last the whole directory page again. -> 0 when done */
-enum { K_BLANK, K_FRAMES, K_ENTRY, K_FULL, K_AREA, K_TABLES, K_READY, K_PREVIEW, K_HEAD };
+enum { K_BLANK, K_FRAMES, K_ENTRY, K_FULL, K_AREA, K_TABLES, K_READY, K_PREVIEW, K_HEAD, K_WIRE };
 /* v0.38 (the testers' "new samples are silent until a restart"): the DSP plays a slot below
  * REC_FIRST only if it is below the directory's count (word 1; dnfw.sampler.program.start),
  * and only the whole page (BLANK, FULL: a power-on or a project's load) carried the count.
@@ -724,6 +724,28 @@ u32 smp_head_min __attribute__((section(".data"))) = 0;     /* a recording's slo
 u32 smp_heads __attribute__((section(".data"))) = 0;        /* heads that checked out (the gate) */
 static int area_due __attribute__((section(".data"))) = 0;      /* the slice area loads at the end */
 static int area_push __attribute__((section(".data"))) = -1;    /* one slot's table to the DSP */
+/* RIFT v0.12: LIGATURE's wirings (lig.c's table) into the pool's WIRE area: all of them (the words
+ * after the magic first, the magic last, so the DSP never takes half a table for whole), or a slot */
+extern const u8 *lig_wbytes(void);
+extern u32 lig_wsize(void);
+static int wire_all __attribute__((section(".data"))) = 0;
+static int wire_magic __attribute__((section(".data"))) = 0;
+static u32 wire_bits[4] __attribute__((section(".data")));
+u32 smp_wire_sent __attribute__((section(".data"))) = 0;          /* (ranges sent: the gate reads it) */
+_Static_assert(WIRE_AREA >= TABLE_AREA + 0x20000u && WIRE_AREA + WIRE_BYTES <= TABLE_READY, "the WIRE area in the tables' room");
+void smp_wire_push(int slot)
+{
+    if (slot < 0) {
+        wire_all = 1;
+        for (int k = 0; k < 4; k++)
+            wire_bits[k] = 0;
+    } else if (slot < LIG_WSLOTS)
+        wire_bits[(u32)slot >> 5] |= 1u << (slot & 31);
+}
+static int wire_due(void)
+{
+    return wire_all || wire_magic || wire_bits[0] || wire_bits[1] || wire_bits[2] || wire_bits[3];
+}
 static int l_area_read __attribute__((section(".data"))) = 0;   /* K_AREA from the +Drive (else from the copy) */
 int smp_area_ok(void);
 static int l_kind __attribute__((section(".data"))) = K_BLANK;
@@ -966,6 +988,29 @@ static int next_range(void)
         l_end = CMD_OFFSET;                     /* up to the command block: the DSP's */
         return 1;
     }
+    if (wire_all && lig_wsize() <= WIRE_BYTES) {    /* RIFT v0.12: every wiring, the magic after */
+        wire_all = 0;
+        wire_magic = 1;
+        l_kind = K_WIRE;
+        l_off = WIRE_AREA + 8u;
+        l_end = WIRE_AREA + lig_wsize();
+        return 1;
+    }
+    if (wire_magic) {
+        wire_magic = 0;
+        l_kind = K_WIRE;
+        l_off = WIRE_AREA;
+        l_end = WIRE_AREA + 8u;
+        return 1;
+    }
+    for (int k = 0; k < LIG_WSLOTS; k++)            /* RIFT v0.12: one wiring edited */
+        if (wire_bits[(u32)k >> 5] & (1u << (k & 31))) {
+            wire_bits[(u32)k >> 5] &= ~(1u << (k & 31));
+            l_kind = K_WIRE;
+            l_off = WIRE_AREA + 4u * (LIG_WHDR + LIG_WWORDS * (u32)k);
+            l_end = l_off + 4u * LIG_WWORDS;
+            return 1;
+        }
     if (area_push >= 0) {                       /* v0.23: one slot's slice table */
         l_kind = K_AREA;
         l_area_read = 0;
@@ -1179,7 +1224,7 @@ static void load_poll(void)
         u32 n = l_end - l_off;
         if (n > CHUNK)
             n = CHUNK;
-        if (l_kind == K_TABLES || l_kind == K_READY || l_kind == K_PREVIEW || (l_kind == K_AREA && !l_area_read))
+        if (l_kind == K_TABLES || l_kind == K_READY || l_kind == K_PREVIEW || l_kind == K_WIRE || (l_kind == K_AREA && !l_area_read))
             span_drop(l_off, l_off + n);                    /* v0.38: not the image's bytes */
         if (l_kind == K_AREA) {                             /* v0.23: from the copy */
             if (l_area_read) {
@@ -1194,6 +1239,11 @@ static void load_poll(void)
                 for (u32 k = 0; k < n; k++)
                     STAGE(0)[k] = SLAREA[l_off - SLICE_AREA + k];
             }
+        } else if (l_kind == K_WIRE) {                      /* RIFT v0.12: from lig.c's table */
+            const u8 *w = lig_wbytes();
+            for (u32 k = 0; k < n; k++)
+                STAGE(0)[k] = w[l_off - WIRE_AREA + k];
+            smp_wire_sent++;
         } else if (l_kind == K_TABLES) {                    /* v0.26: from the ColdFire's RAM */
             for (u32 k = 0; k < n; k++)
                 STAGE(0)[k] = TBL[8 + (l_off - TABLE_AREA) + k];
@@ -1302,6 +1352,12 @@ static u32 s_since __attribute__((section(".data"))) = 0;
 static u32 s_tries __attribute__((section(".data"))) = 0;
 static u32 s_frames __attribute__((section(".data"))) = 0;
 static u32 s_peak __attribute__((section(".data"))) = 0;      /* v0.25: for the normalising */
+/* v0.63 (the owner: saving a FLEX buffer normalised it, and the slot shares the frames the
+ * buffer is still playing, so the playing take jumped to full scale): set by rec.c's bn_save
+ * before smp_save_recording, the save keeps its frames as they lie -- saved, never normalised.
+ * The RECORDER's own saves still normalise (v0.41). s_keep is the save's copy */
+u32 smp_save_keep __attribute__((section(".data"))) = 0;
+static u32 s_keep __attribute__((section(".data"))) = 0;
 static u32 s_place __attribute__((section(".data"))) = 0;
 
 /* v0.33: where the recorder's save is (the recorder's NORMALIZING waits on it): a value that
@@ -1445,6 +1501,8 @@ void smp_save_recording(int slot, u32 off, u32 frames)
         OVERVIEW[OVERVIEW_W * (u32)slot + j] = 0;
     smp_saved = 0;
     s_peak = 0;
+    s_keep = smp_save_keep;
+    smp_save_keep = 0;
     sstate = 1;
 }
 
@@ -1620,7 +1678,7 @@ static void save_poll(void)
             smp_hi = bytes;
             smp_pl_changed();                                /* v0.38: into the project's list */
             smp_head_due = 1;                                /* v0.38: and the count to the DSP */
-            if (s_peak > 0u && s_peak < NORM_PEAK) {     /* not all zero, under full scale: normalised (v0.41) */
+            if (!s_keep && s_peak > 0u && s_peak < NORM_PEAK) {     /* not all zero, under full scale: normalised (v0.41); a FLEX save never (v0.63) */
                 s_off = (REC_OFFSET + s_place) & ~511u;
                 sstate = 3;
                 return;
@@ -1768,6 +1826,30 @@ u32 smp_slot_frames(int k, int *i16)
     if (i16)
         *i16 = n && ENTRY(k)[12] == 1;
     return n;
+}
+
+/* v0.62 (impbox): the slice editor's deep zoom and its zero-crossing snap read a few frames of
+ * the sample itself from the +Drive: frames [F0, F0 + N) of slot K (int16 only, N at most
+ * FINE_MAX), at once, only while nothing else of ours reads or writes. -> the first frame's
+ * bytes (little-endian int16), 0 if not now or not possible */
+#define FINE_MAX 8192u
+#define FINE ((u8 *)(SMP_MIRROR + 0x79000u))
+_Static_assert(0x78000u + HIRES_W <= 0x79000u && 0x79000u + 2u * FINE_MAX + 512u <= 0x80000u,
+               "the editor's frames lie between the fine waveform and the meta block");
+u32 smp_fine_reads __attribute__((section(".data"))) = 0;
+const u8 *smp_frames_read(int k, u32 f0, u32 n)
+{
+    int i16;
+    u32 fr = smp_slot_frames(k, &i16);
+    if (!fr || !i16 || !n || n > FINE_MAX || f0 >= fr || n > fr - f0 || !store_ok()
+        || sstate || an_state == 1 || (smp_lstate != L_DONE && smp_lstate != L_IDLE) || is_recording(k))
+        return 0;
+    u32 lo = le32(ENTRY(k)) - SMP_POOL_DDR + 2u * f0;
+    u32 a = lo & ~511u, b = (lo + 2u * n + 511u) & ~511u;
+    if (b - a > 2u * FINE_MAX + 512u || image_read(a, b - a, FINE) != 0)
+        return 0;
+    smp_fine_reads++;
+    return FINE + (lo - a);
 }
 
 /* read slot K's frames from the +Drive, a chunk a UI pass: the fine waveform (HIRES_W
@@ -2005,6 +2087,12 @@ static void edits_poll(void)
     }
     if (smp_pl_busy())                              /* v0.38: a switch: nothing of the old pool */
         return;                                     /*   goes to the DSP */
+    if (wire_due() && fast_on && push_slot < 0) {  /* RIFT v0.12: a wiring edited, or a new table */
+        l_entry = -1;
+        l_slot = POOL_SLOTS + 1;
+        smp_lstate = next_range() ? L_READ : L_DONE;
+        return;
+    }
     if (push_slot < 0)                              /* v0.29: the next one waiting */
         for (int k = 0; k < 128; k++)
             if (push_more[k >> 5] & (1u << (k & 31))) {

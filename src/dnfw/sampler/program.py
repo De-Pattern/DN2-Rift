@@ -428,10 +428,13 @@ def start(p: Prog, L: Layout) -> None:
                 p.ldi(5, 0, 1)
                 p.ldi(6, 1, 1)
                 p.ldi(13, 2, 1)
+                p.iconst(12, SM.MAIN_MARK)
+                p.iop(10, 13, "AND", 12)     # RIFT v0.14: a MAIN take's mark, kept with the steps
                 p.iconst(12, 0x7FFF)
                 p.iop(13, 13, "AND", 12)
                 p.iconst(12, 1)
                 p.iop(13, 13, "MAX", 12)     # 1..32767 steps (0 would divide by it)
+                p.iop(13, 13, "OR", 10)
                 p.fconst(7, 1.0)
                 p.iconst(8, SM.FMT_I16)
             p.if_(4, "GE", 12, buf_entry, pool_entry, kind="i")
@@ -1167,6 +1170,16 @@ def render(p: Prog, L: Layout) -> None:
     p.ld(0, C["lev"])
     p.fop(0, 0, "*", 1)
     p.st(C["tmp"], 0)                         # LEV with the make-up (C['lev'] stays: a retrigger renders twice)
+    # RIFT v0.14: a FLEX take of MAIN or IN (sla negative: a take; MAIN_MARK in its steps) plays
+    # MAIN_PLAY_DB louder: it was recorded as it is, never boosted into the clamp
+    v(p, 9, "sla")
+
+    def take():
+        p.iconst(12, SM.MAIN_MARK)
+        p.iop(9, 9, "AND", 12)
+        p.ifz(9, "NE", lambda: (p.ld(0, C["tmp"]), p.fconst(12, 10.0 ** (SM.MAIN_PLAY_DB / 20.0)),
+                                 p.fop(0, 0, "*", 12), p.st(C["tmp"], 0)))
+    p.ifz(9, "LT", take)
     dec_at(p, L)
 
     def sample():
@@ -1862,6 +1875,12 @@ def recorder(p: Prog, L: Layout) -> None:
             p.iop(6, 4, "AND", 12)
             p.ifz(6, "NE", lambda bit=bit: (p.fconst(12, 10.0 ** ((1 << bit) / 20.0)), p.fop(5, 5, "*", 12)))
         p.st(SM.REC_GAIN + 4, 5)
+        # v0.59 MON: bit MON_BIT of the channel word (the RECORDER's C; FLEX REC sends 0)
+        p.ld(4, cmd + 12)
+        p.lsh(4, 4, -SM.MON_BIT)
+        p.iconst(12, 1)
+        p.iop(4, 4, "AND", 12)
+        p.st(SM.REC_MON, 4)
 
     def new_command():
         p.ld(0, cmd)
@@ -1948,6 +1967,13 @@ def recorder(p: Prog, L: Layout) -> None:
                     p.lsh(7, 7, -16)
                     p.iconst(12, 0x7FFF)
                     p.iop(7, 7, "AND", 12)
+
+                    def main_take():          # RIFT v0.14: a FLEX take (GAIN set) of MAIN or IN: marked
+                        p.ld(8, SM.REC_GAIN)
+                        p.ifz(8, "NE", lambda: (p.iconst(12, SM.MAIN_MARK), p.iop(7, 7, "OR", 12)))
+                    p.ld(8, C["rsrc"])
+                    p.iconst(12, 2)
+                    p.if_(8, "LT", 12, main_take, kind="i")
                     p.sti(2, 1, 7)
                 p.if_(5, "GE", 12, buf_dest, pool_dest, kind="i")
                 p.iconst(7, 0)
@@ -2205,7 +2231,8 @@ def recorder(p: Prog, L: Layout) -> None:
             p.fop(3, 3, "*", 12)              # at its defaults made up
             p.ld(8, C["rsrc"])
             p.iconst(12, 2)
-            p.if_(8, "GE", 12, lambda: (p.fconst(12, SM.TRK_UNITY), p.fop(3, 3, "*", 12)), kind="i")
+            p.if_(8, "GE", 12, lambda: (p.fconst(12, SM.TRK_UNITY * 10.0 ** (SM.TRK_HW_DB / 20.0)),
+                                        p.fop(3, 3, "*", 12)), kind="i")   # v0.63: + TRK_HW_DB (the unit's)
         p.ld(8, SM.REC_GAIN)
         p.ifz(8, "NE", gained)
         p.fconst(12, 0.999969)
@@ -3169,6 +3196,7 @@ def pvmix(p: Prog, L: Layout) -> None:
         p.iop(1, 12, "+", 1)
         p.st(C["pvk"], 1)
     _loop16(p, C, tap_word, 64)
+    mon(p, L)
     p.ld(0, C["pvn"])
     p.iconst(12, 0)
 
@@ -3241,6 +3269,46 @@ def pvmix(p: Prog, L: Layout) -> None:
             p.ifz(2, "NE", loop)
         p.ifz(0, "EQ", again)
     p.if_(0, "GT", 12, some, kind="i")
+
+
+def mon(p: Prog, L: Layout) -> None:
+    """v0.59 MON: with REC_MON on, SRC IN (rsrc 0) and the recorder armed or recording (rst 1,
+    2), MIX_BUF[k] += IN_BUF[k] for the block's 32 frames, L and R (both laid out as 32 floats
+    then 32): the input heard at unity, as it is recorded. Uses R0..R3, R12, R13, I1, pvk."""
+    C = L.C
+
+    def live():
+        p.iconst(1, 0)
+        p.st(C["pvk"], 1)
+
+        def word():
+            p.ld(1, C["pvk"])
+            p.lsh(12, 1, 2)
+            p.iconst(13, SM.IN_BUF)
+            p.iop(13, 13, "+", 12)
+            p.seti(1, 13)
+            p.ldi(2, 0, 1)
+            p.iconst(13, SM.MIX_BUF)
+            p.iop(13, 13, "+", 12)
+            p.seti(1, 13)
+            p.ldi(3, 0, 1)
+            p.fop(3, 3, "+", 2)
+            p.sti(0, 1, 3)
+            p.iconst(12, 1)
+            p.iop(1, 12, "+", 1)
+            p.st(C["pvk"], 1)
+        _loop16(p, C, word, 64)
+
+    def armed_or_recording():
+        p.ld(0, C["rst"])
+        p.iconst(12, 1)
+        p.if_(0, "GE", 12, lambda: (p.iconst(12, 2), p.if_(0, "LE", 12, live, kind="i")), kind="i")
+
+    def src_in():
+        p.ld(0, C["rsrc"])
+        p.ifz(0, "EQ", armed_or_recording)
+    p.ld(0, SM.REC_MON)
+    p.ifz(0, "NE", src_in)
 
 
 def _loop16(p: Prog, C, body, n: int = 16) -> None:

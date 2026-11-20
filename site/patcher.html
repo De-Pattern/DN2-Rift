@@ -33,6 +33,8 @@ select, button { font: inherit; color: var(--text); background: var(--bg); borde
 button { cursor: pointer; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
 button:disabled { opacity: .45; cursor: default; }
+.manbtn { display: inline-block; padding: 7px 16px; border: 1px solid var(--line); border-radius: 7px; color: var(--text); text-decoration: none; letter-spacing: .08em; font-size: 13px; }
+.manbtn:hover { border-color: var(--text); }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; color: var(--dim); }
 .pill.ok { color: var(--ok); border-color: var(--ok); } .pill.bad { color: var(--bad); border-color: var(--bad); } .pill.warn { color: var(--warn); border-color: var(--warn); }
 .files { display: grid; gap: 10px; }
@@ -63,7 +65,7 @@ details { margin-top: 10px; } summary { cursor: pointer; }
 
   <section>
     <h2>1 · Version</h2>
-    <div class="row"><select id="ver"></select><span id="verNote" class="pill">loading…</span></div>
+    <div class="row"><select id="ver"></select><span id="verNote" class="pill">loading…</span><span style="flex:1"></span><span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><a id="rman" class="manbtn" href="rift-manual.html" target="_blank" rel="noopener">MANUAL</a><a id="rnew" href="rift-manual.html#versions" target="_blank" rel="noopener" style="font-size:12px;color:var(--dim)">What's new</a></span></div>
     <p class="note">Each version here was cleared by the project's ship gate. The page builds it, then checks the result is byte for byte that cleared file (its sha256) before it lets you save it.</p>
   </section>
 
@@ -151,9 +153,11 @@ fetch("patcher/builds.json", { cache: "no-cache" }).then(r => r.json()).then(lis
   builds = list;
   $("#ver").innerHTML = list.map((b, i) => `<option value="${b.version}">${label(b)} ${b.name}${i ? "" : " (latest)"}</option>`).join("");
   $("#verNote").textContent = list.length ? "sha256 " + list[0].sha256.slice(0, 12) + "…" : "none";
+  if (list.length) rmanFor(list[0].version);
   ready();
 }).catch(() => { $("#verNote").textContent = "could not load the list"; $("#verNote").className = "pill bad"; });
-$("#ver").onchange = () => { const b = cur(); failed = false; $("#verNote").textContent = "sha256 " + b.sha256.slice(0, 12) + "…"; out = null; $("#save").disabled = true; $("#result").textContent = ""; ready(); };
+function rmanFor(v) { $("#rnew").href = "rift-manual.html#v" + v; }
+$("#ver").onchange = () => { const b = cur(); rmanFor(b.version); failed = false; $("#verNote").textContent = "sha256 " + b.sha256.slice(0, 12) + "…"; out = null; $("#save").disabled = true; $("#result").textContent = ""; ready(); };
 
 // The files you choose are kept in this browser (IndexedDB), so the next visit has them
 // already: nothing is uploaded anywhere. "Forget my files" clears them.

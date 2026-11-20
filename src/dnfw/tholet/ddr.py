@@ -1,6 +1,6 @@
-"""RESONATOR's DDR tables as the build ships them, read from the committed ddr.json (no numpy: the build
-also runs in the browser patcher). dnfw.reson.program.write_ddr_json writes the file;
-test_reson_program holds the two equal."""
+"""THOLET's DDR tables as the build ships them, read from the committed ddr.json (no numpy: the build
+also runs in the browser patcher). dnfw.tholet.program.write_ddr_json writes the file;
+test_tholet_program holds the two equal."""
 from __future__ import annotations
 
 import json
