@@ -48,7 +48,7 @@ class SLayout:
 
     def __init__(self, scr: int, mbox: int, state: int, vbase: int, tables: int, vtables: int,
                  qsin: int, lanes: tuple, buffers: int, clears: tuple = (), pairs: int | None = None,
-                 ready: int | None = None):
+                 ready: int | None = None, cost: int | None = None):
         self.INIT, self.CLOCK, self.T, self.SEEN, self.LOWN0, self.LOWN1, self.LAGE0, self.LAGE1, self.CNT = (
             scr + 4 * k for k in range(9))
         self.LSAVE = scr + 40                   # L0, L3, L5 as found (3 words)
@@ -59,6 +59,7 @@ class SLayout:
                       tables + n + FT.T_TWI, tables + n + FT.T_TWS)
         self.V = P.VLayout(vbase, tables, vtables, lanes, fft=fft)
         self.READY = ready                      # RIFT v0.16: the tables are in once this word is TABLE_MAGIC
+        self.COST = cost                        # 16 words: each track's last cost (the guard), or None
         self.tables = tables
         self.clears = clears                    # (address, bytes): zeroed at power-on (FASCIA's voices)
 
@@ -164,7 +165,57 @@ def _track(p: Prog, S: SLayout) -> None:
         p.ldi(0, MB_FRAMES, 4)
 
         def play():
-            P.emit_voice(p, V)              # once: the track loop runs it
+            if S.COST is None or p.run:         # (the model: the voice always runs)
+                P.emit_voice(p, V)              # once: the track loop runs it
+                return
+            # RIFT v0.16: the guard, as every voice of ours: the voice only if it fits the frame
+            # (its last cost, eased, against the limit); else silence this block, its state kept
+            from ..perc import guard as G
+            skip, done = p.label("smrskip"), p.label("smrok")
+            p.e("R8 = EMUCLK;")
+            p.st(G.START, 8)
+            p.ld(9, G.MARK0)
+            p.e("R8 = R8 - R9;", "how far into the frame")
+            p.ld(9, S.T)
+            p.lsh(9, 9, 2)
+            p.iconst(10, S.COST)
+            p.iop(9, 10, "+", 9)
+            p.seti(5, 9)
+            p.ldi(9, 0, 5, "this track's last cost")
+            p.iconst(10, 0)
+            p.iop(9, 9, "MAX", 10)
+            p.iconst(10, G.COST_CAP)
+            p.iop(9, 9, "MIN", 10)
+            p.lsh(10, 9, -1)
+            p.iop(9, 10, "+", 9)                # x 1.5
+            p.iconst(10, G.FLOOR)
+            p.iop(9, 9, "MAX", 10)
+            p.iop(8, 8, "+", 9)
+            p.ld(10, G.LIMIT)
+            p.e("COMP(R8, R10);")
+            p.jump("GT", skip)
+            P.emit_voice(p, V)
+            p.e("R8 = EMUCLK;")
+            p.ld(9, G.START)
+            p.e("R8 = R8 - R9;", "what the voice cost")
+            p.ld(9, S.T)
+            p.lsh(9, 9, 2)
+            p.iconst(10, S.COST)
+            p.iop(9, 10, "+", 9)
+            p.seti(5, 9)
+            p.sti(0, 5, 8)
+            p.jump("", done)
+            p.place(skip)
+            p.ldi(9, 0, 5)                      # its expected cost eased by a quarter: tried again
+            p.lsh(10, 9, -2)
+            p.e("R9 = R9 - R10;")
+            p.sti(0, 5, 9)
+            p.ld(8, G.SKIPS)
+            p.iconst(9, 1)
+            p.iop(8, 8, "+", 9)
+            p.st(G.SKIPS, 8)
+            _zero_out(p, V)
+            p.place(done)
         p.ifz(0, "GT", play, lambda: _zero_out(p, V))
         # the track's buffer
         p.ld(9, S.T)
