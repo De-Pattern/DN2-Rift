@@ -79,7 +79,7 @@ def test_the_layout_fits():
 def test_the_program_emits():
     text = P.program(P.layout(), dsp.PING_SW)
     n = sum(1 for ln in text.splitlines() if ln.startswith("      ") and not ln.strip().startswith("//"))
-    assert 1000 < n < 30000              # RIFT v0.7: LIGATURE too (the room itself: test_waverider_dsp, fascia.asm before smp.asm)
+    assert 1000 < n < 34000              # RIFT v0.15: LIGATURE's new blocks (v0.7: LIGATURE too) (the room itself: test_waverider_dsp, fascia.asm before smp.asm)
     assert f"JUMP {dsp.PING_SW:#x};" in text
     import re
     for ln in text.splitlines():

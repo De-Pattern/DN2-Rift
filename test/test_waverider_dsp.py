@@ -191,6 +191,7 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
                                           dsp.SILT_TABLES_DDR,                            # RIFT: SILT's
                                           dsp.LIG_TABLES_DDR,                             # RIFT: LIGATURE's
                                           dsp.DIGIDRUM_TABLES_DDR,                           # RIFT: DIGIDRUM's
+                                          dsp.THOLET_TABLES_DDR,                             # RIFT: THOLET's (its ring, like SILT's lines, the DSP clears)
                                           dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
         assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)
@@ -275,7 +276,7 @@ def test_perc_code_is_in_l2_above_the_stock_image_and_below_the_uncached_window(
     for b in bootstream.walk(stock7).blocks:
         if b.count and 0x20000000 <= b.target < 0x20100000:
             assert b.target + b.count <= dsp.L2_IMAGE_END
-    assert dsp.PERC_SW == 0xBE0000 and dsp.l2_sw_to_load(dsp.PERC_SW) == dsp.PERC_L2_LOAD
+    assert dsp.PERC_SW == 0xBDE000 and dsp.l2_sw_to_load(dsp.PERC_SW) == dsp.PERC_L2_LOAD
     assert dsp.SMP_SW == 0xBF1800 and dsp.l2_sw_to_load(dsp.SMP_SW) == dsp.SMP_L2_LOAD
 
 
@@ -348,7 +349,7 @@ def test_the_block_counter_goes_on_to_perc():
     spec = json.loads((SHARC / "block_count.json").read_text(encoding="utf-8"))
     assert int(spec["load_sw"], 16) == dsp.COUNT_SW == 0x16F600
     be = bytes.fromhex(spec["object_parcels_be"])
-    assert be[spec["instruction_offsets"][-1]:].hex() == "063e00be0000"   # JUMP 0xbe0000, PERC in L2 (v0.11)
+    assert be[spec["instruction_offsets"][-1]:].hex() == "063e00bde000"   # JUMP 0xbde000, PERC in L2 (v0.11; RIFT v0.15: 16 KB lower)
     src = [ln.split("//", 1)[0].strip() for ln in (SHARC / "block_count.asm").read_text().splitlines()]
     stores = {c for c in src if c.startswith("DM(")}
     assert stores == {"DM(0x2de11c) = R8;", "DM(0x2de120) = R9;", "DM(0x2de118) = R8;",

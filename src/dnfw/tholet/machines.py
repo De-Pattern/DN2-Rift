@@ -100,7 +100,7 @@ def c_header() -> str:
         f"static const unsigned char tho_choices[THO_N] = {{{arr(len(CHOICES[c]) if is_choice(c) else 0 for c in CONTROLS)}}};",
         f"static const unsigned char tho_choice_at[THO_N] = {{{arr(at)}}};",
         f"static const char tho_choice_name[{len(names)}][8] = {{{', '.join(q + n + q for n in names)}}};",
-        f"static const char tho_choice_box[{len(names)}][6] = {{{', '.join(q + n + q for n in names)}}};",
+        f"static const char tho_choice_box[{len(names)}][5] = {{{', '.join(q + n[:4] + q for n in names)}}};",   # a box is 4 letters (BRITE: BRIT)
         f"static const unsigned char tho_bipolar[THO_N] = {{{arr(int(c in BIPOLAR) for c in CONTROLS)}}};",
         f"static const char tho_label[THO_N][6] = {{{', '.join(q + LABELS[c] + q for c in CONTROLS)}}};",
         f"static const unsigned short tho_default[THO_N] = {{{arr(dw[c] for c in CONTROLS)}}};",

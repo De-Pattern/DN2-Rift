@@ -93,8 +93,9 @@ def _sel_note() -> str:
         from ..silt import machines as _s
         from ..ligature import machines as _l
         from ..digidrum import machines as _d
+        from ..tholet import machines as _t
         names = [m.LONG.upper() if hasattr(m, "LONG") else "FASCIA"
-                 for m in (_f, _o, _s, _l, _d) if getattr(m, "LISTED", True)]
+                 for m in (_f, _o, _s, _l, _d, _t) if getattr(m, "LISTED", True)]
         return f"MACHINE SEL offers {', '.join(names)} after SWARMER, then the sample machines"
     return (f"MACHINE SEL offers {SPEC['names'][0].upper()} after SWARMER "
             f"(type {SPEC['new_type']}; WaveTone's pages)")
