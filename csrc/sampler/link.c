@@ -1352,6 +1352,12 @@ static u32 s_since __attribute__((section(".data"))) = 0;
 static u32 s_tries __attribute__((section(".data"))) = 0;
 static u32 s_frames __attribute__((section(".data"))) = 0;
 static u32 s_peak __attribute__((section(".data"))) = 0;      /* v0.25: for the normalising */
+/* v0.63 (the owner: saving a FLEX buffer normalised it, and the slot shares the frames the
+ * buffer is still playing, so the playing take jumped to full scale): set by rec.c's bn_save
+ * before smp_save_recording, the save keeps its frames as they lie -- saved, never normalised.
+ * The RECORDER's own saves still normalise (v0.41). s_keep is the save's copy */
+u32 smp_save_keep __attribute__((section(".data"))) = 0;
+static u32 s_keep __attribute__((section(".data"))) = 0;
 static u32 s_place __attribute__((section(".data"))) = 0;
 
 /* v0.33: where the recorder's save is (the recorder's NORMALIZING waits on it): a value that
@@ -1495,6 +1501,8 @@ void smp_save_recording(int slot, u32 off, u32 frames)
         OVERVIEW[OVERVIEW_W * (u32)slot + j] = 0;
     smp_saved = 0;
     s_peak = 0;
+    s_keep = smp_save_keep;
+    smp_save_keep = 0;
     sstate = 1;
 }
 
@@ -1670,7 +1678,7 @@ static void save_poll(void)
             smp_hi = bytes;
             smp_pl_changed();                                /* v0.38: into the project's list */
             smp_head_due = 1;                                /* v0.38: and the count to the DSP */
-            if (s_peak > 0u && s_peak < NORM_PEAK) {     /* not all zero, under full scale: normalised (v0.41) */
+            if (!s_keep && s_peak > 0u && s_peak < NORM_PEAK) {     /* not all zero, under full scale: normalised (v0.41); a FLEX save never (v0.63) */
                 s_off = (REC_OFFSET + s_place) & ~511u;
                 sstate = 3;
                 return;
@@ -1818,6 +1826,30 @@ u32 smp_slot_frames(int k, int *i16)
     if (i16)
         *i16 = n && ENTRY(k)[12] == 1;
     return n;
+}
+
+/* v0.62 (impbox): the slice editor's deep zoom and its zero-crossing snap read a few frames of
+ * the sample itself from the +Drive: frames [F0, F0 + N) of slot K (int16 only, N at most
+ * FINE_MAX), at once, only while nothing else of ours reads or writes. -> the first frame's
+ * bytes (little-endian int16), 0 if not now or not possible */
+#define FINE_MAX 8192u
+#define FINE ((u8 *)(SMP_MIRROR + 0x79000u))
+_Static_assert(0x78000u + HIRES_W <= 0x79000u && 0x79000u + 2u * FINE_MAX + 512u <= 0x80000u,
+               "the editor's frames lie between the fine waveform and the meta block");
+u32 smp_fine_reads __attribute__((section(".data"))) = 0;
+const u8 *smp_frames_read(int k, u32 f0, u32 n)
+{
+    int i16;
+    u32 fr = smp_slot_frames(k, &i16);
+    if (!fr || !i16 || !n || n > FINE_MAX || f0 >= fr || n > fr - f0 || !store_ok()
+        || sstate || an_state == 1 || (smp_lstate != L_DONE && smp_lstate != L_IDLE) || is_recording(k))
+        return 0;
+    u32 lo = le32(ENTRY(k)) - SMP_POOL_DDR + 2u * f0;
+    u32 a = lo & ~511u, b = (lo + 2u * n + 511u) & ~511u;
+    if (b - a > 2u * FINE_MAX + 512u || image_read(a, b - a, FINE) != 0)
+        return 0;
+    smp_fine_reads++;
+    return FINE + (lo - a);
 }
 
 /* read slot K's frames from the +Drive, a chunk a UI pass: the fine waveform (HIRES_W

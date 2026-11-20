@@ -233,6 +233,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("flexcore", "FLEX on the ColdFire: recorder trigs, ARM, the panel, an older BOUNCE track's trigs (ColdFire)"),
        ("rectext", "RECORDER text inside its places, every state and R.LEN value (ColdFire)"),
        ("kbrec", "KEYBOARD kept through grid recording (ColdFire)"),
+       ("slicefine", "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)"),
        ("thres", "THRES on both processors (coupled)"),
        ("flex", "FLEX: a recorder trig's take played by a note, on both processors (coupled)"),
        ("flexplay", "FLEX buffers played by a ONESHOT track, on both processors (coupled)"),
@@ -564,7 +565,8 @@ def main() -> int:
                               ("smp_machine_commit", "SAMP kept across sample machines (ColdFire)"),
                               ("smp_knob_at", "FUNC + turn (ColdFire)"),
                               ("smp_pl_on", "per-project pools (ColdFire)"),
-                              ("jmp_on", "DIRECT JUMP (ColdFire)")):
+                              ("jmp_on", "DIRECT JUMP (ColdFire)"),
+                              ("slc_live_sends", "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)")):
                 if re.search(rf"\b{sym}\b", csrc_text) and sym not in lay:
                     gate(what, False, f"{sym} is in the C but not in the layout: the check cannot run")
             results["symbols"] = "PASS: every C-keyed check has its symbol in the layout"
@@ -1130,8 +1132,8 @@ def main() -> int:
 
         # 6g. v0.25, GRID's ALLOCATE SLICE (YES on a GRID track's page): trigs placed on steps
         # 1, 3, 5 in GRID RECORDING; CREATE LINEAR LOCKS locks slices 1, 2, 3 on them (the
-        # stock's own lock calls, read back through its GET); RANDOM again, then NO puts
-        # back the linear ones
+        # stock's own lock calls, read back through its GET); RANDOM twice, then NO exits with
+        # RANDOM's locks kept (v0.60, impbox: as the DT2; NO used to put the linear ones back)
         if "slc_alloc_n" in lay:
             from dnfw.sampler import machines as SMx    # noqa: PLC0415
             sid = SMx.SLICE_REC
@@ -1139,7 +1141,7 @@ def main() -> int:
             get = ",".join(f"call:0x40037c52:0:{sid}:{k},wait:2" for k in (0, 2, 4))
             steps = (f"wait:3,poke:{kit + 52 + 0xDE:#x}:0c,wait:4,tap:2,wait:6,tap:19,wait:6,tap:25,wait:4,"
                      f"tap:27,wait:4,tap:29,wait:4,tap:19,wait:6,yes,wait:6,png:m,yes,wait:6,"
-                     f"mem:{lay['slc_alloc_n']:#x}:4,{get},yes,wait:6,down,wait:3,yes,wait:6,yes,wait:6,"
+                     f"mem:{lay['slc_alloc_n']:#x}:4,{get},yes,wait:6,down,wait:3,yes,wait:6,yes,wait:6,{get},"
                      f"no,wait:6,mem:{lay['slc_state']:#x}:4,{get}")
             # v0.42 (NiKo, v0.40): CREATE RANDOM LOCKS stays open after its YES; another track
             # (TRACK + [TRIG 2]) must close it, YES there must not open it again, and back on the
@@ -1168,7 +1170,10 @@ def main() -> int:
                     facts = {"three trigs locked": int(m[hex(lay["slc_alloc_n"])], 16) == 3,
                              "linear: slices 1, 2, 3": d0[:3] == [512, 1024, 1536],
                              "closed": sts[:1] == [0],
-                             "NO puts the locks back": d0[4:6] == [1024, 1536]}
+                             # v0.60 (impbox): NO exits and keeps RANDOM's locks, as the DT2 does
+                             "RANDOM changed the locks": d0[3:6] != [512, 1024, 1536],
+                             "RANDOM's locks are slices": all(v % 512 == 0 and 512 <= v <= 63 * 512 for v in d0[3:6]),
+                             "NO keeps RANDOM's locks": len(d0) >= 9 and d0[6:9] == d0[3:6]}
                     if letgo:
                         trk = [int(v, 16) for k, v in m.items() if k.split("@")[0] == "0x42431a6c"]
                         lgv = [int(v, 16) for k, v in m.items() if k.split("@")[0] == hex(lay["slc_letgo"])]
@@ -1182,8 +1187,8 @@ def main() -> int:
                                       "YES off the page opens nothing": sts[7:8] == [0]})
                     good = all(facts.values())
                     why = str(facts) + f" {d0} states {sts}"
-                return good, ("GRID's ALLOCATE SLICE: LINEAR locks slices 1..3 on three placed trigs; NO after "
-                              "RANDOM puts them back" + ("; v0.42: open RANDOM lets go on another track and on another "
+                return good, ("GRID's ALLOCATE SLICE: LINEAR locks slices 1..3 on three placed trigs; RANDOM "
+                              "changes them and NO exits keeping them" + ("; v0.42: open RANDOM lets go on another track and on another "
                               "page, and YES there opens nothing" if letgo else "") if good else why)
             later("alloc", "GRID allocate slice locks (ColdFire)", "GRID allocate slice locks (ColdFire)", [al_cmd, sorted(EMU_ENV.items())], al_body)
 
@@ -3238,6 +3243,34 @@ def main() -> int:
                           "RECORD twice leaves it off")
         later("kbrec", "KEYBOARD kept through grid recording (ColdFire)",
               "KEYBOARD kept through grid recording (ColdFire)", [kb_cmd, sorted(EMU_ENV.items())], kb_body)
+
+        # v0.62: the slice editor's requests (impbox; scripts/emu_slicefine.py, the +Drive and the
+        # DSP played by Python): an edit goes to the DSP and the +Drive 0.2 s after the knobs rest
+        # (not while they move); FUNC + END lands on a zero crossing, the linked start with it
+        # (END alone: no snap); ZOOM to a view of 128..255 frames, the view's own frames read and
+        # drawn as the sample's lowest and highest per column (zoom 0: none read); a note on the
+        # editor's track picks its slice (another track's, or SLCE fixed: nothing); NO keeps it all
+        if "slc_live_sends" in lay:
+            sf_syms = work / "slicefine_syms.json"
+            sf_syms.write_text(json.dumps({k: v for k, v in lay.items() if k.startswith(("smp_", "slc_", "wr_"))}))
+            sf_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", f"link16:{sf_syms}:slicefine", "--png-dir", work / "slicefine"]
+
+            def sf_body(tdir):
+                rc, out = run("slice editor", sf_cmd, logs, env=EMU_ENV, trace=tdir)
+                res = work / "slicefine" / "link16_slicefine.json"
+                if rc != 0 or not res.exists():
+                    return False, out[-900:]
+                r = json.loads(res.read_text())
+                facts = r.get("facts", {})
+                good = bool(r.get("ok")) and len(facts) >= 6 and all(facts.values())
+                return good, ("the slice editor: live edits 0.2 s after the knobs rest, FUNC + END on a zero "
+                              "crossing, the view's own frames at deep zoom, a played slice picked, all kept" if good else
+                              json.dumps({k: v for k, v in facts.items() if not v})[:600] + f" {r.get('detail')}"[:300])
+            later("slicefine", "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)",
+                  "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire)",
+                  [sf_cmd, sorted(EMU_ENV.items())], sf_body)
+
 
         # v0.48 (Error Kit): THRES on the coupled emulator (emu_coupled.py: the ColdFire and the
         # DSP together, block by block): a -34 dB tone on IN; THRES 30 (tick -45 dB) starts the
