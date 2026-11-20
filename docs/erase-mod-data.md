@@ -42,6 +42,8 @@ shows the progress and the result. The instrument runs the same erase, from its 
 | `0x6FF000` | the mod's settings sector (`DN2S`: DIRECT JUMP) |
 | `0x700000` .. the device's last sector | the +Drive library: superblock, index, folders, frames |
 
+Not yet erased (a known issue, as in the DN2 mk2 mod): the microtuning records, `0x6E0400` .. `0x6E04FF`.
+
 Nothing else. The stock store (below `0x458000`), the factory buffer (`0x458000` ..
 `0x5D7FFF`) and the free gaps between our regions (`0x5D8000` .. `0x5FFFFF`,
 `0x6C8001` .. `0x6CFFFF`, `0x6E0300` .. `0x6FEFFF`, `0x6FF001` .. `0x6FFFFF`) are never
