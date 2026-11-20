@@ -113,6 +113,7 @@ class Voice:
         self.c0 = [F(0.0)] * NR
         self.c1 = [F(0.0)] * NR
         self.cw = [F(0.0)] * NR                # cos w, kept for the damper
+        self.sw = [F(0.0)] * NR                # sin w (0: not ringing), kept for a retune
         self.amp = [F(0.0)] * NR               # each resonator's strike (sin w x its level)
         self.hp = F(0.0)                       # the strike's read position (24 kHz samples)
         self.hr = F(0.0)                       # its step
@@ -177,14 +178,22 @@ class Voice:
                 x = F(fp * DT)
                 if not (x < F(0.45)):
                     self.c0[i] = self.c1[i] = self.amp[i] = F(0.0)
+                    self.sw[i] = F(0.0)
                     continue
                 tp = tp if tp > F(0.02) else F(0.02)
                 r = expf(F(F(-LN60) * F(DT * recip(tp))))
                 cw = sin_turns(F(x + F(0.25)))
+                sw = sin_turns(x)
+                # v0.15 (a TUNE jump mid-note rang 10x loud): a retune keeps each ringing partial's
+                # amplitude and phase: its quadrature from the old w, y2 again from the new
+                if not fresh and self.sw[i] > F(0.0):
+                    qd = F(F(F(self.y1[i] * self.cw[i]) - self.y2[i]) * recip(self.sw[i]))
+                    self.y2[i] = F(F(self.y1[i] * cw) - F(qd * sw))
                 self.cw[i] = cw
+                self.sw[i] = sw
                 self.c0[i] = F(F(F(2.0) * r) * cw)
                 self.c1[i] = F(-F(r * r))
-                self.amp[i] = F(sin_turns(x) * ap)
+                self.amp[i] = F(sw * ap)
         if fresh:
             for i in range(NR):
                 self.y1[i] = self.amp[i]       # a damped sine from phase 0: y[0] = A sin w

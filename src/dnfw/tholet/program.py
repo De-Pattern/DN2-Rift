@@ -42,7 +42,7 @@ MAGIC = 0x54484F21                     # 'THO!'
 assert BLOCK == LV.SUB
 CTRL = LV.CONTROLS
 NR, NG, RING = LV.NR, LV.NG, LV.RING
-RW, GW = 6, 5                          # a resonator's words (y1 y2 c0 c1 cw amp), a grain's (pos inc w d n)
+RW, GW = 7, 5                          # a resonator's words (y1 y2 c0 c1 cw amp sw), a grain's (pos inc w d n)
 NCLR = RING // 512
 
 # -- the voice's words (in the slot's FASCIA state) ------------------------------------------------
@@ -545,14 +545,23 @@ class TG(OP.OG):
                 self.fz(S(2))
                 self.fz(S(3))
                 self.fz(S(5))
+                self.fz(S(6))
 
             def live():
                 self.cmp(c("tp"), "LE", k(0.02), lambda: self.set(c("tp"), k(0.02)))
                 self.set(c("r"), expf((-k(LN60)) * (k(DT) * recip(c("tp")))))
-                self.set(S(4), sin_turns(c("x") + k(0.25)))
+                self.set(c("cwn"), sin_turns(c("x") + k(0.25)))
+                self.set(c("swn"), sin_turns(c("x")))
+
+                def keep():                    # v0.15: a retune keeps the partial's amplitude and phase
+                    self.set(c("qd"), ((S(0) * S(4)) - S(1)) * recip(S(6)))
+                    self.set(S(1), (S(0) * c("cwn")) - (c("qd") * c("swn")))
+                self.icmp(c("fresh"), "EQ", 0, lambda: self.cmp(S(6), "GT", k(0.0), keep))
+                self.set(S(4), c("cwn"))
+                self.set(S(6), c("swn"))
                 self.set(S(2), (k(2.0) * c("r")) * S(4))
                 self.set(S(3), -(c("r") * c("r")))
-                self.set(S(5), sin_turns(c("x")) * c("ap"))
+                self.set(S(5), c("swn") * c("ap"))
             self.cmp(c("x"), "LT", k(0.45), live, zero)
 
             def strike():

@@ -89,3 +89,12 @@ def test_the_comparison_sees_a_wrong_program():
             seen = k
             break
     assert seen is not None
+
+
+def test_a_tune_jump_mid_note_keeps_the_level():
+    """v0.15: a retune keeps each ringing partial's amplitude (a TUNE jump of 4 octaves mid-note rang
+    10x loud before); bit-exact as ever"""
+    for a, b_ in ((0, 127), (127, 0)):
+        a_, b2, first = B.compare(lambda k, a=a, b_=b_: B.panel_knobs(TUNE=a if k < 10 else b_), {1: 48.0}, 40)
+        assert first is None, first
+        assert np.abs(b2).max() < 1.0
