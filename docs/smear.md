@@ -323,8 +323,8 @@ SMEAR becomes a stage of its own between them, `smear.asm` at its own address:
   subroutines (about 1,000 instructions less).
 - **The ColdFire**: MACHINE SEL "Smear"/"SMR" in WERP's row (type 9 keeps its key "WERP" in the
   tables). Page 1 TUNE SPD BLND SAMP / STRT SIZE DENS LEV; page 2 its own (OVLP SPRY PRND WIN, on
-  records 260, 245, 261, 262). Knob widgets; SPD shown -4.00..+4.00 (FRZ at 0), WIN by name, one
-  window a detent. MACHINE SEL writes SMEAR's own start (rec.c `smr_default`). Every knob slides.
+  records 260, 245, 261, 262). Knob widgets; SPD shown -4.00..+4.00 (FRZ at 0), WIN by name, four
+  detents a window (as every choice). MACHINE SEL writes SMEAR's own start (rec.c `smr_default`). Every knob slides.
 - **Gate**: unit tests (stage = Model, Model = live.Voice; the silence before READY); the runner's
   `smear` (smear.asm bit-exact to its program on the DSP's own memory, every block: outputs, the
   stage's words, every voice's state) and `mstress` (sixteen tracks, 271k instructions a block);

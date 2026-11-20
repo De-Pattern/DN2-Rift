@@ -1789,10 +1789,10 @@ def main() -> int:
                 if rc != 0 or not pjs.exists():
                     return False, out[-800:]
                 d0 = [c["d0"] for c in json.loads(pjs.read_text())["direct_calls"]]
-                win = [x for x in SMq.QUANT if x[1] == 262][0][3]
-                good = d0[:2] == [0, 32 << 8] and d0[2:] == [win[1] << 8, win[1] << 8]
-                return good, ("PLAY: one detent keeps FWD, the second moves on (two a choice); SMEAR's WIN one "
-                              "window a detent (RIFT v0.16)" if good else f"d0 {d0}, want [0, {32 << 8}, {win[1] << 8}, {win[1] << 8}]")
+                good = d0 == [0, 32 << 8, 0, 0]
+                return good, ("PLAY: one detent keeps FWD, the second moves on (two a choice); SMEAR's WIN keeps "
+                              "GAUS through two (four detents a window, as every choice; RIFT v0.16)" if good
+                              else f"d0 {d0}, want [0, {32 << 8}, 0, 0]")
             later("playdet", "PLAY two detents a choice (ColdFire)", "PLAY two detents a choice (ColdFire)",
                   [pd_cmd, sorted(EMU_ENV.items())], pd_body)
 
