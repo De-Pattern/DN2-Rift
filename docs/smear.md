@@ -303,3 +303,31 @@ SMEAR becomes a stage of its own between them, `smear.asm` at its own address:
    - the two pages in the LINE style;
    - MACHINE SEL's row.
 4. The gate steps: bit-exactness, cost, the UI cells, save/load; the full gate; release.
+
+## Built (RIFT v0.16, 2026-11-20)
+
+- **The chain**: smp.asm (a type-9 track: the slot latched at a note, `sampler.program.smear_latch`;
+  its mailbox, `smear_glue`, MB_MAGIC in MB_ON) → **smear.asm** (`dnfw.smear.stage`, at
+  `dsp.SMEAR_SW` = 0xbd8800, code at 0x200b1000) → fascia.asm. The stage takes a VOC lane at a
+  note (a free one, else the oldest; an empty slot takes none; freed when its owner leaves), runs
+  one voice's code in the track loop under the guard, and writes the track's buffer. L0, L3 and L5
+  are made 0 around it (its code post-modifies I0, I3, I5) and given back.
+- **Memory**: the voice's scratch, the stage's words (loaded zero: the power-on flag), the
+  mailboxes and the guard's cost words in the Machinedrum's former L2 (0x200a0000..); lane 0's
+  WF/WB in L2 at 0x200b7800, lane 1's in DDR; P, RING, the states and the computed tables in DDR
+  at 0x82700000.
+- **The DSP image's 1 MiB**: SMEAR left it 30 KB over. ORGAN's, THOLET's and SMEAR's tables
+  (49 KB) now come from the ColdFire at power-on over the sample link (link.c K_TABLES into the
+  pool's table area, READY's magic last; `dsp.link_tables`); ORGAN and THOLET (fascia.asm
+  `tables_in`) and SMEAR stay silent until READY. The power-on twiddles go through two leaf
+  subroutines (about 1,000 instructions less).
+- **The ColdFire**: MACHINE SEL "Smear"/"SMR" in WERP's row (type 9 keeps its key "WERP" in the
+  tables). Page 1 TUNE SPD BLND SAMP / STRT SIZE DENS LEV; page 2 its own (OVLP SPRY PRND WIN, on
+  records 260, 245, 261, 262). Knob widgets; SPD shown -4.00..+4.00 (FRZ at 0), WIN by name, one
+  window a detent. MACHINE SEL writes SMEAR's own start (rec.c `smr_default`). Every knob slides.
+- **Gate**: unit tests (stage = Model, Model = live.Voice; the silence before READY); the runner's
+  `smear` (smear.asm bit-exact to its program on the DSP's own memory, every block: outputs, the
+  stage's words, every voice's state) and `mstress` (sixteen tracks, 271k instructions a block);
+  ship_gate's ColdFire step `smear`.
+- **Not yet**: TRK + CLEAR gives a SMEAR track WaveTone's record defaults (SPD +4); a saved WERP
+  track opens as SMEAR with WERP's values on SMEAR's records.
