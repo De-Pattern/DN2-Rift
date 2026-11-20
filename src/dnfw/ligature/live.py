@@ -675,7 +675,7 @@ class Voice:
         elif ty == TICK:                     # a click each DIV of the tempo, CHANCE of it sounding
             L = DIV[WN(x1, 12)]               # A: a gate on it; B: each click up to half a DIV late
             rL = recip(L)
-            spb = F(F(FS * F(15.0)) * recip(self.bpm if self.bpm > F(20.0) else F(20.0)))
+            spb = F(F(FS * F(15.0)) * recip(self.bpm if self.bpm > F(20.0) else F(20.0)))   # samples a 16th
             for j in range(SUB):
                 at = floorf(F(F(self.pos + F(self.pinc * F(j))) * rL))
                 y = F(0.0)
@@ -825,7 +825,8 @@ class SlotVoice(Voice):
         super().__init__(slot_seed(slot))
         self.slot = slot
 
-    def dsp_block(self, knobs, trig: bool, note: float, vel: int, off: bool) -> np.ndarray:
+    def dsp_block(self, knobs, trig: bool, note: float, vel: int, off: bool, tempo: int = 14400) -> np.ndarray:
+        self.bpm = F(F(float(tempo & 0xFFFF)) * F(1.0 / 120.0))     # v0.15: the frame's word 108
         if trig:
             self.note(note, F(min(int(vel), 127)) * INV127)
         if off:

@@ -154,3 +154,57 @@ def test_the_comparison_sees_a_wrong_table():
     got = np.concatenate([got] + [dsp.block(f2, [0])[0] for _ in range(6)])
     want = np.concatenate([want] + [v.dsp_block(B.knobs_seen(words), False, 48.0, 127, False) for _ in range(6)])
     assert not np.array_equal(got.view(np.uint32), want.view(np.uint32))
+
+
+# -- v0.15: WEFT's clocks, particles and modular basics -------------------------------------------
+NEW15 = (L.TICK, L.ENV, L.VCA, L.CDIV, L.DUST, L.CHAOS, L.CRUSH, L.LISSA)
+
+
+def _one(ty, sa, sb, d1, d2, aa=100, ab=100, extra=()):
+    """ty fed by SA and SB, after a clock (block 1: TICK) and a sine (blocks 2, 3)"""
+    rows = [(L.TICK, 0, 0, 0, 0, 9, 110), (L.PHASE, 0, 0, 0, 0, 2, 64), (L.WAVE, 2, 100, 0, 0, 0, 64)]
+    rows += list(extra)
+    rows.append((ty, sa, aa, sb, ab, d1, d2))
+    return L.encode(rows, len(rows), 0)
+
+
+@pytest.mark.parametrize("ty", NEW15)
+@pytest.mark.parametrize("wiring", range(4))
+def test_the_new_blocks_are_bit_exact(ty, wiring):
+    """each new block alone, on a clock, on a sine, on noise and a trig; its settings moving"""
+    sa, sb = ((0, 0), (1, 0), (3, L.S_NOISE), (L.S_LFO1, L.S_TRIG))[wiring]
+    tb = list(SEED)
+    for k in range(4):
+        tb[L.WHDR + L.WWORDS * k: L.WHDR + L.WWORDS * (k + 1)] = _one(ty, sa, sb, 30 * k + 5, 127 - 31 * k)
+
+    def kn(k):
+        x = [(k // 12) % 4] + B.panel_knobs()[1:]
+        x[8 + 6] = (64 + 3 * k) % 128             # block 4's settings moving (its knobs' offsets)
+        x[9 + 6] = (64 - 2 * k) % 128
+        return x
+    a, b, first = B.compare(kn, {1: 48.0, 20: 55.0, 33: 60.0}, 48, offs=(14, 40), table_of=lambda k: tb)
+    assert first is None, first
+    assert np.isfinite(a).all()
+
+
+@pytest.mark.parametrize("tempo", (0, 7200, 14400, 21000, 36000, 0xFFFF))
+def test_tick_follows_the_tempo_bit_exact(tempo):
+    tb = list(SEED)
+    tb[L.WHDR: L.WHDR + L.WWORDS] = L.encode([(L.TICK, 0, 0, 0, 0, 10, 127), (L.SKIN, 1, 100, 0, 0, 64, 40)], 2, 0)
+    a, b, first = B.compare(lambda k: [0] + B.panel_knobs()[1:], {1: 50.0}, 60, table_of=lambda k: tb,
+                            tempo_of=lambda k: tempo)
+    assert first is None, first
+
+
+def test_tick_rate_is_the_tempos():
+    """negative control on the clock: at 120 BPM a sixteenth's TICK clicks every 6,000 samples"""
+    v = L.SlotVoice(0)
+    tb = list(SEED)
+    tb[L.WHDR: L.WHDR + L.WWORDS] = L.encode([(L.TICK, 0, 0, 0, 0, 8, 127)], 1, 0)
+    v.table = tb
+    kn = [0] + B.panel_knobs()[1:]
+    kn[5], kn[6], kn[7] = 0, 0, 127
+    out = np.concatenate([v.dsp_block(kn, k == 0, 60, 127, False, 14400) for k in range(800)])
+    at = np.flatnonzero(out > 0.1)
+    gaps = np.diff(at[np.r_[True, np.diff(at) > 1]])
+    assert len(gaps) >= 3 and all(abs(g - 6000) <= 1 for g in gaps), gaps[:5]

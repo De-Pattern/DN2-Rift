@@ -74,9 +74,10 @@ STATE_DM, STATE_BYTES = 0x2DDE00, 0x380      # save area, PERC's scratch, idle_l
 # touches L2 above the image's end) and well below the startup's non-cacheable window
 # 0x200fa000..0x200fdfff; the I-cache (enabled by the startup, docs/waverider-dsp-silence.md)
 # serves it. Its voices' state and scratch stay in L1, its tables in DDR.
-PERC_L2_LOAD = 0x200C0000
-PERC_L2_SPAN = 0x23000                       # 140 KB (v0.24: with P-I, about 132 KB; 80 KB v0.17..v0.23)
-PERC_SW = 0xB80000 + (PERC_L2_LOAD - 0x20000000) // 2       # 0xbe0000
+PERC_L2_LOAD = 0x200BC000                    # RIFT v0.15: 16 KB lower (0x200c0000 until v0.14), so fascia.asm
+                                             # (LIGATURE's new blocks) has 16 KB more; smp.asm stays at 0x200e3000
+PERC_L2_SPAN = 0x27000                       # RIFT v0.15: to smp.asm (0x23000 until v0.14: 140 KB, v0.24: with P-I)
+PERC_SW = 0xB80000 + (PERC_L2_LOAD - 0x20000000) // 2       # 0xbde000 (0xbe0000 until RIFT v0.14)
 L2_IMAGE_END = 0x2008823C                    # the stock stream's last L2 byte
 L2_NOCACHE = 0x200FA000                      # the startup's non-cacheable L2 window starts here
 PERC_SCRATCH_DM = 0x2DDE80                   # 55 words (dnfw.perc.machines.SC_WORDS)
@@ -218,9 +219,9 @@ FSC_STATE2_L2 = 0x200A9400                   # voices 8..15
 FSC_STATE_SPAN = 8 * 0xF80                   # dnfw.fascia.program.STRIDE
 # RIFT (SILT, 2026-11-17): the code moved into PERC's former room (RIFT's perc.asm, its chain head and
 # the sample machines' shared code, is 7.7 KB there): FASCIA, ORGAN and SILT need about 84 KB;
-# 0x200b1000..0x200c0000 is free again
-FSC_L2_LOAD = PERC_L2_LOAD + 0x4000          # 0x200c4000, 16 KB after perc.asm's start
-FSC_L2_SPAN = SMP_L2_LOAD - FSC_L2_LOAD        # to smp.asm's 0x200e3000: 124 KB
+# 0x200b1000..0x200bc000 is free again (44 KB; to 0x200c0000 until v0.14)
+FSC_L2_LOAD = PERC_L2_LOAD + 0x4000          # 0x200c0000, 16 KB after perc.asm's start (0x200c4000 until v0.14)
+FSC_L2_SPAN = SMP_L2_LOAD - FSC_L2_LOAD        # to smp.asm's 0x200e3000: 140 KB (124 KB until v0.14)
 FSC_SW = 0xB80000 + (FSC_L2_LOAD - 0x20000000) // 2
 FSC_SCRATCH_DM = MNM_RENDER_DM + MNM_RENDER_BYTES          # 0x2e6400 .. REGION's end 0x2e7000
 FSC_TABLES_DDR = 0x81220000
