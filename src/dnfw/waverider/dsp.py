@@ -236,6 +236,12 @@ SILT_DELAY_SPAN = 16 * 0xC000
 LIG_TABLES_DDR = 0x81227000
 # DIGIDRUM (type 22, dnfw.digidrum.program): its knobs' records and the modes' anchors (after LIGATURE's)
 DIGIDRUM_TABLES_DDR = 0x81229000
+# THOLET (type 23, dnfw.tholet.program; the concept is Error Kit's): its records, mu-law's levels, the
+# six strikes and the partials' constants (after DIGIDRUM's); each slot's cloud ring, 64 KB a slot
+# (above SILT's lines, below the sample pool; cleared by the DSP itself, 512 words a block)
+THOLET_TABLES_DDR = 0x8122A000
+THOLET_RING_DDR = 0x82600000
+THOLET_RING_SPAN = 16 * 0x10000
 
 IDLE_SITE_SW = 0xB88ABB                      # prvIdleTask's back edge: jump (pc,-0x10)
 IDLE_SITE_STOCK = bytes.fromhex("3e07ff00f0ff")
@@ -387,6 +393,7 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("SILT's players' constants (dnfw.silt.program.tables_bytes; RIFT)", SILT_TABLES_DDR, _silt_tables()),
         ("LIGATURE's patches (dnfw.ligature.program.tables_bytes; RIFT)", LIG_TABLES_DDR, _lig_tables()),
         ("DIGIDRUM's records and anchors (dnfw.digidrum.program.tables_bytes; RIFT)", DIGIDRUM_TABLES_DDR, _dgd_tables()),
+        ("THOLET's records, strikes and partials (dnfw.tholet.program.tables_bytes; RIFT)", THOLET_TABLES_DDR, _tho_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -410,6 +417,11 @@ def _perc_sine() -> bytes:
 
 def _dgd_tables() -> bytes:
     from ..digidrum import ddr
+    return ddr.tables_bytes()
+
+
+def _tho_tables() -> bytes:
+    from ..tholet import ddr
     return ddr.tables_bytes()
 
 

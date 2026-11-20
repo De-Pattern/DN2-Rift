@@ -153,7 +153,7 @@ class Voice:
         det = exp2f(F(F(kq(k, "STRK") * F(4.0)) * F(1.0 / 1200.0)))
         hard = F(F(F(0.12) + F(F(0.35) * F(F(1.0) - tone))) + F(F(1.4) * felt))
         ep1 = F(F(1.0) - ep)
-        self.hk = min(int(k["HAMR"]) * NH >> 7, NH - 1)
+        self.hk = min(max(int(k["HAMR"]), 0), NH - 1)   # HAMR: the strike's option (0..5), as the DSP's records give it
         self.hr = F(f0 * HINV[self.hk])
         self.ed = expf(F(F(-LN60) * F(DT * recip(t60))))
         for s in range(2):
