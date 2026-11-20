@@ -758,7 +758,7 @@ def main(argv=None):
             gc.collect()
         if "chords" in steps:
             print("\nstep 3k: four-note chords on each Monomachine machine, the memory clock (v0.36); "
-                  "and on the sample machines ONESHOT, WERP, SLICE (v0.38)")
+                  "and on the sample machines ONESHOT, SLICE (v0.38; RIFT v0.16: no WERP)")
             results["3k_chords"] = step_chords(warm(), sound, machines, cold=init)
             show(results["3k_chords"])
             gc.collect()
@@ -1829,7 +1829,7 @@ def step_smp_chords(init, sound, machines, blocks=12, only=()) -> tuple[dict, di
     slice_notes = tuple((24 + k) << 8 for k in SMP_CHORD_SLICES)
     cases = {
         "ONESHOT": (SM.TYPE_OF["ONESHOT"], smp_words({SM.SAMP_REC: 4}), notes),
-        "WERP": (SM.TYPE_OF["WERP"], smp_words({SM.SAMP_REC: 4}), notes),
+        # (RIFT v0.16: type 9 is SMEAR: its chords are the smear part's)
         "SLICE": (SM.TYPE_OF["SLICE"], smp_words({SM.SAMP_REC: 4, SM.SLICE_REC: 0}), slice_notes),
     }
     res, nums = {}, {}
@@ -1986,7 +1986,7 @@ def step_cost(init, sound, machines) -> dict:
                     f.param(0, slot, w)
                 return f.to_bytes()
             measure(name, fb)
-        for name in (("ONESHOT", "WERP", "STRETCH", "REPITCH", "GRID", "SLICE") if only != "mnm" else ()):
+        for name in (("ONESHOT", "STRETCH", "REPITCH", "GRID", "SLICE") if only != "mnm" else ()):   # (RIFT v0.16: no WERP)
             measure(name, (lambda ty: lambda b: base_frame(sound, machines, t0=ty, trigger=b == 1,
                                                           overrides=smp_words({SM.SAMP_REC: 4})).to_bytes())(SM.TYPE_OF[name]))
     finally:
@@ -2249,10 +2249,9 @@ def step_smp(init, sound, machines, blocks) -> dict:
     STR, REP = SM.TYPE_OF["STRETCH"], SM.TYPE_OF["REPITCH"]
 
     def timed(b):
-        f = base_frame(sound, machines, t0=WERP, trigger=b == 1, others={1: STR, 2: REP},
+        f = base_frame(sound, machines, t0=STR, trigger=b == 1, others={1: STR, 2: REP},   # RIFT v0.16: STRETCH in WERP's place
                        trigger_others=True,
-                       overrides=smp_words({SM.SAMP_REC: 4, SM.BARS_REC: 0, SM.SEG_REC: 20,
-                                            SM.MODE_REC: 80}))
+                       overrides=smp_words({SM.SAMP_REC: 4, SM.BARS_REC: 0}))
         for t, ws in ((1, smp_words({SM.SAMP_REC: 1, SM.BARS_REC: 0})),
                       (2, smp_words({SM.SAMP_REC: 2, SM.BARS_REC: 13}))):
             for slot, w in ws.items():
@@ -2392,7 +2391,7 @@ def step_smp(init, sound, machines, blocks) -> dict:
            {"PERC beside them is bit-exact to its model and sounds":
             mx["ok"] and perc_exact(mx)[0] > 0 and perc_exact(mx)[1:] == (0, 0)
             and V.peak(perc_series(mx, 2)) > 0.05}),
-        "v0.15: WERP, STRETCH and REPITCH at 140 BPM sound (peak > 0.05), bit-exact (above)":
+        "v0.15: STRETCH (twice) and REPITCH at 140 BPM sound (peak > 0.05), bit-exact (above) (RIFT v0.16: no WERP)":
             runs["timed"]["ok"] and all(V.peak(smp_series(runs["timed"], t)) > 0.05 for t in (0, 1, 2)),
         "v0.18: CFAD is gone (the DT2's ONESHOT has no such control): its record changes nothing; the loop sounds":
             runs["cfad"]["ok"] and runs["nocfad"]["ok"]
