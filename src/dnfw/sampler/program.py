@@ -444,8 +444,8 @@ def smear_glue(p: Prog, L: Layout) -> None:
         if rec in (SM.TUNE_REC, SM.SAMP_REC):
             continue                         # (TUNE is in TR, the slot latched: the voice reads neither)
         ctl(p, 4, rec, 10)
-        _lo, top = SM.RECORDS[rec][1], SM.RECORDS[rec][2]
-        if top != 127:                     # STRT 0..120: to 0..127
+        top = SM.SMEAR_TOPS.get(name, SM.RECORDS[rec][2])
+        if top != 127:                     # STRT, SIZE 0..120: to 0..127
             p.iconst(12, 0)
             p.float_(4, 4, 12)
             p.fconst(12, 127.0 / top)

@@ -568,8 +568,14 @@ def smr_defaults_header() -> str:
     """RIFT v0.16: SMEAR's start (dnfw.smear.live.DEFAULTS) on its records, which rec.c writes
     when a track becomes SMEAR (the records' own defaults are WaveTone's: SPD would start at +4)"""
     from ..smear import live as _sl
-    rows = [(r, _knob_word(round(_sl.DEFAULTS[c] * _smp.RECORDS[r][2] / 127), _smp.RECORDS[r][2], _smp.RECORDS[r][1]))
-            for c, r in _smp.SMEAR_RECORDS.items() if c not in ("TUNE", "SAMP")]
+    def word(c, r):
+        top = _smp.SMEAR_TOPS.get(c, _smp.RECORDS[r][2])
+        k = round(_sl.DEFAULTS[c] * top / 127)
+        if r == 262:                              # WIN: its choice's own value (smp_quant's rep)
+            q = [x for x in _smp.QUANT if x[1] == 262][0]
+            k = q[3][min(6, _sl.DEFAULTS[c] * 7 >> 7)]
+        return _knob_word(k, _smp.RECORDS[r][2], _smp.RECORDS[r][1])
+    rows = [(r, word(c, r)) for c, r in _smp.SMEAR_RECORDS.items() if c not in ("TUNE", "SAMP")]
     return (f"#define SMR_N {len(rows)}\n"
             f"static const unsigned short smr_rid[SMR_N] = {{{', '.join(str(r) for r, _w in rows)}}};\n"
             f"static const unsigned short smr_default[SMR_N] = {{{', '.join(str(w) for _r, w in rows)}}};\n")

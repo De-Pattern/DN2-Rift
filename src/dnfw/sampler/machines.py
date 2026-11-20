@@ -88,6 +88,9 @@ PAGES2 = {"WERP": ((260, "OVLP", "Grain Overlap"), (245, "SPRY", "Grain Spray"),
 SMEAR_RECORDS = dict(TUNE=238, SPD=254, BLND=255, SAMP=256, STRT=239, SIZE=258, DENS=257, OVLP=260,
                      SPRY=245, PRND=261, WIN=262, LEV=241)
 WIN_NAMES = ("GAUS", "BHAR", "EXPO", "TRI", "RAMP", "SINC", "RECT")
+# the top each SMEAR knob is read against: SIZE rides LEN's record, which the setter keeps to
+# 0..120 (its fine word, v0.48), as STRT's; the rest 0..127
+SMEAR_TOPS = {"STRT": 120, "SIZE": 120}
 # how page.c draws each control (v0.15, after the DT2's widgets)
 WIDGETS = {238: "bipolar", 254: "play", 260: "knob", 256: "samp", 239: "knob", 258: "knob",
            257: "knob", 241: "fader", 242: "seg", 255: "play", 240: "bars",
