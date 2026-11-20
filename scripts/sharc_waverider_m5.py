@@ -2910,6 +2910,11 @@ def step_mainmark(init, sound, machines) -> dict:
 
         def at_dispatch(r):
             b = state["b"]
+            # MAIN's tap (and IN's buffer): a known sine each block, where the recorder reads it
+            for kk in range(32):
+                x = struct.unpack("<I", struct.pack("<f", 0.25 * _m.sin(2 * _m.pi * 220 * (32 * b + kk) / 48000)))[0]
+                for at in (SM.MAIN_TAP, SM.MAIN_TAP + 0x80):
+                    m2.poke(r.state, at + 4 * kk, x)
             if b == 0:
                 command(r, 1, SM.CMD_NOW, src=src, chan=SM.GAIN_ZERO << 24, dest=SM.BUF_SLOT0)
             if b == n:
@@ -2927,15 +2932,7 @@ def step_mainmark(init, sound, machines) -> dict:
             for t in range(16):
                 f.put(0xA5A + 2 * t, t)
             return f.to_bytes()
-        mk = {"k": 0}
-
-        def at_master(r):                        # the stock's master mix: a known one (mainrec's way)
-            for kk in range(32):
-                x = 0.25 * _m.sin(2 * _m.pi * 220 * (mk["k"] + kk) / 48000)
-                m2.poke(r.state, SM.MIX_BUF + 4 * kk, struct.unpack("<I", struct.pack("<f", x))[0])
-                m2.poke(r.state, SM.MIX_BUF + 0x80 + 4 * kk, struct.unpack("<I", struct.pack("<f", x))[0])
-            mk["k"] += 32
-        r = run_blocks(init, fb, n + gap + w + 2, extra_hooks={m3.DISPATCH: at_dispatch, 0x1C3064: at_master})
+        r = run_blocks(init, fb, n + gap + w + 2, extra_hooks={m3.DISPATCH: at_dispatch})
         if not r["ok"]:
             return None
         st = r["state"].state
@@ -2974,6 +2971,9 @@ def step_mainmark(init, sound, machines) -> dict:
     }
     for r in (main, trk, cleared, inp):
         if r:
+            r["take_peak"] = max((abs(v) for v in r["take"]), default=0.0)
+            r["play_peak"] = max((abs(v) for v in r["play"]), default=0.0)
+            r["play_head"] = [round(v, 6) for v in r["play"][:6]]
             r.pop("take", None)
             r.pop("play", None)
     return {"ok": all(checks.values()), "checks": checks,
