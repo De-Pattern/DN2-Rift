@@ -2942,16 +2942,18 @@ def step_mainmark(init, sound, machines) -> dict:
         r.pop("state", None)
         return {"steps_word": steps_word, "frames": ent[1], "take": take,
                 "play": list(ren[p0 + BLOCK: p0 + w * BLOCK])}
-    main, trk, cleared = run(1), run(2), run(1, clear_mark=True)
+    main, trk, cleared, inp = run(1), run(2), run(1, clear_mark=True), run(0)
     k = 10.0 ** (SM.MAIN_PLAY_DB / 20.0)
 
     def louder(a, b):
         pairs = [(x, y) for x, y in zip(b["play"], a["play"]) if abs(x) >= 1e-4]
         return len(pairs) >= 100 and all(abs(y / x - k) <= 0.001 * k for x, y in pairs)
-    ok_runs = all(r is not None for r in (main, trk, cleared))
+    ok_runs = all(r is not None for r in (main, trk, cleared, inp))
     checks = {
         "a FLEX take of MAIN marks its buffer half (MAIN_MARK in the steps word), its steps kept":
             ok_runs and bool(main["steps_word"] & SM.MAIN_MARK) and (main["steps_word"] & 0x7FFF) == 16,
+        "a FLEX take of IN marks its buffer half too (the owner: IN as quiet as MAIN)":
+            ok_runs and bool(inp["steps_word"] & SM.MAIN_MARK) and (inp["steps_word"] & 0x7FFF) == 16,
         "negative control: a FLEX take of a track leaves no mark":
             ok_runs and not (trk["steps_word"] & SM.MAIN_MARK) and (trk["steps_word"] & 0x7FFF) == 16,
         "the MAIN take is recorded as it is: the same frames with the mark or without (and something there)":
@@ -2962,11 +2964,12 @@ def step_mainmark(init, sound, machines) -> dict:
             ok_runs and not (lambda kk: all(abs(y - x) <= 0.001 * abs(x) for x, y in zip(cleared["play"], main["play"])
                                             if abs(x) >= 1e-4))(None),
     }
-    for r in (main, trk, cleared):
+    for r in (main, trk, cleared, inp):
         if r:
             r.pop("take", None)
             r.pop("play", None)
-    return {"ok": all(checks.values()), "checks": checks, "numbers": {"main": main, "trk": trk, "cleared": cleared}}
+    return {"ok": all(checks.values()), "checks": checks,
+            "numbers": {"main": main, "trk": trk, "cleared": cleared, "in": inp}}
 
 
 # -- step 3e: the fast link (v0.16, docs/sampler.md) -------------------------------------------------
