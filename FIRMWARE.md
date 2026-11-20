@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.12** | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
+| **v0.13** | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
+| v0.12 | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
 | v0.11 | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
 | v0.10 | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
 | v0.9 | 2026-11-19 | LINE, the new screens on every RIFT machine (thin lines, a moving icon per control, values the Syntakt way, p-locks highlighted); LIGATURE in MACHINE SEL; RESONATOR removed; the manual (MANUAL on the patcher) | `builds/v0.9-LINE/` | yes |
@@ -39,6 +40,47 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.13 · PARITY
+
+- **File:** `RIFT_v0.13_PARITY_OS1.11.syx` (`builds/v0.13-PARITY/`)
+- **sha256:** `195fe44faa3c4abaeb26160a7ae6f844d0fd81abc1f559b9ec409774766fe092`
+- **Gated:** 2026-11-20, `CLEARED TO FLASH`
+- **Source:** `341cfc1` (this repository)
+
+**Adds** (the DN2 mk2 mod's updates, ported as is from dn2mk2-firmware ff1ffe5, 6e8baa6,
+e354e03, 40c2a91, 2a37c41, cd0779d, 754b31c, 53374d2, 1fd9d24; the generated SHARC and ColdFire
+code regenerated here)
+
+- **EDIT SLICE POINTS** (the mod's v0.62, impbox): edits play 0.2 s after the knobs rest (no YES);
+  a played slice is selected; ZOOM to a 128-frame view drawn from the sample's own frames (read
+  from the +Drive); FUNC + START / END snaps to the nearest zero crossing (`slice.c`, `link.c`).
+- **CREATE SLICE GRID:** FUNC + E jumps SLICES 2 / 4 / 8 / 16 / 32 / 64 (Wolljamin; `slc_grid_jumps`).
+- **GRID's ALLOCATE SLICE:** NO exits keeping RANDOM's locks, as the DT2 (the mod's v0.60, impbox).
+- **FLEX level** (the mod's v0.63): a take of a track 24 dB louder (`TRK_HW_DB`, the owner's number:
+  GAIN +24 made a take match its source by ear); GAIN 0 is what was +24.
+- **FLEX save:** a FLEX buffer saved to a slot keeps its take as it lies, never normalised
+  (`smp_save_keep`; `rec.c` `bn_save`).
+- The page renderer's span grows to 0x3C000 (the MD graphics move to 0x46afc000).
+- Gate: `slicefine` (new: live edits, zero crossings, deep zoom, a played slice, FUNC + E);
+  `alloc` (NO keeps RANDOM's locks); `sharc:flexlevel` (GAIN -24 at the runner's unity, GAIN 0 the
+  same take x 15.85 where unclipped, a 0 dB negative control); `link16` norm's fifth take (a FLEX
+  save kept as it lies).
+
+**Known issues**
+
+- Playing the same note again on the same voice doesn't re-select its slice (a different note does).
+- MAIN and IN FLEX takes unchanged (still quiet).
+
+**Tests**
+
+1. EDIT SLICE POINTS: move START, stop, play the key: the change is heard without YES.
+2. Play the track: the editor selects the slice that plays.
+3. ZOOM fully in: single cycles; FUNC + E / FUNC + H land on zero crossings.
+4. CREATE SLICE GRID: FUNC + E steps 2 / 4 / 8 / 16 / 32 / 64; E alone one.
+5. ALLOCATE SLICE, RANDOM, NO: RANDOM's locks stay.
+6. FLEX of a track, GAIN 0: about the track's level. A boosted FLEX track: 24 dB hotter, GAIN 0 brings it back.
+7. Save the FLEX buffer while it plays: no jump; the saved sample loads at the same level.
 
 ## v0.12 · PATCHING
 
