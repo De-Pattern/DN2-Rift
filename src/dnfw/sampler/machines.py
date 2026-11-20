@@ -196,7 +196,8 @@ TRK_UNITY = 0.1696 / 0.0725                # 2.339 (+7.4 dB): x the 1 / TRK_GAIN
 TRK_HW_DB = 24
 # RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet, and GAIN
 # +12 to make it up clips the take): a MAIN take is recorded as it is (never boosted into the
-# clamp) and played back MAIN_PLAY_DB louder. The DSP's recorder marks its buffer half (the
+# clamp) and played back MAIN_PLAY_DB louder; so is a take of IN (the owner, the same day: IN as
+# quiet as MAIN, at the mixer page's highest input level). The DSP's recorder marks its buffer half (the
 # directory's steps word, bit 15: MAIN_MARK); a voice on a marked half plays it that much louder
 MAIN_PLAY_DB = 12
 MAIN_MARK = 0x8000

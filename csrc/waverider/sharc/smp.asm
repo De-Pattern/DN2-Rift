@@ -572,9 +572,9 @@ wr_sm_else_41.:
       R12 = 0x7fff;
       R7 = R7 AND R12;
       R8 = DM(0x2df7dc);
-      R12 = 0x1;
+      R12 = 0x2;
       COMP(R8, R12);
-      IF NE JUMP 0xbf1c67;                   // -> wr_sm_else_51.
+      IF GE JUMP 0xbf1c67;                   // -> wr_sm_else_51.
       R8 = DM(0x2e0080);
       R8 = PASS R8;
       IF EQ JUMP 0xbf1c67;                   // -> wr_sm_else_52.
@@ -675,9 +675,9 @@ wr_sm_else_49.:
       R12 = 0x7fff;
       R7 = R7 AND R12;
       R8 = DM(0x2df7dc);
-      R12 = 0x1;
+      R12 = 0x2;
       COMP(R8, R12);
-      IF NE JUMP 0xbf1d3d;                   // -> wr_sm_else_57.
+      IF GE JUMP 0xbf1d3d;                   // -> wr_sm_else_57.
       R8 = DM(0x2e0080);
       R8 = PASS R8;
       IF EQ JUMP 0xbf1d3d;                   // -> wr_sm_else_58.
@@ -767,9 +767,9 @@ wr_sm_else_55.:
       R12 = 0x7fff;
       R7 = R7 AND R12;
       R8 = DM(0x2df7dc);
-      R12 = 0x1;
+      R12 = 0x2;
       COMP(R8, R12);
-      IF NE JUMP 0xbf1dfe;                   // -> wr_sm_else_62.
+      IF GE JUMP 0xbf1dfe;                   // -> wr_sm_else_62.
       R8 = DM(0x2e0080);
       R8 = PASS R8;
       IF EQ JUMP 0xbf1dfe;                   // -> wr_sm_else_63.

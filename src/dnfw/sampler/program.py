@@ -1170,7 +1170,7 @@ def render(p: Prog, L: Layout) -> None:
     p.ld(0, C["lev"])
     p.fop(0, 0, "*", 1)
     p.st(C["tmp"], 0)                         # LEV with the make-up (C['lev'] stays: a retrigger renders twice)
-    # RIFT v0.14: a FLEX take of MAIN (sla negative: a take; MAIN_MARK in its steps) plays
+    # RIFT v0.14: a FLEX take of MAIN or IN (sla negative: a take; MAIN_MARK in its steps) plays
     # MAIN_PLAY_DB louder: it was recorded as it is, never boosted into the clamp
     v(p, 9, "sla")
 
@@ -1968,12 +1968,12 @@ def recorder(p: Prog, L: Layout) -> None:
                     p.iconst(12, 0x7FFF)
                     p.iop(7, 7, "AND", 12)
 
-                    def main_take():          # RIFT v0.14: a FLEX take (GAIN set) of MAIN: marked
+                    def main_take():          # RIFT v0.14: a FLEX take (GAIN set) of MAIN or IN: marked
                         p.ld(8, SM.REC_GAIN)
                         p.ifz(8, "NE", lambda: (p.iconst(12, SM.MAIN_MARK), p.iop(7, 7, "OR", 12)))
                     p.ld(8, C["rsrc"])
-                    p.iconst(12, 1)
-                    p.if_(8, "EQ", 12, main_take, kind="i")
+                    p.iconst(12, 2)
+                    p.if_(8, "LT", 12, main_take, kind="i")
                     p.sti(2, 1, 7)
                 p.if_(5, "GE", 12, buf_dest, pool_dest, kind="i")
                 p.iconst(7, 0)
