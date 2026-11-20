@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.10** | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
+| **v0.11** | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
+| v0.10 | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
 | v0.9 | 2026-11-19 | LINE, the new screens on every RIFT machine (thin lines, a moving icon per control, values the Syntakt way, p-locks highlighted); LIGATURE in MACHINE SEL; RESONATOR removed; the manual (MANUAL on the patcher) | `builds/v0.9-LINE/` | yes |
 | v0.8 | 2026-11-18 | RESONATOR returns (the DN2 mk2 mod's Rings-style modal resonator, as a RIFT machine: TUNE LEV STRC BRIT / DAMP POS EXCT HIT) | `builds/v0.8-RESONATOR/` | yes |
 | v0.7 | 2026-11-18 | FLEX buffers B1..B8 in every sample machine's SAMP, MUTE SRC only while the FLEX track plays, the stock NAME screen for file names (from the DN2 mk2 mod's v0.54-v0.57); ORGAN: BLOM is the breath's attack; turned knobs show their value (a lock with its trig held) on RIFT's machines; the campfire start-up animation | `builds/v0.7-FLEXPOOL/` | yes |
@@ -37,6 +38,36 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.11 · VOICEKEEP
+
+- **File:** `RIFT_v0.11_VOICEKEEP_OS1.11.syx` (`builds/v0.11-VOICEKEEP/`)
+- **sha256:** `e0e477dcd82356a01681de3485b15a61a04cd1e70663b94822bbe27c3e206165`
+- **Gated:** 2026-11-19, `CLEARED TO FLASH`
+- **Source:** `5807099` (this repository)
+
+**Adds**
+
+- **Held voices keep the DSP's time** (dreamsaremaps, Discord 2026-11-19). The frame guard
+  renders our voices in ORDER and leaves out, then steals, the ones that do not fit. ORDER was
+  newest first (v0.29), so a melody over a held chord, or a REUSE re-strike, took the time and the
+  held notes were stolen. Now each slot's note-off (the frame's mask 36) marks it released until its
+  next note, and ORDER puts every released voice after every held one, newest first within each
+  (`src/dnfw/perc/program.py`: RELS_OFF, SORTS_OFF, RELEASED_BIAS).
+- SHARC runner part `fkeep` (gate group `sharc:fkeep`): two held FASCIA notes under a melody, the
+  clock made to move so about three voices fit: the held notes sound to the end (on v0.10 both die
+  within four blocks); three held with one re-struck over and over.
+
+**Known issues**
+
+- More notes held at once than the DSP can run: the newest still win.
+- The REUSE report itself was not reproduced at the emulator's CPU level; its case is in `fkeep`.
+
+**Tests**
+
+1. A busy FASCIA or SILT track: hold a two-note chord, play a melody over it: the chord keeps sounding.
+2. Hold a chord, re-strike one of its notes several times (REUSE): the others keep sounding.
+3. Every RIFT machine plays as before.
 
 ## v0.10 · DIGIDRUM
 
