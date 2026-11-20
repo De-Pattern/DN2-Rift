@@ -329,5 +329,5 @@ SMEAR becomes a stage of its own between them, `smear.asm` at its own address:
   `smear` (smear.asm bit-exact to its program on the DSP's own memory, every block: outputs, the
   stage's words, every voice's state) and `mstress` (sixteen tracks, 271k instructions a block);
   ship_gate's ColdFire step `smear`.
-- **Not yet**: TRK + CLEAR gives a SMEAR track WaveTone's record defaults (SPD +4); a saved WERP
+- **Not yet**: a saved WERP
   track opens as SMEAR with WERP's values on SMEAR's records.
