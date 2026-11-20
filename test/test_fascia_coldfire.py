@@ -98,7 +98,7 @@ def test_coldfire_type_18():
     from dnfw.waverider import coldfire as CF
     from dnfw.waverider import pages as P
     from dnfw.mnm import machines as MM
-    assert F.TYPE == 18 and F.TYPE in CF.NEW_TYPES and CF.TYPES_LAST == P.TYPES_LAST == 22   # RIFT: ORGAN, SILT, LIGATURE, then DIGIDRUM, after FASCIA
+    assert F.TYPE == 18 and F.TYPE in CF.NEW_TYPES and CF.TYPES_LAST == P.TYPES_LAST == 23   # RIFT: ORGAN, SILT, LIGATURE, DIGIDRUM, then THOLET, after FASCIA
     assert CF.MACHINE_NAMES[F.TYPE] == ("Fascia", "FSC")
     lst = list(CF.LIST_NEW)
     if not F.LISTED:
@@ -108,7 +108,8 @@ def test_coldfire_type_18():
     if PP.RIFT:   # RIFT: after the stock four, before the samples
         from dnfw.ligature import machines as LGM
         from dnfw.digidrum import machines as RSM
-        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(8) - (3 + LGM.LISTED + RSM.LISTED)   # RIFT: then ORGAN, SILT, (LIGATURE,) (DIGIDRUM,) the samples
+        from dnfw.tholet import machines as THM
+        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(8) - (3 + LGM.LISTED + RSM.LISTED + THM.LISTED)   # RIFT: then ORGAN, SILT, (LIGATURE,) (DIGIDRUM,) the samples
     else:
         assert lst.index(F.TYPE) == lst.index(MM.TYPES[-1]) + 1 == lst.index(8) - 1   # after the MnM's, before the samples
     assert not CF.SAMPLER_FIRST <= F.TYPE <= CF.SAMPLER_LAST                   # the synth group: no divider
@@ -118,7 +119,7 @@ def test_coldfire_type_18():
 def test_header_kinds_names_and_tables():
     from dnfw.waverider import pages as P
     hdr = P.c_header()
-    assert "#define WR_KINDS 18" in hdr and f"#define FSC_KIND {F.KIND}" in hdr
+    assert "#define WR_KINDS 19" in hdr and f"#define FSC_KIND {F.KIND}" in hdr
     assert "#define WR_NAMED_LO 208" in hdr and "#define WR_NAMED_HI 262" in hdr
     named = P.fsc_named()
     for c in F.CONTROLS:

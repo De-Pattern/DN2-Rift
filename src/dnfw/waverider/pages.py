@@ -66,7 +66,8 @@ from ..organ import machines as _org      # RIFT: ORGAN, type 19 (kind 15)
 from ..silt import machines as _slt       # RIFT: SILT, type 20 (kind 16)
 from ..ligature import machines as _lig   # RIFT: LIGATURE, type 21 (kind 17)
 from ..digidrum import machines as _dgd      # RIFT: DIGIDRUM, type 22 (kind 18)
-TYPES_LAST = max(13, *_mnm_types.TYPES, _smp.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE)   # dnfw.waverider.coldfire.TYPES_LAST: 5.. are ours (v0.20: 13,
+from ..tholet import machines as _tho        # RIFT: THOLET, type 23 (kind 19)
+TYPES_LAST = max(13, *_mnm_types.TYPES, _smp.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE, _tho.TYPE)   # dnfw.waverider.coldfire.TYPES_LAST: 5.. are ours (v0.20: 13,
                                   # SLICE, had been left out here: its track got WaveTone's pages;
                                   # v0.26: the Monomachine's from 14 on)
 GET_SHORT_NAME = 0x400372DA
@@ -279,7 +280,7 @@ from ..sampler import machines as _smp
 SMP_FIRST = _smp.FIRST_TYPE
 SMP_PAGES = tuple(tuple(r for r, _sh, _lo in _smp.PAGES.get(n, _smp.PAGES["ONESHOT"])) for n in _smp.NAMES)
 SMP_TITLES = _smp.SHORT
-SMP_SUBTITLES = tuple(n.capitalize() for n in _smp.NAMES)
+SMP_SUBTITLES = tuple(_smp.DISPLAY.get(n, n).capitalize() for n in _smp.NAMES)
 SMP_REC_IDS = tuple(r for r, _sh, _lo in _smp.REC_PAGE)            # every sample machine's page 2
 
 
@@ -321,6 +322,13 @@ def dgd_named() -> dict[int, tuple[str, str]]:
     return out
 
 
+def tho_named() -> dict[int, tuple[str, str]]:
+    """RIFT: record -> (long, short) on a THOLET track (dnfw.tholet.machines), the rest named "-" """
+    out = {_tho.SLOTS[c][0]: (_tho.LONG_NAMES[c], _tho.LABELS[c]) for c in _tho.CONTROLS}
+    out.update({r: (UNUSED_LONG, UNUSED_SHORT) for r in _tho.UNUSED_RECORDS})
+    return out
+
+
 # the C side's one descriptor a machine of FASCIA's kind (fmt.c, smp_page.c, rec.c, page.c pick it by
 # the track's type or kind): FASCIA's and ORGAN's tables behind one set of pointers
 # RIFT v0.9 (owner, 2026-11-18: "use the new guis that you made"): each control's LINE glyph (smp_page.c line_glyph)
@@ -329,15 +337,16 @@ LINE_GLYPHS = ("ARC", "TUNE", "LEV", "DECAY", "ATTACK", "PULSE", "DOTS", "FM", "
 _LINE_OF = {
     "TUNE": ("TUNE", "MTUN", "SHIFT", "GLISS", "BEND", "FINE"),
     "LEV": ("LEV", "LEVL", "MIX", "MIXT", "HIT", "PVEL", "VSNS"),
-    "DECAY": ("DEC", "DAMP", "PDEC", "SPEECH", "DRIFT"),
+    # THOLET: TONE FELT EP STRK GRAN GDEN GSIZ GFM GSPR REL (BRTH is NOISE's)
+    "DECAY": ("DEC", "DAMP", "PDEC", "SPEECH", "DRIFT", "REL"),
     "ATTACK": ("ATK", "CHIFF", "BLOM", "PERC"),
-    "PULSE": ("HARD", "CLIK", "KCLK", "SNAP", "PNCH", "AMD"),
-    "DOTS": ("DUST", "GRAIN", "DENS", "PART", "SCRAP", "WATR"),
+    "PULSE": ("HARD", "CLIK", "KCLK", "SNAP", "PNCH", "AMD", "STRK", "FELT"),
+    "DOTS": ("DUST", "GRAIN", "DENS", "PART", "SCRAP", "WATR", "GRAN", "GDEN"),
     # DIGIDRUM (its O1..O4 are the type's own: one glyph each, the knob's motion)
-    "FM": ("TZFM", "RING", "SIDE"),
+    "FM": ("TZFM", "RING", "SIDE", "GFM", "EP"),
     "FOLD": ("FOLD", "CHAR", "ROUGH", "DRIV", "OVER"),
-    "POS": ("POS", "EQF"), "RAYS": ("BRIT", "FORM", "EDGE", "EQG"),
-    "SPREAD": ("SPREAD", "CELESTE", "VOICES", "COUP", "FLTW"),
+    "POS": ("POS", "EQF"), "RAYS": ("BRIT", "FORM", "EDGE", "EQG", "TONE"),
+    "SPREAD": ("SPREAD", "CELESTE", "VOICES", "COUP", "FLTW", "GSPR", "GSIZ"),
     "NOISE": ("AIR", "WIND", "TURB", "BRTH", "BREK", "BUZZ", "VARY", "EXCT"),
     "RATE": ("TREM", "TRATE", "ROTR", "RSPD", "LFO1", "LFO2", "VIBR", "AMF"),
     "STRC": ("STRC",), "SINE": ("FDBK", "MORPH", "LPG", "MCHR"),
@@ -356,7 +365,7 @@ def line_glyph(name: str) -> int:
 
 def line_c() -> str:
     out = "".join(f"#define LG_{g} {i}\n" for i, g in enumerate(LINE_GLYPHS))
-    for pre, m in (("fsc", _fsc), ("org", _org), ("slt", _slt), ("lig", _lig), ("dgd", _dgd)):
+    for pre, m in (("fsc", _fsc), ("org", _org), ("slt", _slt), ("lig", _lig), ("dgd", _dgd), ("tho", _tho)):
         out += f"static const unsigned char {pre}_lglyph[{len(m.CONTROLS)}] = {{{', '.join(str(line_glyph(c)) for c in m.CONTROLS)}}};\n"
     return out
 
@@ -385,20 +394,23 @@ static const wr_mach_t wr_mach_lig = {LIG_TYPE, LIG_KIND, LIG_N, LIG_PAGES, -1, 
 static const wr_mach_t wr_mach_dgd = {DGD_TYPE, DGD_KIND, DGD_N, DGD_PAGES, -1, 0,
     dgd_rid, dgd_default, 0, dgd_slot, dgd_lo, dgd_top, dgd_choices, dgd_choice_at, dgd_bipolar,
     dgd_choice_name, dgd_choice_box, dgd_label, dgd_lglyph};
+static const wr_mach_t wr_mach_tho = {THO_TYPE, THO_KIND, THO_N, THO_PAGES, -1, 0,
+    tho_rid, tho_default, 0, tho_slot, tho_lo, tho_top, tho_choices, tho_choice_at, tho_bipolar,
+    tho_choice_name, tho_choice_box, tho_label, tho_lglyph};
 static inline const wr_mach_t *wr_mach_type(int ty)
 {
-    return ty == FSC_TYPE ? &wr_mach_fsc : ty == ORG_TYPE ? &wr_mach_org : ty == SLT_TYPE ? &wr_mach_slt : ty == LIG_TYPE ? &wr_mach_lig : ty == DGD_TYPE ? &wr_mach_dgd : 0;
+    return ty == FSC_TYPE ? &wr_mach_fsc : ty == ORG_TYPE ? &wr_mach_org : ty == SLT_TYPE ? &wr_mach_slt : ty == LIG_TYPE ? &wr_mach_lig : ty == DGD_TYPE ? &wr_mach_dgd : ty == THO_TYPE ? &wr_mach_tho : 0;
 }
 static inline const wr_mach_t *wr_mach_kind(int kind)
 {
-    return kind == FSC_KIND ? &wr_mach_fsc : kind == ORG_KIND ? &wr_mach_org : kind == SLT_KIND ? &wr_mach_slt : kind == LIG_KIND ? &wr_mach_lig : kind == DGD_KIND ? &wr_mach_dgd : 0;
+    return kind == FSC_KIND ? &wr_mach_fsc : kind == ORG_KIND ? &wr_mach_org : kind == SLT_KIND ? &wr_mach_slt : kind == LIG_KIND ? &wr_mach_lig : kind == DGD_KIND ? &wr_mach_dgd : kind == THO_KIND ? &wr_mach_tho : 0;
 }
 """
 
 
 def smp_named(name: str) -> dict[int, tuple[str, str]]:
     """record -> (long, short) on a sample machine's track"""
-    out = {r: (lo, sh) for r, sh, lo in _smp.PAGES.get(name, _smp.PAGES["ONESHOT"]) if r}
+    out = {r: (lo, sh) for r, sh, lo in _smp.PAGES.get(name, _smp.PAGES["ONESHOT"]) + _smp.PAGES2.get(name, ()) if r}
     out.update({r: (UNUSED_LONG, UNUSED_SHORT) for r in range(238, 263) if r not in out})
     return out
 
@@ -469,9 +481,10 @@ def c_header() -> str:
     slt = slt_named()
     lig = lig_named()
     res = dgd_named()
-    order = sorted(set(order) | set(fsc) | set(org) | set(slt) | set(lig) | set(res))
+    tho = tho_named()
+    order = sorted(set(order) | set(fsc) | set(org) | set(slt) | set(lig) | set(res) | set(tho))
     by_kind = {1: wr, **{_smp.TYPE_OF[n] - 4: m for n, m in zip(_smp.NAMES, smp)},
-               **{kd: m for kd, m in zip(MNM_KINDS, mnm)}, _fsc.KIND: fsc, _org.KIND: org, _slt.KIND: slt, _lig.KIND: lig, _dgd.KIND: res}
+               **{kd: m for kd, m in zip(MNM_KINDS, mnm)}, _fsc.KIND: fsc, _org.KIND: org, _slt.KIND: slt, _lig.KIND: lig, _dgd.KIND: res, _tho.KIND: tho}
     if sorted(by_kind) != list(range(1, len(by_kind) + 1)):
         raise ValueError(f"the kinds are not 1..n: {sorted(by_kind)}")
     kinds = [by_kind[k] for k in sorted(by_kind)]
@@ -486,7 +499,7 @@ def c_header() -> str:
             f"#define WR_KINDS {len(kinds)}\n"
             f"static const char *const wr_named_long[WR_KINDS][WR_NAMED] = {{{', '.join(row(m, 0) for m in kinds)}}};\n"
             f"static const char *const wr_named_short[WR_KINDS][WR_NAMED] = {{{', '.join(row(m, 1) for m in kinds)}}};\n"
-            + perc_c_header() + smp_c_header() + mnm_c_header() + _fsc.c_header() + _org.c_header() + _slt.c_header() + _lig.c_header() + _dgd.c_header() + line_c() + MACH_C
+            + perc_c_header() + smp_c_header() + mnm_c_header() + _fsc.c_header() + _org.c_header() + _slt.c_header() + _lig.c_header() + _dgd.c_header() + _tho.c_header() + line_c() + MACH_C
             + f"#define WR_NAMED_LO {min(order)}\n#define WR_NAMED_HI {max(order)}\n")
 
 
@@ -505,6 +518,8 @@ def smp_c_header() -> str:
             f"#define SMP_IDX(kind) ((kind) >= SMP_KIND0 && (kind) < SMP_KIND0 + SMP_N0 ? (kind) - SMP_KIND0 : (kind) == SMP_BOUNCE_KIND ? SMP_N0 : -1)\n"
             f"#define WR_TYPES_LAST {TYPES_LAST}\n"
             f"static const unsigned short smp_ids[SMP_N][8] = {{\n{ids}\n}};\n"
+            f"static const unsigned short smp_werp2_ids[8] = {{{', '.join(str(r) for r, _sh, _lo in _smp.PAGES2['WERP'])}}};\n#define SMP_SIZE_ID {_smp.SMEAR_RECORDS['SIZE']}\n"
+            + smr_defaults_header() +
             f"static const char smp_machine[SMP_N][8] = {{{names}}};\n"
             f"#define SMP_PLAY_ID {_smp.PLAY_REC}\n#define SMP_SAMP_ID {_smp.SAMP_REC}\n"
             f"#define SMP_STRT_ID {_smp.STRT_REC}\n#define SMP_LEN_ID {_smp.LEN_REC}\n"
@@ -547,6 +562,17 @@ SMP_FIRST_KIND = 4                 # is_wr's answer for type 8; 5..8 for 9..12
 def _knob_word(x, top, lo):
     from ..perc import live as _pl
     return _pl.knob_word(x, top, lo)
+
+
+def smr_defaults_header() -> str:
+    """RIFT v0.16: SMEAR's start (dnfw.smear.live.DEFAULTS) on its records, which rec.c writes
+    when a track becomes SMEAR (the records' own defaults are WaveTone's: SPD would start at +4)"""
+    from ..smear import live as _sl
+    rows = [(r, _knob_word(round(_sl.DEFAULTS[c] * _smp.RECORDS[r][2] / 127), _smp.RECORDS[r][2], _smp.RECORDS[r][1]))
+            for c, r in _smp.SMEAR_RECORDS.items() if c not in ("TUNE", "SAMP")]
+    return (f"#define SMR_N {len(rows)}\n"
+            f"static const unsigned short smr_rid[SMR_N] = {{{', '.join(str(r) for r, _w in rows)}}};\n"
+            f"static const unsigned short smr_default[SMR_N] = {{{', '.join(str(w) for _r, w in rows)}}};\n")
 
 
 def smp_quant_header() -> str:
@@ -683,6 +709,8 @@ def source(page_draw: int, cell: int) -> str:
     smp_page_data = "\n".join(f"    .long smp_title_{k}, smp_subtitle_{k}\n"
                               f"    .long {', '.join(str(e) for e in entries)}\n"
                               f"    .long {TAG}" for k, entries in enumerate(SMP_PAGES))
+    smp_page_data += ("\nsmp_werp2_descriptor:\n    .long smp_title_1, smp_subtitle_1\n"
+                      f"    .long {', '.join(str(r) for r, _sh, _lo in _smp.PAGES2['WERP'])}\n    .long {TAG}")
     smp_page_data += ("\nsmp_rec_descriptor:\n    .long smp_rec_title, smp_rec_subtitle\n"
                       f"    .long {', '.join(str(e) for e in SMP_REC_IDS)}\n    .long {TAG}")
     fsc_page_data = "\n".join(f"    .long fsc_title_{k}, fsc_subtitle_{k}\n"
@@ -700,6 +728,9 @@ def source(page_draw: int, cell: int) -> str:
     dgd_page_data = "\n".join(f"    .long dgd_title_{k}, dgd_subtitle_{k}\n"
                               f"    .long {', '.join(str(_dgd.SLOTS[c][0]) for c in page)}\n"
                               f"    .long {TAG}" for k, page in enumerate(_dgd.PAGES.values()))
+    tho_page_data = "\n".join(f"    .long tho_title_{k}, tho_subtitle_{k}\n"
+                              f"    .long {', '.join(str(_tho.SLOTS[c][0]) for c in page)}\n"
+                              f"    .long {TAG}" for k, page in enumerate(_tho.PAGES.values()))
     return f"""
 | -- the active track's machine, as ours: d0 = its type - 4 for types 5..{TYPES_LAST}: 1 PERC,
 | 4..9 the sample machines (8..13), 2, 3 and 10.. the Monomachine's (6, 7, 14..), else 0;
@@ -757,8 +788,13 @@ wr_count:
     rts
 19: moveq   #{_dgd.KIND - 1},%d1                        | RIFT: DIGIDRUM: its page
     cmp.l   %d1,%d0
-    bne.s   11f
+    bne.s   21f
     moveq   #{len(_dgd.PAGES)},%d0
+    rts
+21: moveq   #{_tho.KIND - 1},%d1                        | RIFT: THOLET: its two pages
+    cmp.l   %d1,%d0
+    bne.s   11f
+    moveq   #{len(_tho.PAGES)},%d0
     rts
 11: moveq   #2,%d1                         | d0 = kind - 1: 1, 2 and 9.. the Monomachine's
     cmp.l   %d1,%d0
@@ -847,7 +883,7 @@ wr_page:
     bra.w   2f
 20: moveq   #{_dgd.KIND - 1},%d1                        | RIFT: DIGIDRUM: its descriptor n (0)
     cmp.l   %d1,%d0
-    bne.s   12f
+    bne.s   22f
     move.l  %sp@(16),%d0
     moveq   #{len(_dgd.PAGES)},%d1
     cmp.l   %d1,%d0
@@ -855,6 +891,17 @@ wr_page:
     moveq   #44,%d1
     mulu.w  %d1,%d0
     addi.l  #dgd_descriptors,%d0
+    bra.w   2f
+22: moveq   #{_tho.KIND - 1},%d1                        | RIFT: THOLET: its descriptor n (0..1)
+    cmp.l   %d1,%d0
+    bne.s   12f
+    move.l  %sp@(16),%d0
+    moveq   #{len(_tho.PAGES)},%d1
+    cmp.l   %d1,%d0
+    bcc.w   6b
+    moveq   #44,%d1
+    mulu.w  %d1,%d0
+    addi.l  #tho_descriptors,%d0
     bra.w   2f
 12: moveq   #{_smp.BOUNCE_TYPE - 5},%d1
     cmp.l   %d1,%d0
@@ -885,7 +932,15 @@ wr_page:
     move.l  #smp_rec_descriptor,%d0
     bra.w   2f
 9:  subq.l  #1,%d0
-    moveq   #44,%d1
+    moveq   #{_smp.NAMES.index("WERP")},%d1               | RIFT v0.16: SMEAR's page 2 is its own
+    cmp.l   %d1,%d0
+    bne.s   19f
+    move.l  %sp@(16),%d1
+    subq.l  #1,%d1
+    bne.s   19f
+    move.l  #smp_werp2_descriptor,%d0
+    bra.w   2f
+19: moveq   #44,%d1
     mulu.w  %d1,%d0
     addi.l  #smp_descriptors,%d0
 2:  addq.l  #4,%sp
@@ -1023,6 +1078,8 @@ lig_descriptors:
 {lig_page_data}
 dgd_descriptors:
 {dgd_page_data}
+tho_descriptors:
+{tho_page_data}
 {_rep("subtitle", SUBTITLE)}
 {chr(10).join(_rep(f"mnm_title_{k}", t) for k, t in enumerate(MNM_TITLES))}
 {chr(10).join(_rep(f"mnm_subtitle_{k}", t) for k, t in enumerate(MNM_SUBTITLES))}
@@ -1039,6 +1096,8 @@ dgd_descriptors:
 {chr(10).join(_rep(f"lig_subtitle_{k}", t) for k, t in enumerate(_lig.PAGE_SUBTITLES))}
 {chr(10).join(_rep(f"dgd_title_{k}", t) for k, t in enumerate(_dgd.PAGE_TITLES))}
 {chr(10).join(_rep(f"dgd_subtitle_{k}", t) for k, t in enumerate(_dgd.PAGE_SUBTITLES))}
+{chr(10).join(_rep(f"tho_title_{k}", t) for k, t in enumerate(_tho.PAGE_TITLES))}
+{chr(10).join(_rep(f"tho_subtitle_{k}", t) for k, t in enumerate(_tho.PAGE_SUBTITLES))}
 {_rep("smp_rec_subtitle", "Recorder")}
 {chr(10).join(_rep(f"title_{k}", t) for k, t in enumerate(TITLES))}
 {strings}

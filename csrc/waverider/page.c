@@ -487,15 +487,10 @@ static void smp_picture(void *c, void *view, int kind)
         b = (s + len) * w / n;
         for (int j = 0; j <= n && n <= 32; j++)
             px(c, x0 + j * w / n, POS_Y + 2);
-    } else if (kind == SMP_WERP_KIND) {         /* the whole sample, its segments ticked */
-        int v = smp_get(view, SMP_SEG_ID), j = 0;
-        while (j < 7 && v >= smp_seg_steps[j])
-            j++;
-        int n = 32 >> j;                        /* (per bar; the ticks are drawn up to 32) */
-        a = 0;
-        b = w;
-        for (int i = 0; i <= n && n <= 32; i++)
-            px(c, x0 + i * w / n, POS_Y + 2);
+    } else if (kind == SMP_WERP_KIND) {         /* RIFT v0.16 SMEAR: the loop, STRT and SIZE squared */
+        int st = smp_get(view, SMP_STRT_ID), sz = smp_get(view, SMP_SIZE_ID);
+        a = st * w / 128;
+        b = a + (w - a) * sz * sz / (127 * 127);
     } else {
         a = smp_pos(view, SMP_STRT_ID, w);     /* v0.48: the fine word (fmt.c smp_fine) */
         b = a + smp_pos(view, SMP_LEN_ID, w);

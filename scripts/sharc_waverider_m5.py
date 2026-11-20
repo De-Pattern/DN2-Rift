@@ -80,6 +80,8 @@ from dnfw.organ import program as OGP                           # noqa: E402  (R
 from dnfw.silt import program as SLP                            # noqa: E402  (RIFT: SILT's, in FASCIA's walk)
 from dnfw.ligature import program as LGP                        # noqa: E402  (RIFT: LIGATURE's, in FASCIA's walk)
 from dnfw.digidrum import program as DDP                           # noqa: E402  (RIFT: DIGIDRUM's, in FASCIA's walk)
+from dnfw.perc.program import RIFT as PP_RIFT                    # noqa: E402
+from dnfw.tholet import program as THP                          # noqa: E402  (RIFT: THOLET's, in FASCIA's walk)
 from dnfw.fascia import machines as FSM                         # noqa: E402
 
 OUT = ROOT / "out" / "waverider"
@@ -104,6 +106,7 @@ OG_L = OGP.layout()             # RIFT: ORGAN (type 19), in FASCIA's walk
 SL_L = SLP.layout()             # RIFT: SILT (type 20), in FASCIA's walk
 LG_L = LGP.layout()             # RIFT: LIGATURE (type 21), in FASCIA's walk
 DD_L = DDP.layout()             # RIFT: DIGIDRUM (type 22), in FASCIA's walk
+TH_L = THP.layout()             # RIFT: THOLET (type 23), in FASCIA's walk
 
 
 def fsc_base(t: int) -> int:
@@ -148,10 +151,16 @@ def init_on(snap, m2mach, image: Image, warm: bool = False):
     # v0.26: the tables the ColdFire sends over the link at power-on (the host's pitch table
     # and zpack, at the pool's table area), then the word that says they are whole
     Lm = PL.layout().md
-    shipped = MDK.tables_bytes()
-    for k in range(0, len(shipped), 4):
-        m2.poke(runner.state, Lm.T[MDK.SHIPPED] + k, struct.unpack_from("<I", shipped, k)[0])
-    m2.poke(runner.state, Lm.ready, SM.TABLE_MAGIC)
+    if PP_RIFT:      # RIFT v0.16: ORGAN's, THOLET's and SMEAR's (dsp.link_tables), as link.c sends them
+        shipped = dsp.link_tables()
+        for k in range(0, len(shipped), 4):
+            m2.poke(runner.state, dsp.LINK_TABLES_DDR + k, struct.unpack_from("<I", shipped, k)[0])
+        m2.poke(runner.state, dsp.LINK_READY_DDR, SM.TABLE_MAGIC)
+    else:
+        shipped = MDK.tables_bytes()
+        for k in range(0, len(shipped), 4):
+            m2.poke(runner.state, Lm.T[MDK.SHIPPED] + k, struct.unpack_from("<I", shipped, k)[0])
+        m2.poke(runner.state, Lm.ready, SM.TABLE_MAGIC)
     if warm:
         # v0.17: the Machinedrum's sine and tables as the DSP has them 0.7 s after power-on
         # (it fills them itself, 32 blocks; the "sine" run checks that fill word for word),
@@ -218,7 +227,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
     run on the DSP's memory at that entry); loop entries."""
     state = init
     out = {"machine": [], "amp_in": [], "amp_out": [], "buffers": [], "buffer_bits": [], "t5_inputs": [],
-           "perc": [], "smp": [], "fsc": [], "loop_entries": 0, "smp_entries": 0, "fsc_entries": 0,
+           "perc": [], "smp": [], "fsc": [], "smr": [], "loop_entries": 0, "smp_entries": 0, "fsc_entries": 0,
            "setup": []}
     instr = wall = 0
     for b in range(blocks):
@@ -307,11 +316,42 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                                             for k in range(SP.STATE_STRIDE // 4)]}
                               for t in tap.get("smp_model", {})}
 
+        def at_smear(r):
+            # RIFT v0.16: smear.asm's entry, smp.asm's tail: the sample machines' outputs, then
+            # SMEAR's model (dnfw.smear.stage run on the DSP's memory here): every track whose
+            # mailbox is on, its buffer; the stage's words; each such track's state in DDR
+            at_after_smp(r)
+            if "smr_model" in tap:
+                return
+            from dnfw.perc.dsl import Mem as _Mem, Prog as _Prog
+            from dnfw.smear import stage as _SG
+            st = r.state
+            S_ = dsp.smear_layout()
+            on = [t for t in range(16) if m2.word(st, S_.mb(t, _SG.MB_ON)) == _SG.MB_MAGIC]
+            mem = _Mem(lambda a, st=st: m2.word(st, a) or 0)
+            pr = _Prog("run", mem=mem)
+            _SG.stage(pr, S_)
+            words = [S_.INIT, S_.CLOCK, S_.LOWN0, S_.LOWN1, S_.LAGE0, S_.LAGE1]
+            tap["smr_words"] = words
+            tap["smr_model"] = {"tracks": {t: [mem.get(tap["bufs"][t] + 4 * k) for k in range(BLOCK)] for t in on},
+                                "words": [mem.get(w) for w in words],
+                                "state": {t: [mem.get(S_.STATE + 512 * t + 4 * k) for k in range(S_.V.STATE_WORDS)]
+                                          for t in on},
+                                "steps": pr.steps}
+
         def at_fsc(r):
-            # v0.45: FASCIA's entry, smp.asm's tail: the sample machines' outputs (as before at
-            # PING_SW), then FASCIA's model (dnfw.fascia.program run on the DSP's memory here) for
+            # v0.45: FASCIA's entry (RIFT v0.16: smear.asm's tail): SMEAR's outputs, then FASCIA's model (dnfw.fascia.program run on the DSP's memory here) for
             # every type-18 slot, in the order the DSP walks them (PERC's ORDER: the newest first)
             at_after_smp(r)
+            if "smr_model" in tap and "smr_dsp" not in tap:
+                st = r.state
+                S_ = dsp.smear_layout()
+                m_ = tap["smr_model"]
+                tap["smr_dsp"] = {"tracks": {t: [m2.word(st, tap["bufs"][t] + 4 * k) or 0 for k in range(BLOCK)]
+                                             for t in m_["tracks"]},
+                                  "words": [m2.word(st, w) or 0 for w in tap["smr_words"]],
+                                  "state": {t: [m2.word(st, S_.STATE + 512 * t + 4 * k) or 0
+                                                for k in range(S_.V.STATE_WORDS)] for t in m_["state"]}}
             if "fsc_model" in tap:
                 return
             out["fsc_entries"] += 1
@@ -330,7 +370,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 lt = FSC_L.lasttype + 4 * t
                 if mem.get(lt) != ty:
                     mem.put(lt, ty)
-                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"]):
+                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], THP.VOICE["magic"]):
                         mem.put(fsc_base(t) + 4 * k_, 0)
                 if ty == FSM.TYPE:
                     p_, mem = FSP.run_voice(FSC_L, None, t, mem)
@@ -347,6 +387,9 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 elif ty == DDP.TYPE:                 # RIFT: DIGIDRUM (dnfw.digidrum.program), in the same walk
                     p_, mem = DDP.run_voice(DD_L, None, t, mem)
                     nw = DDP.VOICE_WORDS
+                elif ty == THP.TYPE:                 # RIFT: THOLET (dnfw.tholet.program), in the same walk
+                    p_, mem = THP.run_voice(TH_L, None, t, mem)
+                    nw = THP.VOICE_WORDS
                 else:
                     continue
                 buf = m2.word(st, PP.BUFFERS + 4 * t) or 0
@@ -385,7 +428,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
             out["setup"].append(("none-arm", b, None))
 
         hooks = {m3.DISPATCH: at_dispatch, dsp.PERC_SW: at_loop, dsp.SMP_SW: at_after_perc,
-                 dsp.FSC_SW: at_fsc, dsp.PING_SW: at_after_fsc,
+                 dsp.SMEAR_SW: at_smear, dsp.FSC_SW: at_fsc, dsp.PING_SW: at_after_fsc,
                  LOOP_RESUME: at_resume,
                  m3.AMP_STAGE: amp, AMP_RETURN: amp_ret, SETUP_GUARD: guard,
                  SETUP_TABLE_READ: table_read, SETUP_NONE: none_arm}
@@ -424,6 +467,15 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                                + (0 if t in got else SP.STATE_STRIDE // 4),
                                "out": [V.bits_f32(x) for x in got.get(t, {}).get("out", [])],
                                "model_steps": model[t]["steps"]} for t in model})
+        sm, sg = tap.get("smr_model"), tap.get("smr_dsp")
+        out["smr"].append(None if sm is None else {
+            "tracks": {t: {"mismatches": sum(1 for x, y in zip(sm["tracks"][t], (sg or {}).get("tracks", {}).get(t, [])) if x != y)
+                           + (0 if sg and t in sg["tracks"] else BLOCK),
+                           "bits": list((sg or {}).get("tracks", {}).get(t, []))} for t in sm["tracks"]},
+            "words_ok": bool(sg) and sm["words"] == sg["words"],
+            "state_mismatches": sum(sum(1 for x, y in zip(sm["state"][t], (sg or {}).get("state", {}).get(t, [])) if x != y)
+                                    for t in sm["state"]),
+            "steps": sm["steps"]})
         model, got = tap.get("fsc_model", {}), tap.get("fsc_dsp", {})
         out["fsc"].append({t: {"out_mismatches": sum(1 for x, y in zip(model[t]["out"], got.get(t, {}).get("out", [])) if x != y)
                                + (0 if t in got else BLOCK),
@@ -598,7 +650,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,tholet,tstress,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -706,7 +758,7 @@ def main(argv=None):
             gc.collect()
         if "chords" in steps:
             print("\nstep 3k: four-note chords on each Monomachine machine, the memory clock (v0.36); "
-                  "and on the sample machines ONESHOT, WERP, SLICE (v0.38)")
+                  "and on the sample machines ONESHOT, SLICE (v0.38; RIFT v0.16: no WERP)")
             results["3k_chords"] = step_chords(warm(), sound, machines, cold=init)
             show(results["3k_chords"])
             gc.collect()
@@ -740,7 +792,15 @@ def main(argv=None):
                                ("digidrum", "DIGIDRUM bit-exact to live.Voice, in FASCIA's walk (RIFT)",
                                 lambda: step_digidrum(warm(), sound, machines)),
                                ("dstress", "sixteen DIGIDRUM voices under the guard (RIFT)",
-                                lambda: step_dstress(warm(), sound, machines))):
+                                lambda: step_dstress(warm(), sound, machines)),
+                               ("tholet", "THOLET bit-exact to live.Voice, in FASCIA's walk (RIFT)",
+                                lambda: step_tholet(warm(), sound, machines)),
+                               ("tstress", "sixteen THOLET voices under the guard (RIFT)",
+                                lambda: step_tstress(warm(), sound, machines)),
+                               ("smear", "SMEAR (smear.asm) bit-exact to its program, lanes, notes, an empty slot (RIFT v0.16)",
+                                lambda: step_smear(warm(), sound, machines)),
+                               ("mstress", "sixteen SMEAR tracks: every block returns, finite (RIFT v0.16)",
+                                lambda: step_mstress(warm(), sound, machines))):
             if key in steps:
                 print(f"\nstep 3{key}: {title}")
                 results[f"3_{key}"] = fn()
@@ -793,6 +853,12 @@ def main(argv=None):
             results["3f_flexlevel"] = step_flexlevel(init, sound, machines)
             gc.collect()
             show(results["3f_flexlevel"])
+
+        if "mainmark" in steps:
+            print("\nstep 3f2: a FLEX take of MAIN, played MAIN_PLAY_DB louder (RIFT v0.14)")
+            results["3f2_mainmark"] = step_mainmark(init, sound, machines)
+            gc.collect()
+            show(results["3f2_mainmark"])
 
         if "mainrec" in steps:
             print("\nstep 3m: MAIN recorded, previewed and played, in the instrument's order (v0.38)")
@@ -1763,7 +1829,7 @@ def step_smp_chords(init, sound, machines, blocks=12, only=()) -> tuple[dict, di
     slice_notes = tuple((24 + k) << 8 for k in SMP_CHORD_SLICES)
     cases = {
         "ONESHOT": (SM.TYPE_OF["ONESHOT"], smp_words({SM.SAMP_REC: 4}), notes),
-        "WERP": (SM.TYPE_OF["WERP"], smp_words({SM.SAMP_REC: 4}), notes),
+        # (RIFT v0.16: type 9 is SMEAR: its chords are the smear part's)
         "SLICE": (SM.TYPE_OF["SLICE"], smp_words({SM.SAMP_REC: 4, SM.SLICE_REC: 0}), slice_notes),
     }
     res, nums = {}, {}
@@ -1920,7 +1986,7 @@ def step_cost(init, sound, machines) -> dict:
                     f.param(0, slot, w)
                 return f.to_bytes()
             measure(name, fb)
-        for name in (("ONESHOT", "WERP", "STRETCH", "REPITCH", "GRID", "SLICE") if only != "mnm" else ()):
+        for name in (("ONESHOT", "STRETCH", "REPITCH", "GRID", "SLICE") if only != "mnm" else ()):   # (RIFT v0.16: no WERP)
             measure(name, (lambda ty: lambda b: base_frame(sound, machines, t0=ty, trigger=b == 1,
                                                           overrides=smp_words({SM.SAMP_REC: 4})).to_bytes())(SM.TYPE_OF[name]))
     finally:
@@ -2183,10 +2249,9 @@ def step_smp(init, sound, machines, blocks) -> dict:
     STR, REP = SM.TYPE_OF["STRETCH"], SM.TYPE_OF["REPITCH"]
 
     def timed(b):
-        f = base_frame(sound, machines, t0=WERP, trigger=b == 1, others={1: STR, 2: REP},
+        f = base_frame(sound, machines, t0=STR, trigger=b == 1, others={1: STR, 2: REP},   # RIFT v0.16: STRETCH in WERP's place
                        trigger_others=True,
-                       overrides=smp_words({SM.SAMP_REC: 4, SM.BARS_REC: 0, SM.SEG_REC: 20,
-                                            SM.MODE_REC: 80}))
+                       overrides=smp_words({SM.SAMP_REC: 4, SM.BARS_REC: 0}))
         for t, ws in ((1, smp_words({SM.SAMP_REC: 1, SM.BARS_REC: 0})),
                       (2, smp_words({SM.SAMP_REC: 2, SM.BARS_REC: 13}))):
             for slot, w in ws.items():
@@ -2326,7 +2391,7 @@ def step_smp(init, sound, machines, blocks) -> dict:
            {"PERC beside them is bit-exact to its model and sounds":
             mx["ok"] and perc_exact(mx)[0] > 0 and perc_exact(mx)[1:] == (0, 0)
             and V.peak(perc_series(mx, 2)) > 0.05}),
-        "v0.15: WERP, STRETCH and REPITCH at 140 BPM sound (peak > 0.05), bit-exact (above)":
+        "v0.15: STRETCH (twice) and REPITCH at 140 BPM sound (peak > 0.05), bit-exact (above) (RIFT v0.16: no WERP)":
             runs["timed"]["ok"] and all(V.peak(smp_series(runs["timed"], t)) > 0.05 for t in (0, 1, 2)),
         "v0.18: CFAD is gone (the DT2's ONESHOT has no such control): its record changes nothing; the loop sounds":
             runs["cfad"]["ok"] and runs["nocfad"]["ok"]
@@ -2878,6 +2943,100 @@ def step_flexlevel(init, sound, machines) -> dict:
             r.pop("take", None)
     return {"ok": all(checks.values()), "checks": checks,
             "numbers": {"unity": unity, "recorder": recorder, "zero": zero}}
+
+
+def step_mainmark(init, sound, machines) -> dict:
+    """RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet; GAIN +12 to
+    make it up clipped it): a FLEX take of MAIN is recorded as it is and played MAIN_PLAY_DB louder.
+    Track 0 ONESHOT looping into the mix; RECORD NOW into buffer half 0 (as FLEX sends it: the
+    GAIN index set) from MAIN, then from TRK1 (the negative control); the directory's steps word
+    carries MAIN_MARK for MAIN only. Then the MAIN take played by track 0 (SAMP on the half) twice,
+    with the mark and with it cleared: the voice's render is MAIN_PLAY_DB louder with it, sample
+    for sample (within 0.1 %), and the take itself is the same recording either way."""
+    import math as _m
+    ONE = SM.TYPE_OF["ONESHOT"]
+    cmd_at = dsp.SMP_POOL_DDR + SM.CMD_OFFSET
+    dir0 = dsp.SMP_POOL_DDR + SM.BUF_DIR
+    n, gap, w = 16, 3, 10
+    loop = {SM.SAMP_REC: 3, SM.PLAY_REC: 80, SM.LOOP_REC: 20}
+
+    def command(r, seq, cmd, src=0, chan=0, dest=0, frames=SM.REC_FRAMES, steps=16):
+        for kk, word in enumerate((seq, cmd, src, chan, 33 | steps << 16, dest << 24 | frames)):
+            m2.poke(r.state, cmd_at + 4 * kk, word)
+
+    def run(src, clear_mark=False):
+        state = {"b": 0}
+
+        def at_dispatch(r):
+            b = state["b"]
+            # MAIN's tap (and IN's buffer): a known sine each block, where the recorder reads it
+            for kk in range(32):
+                x = struct.unpack("<I", struct.pack("<f", 0.25 * _m.sin(2 * _m.pi * 220 * (32 * b + kk) / 48000)))[0]
+                for at in (SM.MAIN_TAP, SM.MAIN_TAP + 0x80):
+                    m2.poke(r.state, at + 4 * kk, x)
+            if b == 0:
+                command(r, 1, SM.CMD_NOW, src=src, chan=SM.GAIN_ZERO << 24, dest=SM.BUF_SLOT0)
+            if b == n:
+                command(r, 2, SM.CMD_STOP)
+            if b == n + 1 and clear_mark:
+                m2.poke(r.state, dir0 + 8, (m2.word(r.state, dir0 + 8) or 0) & ~SM.MAIN_MARK)
+            state["b"] += 1
+
+        def fb(b):
+            if b < n + gap:
+                f = base_frame(sound, machines, t0=ONE, trigger=b == 1, overrides=smp_words(loop))
+            else:
+                take = {**loop, SM.SAMP_REC: SM.BUF_SAMP0}
+                f = base_frame(sound, machines, t0=ONE, trigger=b == n + gap, overrides=smp_words(take))
+            for t in range(16):
+                f.put(0xA5A + 2 * t, t)
+            return f.to_bytes()
+        r = run_blocks(init, fb, n + gap + w + 2, extra_hooks={m3.DISPATCH: at_dispatch})
+        if not r["ok"]:
+            return None
+        st = r["state"].state
+        steps_word = m2.word(st, dir0 + 8) or 0
+        ent = [m2.word(st, dir0 + 4 * kk) or 0 for kk in range(2)]
+        take = []
+        for kk in range(min(ent[1], 4096) // 2):
+            word = m2.word(st, ent[0] + 4 * kk) or 0
+            take += [((h ^ 0x8000) - 0x8000) / 32768.0 for h in (word & 0xFFFF, word >> 16)]
+        ren = smp_series(r, 0)
+        p0 = (n + gap) * BLOCK
+        r.pop("state", None)
+        return {"steps_word": steps_word, "frames": ent[1], "take": take,
+                "play": list(ren[p0 + BLOCK: p0 + w * BLOCK])}
+    main, trk, cleared, inp = run(1), run(2), run(1, clear_mark=True), run(0)
+    k = 10.0 ** (SM.MAIN_PLAY_DB / 20.0)
+
+    def louder(a, b):
+        pairs = [(x, y) for x, y in zip(b["play"], a["play"]) if abs(x) >= 1e-4]
+        return len(pairs) >= 100 and all(abs(y / x - k) <= 0.001 * k for x, y in pairs)
+    ok_runs = all(r is not None for r in (main, trk, cleared, inp))
+    checks = {
+        "a FLEX take of MAIN marks its buffer half (MAIN_MARK in the steps word), its steps kept":
+            ok_runs and bool(main["steps_word"] & SM.MAIN_MARK) and (main["steps_word"] & 0x7FFF) == 16,
+        "a FLEX take of IN marks its buffer half too (the owner: IN as quiet as MAIN)":
+            ok_runs and bool(inp["steps_word"] & SM.MAIN_MARK) and (inp["steps_word"] & 0x7FFF) == 16,
+        "negative control: a FLEX take of a track leaves no mark":
+            ok_runs and not (trk["steps_word"] & SM.MAIN_MARK) and (trk["steps_word"] & 0x7FFF) == 16,
+        "the MAIN take is recorded as it is: the same frames with the mark or without (and something there)":
+            ok_runs and main["take"] == cleared["take"] and max((abs(v) for v in main["take"]), default=0) > 0.01,
+        f"the marked take plays MAIN_PLAY_DB ({SM.MAIN_PLAY_DB} dB) louder, sample for sample (within 0.1 %)":
+            ok_runs and louder(main, cleared),
+        "negative control: the same comparison at 0 dB is refused":
+            ok_runs and not (lambda kk: all(abs(y - x) <= 0.001 * abs(x) for x, y in zip(cleared["play"], main["play"])
+                                            if abs(x) >= 1e-4))(None),
+    }
+    for r in (main, trk, cleared, inp):
+        if r:
+            r["take_peak"] = max((abs(v) for v in r["take"]), default=0.0)
+            r["play_peak"] = max((abs(v) for v in r["play"]), default=0.0)
+            r["play_head"] = [round(v, 6) for v in r["play"][:6]]
+            r.pop("take", None)
+            r.pop("play", None)
+    return {"ok": all(checks.values()), "checks": checks,
+            "numbers": {"main": main, "trk": trk, "cleared": cleared, "in": inp}}
 
 
 # -- step 3e: the fast link (v0.16, docs/sampler.md) -------------------------------------------------
@@ -4254,6 +4413,277 @@ def step_dstress(init, sound, machines) -> dict:
         "the newest note heard in most blocks (newest first)": out["newest_heard"] >= 0.8,
         "every buffer finite": out["finite"],
     }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+def th_frame(sound, machines, res: dict, trig=(), fascias=None, offs=()) -> bytes:
+    """a frame: RES = {t: (knobs, note)} on THOLET, FASCIAS = {t: (panel, note, vel)} on FASCIA; TRIG the
+    tracks triggered (mask 34)"""
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.tholet import bench as DB           # noqa: PLC0415
+    t0 = THP.TYPE if 0 in res else FSM.TYPE
+    f = base_frame(sound, machines, t0=t0, trigger=False)
+    for t, (kn, note) in res.items():
+        f.header(FR.MACHINE, t, THP.TYPE)
+        for w, ride in zip(DB.knobs_words(kn), DB.RIDES):
+            f.param(t, FSM.SLOTS[ride][1], w)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, 127 << 8)
+    for t, (panel, note, vel) in (fascias or {}).items():
+        f.header(FR.MACHINE, t, FSM.TYPE)
+        for c, word in FB.panel_words(panel).items():
+            f.param(t, FSM.SLOTS[c][1], word)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
+    for t in trig:
+        f.trigger(t, masks=(34,))
+    for t in offs:                               # THOLET: a note-off (mask 36) lets its dampers fall
+        f.trigger(t, masks=(36,))
+    return f.to_bytes()
+
+
+def th_live(knobs_of, notes: dict, blocks: int, slot: int, skew=0, offs=()):
+    """live.Voice for SLOT: KNOBS_OF(b), NOTES = {block: note}. SKEW (the negative control) moves O1 by
+    that much in live only (TONE: THOLET's first knob)"""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.tholet import bench as DB, live as THV   # noqa: PLC0415
+    v = THV.Voice(slot)
+    out, note = [], 60.0
+    for b in range(blocks):
+        seen = list(DB.knobs_seen(DB.knobs_words(knobs_of(b))))
+        seen[2] = min(127, seen[2] + skew)               # TONE
+        if b in notes:
+            note = notes[b]
+        out.append(np.asarray(v.block(DB.live_knobs(seen), b in notes, FB.note_seen(note), 127, b in offs), np.float32))
+    return out
+
+
+def step_tholet(init, sound, machines) -> dict:
+    """RIFT: THOLET's assembled code against live.Voice, bit for bit, in FASCIA's walk: the defaults (a
+    note, a retrigger); every knob moving; extreme panels; two voices at once; a track switched from
+    FASCIA to THOLET (the walk's reset); and a negative control (live with TONE one step off must be
+    told apart)."""
+    import random                                # noqa: PLC0415
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.tholet import bench as DB           # noqa: PLC0415
+    res, bad = {}, []
+
+    def judge(name, rr, want, t=0, need_sound=True):
+        ex = fsc_exact(rr)
+        lb, dmax = fsc_vs_live(rr, t, want)
+        got = [np.array(b_, np.uint32).view(np.float32) for b_ in fsc_bits(rr, t) if b_ is not None]
+        pk = float(max((np.max(np.abs(g)) for g in got), default=0.0))
+        ok = bool(rr["ok"] and ex[1:] == (0, 0) and lb == 0 and (pk > 0.001 or not need_sound))
+        res[name] = {"ok": ok, "model_mismatch": ex[1:], "live_blocks_differing": lb, "max_abs_diff": dmax,
+                     "peak": pk, "halt": rr.get("halt")}
+        if not ok:
+            bad.append(name)
+        print(f"    tholet {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
+        return lb
+    n = 20
+    dk = DB.panel_knobs()
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (dk, 55.0)}, trig=(0,) if b in (1, 12) else ()), n)
+    judge("defaults: a note, a retrigger", rr, th_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0))
+    lb_neg = fsc_vs_live(rr, 0, th_live(lambda b: dk, {1: 55.0, 12: 55.0}, n, 0, skew=1))[0]
+    res["negative control: TONE + 1 in live only"] = {"ok": lb_neg > 0, "live_blocks_differing": lb_neg}
+    print(f"    tholet negative control: {'ok' if lb_neg > 0 else 'FAIL'} ({lb_neg} blocks told apart)", flush=True)
+
+    def moving(b):
+        return [(dk[j] + 7 * b * (j + 1)) % 128 for j in range(16)]
+    m = 16
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (moving(b), 48.0)}, trig=(0,) if b in (1, 8) else ()), m)
+    judge("every knob moving", rr, th_live(moving, {1: 48.0, 8: 48.0}, m, 0))
+    ok_x = True
+    for seed in range(3):
+        r0 = random.Random(seed)
+        kx = [r0.choice([0, 127, r0.randrange(128)]) for _ in range(16)]
+        note = (24.0, 72.0, 120.0)[seed]
+        rr = run_blocks(init, lambda b, kx=kx, note=note: th_frame(sound, machines, {0: (kx, note)}, trig=(0,) if b == 1 else ()), 10)
+        judge(f"extreme panel {seed}", rr, th_live(lambda b, kx=kx: kx, {1: note}, 10, 0), need_sound=False)
+        ok_x = ok_x and res[f"extreme panel {seed}"]["ok"]
+    k2 = DB.panel_knobs(HAMR=110, TONE=100, DEC=90, GRAN=110, GDEN=90)
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (dk, 45.0), 1: (k2, 64.0)},
+                                             trig=(0, 1) if b == 1 else ()), 14)
+    judge("two at once (track 1)", rr, th_live(lambda b: dk, {1: 45.0}, 14, 0))
+    judge("two at once (track 2)", rr, th_live(lambda b: k2, {1: 64.0}, 14, 1), t=1)
+    n_off = 24
+    rr = run_blocks(init, lambda b: th_frame(sound, machines, {0: (dk, 60.0)}, trig=(0,) if b == 1 else (),
+                                             offs=(0,) if b == 9 else ()), n_off)
+    judge("a note, then its note-off (the dampers)", rr, th_live(lambda b: dk, {1: 60.0}, n_off, 0, offs=(9,)))
+    fpanel = fsc_audition()["01_tubular_bell"][0]
+    n_sw = 20
+
+    def sw(b):
+        if b < 5:
+            return th_frame(sound, machines, {}, trig=(0,) if b == 1 else (), fascias={0: (fpanel, 60, 1.0)})
+        return th_frame(sound, machines, {0: (dk, 50.0)}, trig=(0,) if b == 6 else ())
+    rr = run_blocks(init, sw, n_sw)
+    want = th_live(lambda b: dk, {1: 50.0}, n_sw - 5, 0)
+    got = fsc_bits(rr, 0)
+    ex = fsc_exact(rr)
+    exact = len(got) == n_sw and all(got[b] is not None and np.array_equal(np.array(got[b], np.uint32),
+                                                                             want[b - 5].view(np.uint32))
+                                     for b in range(5, n_sw))
+    ok_sw = bool(rr["ok"] and ex[1:] == (0, 0) and exact and np.max(np.abs(want[-1])) > 0.0005)
+    res["FASCIA -> THOLET on one track"] = {"ok": ok_sw, "model_mismatch": ex[1:], "dgd_exact": exact}
+    if not ok_sw:
+        bad.append("switch")
+    print(f"    tholet FASCIA -> THOLET: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    checks = {
+        "the defaults (a note, a retrigger): bit-exact to the model and live": res["defaults: a note, a retrigger"]["ok"],
+        "the comparison tells live with TONE one step off apart (negative control)":
+            res["negative control: TONE + 1 in live only"]["ok"],
+        "every knob moving: bit-exact": res["every knob moving"]["ok"],
+        "extreme panels (low, middle, top notes): bit-exact": ok_x,
+        "two at once: both bit-exact": res["two at once (track 1)"]["ok"] and res["two at once (track 2)"]["ok"],
+        "a track switched from FASCIA to THOLET: a fresh voice, then bit-exact": ok_sw,
+        "a note-off (mask 36): the dampers fall, bit-exact": res["a note, then its note-off (the dampers)"]["ok"],
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
+
+
+def step_tstress(init, sound, machines) -> dict:
+    """RIFT: sixteen THOLET voices under the guard, as lstress (the clock made to move, K = 2): a new
+    note on the next track every block, the grain cloud at its fullest, the strike hardest. Every
+    block must end, our voices done by 0.8 of the frame, voices left out (and counted) when time is
+    short, the newest note heard in most blocks, every buffer finite."""
+    from dnfw.perc import guard as G
+    from dnfw.tholet import bench as DB           # noqa: PLC0415
+    K, P = 2, 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    kn = DB.panel_knobs(DEC=127, GRAN=127, GDEN=127, GSIZ=127, EP=100, STRK=127)
+    b_now = {"b": 0}
+
+    def clock(r):
+        base = (b_now["b"] + 1) * P
+        r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const((base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+    def at_perc(r):
+        base = (b_now["b"] + 1) * P
+        m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+        m2.poke(r.state, G.MARK, (base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+    hooks = {dsp.PERC_SW: at_perc}
+    hooks.update({s_: clock for s_ in sites})
+    tracks = {t: (kn, 36.0 + (t * 5) % 24) for t in range(16)}
+    nb = 40
+
+    def fb(b):
+        b_now["b"] = b
+        return th_frame(sound, machines, tracks, trig=(b % 16,) if b >= 2 else ())
+    rr = run_blocks(init, fb, nb, extra_hooks=hooks)
+    st = rr.get("state")
+    skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+    end = m2.word(st.state, G.OURS_END) if rr["ok"] else None
+    mark0 = m2.word(st.state, G.MARK0) if rr["ok"] else None
+    rr.pop("state", None)
+    heard = tot = 0
+    for b in range(4, nb - 1):
+        t = b % 16
+        tot += 1
+        blks = [rr["fsc"][x] if x < len(rr["fsc"]) else {} for x in (b, b + 1)]
+        if any(t in blk and V.peak(blk[t]["out"]) > 1e-4 for blk in blks):
+            heard += 1
+    fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    out = {"ok": rr["ok"], "skips": skips, "our_end_over_P": round(((end - mark0) & 0xFFFFFFFF) / P, 3)
+           if end is not None else None, "newest_heard": heard / max(tot, 1), "finite": fin,
+           "instructions_per_block": rr.get("instructions", 0) // nb}
+    print(f"    tstress: {out}", flush=True)
+    checks = {
+        "every block returns": out["ok"],
+        "our voices done by 0.8 of the frame (the guard's limit holds)":
+            out["our_end_over_P"] is not None and out["our_end_over_P"] <= 0.8,
+        "with time short, voices are left out and counted": bool(out["skips"]),
+        "the newest note heard in most blocks (newest first)": out["newest_heard"] >= 0.8,
+        "every buffer finite": out["finite"],
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+# -- RIFT v0.16: SMEAR ---------------------------------------------------------------------------
+SMR = SM.TYPE_OF["WERP"]
+
+
+def smr_words(kn: dict) -> dict:
+    """frame slot -> word for SMEAR: smp_words plus the knobs KN {name: 0..127} on their records"""
+    from dnfw.smear import live as SLV
+    vals = {SM.SMEAR_RECORDS[c]: (round(v * SM.RECORDS[SM.SMEAR_RECORDS[c]][2] / 127) if c != "SAMP" else v)
+            for c, v in {**SLV.DEFAULTS, "SAMP": 4, **kn}.items() if c != "TUNE"}
+    return smp_words(vals)
+
+
+def smr_frame(sound, machines, tracks: dict, trig=()) -> bytes:
+    """TRACKS = {t: knobs}: SMEAR on each; TRIG the tracks triggered"""
+    t0 = 0 if 0 in tracks else None
+    f = base_frame(sound, machines, t0=SMR if t0 == 0 else 0, overrides=smr_words(tracks[0]) if t0 == 0 else None,
+                   trigger=False)
+    for t, kn in tracks.items():
+        if t:
+            f.header(FR.MACHINE, t, SMR)
+        f.header(FR.NOTE, t, 0x3C00)
+        for slot, w in smr_words(kn).items():
+            f.param(t, slot, w)
+    for t in trig:
+        f.trigger(t, masks=(34,))
+    return f.to_bytes()
+
+
+def smr_check(rr) -> dict:
+    blocks = [b for b in rr["smr"] if b is not None]
+    mism = sum(v["mismatches"] for b in blocks for v in b["tracks"].values())
+    words = all(b["words_ok"] for b in blocks)
+    st = sum(b["state_mismatches"] for b in blocks)
+    peak = 0.0
+    for b in blocks:
+        for v in b["tracks"].values():
+            for x in v["bits"]:
+                f_ = V.bits_f32(x)
+                if math.isfinite(f_):
+                    peak = max(peak, abs(f_))
+    fin = all(math.isfinite(V.bits_f32(x)) for b in blocks for v in b["tracks"].values() for x in v["bits"])
+    return {"blocks": len(blocks), "out_mismatches": mism, "words_ok": words, "state_mismatches": st,
+            "peak": peak, "finite": fin, "ok": rr["ok"]}
+
+
+def step_smear(init, sound, machines) -> dict:
+    """RIFT v0.16: SMEAR's stage (smear.asm) against its program run on the DSP's own memory each
+    block (dnfw.smear.stage, itself held to live.Voice by test_smear_stage), bit for bit: VOC
+    alone (a lane), PLAY, GRN, two tracks at once taking both lanes, a third stealing one, an
+    empty slot; every output, the stage's words and every voice's state"""
+    res = {}
+    n = 60
+    cases = {
+        "VOC alone": ({0: dict(BLND=0, SPD=72)}, {0: (1,)}),
+        "PLAY and GRN": ({0: dict(BLND=64, SPD=90), 1: dict(BLND=127, DENS=100, OVLP=90)}, {0: (1,), 1: (2,)}),
+        "three tracks, two lanes": ({0: dict(BLND=20), 1: dict(BLND=30), 2: dict(BLND=10)}, {0: (1,), 1: (3,), 2: (5, 30)}),
+        "an empty slot": ({0: dict(BLND=64, SAMP=0)}, {0: (1,)}),
+    }
+    for name, (tracks, trigs) in cases.items():
+        rr = run_blocks(init, lambda b, tracks=tracks, trigs=trigs: smr_frame(
+            sound, machines, tracks, trig=tuple(t for t, bs in trigs.items() if b in bs)), n)
+        c = smr_check(rr)
+        need = name != "an empty slot"
+        c["ok"] = bool(c["ok"] and c["blocks"] >= n - 2 and c["out_mismatches"] == 0 and c["words_ok"]
+                       and c["state_mismatches"] == 0 and c["finite"] and ((c["peak"] > 1e-3) == need))
+        res[name] = c
+        print(f"    smear {name}: {c}", flush=True)
+    checks = {f"{k}: bit-exact (outputs, words, states), finite, {'sounding' if k != 'an empty slot' else 'silent'}": v["ok"]
+              for k, v in res.items()}
+    return {"ok": all(checks.values()), "checks": checks, "numbers": res}
+
+
+def step_mstress(init, sound, machines) -> dict:
+    """RIFT v0.16: sixteen SMEAR tracks (VOC, PLAY and GRN), a note on the next track every block:
+    every block returns, every buffer finite, the stage bit-exact to its program"""
+    tracks = {t: dict(BLND=(t * 9) % 128, DENS=110, OVLP=110) for t in range(16)}
+    nb = 24
+    rr = run_blocks(init, lambda b: smr_frame(sound, machines, tracks, trig=(b % 16,) if b >= 1 else ()), nb)
+    c = smr_check(rr)
+    fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    out = {**c, "buffers_finite": fin, "instructions_per_block": rr.get("instructions", 0) // nb}
+    print(f"    mstress: {out}", flush=True)
+    checks = {"every block returns": bool(rr["ok"]), "every buffer finite": bool(fin),
+              "the stage bit-exact to its program": c["out_mismatches"] == 0 and c["words_ok"] and c["state_mismatches"] == 0}
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 
 

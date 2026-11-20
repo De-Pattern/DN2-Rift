@@ -41,7 +41,8 @@ def ranges() -> list[tuple[int, int, str]]:
            (dsp.IDLE_SW, dsp.IDLE_SW + len(obj["idle_load"]) // 2, "idle_load.asm"),
            (dsp.COUNT_SW, dsp.COUNT_SW + len(obj["block_count"]) // 2, "block_count.asm"),
            (dsp.EMARK_SW, dsp.EMARK_SW + len(obj["entry_mark"]) // 2, "entry_mark.asm"),
-           (dsp.FSC_SW, dsp.FSC_SW + len(obj["fascia"]) // 2, "fascia.asm")]       # v0.45: FASCIA
+           (dsp.FSC_SW, dsp.FSC_SW + len(obj["fascia"]) // 2, "fascia.asm"),       # v0.45: FASCIA
+           (dsp.SMEAR_SW, dsp.SMEAR_SW + len(obj["smear"]) // 2, "smear.asm")]      # RIFT v0.16: SMEAR
     for name, sw in (("the entry JUMP", dsp.ENTRY_SW), ("the machine lookup's base", dsp.LOOKUP_SITE_SW),
                      ("the idle loop's back edge", dsp.IDLE_SITE_SW), ("the handler's call", dsp.CALL_SITE_SW),
                      ("the driver's call of the mix", dsp.PVMIX_SITE_SW)):

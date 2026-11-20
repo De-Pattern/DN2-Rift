@@ -131,6 +131,8 @@ static int widget_of(u32 id, int kind)
         return W_BARS;                          /* GRID: the slice count, drawn as bars */
     if ((kind == SMP_GRID_KIND || kind == SMP_SLICE_KIND) && id == SMP_SLEN_ID)
         return W_KNOB;
+    if (kind == SMP_WERP_KIND && id != SMP_SAMP_ID && id != 241 && id != 238)
+        return W_KNOB;                          /* RIFT v0.16 SMEAR: its controls are knobs (TUNE, SAMP, LEV as every machine's) */
     for (int k = 0; k < SMP_WIDGETS; k++)
         if (smp_widget_ids[k] == id)
             return smp_widget_kind[k];
@@ -2293,6 +2295,15 @@ void smp_page_draw(void *view, void *c, int kind, int wave)
     for (int i = 0; i < 8; i++)
         ids[i] = smp_ids[SMP_IDX(kind)][i];
     smp_box(c);
+    if (wave && kind == SMP_WERP_KIND) {        /* RIFT v0.16: SMEAR's page 2, its grains' controls */
+        for (int i = 0; i < 8; i++) {
+            cell_i = i;
+            if (smp_werp2_ids[i])
+                cell(c, view, kind, smp_werp2_ids[i], CELL_X(i & 3), i < 4 ? TOP_Y : BOT_Y, 1, 0);
+        }
+        cell_i = -1;
+        return;
+    }
     if (!wave) {                                /* page 1: the widgets and their labels */
         for (int i = 0; i < 8; i++) {
             cell_i = i;
@@ -2357,11 +2368,6 @@ void smp_page_draw(void *view, void *c, int kind, int wave)
             }
         }
 #undef SLICE_X
-    } else if (kind == SMP_WERP_KIND) {         /* the whole sample, its segments marked */
-        int n = (32 >> steps_index(value(view, SMP_SEG_ID, 0), smp_seg_steps))
-                << steps_index(value(view, SMP_BARS_ID, 0), smp_bars_steps);   /* the segments: (32 >> SEG) << BARS */
-        for (int j = 0; j <= n && n <= 32; j++)
-            marker(c, x0 + j * (w - 1) / n, cy, j != 0 && j != n);
     } else {
         int a = pos_x(view, SMP_STRT_ID, w - 1);   /* v0.48: the fine word, 0..120.00 */
         int b = a + pos_x(view, SMP_LEN_ID, w - 1);
