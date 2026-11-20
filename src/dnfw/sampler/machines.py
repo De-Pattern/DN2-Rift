@@ -194,6 +194,12 @@ TRK_UNITY = 0.1696 / 0.0725                # 2.339 (+7.4 dB): x the 1 / TRK_GAIN
 # 2026-11-19 09:30), so it is the unit's number, not the runner's. A FLEX take of a track is made
 # TRK_HW_DB louder on top of TRK_UNITY: GAIN 0 is what was +24; GAIN -24 is v0.50..v0.62's unity
 TRK_HW_DB = 24
+# RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet, and GAIN
+# +12 to make it up clips the take): a MAIN take is recorded as it is (never boosted into the
+# clamp) and played back MAIN_PLAY_DB louder. The DSP's recorder marks its buffer half (the
+# directory's steps word, bit 15: MAIN_MARK); a voice on a marked half plays it that much louder
+MAIN_PLAY_DB = 12
+MAIN_MARK = 0x8000
 GAIN_ZERO = 25                             # the index of 0 dB: 1..63 is -24..+38 dB
 CMD_OFFSET = 0xF00                         # the command block in the pool's directory page:
 CMD_WORDS = 6                              #   seq, cmd, src, chan, thres (0..32767), dest << 24 | frames
