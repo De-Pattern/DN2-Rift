@@ -300,6 +300,33 @@ BLOCKS = [
      "GAIN: how far the halves are pushed apart.", "OFFS: the offset.",
      "A: first input.", "B: second input."),
 ]
+# RIFT v0.17: WEFT's clocks, particles and modular basics (shown when the tree has them)
+BLOCKS_17 = [
+    ("TICK", "TICK", "Tick", "A clock locked to the Digitone's tempo, like a metro: a one-sample click every DIV, which sounds with CHANCE's probability. Clock a SLOPE, ENV, HOLD, CDIV or RUNG with it for tempo-synced patterns.",
+     "RATE: the division of the tempo, 4 bars to a 64th (4 BAR, 2 BAR, 1 BAR, 1/2, 1/4, 1/6, 1/8, 1/12, 1/16, 1/24, 1/32, 1/64).", "CHNC: the chance a tick sounds (127: every one).",
+     "A: a gate on it (ticks only while A is up).", "B: swing/humanise: each tick up to half a division late, at random by B's amount."),
+    ("ENV", "ENV", "Envelope", "A plain attack/release envelope that follows a gate: rises at ATK while the gate is up, falls at REL after. (SLOPE is attack/decay from a trigger; ENV holds as long as the gate.)",
+     "ATK: the attack time.", "REL: the release time.",
+     "A: the gate (unconnected: the note's).", "B: scales both times."),
+    ("VCA", "VCA", "VCA", "A voltage-controlled amplifier: A times a gain of LEVL plus B, with CURV from linear to a cube (an audio taper). With nothing in A it outputs the gain itself (a control source).",
+     "LEVL: the base gain.", "CURV: the response, linear to cubic.",
+     "A: the signal.", "B: added to the gain (an envelope here)."),
+    ("CDIV", "CDIV", "Clock divider", "Divides or multiplies a clock: a pulse on A's first rise of every RATI rises (/2, /3 ... /64), or RATI evenly spaced pulses between A's rises (x2, x3, x4).",
+     "RATI: the ratio (x4, x3, x2, 1, /2, /3, /4, /5, /6, /7, /8, /12, /16, /24, /32, /64).", "WIDT: each pulse's length, a fraction of the divided period.",
+     "A: the clock (a TICK, a CYCLE through COMP).", "B: a rise resets the count (back to the first)."),
+    ("DUST", "DUST", "Dust", "Random particles in clumps: sparse impulses whose rate is DENS, and each one makes the next more likely for a while (CLMP), so they come in bursts. Strike a SKIN, BAR or BP with it for rain, Geiger clicks, crackle.",
+     "DENS: the average rate.", "CLMP: how strongly particles bunch together.",
+     "A: modulates the density.", "B: a rise triggers a burst (unconnected: each note)."),
+    ("CHAOS", "CHAO", "Chaos", "The logistic map: a value stepped through x = r x (1 - x) at RATE (or at each rise of A). Low R settles into cycles of 2, 4, 8; high R is chaos. A stepped, not-quite-random control source.",
+     "R: the map's r, 3.4 to 4.0 (period-doubling into chaos).", "RATE: steps a second (0.1 Hz to audio rate).",
+     "A: steps on its rises (instead of RATE).", "B: moves R."),
+    ("CRUSH", "CRSH", "Crush", "A bitcrusher and sample-rate reducer: A held for RATE samples at a time, rounded to BITS' levels.",
+     "BITS: the resolution (16 bits down to 1).", "RATE: samples each value is held (1 to 64).",
+     "A: the audio in.", "B: modulates the hold rate."),
+    ("LISSA", "LISA", "Lissajous LFO", "Two sines at a RATI of one RATE (the X and Y of a Lissajous figure); the block outputs X: a complex, slowly repeating LFO shape.",
+     "RATE: 0.02 Hz to audio rate.", "RATI: the ratio between them (1:1, 1:2, 2:3, 3:4 ...).",
+     "A: modulates the rate.", "B: (unused)."),
+]
 SOURCES = [("----", "nothing (the input is unused)"),
            ("B1..BC", "another block's output (1-9, then A, B, C for 10-12). An earlier block is heard at once; the block itself or a later one is heard one 32-sample block late (0.67 ms): that is how feedback patches work"),
            ("PTCH", "the note's pitch, as a control signal (0 at middle C, +-1 at four octaves)"),
@@ -382,7 +409,8 @@ def build() -> str:
             ("tuning", "Microtuning"), ("perf", "Performance")]
     nav += [("versions", "Versions")]
     s = []
-    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM) and (v != "0.16" or HAS_SMEAR))
+    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM) and (v != "0.16" or HAS_SMEAR)
+                  and (v != "0.17" or "TICK" in getattr(LM, "TYPE_SETS", {})))
     s.append(f"<h1>RIFT</h1><p class=\"dim\">The manual · covers v{E(newest)}</p>")
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
 
@@ -469,9 +497,13 @@ def build() -> str:
     s.append("<h3>Sources an input can take</h3><table class=\"ctl\">" +
              "".join(f"<tr><th><b>{E(a)}</b></th><td>{E(b)}</td></tr>" for a, b in SOURCES) + "</table>")
     s.append("<h3>The blocks</h3>")
-    s.append(p("Signals are roughly -1..+1 (audio) or 0..1 (envelopes, gates). Any output can feed any input, audio or control: that is the fun of it."))
+    s.append(p("Signals are roughly -1..+1 (audio) or 0..1 (envelopes, gates). Any output can feed any input, audio or control: that is the fun of it."
+               + (" Since v0.17, TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH and LISSA too (the last eight below)." if "TICK" in getattr(LM, "TYPE_SETS", {}) else "")))
     s.append("<table class=\"blk\"><tr><th>Block</th><th>What it does</th><th>Settings (knobs)</th><th>Inputs</th></tr>")
-    for name, short, long_, what, s1, s2, ia, ib in BLOCKS:
+    blocks = list(BLOCKS)
+    if "TICK" in getattr(LM, "TYPE_SETS", {}):
+        blocks += BLOCKS_17
+    for name, short, long_, what, s1, s2, ia, ib in blocks:
         s.append(f"<tr><td><b>{E(short)}</b><br><span class=\"dim\">{E(long_)}</span></td><td>{E(what)}</td>"
                  f"<td>{E(s1)}<br>{E(s2)}</td><td>{E(ia)}<br>{E(ib)}</td></tr>")
     s.append("</table>")
@@ -559,13 +591,15 @@ def build() -> str:
 
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
     for vid, title, items in VERSIONS:
-        if (vid == "0.15" and not TM) or (vid == "0.16" and not HAS_SMEAR):
+        if (vid == "0.15" and not TM) or (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and "TICK" not in getattr(LM, "TYPE_SETS", {})):
             continue
         s.append(f"<div class=\"box\" id=\"v{vid}\"><b>v{vid} · {E(title)}</b>" + ul(*items) + "</div>")
     return PAGE_HEAD + "\n".join(s) + "\n</main></body></html>\n"
 
 
 VERSIONS = [
+    ("0.17", "BLOCKS", ["LIGATURE: eight new blocks from WEFT: TICK (a clock on the tempo, with CHANCE), ENV, VCA, CDIV (clock divider), DUST, CHAOS, CRUSH, LISSA (a Lissajous LFO).",
+                        "Includes v0.16."]),
     ("0.16", "SMEAR", ["SMEAR, a granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place.",
                        "ORGAN's, THOLET's and SMEAR's tables come from the ColdFire at power-on (the DSP's upload had no room): those three machines are silent for the first moment after power-on.",
                        "Includes v0.15."]),
