@@ -36,6 +36,17 @@ def have(mod: str) -> bool:
 
 HAS_THOLET = have("dnfw.tholet.machines")
 
+
+def has_smear() -> bool:
+    try:
+        from dnfw.sampler import machines as SM
+        return hasattr(SM, "SMEAR_RECORDS")
+    except ImportError:
+        return False
+
+
+HAS_SMEAR = has_smear()
+
 # --------------------------------------------------------------------------------------------
 # What each control does. Keys are the panel's names; text is plain (escaped) except <b>/<i>
 # written here on purpose (kept as markup: R() marks a string as raw).
@@ -205,6 +216,21 @@ THOLET = {
     "BRTH": "Strike level: the hammer transient's level against the strings.",
 }
 
+SMEAR = [
+    ("TUNE", "Tune", "Tune, in semitones (as every sample machine's). The note and TUNE set the pitch of all three readers."),
+    ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: frozen; +1.00 and -1.00 have wide detents). Negative reads backwards. The vocoder and the grains keep their pitch whatever the speed; PLAY (tape) changes pitch with it."),
+    ("BLND", "Blend", "Crossfades the three readers at constant power: VOC (the phase vocoder) at 0, PLAY (a plain tape-like read) in the middle, GRN (the grains) at 127. Between, two of them mixed."),
+    ("SAMP", "Sample Slot", "The sample (or FLEX buffer B1..B8) SMEAR plays, as on every sample machine. Taken at the note."),
+    ("STRT", "Start", "Where the loop starts in the sample."),
+    ("SIZE", "Loop Size", "How long the loop is, from STRT toward the sample's end (squared, as on the Nebulae: fine control at small sizes)."),
+    ("DENS", "Grain Density", "Grains a second, 0.12 to 2,500 (up to 10 at once)."),
+    ("LEV", "Sample Level", "Level."),
+    ("OVLP", "Grain Overlap", "Each grain's length against the density: short separate grains to long overlapping ones."),
+    ("SPRY", "Grain Spray", "Scatters where each grain starts around the read point."),
+    ("PRND", "Pitch Random", "Detunes each grain at random, up to +-120 cents."),
+    ("WIN", "Grain Window", "The grains' envelope: GAUS (soft), BHAR (Blackman-Harris), EXPO (percussive), TRI, RAMP (reverse swell), SINC, RECT (hard-edged). One detent a window."),
+]
+
 # LIGATURE: the blocks (WEFT's), what they do, their two settings, what A and B do
 BLOCKS = [
     ("PHASE", "PHAS", "Phase", "A ramp oscillator (a saw from -1 to +1) at the note's pitch times a ratio: the raw phase most voices start from. Feed it to WAVE to make a tone, or use it to drive another block.",
@@ -350,11 +376,13 @@ def build() -> str:
            ("digidrum", "DIGIDRUM")]
     if TM:
         nav.append(("tholet", "THOLET"))
+    if HAS_SMEAR:
+        nav.append(("smear", "SMEAR"))
     nav += [("samples", "Sample machines"), ("flex", "FLEX"), ("recorder", "Recorder"),
             ("tuning", "Microtuning"), ("perf", "Performance")]
     nav += [("versions", "Versions")]
     s = []
-    newest = next(v for v, _t, _i in VERSIONS if v != "0.15" or TM)
+    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM) and (v != "0.16" or HAS_SMEAR))
     s.append(f"<h1>RIFT</h1><p class=\"dim\">The manual · covers v{E(newest)}</p>")
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
 
@@ -483,8 +511,19 @@ def build() -> str:
         s.append(p("<span class=\"credit\">Concept: Error Kit. Hammer samples: Kawai grand (VCSL, CC0).</span>"))
         s.append(table(TM, THOLET))
 
+    if HAS_SMEAR:
+        s.append("<h2 id=\"smear\">SMEAR</h2>")
+        s.append(p("A granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through three readers of one loop: <b>VOC</b>, a phase vocoder that stretches without changing pitch (SPD 0 freezes the sound in place); <b>PLAY</b>, a plain tape-like read; and <b>GRN</b>, a cloud of grains. BLND moves between them. A note restarts the read at STRT and plays at its pitch, so SMEAR plays chromatically.",
+                   "<b>How to approach it:</b> load a sample, BLND 0 (VOC) and turn SPD toward FRZ: a held, smeared texture of that moment; move STRT to scan. BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece. LFO SPD, STRT or BLND for motion.",
+                   "<b>Note:</b> the two vocoders are shared by the whole instrument: the two newest SMEAR notes that use VOC get one each; an older one loses its VOC part. PLAY and GRN work on every track. A vocoder note sounds about 11 ms after its trig (a hop)."))
+        s.append(p("<span class=\"credit\">Concept: De-Pattern, after the Qu-Bit Nebulae v2 (its granular-looper instrument, MIT).</span>"))
+        s.append("<h3>SRC page 1</h3><table class=\"ctl\">" + "".join(
+            f"<tr><th><b>{E(a)}</b><br><span class=\"dim\">{E(b)}</span></th><td>{E(c)}</td></tr>" for a, b, c in SMEAR[:8]) + "</table>")
+        s.append("<h3>SRC page 2</h3><table class=\"ctl\">" + "".join(
+            f"<tr><th><b>{E(a)}</b><br><span class=\"dim\">{E(b)}</span></th><td>{E(c)}</td></tr>" for a, b, c in SMEAR[8:]) + "</table>")
+
     s.append("<h2 id=\"samples\">Sample machines</h2>")
-    s.append(p("ONESHOT, WERP, STRETCH, REPITCH, GRID, SLICE and FLEX, from the Digitakt II, play samples from the project's sample list and the +Drive library (16,384 samples, in folders)."))
+    s.append(p(("ONESHOT, SMEAR (in WERP's place), STRETCH, REPITCH, GRID, SLICE and FLEX" if HAS_SMEAR else "ONESHOT, WERP, STRETCH, REPITCH, GRID, SLICE and FLEX") + ", from the Digitakt II, play samples from the project's sample list and the +Drive library (16,384 samples, in folders)."))
     s.append(ul("<b>SAMP</b> picks a sample; turning past 127 reaches the eight FLEX buffers <b>B1..B8</b> (\"FLEX BUF n\" when one holds a take): any sample machine can play a FLEX take.",
                 "<b>EDIT SLICE POINTS</b> (SLICE, GRID): edits are heard 0.2 s after the knobs rest; the slice that plays is selected; ZOOM shows 128 frames of the sample itself; [FUNC] + START / END snaps to the nearest zero crossing.",
                 "<b>CREATE SLICE GRID:</b> [FUNC] + E jumps SLICES 2 / 4 / 8 / 16 / 32 / 64.",
@@ -520,13 +559,16 @@ def build() -> str:
 
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
     for vid, title, items in VERSIONS:
-        if vid == "0.15" and not TM:
+        if (vid == "0.15" and not TM) or (vid == "0.16" and not HAS_SMEAR):
             continue
         s.append(f"<div class=\"box\" id=\"v{vid}\"><b>v{vid} · {E(title)}</b>" + ul(*items) + "</div>")
     return PAGE_HEAD + "\n".join(s) + "\n</main></body></html>\n"
 
 
 VERSIONS = [
+    ("0.16", "SMEAR", ["SMEAR, a granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place.",
+                       "ORGAN's, THOLET's and SMEAR's tables come from the ColdFire at power-on (the DSP's upload had no room): those three machines are silent for the first moment after power-on.",
+                       "Includes v0.15."]),
     ("0.15", "THOLET", ["THOLET, a piano that leans toward a Rhodes, with a grain cloud (Error Kit's concept).",
                         "KEYBOARD HOLD from the DN2 mk2 mod: [PTN] + [KEYBOARD].",
                         "Includes v0.14."]),
