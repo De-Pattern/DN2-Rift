@@ -603,7 +603,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,tholet,tstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,tholet,tstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -802,6 +802,12 @@ def main(argv=None):
             results["3f_flexlevel"] = step_flexlevel(init, sound, machines)
             gc.collect()
             show(results["3f_flexlevel"])
+
+        if "mainmark" in steps:
+            print("\nstep 3f2: a FLEX take of MAIN, played MAIN_PLAY_DB louder (RIFT v0.14)")
+            results["3f2_mainmark"] = step_mainmark(init, sound, machines)
+            gc.collect()
+            show(results["3f2_mainmark"])
 
         if "mainrec" in steps:
             print("\nstep 3m: MAIN recorded, previewed and played, in the instrument's order (v0.38)")
@@ -2887,6 +2893,100 @@ def step_flexlevel(init, sound, machines) -> dict:
             r.pop("take", None)
     return {"ok": all(checks.values()), "checks": checks,
             "numbers": {"unity": unity, "recorder": recorder, "zero": zero}}
+
+
+def step_mainmark(init, sound, machines) -> dict:
+    """RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet; GAIN +12 to
+    make it up clipped it): a FLEX take of MAIN is recorded as it is and played MAIN_PLAY_DB louder.
+    Track 0 ONESHOT looping into the mix; RECORD NOW into buffer half 0 (as FLEX sends it: the
+    GAIN index set) from MAIN, then from TRK1 (the negative control); the directory's steps word
+    carries MAIN_MARK for MAIN only. Then the MAIN take played by track 0 (SAMP on the half) twice,
+    with the mark and with it cleared: the voice's render is MAIN_PLAY_DB louder with it, sample
+    for sample (within 0.1 %), and the take itself is the same recording either way."""
+    import math as _m
+    ONE = SM.TYPE_OF["ONESHOT"]
+    cmd_at = dsp.SMP_POOL_DDR + SM.CMD_OFFSET
+    dir0 = dsp.SMP_POOL_DDR + SM.BUF_DIR
+    n, gap, w = 16, 3, 10
+    loop = {SM.SAMP_REC: 3, SM.PLAY_REC: 80, SM.LOOP_REC: 20}
+
+    def command(r, seq, cmd, src=0, chan=0, dest=0, frames=SM.REC_FRAMES, steps=16):
+        for kk, word in enumerate((seq, cmd, src, chan, 33 | steps << 16, dest << 24 | frames)):
+            m2.poke(r.state, cmd_at + 4 * kk, word)
+
+    def run(src, clear_mark=False):
+        state = {"b": 0}
+
+        def at_dispatch(r):
+            b = state["b"]
+            # MAIN's tap (and IN's buffer): a known sine each block, where the recorder reads it
+            for kk in range(32):
+                x = struct.unpack("<I", struct.pack("<f", 0.25 * _m.sin(2 * _m.pi * 220 * (32 * b + kk) / 48000)))[0]
+                for at in (SM.MAIN_TAP, SM.MAIN_TAP + 0x80):
+                    m2.poke(r.state, at + 4 * kk, x)
+            if b == 0:
+                command(r, 1, SM.CMD_NOW, src=src, chan=SM.GAIN_ZERO << 24, dest=SM.BUF_SLOT0)
+            if b == n:
+                command(r, 2, SM.CMD_STOP)
+            if b == n + 1 and clear_mark:
+                m2.poke(r.state, dir0 + 8, (m2.word(r.state, dir0 + 8) or 0) & ~SM.MAIN_MARK)
+            state["b"] += 1
+
+        def fb(b):
+            if b < n + gap:
+                f = base_frame(sound, machines, t0=ONE, trigger=b == 1, overrides=smp_words(loop))
+            else:
+                take = {**loop, SM.SAMP_REC: SM.BUF_SAMP0}
+                f = base_frame(sound, machines, t0=ONE, trigger=b == n + gap, overrides=smp_words(take))
+            for t in range(16):
+                f.put(0xA5A + 2 * t, t)
+            return f.to_bytes()
+        r = run_blocks(init, fb, n + gap + w + 2, extra_hooks={m3.DISPATCH: at_dispatch})
+        if not r["ok"]:
+            return None
+        st = r["state"].state
+        steps_word = m2.word(st, dir0 + 8) or 0
+        ent = [m2.word(st, dir0 + 4 * kk) or 0 for kk in range(2)]
+        take = []
+        for kk in range(min(ent[1], 4096) // 2):
+            word = m2.word(st, ent[0] + 4 * kk) or 0
+            take += [((h ^ 0x8000) - 0x8000) / 32768.0 for h in (word & 0xFFFF, word >> 16)]
+        ren = smp_series(r, 0)
+        p0 = (n + gap) * BLOCK
+        r.pop("state", None)
+        return {"steps_word": steps_word, "frames": ent[1], "take": take,
+                "play": list(ren[p0 + BLOCK: p0 + w * BLOCK])}
+    main, trk, cleared, inp = run(1), run(2), run(1, clear_mark=True), run(0)
+    k = 10.0 ** (SM.MAIN_PLAY_DB / 20.0)
+
+    def louder(a, b):
+        pairs = [(x, y) for x, y in zip(b["play"], a["play"]) if abs(x) >= 1e-4]
+        return len(pairs) >= 100 and all(abs(y / x - k) <= 0.001 * k for x, y in pairs)
+    ok_runs = all(r is not None for r in (main, trk, cleared, inp))
+    checks = {
+        "a FLEX take of MAIN marks its buffer half (MAIN_MARK in the steps word), its steps kept":
+            ok_runs and bool(main["steps_word"] & SM.MAIN_MARK) and (main["steps_word"] & 0x7FFF) == 16,
+        "a FLEX take of IN marks its buffer half too (the owner: IN as quiet as MAIN)":
+            ok_runs and bool(inp["steps_word"] & SM.MAIN_MARK) and (inp["steps_word"] & 0x7FFF) == 16,
+        "negative control: a FLEX take of a track leaves no mark":
+            ok_runs and not (trk["steps_word"] & SM.MAIN_MARK) and (trk["steps_word"] & 0x7FFF) == 16,
+        "the MAIN take is recorded as it is: the same frames with the mark or without (and something there)":
+            ok_runs and main["take"] == cleared["take"] and max((abs(v) for v in main["take"]), default=0) > 0.01,
+        f"the marked take plays MAIN_PLAY_DB ({SM.MAIN_PLAY_DB} dB) louder, sample for sample (within 0.1 %)":
+            ok_runs and louder(main, cleared),
+        "negative control: the same comparison at 0 dB is refused":
+            ok_runs and not (lambda kk: all(abs(y - x) <= 0.001 * abs(x) for x, y in zip(cleared["play"], main["play"])
+                                            if abs(x) >= 1e-4))(None),
+    }
+    for r in (main, trk, cleared, inp):
+        if r:
+            r["take_peak"] = max((abs(v) for v in r["take"]), default=0.0)
+            r["play_peak"] = max((abs(v) for v in r["play"]), default=0.0)
+            r["play_head"] = [round(v, 6) for v in r["play"][:6]]
+            r.pop("take", None)
+            r.pop("play", None)
+    return {"ok": all(checks.values()), "checks": checks,
+            "numbers": {"main": main, "trk": trk, "cleared": cleared, "in": inp}}
 
 
 # -- step 3e: the fast link (v0.16, docs/sampler.md) -------------------------------------------------
