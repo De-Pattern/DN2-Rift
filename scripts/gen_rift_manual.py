@@ -228,7 +228,7 @@ SMEAR = [
     ("OVLP", "Grain Overlap", "Each grain's length against the density: short separate grains to long overlapping ones."),
     ("SPRY", "Grain Spray", "Scatters where each grain starts around the read point."),
     ("PRND", "Pitch Random", "Detunes each grain at random, up to +-120 cents."),
-    ("WIN", "Grain Window", "The grains' envelope: GAUS (soft), BHAR (Blackman-Harris), EXPO (percussive), TRI, RAMP (reverse swell), SINC, RECT (hard-edged). One detent a window."),
+    ("WIN", "Grain Window", "The grains' envelope: GAUS (soft), BHAR (Blackman-Harris), EXPO (percussive), TRI, RAMP (reverse swell), SINC, RECT (hard-edged). Four detents a window, as every choice."),
 ]
 
 # LIGATURE: the blocks (WEFT's), what they do, their two settings, what A and B do
