@@ -79,6 +79,7 @@ def compile_page(header: str, *, base: int) -> tuple[bytes, dict[str, int], int]
         # (link.c tbl_bytes; ERASE MOD DATA faulted there)
         from ..perc import program as _pp
         defines["WR_NO_TABLES"] = 0              # RIFT v0.16: its own tables chunk (ORGAN, THOLET, SMEAR)
+        defines["WR_RIFT"] = int(_pp.RIFT)       # RIFT v0.17: md_page.c, the Machinedrum's and Monomachine's pages, left out
         _ = _pp
         from ..ligature import wire as _lw          # RIFT v0.12: LIGATURE's wirings (link.c, pools.c)
         for name in ("WSLOTS", "WHDR", "WWORDS", "WTABLE_WORDS"):
