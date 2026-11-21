@@ -439,9 +439,16 @@ def emit_cos(p: Prog, d: int, j: int, qsin: int) -> None:
     p.ifz(13, "NE", lambda: (p.iconst(12, 0), p.fop(d, 12, "-", d)))
 
 
-def emit_init(p: Prog, qsin: int, tables: int, win: int) -> None:
+INIT_PARTS = 4
+
+
+def emit_init(p: Prog, qsin: int, tables: int, win: int, part: int | None = None) -> None:
     """The tables `tables_words` and live.WIN describe, computed from QSIN (513 words at
-    QSIN) into TABLES (after the swap pairs, which the image holds) and WIN."""
+    QSIN) into TABLES (after the swap pairs, which the image holds) and WIN. PART (0..3) emits
+    one of the four in turn (the forward twiddles, the inverse, the split twiddles, the Hann
+    window), so the power-on work is spread over four blocks (RIFT v0.16: all four in one block
+    cost about 229,000 instructions, a third of a frame); None: all four."""
+    parts = range(INIT_PARTS) if part is None else (part,)
     def table(dst: int, n: int, jof, store):
         """for i in 0..n-1: store(i) with R14 = i; I5 walks DST."""
         p.iconst(9, dst)
@@ -474,15 +481,20 @@ def emit_init(p: Prog, qsin: int, tables: int, win: int) -> None:
         return st
 
     T = tabs(tables)
-    for base, neg in ((T.twf, True), (T.twi, False)):
+    for k, (base, neg) in enumerate(((T.twf, True), (T.twi, False))):
+        if k not in parts:
+            continue
         p.comment(f"power-on: the {'forward' if neg else 'inverse'} stage twiddles")
         off = 0
         for s in range(LOG2N):
             half = 1 << s
             dst = base + 8 * (half - 1)
             table(dst, half, lambda s=s: p.lsh(11, 14, LOG2N - s), cs(neg, None))   # J = 2 (j << (9 - s))
-    p.comment("power-on: the split twiddles")
-    table(T.tws, N // 2, lambda: p.ipass(11, 14), cs(True, None))
+    if 2 in parts:
+        p.comment("power-on: the split twiddles")
+        table(T.tws, N // 2, lambda: p.ipass(11, 14), cs(True, None))
+    if 3 not in parts:
+        return
     p.comment("power-on: the Hann window")
 
     def hann():

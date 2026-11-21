@@ -2,6 +2,8 @@
 mode equals stage.Model (live.Voice under the stage's rules) bit for bit."""
 import numpy as np
 
+from dnfw.smear import fft as FT
+
 from dnfw.perc.dsl import Mem, Prog
 from dnfw.smear import live as LV
 from dnfw.smear import stage as ST
@@ -32,7 +34,8 @@ def test_the_stage_is_the_contract():
         mem.put(BUFS + 4 * t, OUT0 + 128 * t)
     model = ST.Model()
     peaks = {}
-    ST.stage(Prog("run", mem=mem), S)        # the power-on block: the tables, no track yet
+    for _ in range(FT.INIT_PARTS):            # the power-on work, a part a block: the tables, no track yet
+        ST.stage(Prog("run", mem=mem), S)
     model.clock = mem.get(S.CLOCK)
     rate = 44100 / 48000
     # tracks 0, 3 and 5 SMEAR; 5 plays an empty slot; notes take and steal the two lanes
@@ -113,6 +116,11 @@ def test_silent_until_the_tables_are_in():
     assert mem.get(S.mb(2, ST.MB_ON)) == 0 and mem.get(S.LOWN0) in (0, None)
     mem.put(S.mb(5, ST.MB_ON), 1)                               # not the magic: off, its buffer untouched
     mem.put(READY, SM.TABLE_MAGIC)
+    for k in range(FT.INIT_PARTS - 1):              # the power-on work, a part a block: silent meanwhile
+        mail()
+        ST.stage(Prog("run", mem=mem), S)
+        assert mem.get(S.INIT) == ST.INIT_BUSY and mem.get(S.ISTEP) == k + 1
+        assert all(mem.get(OUT0 + 256 + 4 * s) == 0 for s in range(32))
     for _ in range(3):
         mail()
         ST.stage(Prog("run", mem=mem), S)

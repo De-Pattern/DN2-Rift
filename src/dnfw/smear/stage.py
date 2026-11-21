@@ -35,6 +35,7 @@ MB_WORDS = 32                              # 7 + 12 knobs, rounded up
 MB_MAGIC = 0x534D4F4E                      # 'SMON' in MB_ON: written by smp.asm this block (anything else: off)
 STATE_BYTES = 512                          # a voice's state in DDR (program.VLayout.STATE_WORDS words, rounded)
 INIT_MAGIC = 0x534D5249                    # 'SMRI': the tables computed this power-on
+INIT_BUSY = 0x534D5242                     # 'SMRB': the tables being computed, a part a block (ISTEP the next)
 NTRACKS = 16
 
 
@@ -51,6 +52,7 @@ class SLayout:
                  ready: int | None = None, cost: int | None = None):
         self.INIT, self.CLOCK, self.T, self.SEEN, self.LOWN0, self.LOWN1, self.LAGE0, self.LAGE1, self.CNT = (
             scr + 4 * k for k in range(9))
+        self.ISTEP = scr + 36                   # the power-on work's next part (while INIT is INIT_BUSY)
         self.LSAVE = scr + 40                   # L0, L3, L5 as found (3 words)
         self.scr_end = scr + 64
         self.MBOX, self.STATE, self.QSIN, self.BUFFERS = mbox, state, qsin, buffers
@@ -133,7 +135,7 @@ def _track(p: Prog, S: SLayout) -> None:
         p.sti(MB_ON, 4, 0)                      # consumed
         p.ld(0, S.INIT)                         # (before the power-on block: silence, below)
         p.iconst(1, INIT_MAGIC)
-        p.if_(0, "NE", 1, lambda: p.sti(MB_FRAMES, 4, 0), kind="i")
+        p.if_(0, "NE", 1, lambda: (p.iconst(2, 0), p.sti(MB_FRAMES, 4, 2)), kind="i")   # (R0 holds INIT: not it)
         p.ld(0, S.SEEN)                         # the owners seen this block (bit t)
         p.iconst(1, 1)
         p.ld(9, S.T)
@@ -258,7 +260,26 @@ def stage(p: Prog, S: SLayout) -> None:
 
     def init():
         def go():
-            FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN)
+            # RIFT v0.16: a part a block (FT.INIT_PARTS), so no block carries all of it. INIT
+            # reads INIT_BUSY while it goes (ISTEP its next part: L2 holds anything at power-on,
+            # so ISTEP counts only once INIT says so)
+            p.ld(0, S.INIT)
+            p.iconst(1, INIT_BUSY)
+            p.if_(0, "NE", 1, lambda: (p.iconst(2, 0), p.st(S.ISTEP, 2), p.iconst(2, INIT_BUSY),
+                                       p.st(S.INIT, 2)), kind="i")
+            for k in range(FT.INIT_PARTS - 1):
+                p.ld(0, S.ISTEP)
+                p.iconst(1, k)
+                p.if_(0, "EQ", 1, lambda k=k: FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN, part=k), kind="i")
+            p.ld(0, S.ISTEP)
+            p.iconst(12, 1)
+            p.iop(2, 12, "+", 0)
+            p.st(S.ISTEP, 2)
+            p.iconst(1, FT.INIT_PARTS - 1)
+            p.if_(0, "EQ", 1, last, kind="i")
+
+        def last():
+            FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN, part=FT.INIT_PARTS - 1)
             for at, n in S.clears:
                 p.iconst(0, 0)
                 p.iconst(9, at)
