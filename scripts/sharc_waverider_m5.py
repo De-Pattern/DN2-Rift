@@ -4707,10 +4707,10 @@ def step_pstress(init, sound, machines) -> dict:
 
 # -- RIFT v0.18: GLASS, the FLTR type 6 -----------------------------------------------------------
 def glass_frame(sound, machines, fm: dict, fascias: dict, trig=(), filt=6) -> bytes:
-    """a frame: FM = {t: settings} FM Tone tracks, FASCIAS = {t: (panel, note, vel, settings)}; every one on
+    """a frame: FM = {t: settings} WaveTone tracks (stock voices), FASCIAS = {t: (panel, note, vel, settings)}; every one on
     filter FILT with SETTINGS = {slot: word} on its filter records (frame.RECORD_FIELDS' slots)"""
     from dnfw.fascia import bench as FB          # noqa: PLC0415
-    f = base_frame(sound, machines, t0=FSM.TYPE, others={t: 0 for t in fm}, trigger=False)   # (FM Tone's own sound)
+    f = base_frame(sound, machines, t0=FSM.TYPE, others={t: 1 for t in fm}, trigger=False)   # (WaveTone, its own sound)
     for t, sets in fm.items():
         f.header(FR.FILTER, t, filt)
         f.header(FR.NOTE, t, 0x3C00)
@@ -4763,7 +4763,7 @@ def glass_vs_live(rr, t, freq_skew=0.0):
 
 
 def step_glass(init, sound, machines) -> dict:
-    """RIFT v0.18: GLASS's assembled code against live.Voice, bit for bit, on what it read: two FM Tone
+    """RIFT v0.18: GLASS's assembled code against live.Voice, bit for bit, on what it read: two WaveTone
     tracks (stock voices) and a FASCIA track on filter 6, each its own settings (RES high, the morph, ENV
     with bends, LPG); the walk's model of every FASCIA slot still exact; a track on Multi-Mode beside them
     untouched by GLASS; a negative control (FREQ + 1/128 in live)."""
@@ -4776,11 +4776,7 @@ def step_glass(init, sound, machines) -> dict:
     rr = run_blocks(init, lambda b: glass_frame(sound, machines, {1: s0, 2: s1}, {3: (fp, 60, 1.0, s3)},
                                                 trig=(1, 2, 3) if b in (1, 12) else ()), n)
     ex = fsc_exact(rr)
-    import numpy as _np                          # noqa: PLC0415
-    print("    (FM track 1 at our tail's return / the dispatch's end:",
-          max(float(_np.max(_np.abs(_np.nan_to_num(_np.array(m_[1], _np.float32))))) for m_ in rr["machine"] if m_),
-          max(float(_np.max(_np.abs(_np.nan_to_num(_np.array(b_[1], _np.float32))))) for b_ in rr["buffers"] if b_), ")")
-    for t, name in ((1, "FM Tone, LP, RES high"), (2, "FM Tone, HP, ENV with bends"), (3, "FASCIA, BP, LPG")):
+    for t, name in ((1, "WaveTone, LP, RES high"), (2, "WaveTone, HP, ENV with bends"), (3, "FASCIA, BP, LPG")):
         bad, mbad, pk, seen, ipk = glass_vs_live(rr, t)
         ok = bool(rr["ok"] and bad == 0 and mbad == 0 and seen >= n - 2 and ipk > 1e-3 and pk > 1e-4)
         res[name] = {"ok": ok, "live_blocks_differing": bad, "model_blocks_differing": mbad, "peak": pk,
@@ -4792,12 +4788,10 @@ def step_glass(init, sound, machines) -> dict:
     rr2 = run_blocks(init, lambda b: glass_frame(sound, machines, {1: s0, 2: s1}, {3: (fp, 60, 1.0, s3)},
                                                  trig=(1, 2, 3) if b in (1, 12) else (), filt=0), 8)
     untouched = rr2["ok"] and not any(blk for blk in rr2.get("glass", []))
-    print("    (on Multi-Mode, FM track 1 at the dispatch's end:",
-          max(float(_np.max(_np.abs(_np.nan_to_num(_np.array(b_[1], _np.float32))))) for b_ in rr2["buffers"] if b_), ")")
     print(f"    glass Multi-Mode tracks: {'not ours' if untouched else 'FAIL'}", flush=True)
     checks = {
-        "two FM Tone tracks on GLASS (LP with RES high; HP with ENV and bends): bit-exact to the model and live":
-            res["FM Tone, LP, RES high"]["ok"] and res["FM Tone, HP, ENV with bends"]["ok"],
+        "two WaveTone tracks (stock voices) on GLASS (LP with RES high; HP with ENV and bends): bit-exact to the model and live":
+            res["WaveTone, LP, RES high"]["ok"] and res["WaveTone, HP, ENV with bends"]["ok"],
         "a FASCIA track on GLASS (BP, LPG): bit-exact; the walk's own models exact": res["FASCIA, BP, LPG"]["ok"] and ex[1:] == (0, 0),
         "the comparison tells live with FREQ 1/128 off apart (negative control)": neg > 0,
         "tracks on Multi-Mode: GLASS leaves them alone": untouched,
