@@ -28,8 +28,9 @@ def panel_of_eff(eff) -> dict:
 
 def test_the_tables_are_current_and_shipped():
     assert P.tables_bytes() == P.tables_values()
-    assert ("ORGAN's pipes, gains and ramp (dnfw.organ.program.tables_bytes; RIFT)", dsp.ORGAN_TABLES_DDR,
-            P.tables_bytes()) in dsp.ddr_spans()
+    # RIFT v0.16: over the sample link (dsp.link_tables), not in the DSP image
+    off = dsp.ORGAN_TABLES_DDR - dsp.LINK_TABLES_DDR
+    assert dsp.link_tables()[off:off + len(P.tables_bytes())] == P.tables_bytes()
     assert dsp.FSC_TABLES_DDR + 4 * FP_.TABLE_WORDS <= dsp.ORGAN_TABLES_DDR
 
 

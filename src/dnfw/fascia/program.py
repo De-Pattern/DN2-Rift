@@ -3643,6 +3643,17 @@ def _voice(g: FP, t) -> None:
     p.scr_on = False
 
 
+def tables_in(p, notready: str) -> None:
+    """RIFT v0.16: on to NOTREADY unless the link's tables are in (dsp.LINK_READY_DDR holds
+    TABLE_MAGIC): ORGAN's and THOLET's tables come from the ColdFire at power-on"""
+    from ..waverider import dsp as _dsp
+    from ..sampler import machines as _SM
+    p.ld(0, _dsp.LINK_READY_DDR)
+    p.iconst(12, _SM.TABLE_MAGIC)
+    p.e("COMP(R0, R12);")
+    p.jump("NE", notready)
+
+
 def off(g: FP) -> None:
     """a slot not on FASCIA: its voice off (a track that comes back starts clean)"""
     p, C, L = g.p, g.L.C, g.L
@@ -3726,6 +3737,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     lig = p.label("lig")
     res = p.label("res")
     tho = p.label("tho")
+    notready = p.label("notready")
     p.iconst(12, OP.TYPE)
     p.e("COMP(R0, R12);")
     p.jump("EQ", organ)
@@ -3748,6 +3760,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
     p.jump("", nxt)
     p.place(organ)
+    tables_in(p, notready)                     # RIFT v0.16: ORGAN's tables come over the link
     OL = OP.Layout(L, organ_tables)
     og = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: og.append(OP.voice(p, OL)),
@@ -3773,11 +3786,22 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
     p.jump("", nxt)
     p.place(tho)                               # RIFT: THOLET (type 23, dnfw.tholet.program)
+    tables_in(p, notready)                     # RIFT v0.16: THOLET's tables come over the link
     TL_ = TP.Layout(L, _dsp.THOLET_TABLES_DDR, _dsp.THOLET_RING_DDR)
     tg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: tg.append(TP.voice(p, TL_)),
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
     p.jump("", nxt)
+    p.place(notready)                          # RIFT v0.16: before the link's tables: silence
+    p.ld(9, L.C["t"])
+    p.lsh(12, 9, 2)
+    p.iconst(11, BUFFERS)
+    p.iop(12, 11, "+", 12)
+    p.seti(1, 12)
+    p.ldi(0, 0, 1)
+    p.seti(1, 0)
+    p.iconst(0, 0)
+    p.loop_r(15, 32, lambda: p.stpost(1, 0))
     p.place(other)
     off(g)
     p.place(nxt)

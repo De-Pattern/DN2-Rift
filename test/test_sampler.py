@@ -80,7 +80,7 @@ def test_oneshot_is_the_dt2s_reader():
     assert max(err) <= 2.0 ** -13 and sum(e < 1e-6 for e in err) >= 0.99 * len(err)
 
 
-@pytest.mark.parametrize("name", ["REPITCH", "STRETCH", "WERP"])
+@pytest.mark.parametrize("name", ["REPITCH", "STRETCH"])   # (RIFT v0.16: type 9 is SMEAR)
 def test_the_time_machines_last_bars_at_the_tempo(name):
     # 1 bar (BARS 0, v0.18: the DT2's 1, 2, 4, 8) at 480 BPM: 0.5 s; at 240 BPM, 1 s
     samp = 4 if name == "WERP" else 1
@@ -136,6 +136,10 @@ def test_the_host_tool_codec_and_pool(tmp_path):
 def test_the_pages_follow_the_dt2_layout():
     # v0.15: A TUNE (or nothing), B PLAY, C empty, D SAMP on every machine
     for name, page in SM.PAGES.items():
+        if name == "WERP":                           # RIFT v0.16: SMEAR's own (TUNE SPD BLND SAMP / .. LEV)
+            assert [r for r, _s, _l in page] == [SM.SMEAR_RECORDS[c] for c in
+                                                ("TUNE", "SPD", "BLND", "SAMP", "STRT", "SIZE", "DENS", "LEV")]
+            continue
         assert page[1][0] == SM.PLAY_REC, name
         # v0.44: BOUNCE's D is BUF (its track's buffer), the rest D SAMP
         assert page[3][0] == (SM.BUF_REC if name == "FLEX" else SM.SAMP_REC), name
@@ -481,10 +485,11 @@ def test_one_detent_a_choice_lands_inside_each_choice():
     for c in range(128):
         assert zone(SM.QUANT[0][2], c) == min(3, c >> 5)
     for c in range(101):
-        assert zone(SM.QUANT[2][2], c) == sum(1 for x in SM.BARS_STEPS if c >= x)
+        assert zone(SM.QUANT[1][2], c) == sum(1 for x in SM.BARS_STEPS if c >= x)
+    for c in range(128):                         # RIFT v0.16: SMEAR's WIN, as live reads it
+        assert zone(SM.QUANT[2][2], c) == min(6, c * 7 >> 7)
     for v in range(121):
-        assert zone(SM.QUANT[3][2], v + 4) == sum(1 for x in SM.SEG_STEPS if v >= x)
-        assert zone(SM.QUANT[4][2], v) == min(4, v // 24)
+        assert zone(SM.QUANT[3][2], v) == min(4, v // 24)
 
 
 def _rx(h, units, high=True, pg=0):
@@ -695,23 +700,29 @@ def test_a_retrigger_fades_the_old_note_under_the_new_one():
     assert max(abs(a - b) for a, b in zip(old, fade)) < 1e-5
 
 
-def test_werp_segments_are_the_dt2s_note_values_and_change_at_blocks():
-    # v0.18: SEG 1/32, 1/16, 1/8 of a bar, a segment starting on a block (the DT2's ColdFire
-    # clock); at 480 BPM a bar is 750 blocks: 32, 16 or 8 segments in it
-    for seg, n in ((0, 32), (60, 16), (100, 8)):
-        h = SL.Harness(0)
-        h.defaults()
-        h.set(SM.BARS_REC, 0)
-        h.set(SM.SAMP_REC, 4)
-        h.set(SM.SEG_REC, seg)
-        _tempo(h, 480.0)
-        segs = []
-        for b in range(800):
-            h.block(SM.TYPE_OF["WERP"], 60.0, b == 1)
-            segs.append(h.mem.get(h.L.state + 4 * P.V["seg"]))
-        changes = [b for b in range(1, len(segs)) if segs[b] != segs[b - 1]]
-        assert len(changes) == n - 1, (seg, len(changes))
-        assert abs(changes[1] - changes[0] - 750 / n) <= 1
+def test_smear_leaves_its_mailbox_and_renders_nothing_itself():
+    """RIFT v0.16: a SMEAR track (type 9, WERP's) at a note: the slot latched, its mailbox for
+    smear.asm (MB_MAGIC, the trig, TR x rate, base, frames, format, the twelve knobs), its buffer
+    left to smear.asm; the next block, no trig; SAMP OFF: frames 0"""
+    from dnfw.smear import stage as SG, live as SLV
+    from dnfw.waverider import dsp
+    h = SL.Harness(0)
+    h.defaults()
+    h.set(SM.SAMP_REC, 1)
+    h.set(254, 80)                          # SPD
+    h.block(SM.TYPE_OF["WERP"], 60.0, True)
+    mb = [h.mem.get(dsp.SMEAR_MBOX + 4 * k) for k in range(SG.MB_WORDS)]
+    assert mb[SG.MB_ON] == SG.MB_MAGIC and mb[SG.MB_TRIG] == 1
+    assert mb[SG.MB_FRAMES] == len(h.samples[0]) and mb[SG.MB_BASE] > dsp.SMP_POOL_DDR
+    assert mb[SG.MB_KN + SLV.CONTROLS.index("SPD")] == 80
+    assert struct.unpack("<f", struct.pack("<I", mb[SG.MB_RATE]))[0] > 0
+    h.mem.put(dsp.SMEAR_MBOX, 0)
+    h.block(SM.TYPE_OF["WERP"], 60.0, False)
+    assert h.mem.get(dsp.SMEAR_MBOX + 4 * SG.MB_ON) == SG.MB_MAGIC
+    assert h.mem.get(dsp.SMEAR_MBOX + 4 * SG.MB_TRIG) == 0
+    h.set(SM.SAMP_REC, 0)
+    h.block(SM.TYPE_OF["WERP"], 60.0, True)
+    assert h.mem.get(dsp.SMEAR_MBOX + 4 * SG.MB_FRAMES) == 0
 
 
 def test_slice_plays_the_samples_own_slices():

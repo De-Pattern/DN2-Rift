@@ -187,11 +187,10 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
     from dnfw.perc import program as PP
     if PP.RIFT:   # RIFT: no PERC or Machinedrum tables, no P-I lines; FASCIA's sine stays
         assert [a for _, a, _ in ddr] == [dsp.SHFT_TABLES_DDR, dsp.PERC_TABLES_DDR, dsp.SMP_TABLES_DDR,
-                                          dsp.FSC_TABLES_DDR, dsp.ORGAN_TABLES_DDR,       # RIFT v0.4: ORGAN's
+                                          dsp.FSC_TABLES_DDR,                             # (RIFT v0.16: ORGAN's over the link)
                                           dsp.SILT_TABLES_DDR,                            # RIFT: SILT's
                                           dsp.LIG_TABLES_DDR,                             # RIFT: LIGATURE's
                                           dsp.DIGIDRUM_TABLES_DDR,                           # RIFT: DIGIDRUM's
-                                          dsp.THOLET_TABLES_DDR,                             # RIFT: THOLET's (its ring, like SILT's lines, the DSP clears)
                                           dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
         assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)
@@ -374,7 +373,7 @@ def _code_lines(name):
     return [ln for ln in lines if ln and not ln.startswith(".") and not ln.endswith(":")]
 
 
-@pytest.mark.parametrize("name,nxt", [("smp", "FSC_SW"), ("fascia", "PING_SW")])
+@pytest.mark.parametrize("name,nxt", [("smp", "SMEAR_SW"), ("smear", "FSC_SW"), ("fascia", "PING_SW")])   # RIFT v0.16: smp -> SMEAR -> FASCIA
 def test_smp_hands_on_to_ping_and_writes_only_saved_registers(name, nxt):
     # v0.13: PERC -> the sample machines -> (v0.26) PING, whose tail restores what PERC saved;
     # v0.45: the sample machines -> FASCIA (type 18) -> PING's tail
@@ -387,10 +386,19 @@ def test_smp_hands_on_to_ping_and_writes_only_saved_registers(name, nxt):
             # v0.18: I0 (the DT2 decimator's coefficients), I3 (its interpolator's row) and I5
             # (its state): saved by PERC; used only pre-modified, DM(k, In), which no circular
             # buffer (L) touches
-            assert f"{m.group(1)}{m.group(2)}" in ("I0", "I1", "I2", "I3", "I4", "I5", "I12"), ln
+            assert f"{m.group(1)}{m.group(2)}" in ("I0", "I1", "I2", "I3", "I4", "I5", "I12") or (
+                name == "smear" and f"{m.group(1)}{m.group(2)}" in ("L0", "L3", "L5")), ln   # RIFT v0.16: made 0, given back
         assert not re.search(r"\b(R1[6-9]|R[2-9]\d|F1[6-9]|USTAT|MODE1|MODE2|LCNTR)\b", ln), ln
-        assert not re.search(r"DM\(I[035], M", ln), ln
+        assert name == "smear" or not re.search(r"DM\(I[035], M", ln), ln
     assert not any(re.search(r"\bCALL\b|\bDO\b|\bRTS\b", ln) for ln in lines)
+    if name == "smear":                     # every L it zeroes, saved first and given back before the JUMP on
+        for r in ("L0", "L3", "L5"):
+            sv = [i for i, ln in enumerate(lines) if re.match(rf"DM\(0x[0-9a-f]+\) = {r};", ln)]
+            z = [i for i, ln in enumerate(lines) if ln == f"{r} = 0;"]
+            back = [i for i, ln in enumerate(lines) if re.match(rf"{r} = DM\(0x[0-9a-f]+\);", ln)]
+            jmp = lines.index(f"JUMP {dsp.FSC_SW:#x};")
+            assert sv and z and back and sv[0] < z[0] < back[-1] < jmp
+            assert [ln for ln in lines if re.match(rf"{r} =", ln)] == [f"{r} = 0;", lines[back[-1]]]
 
 
 def test_perc_saves_what_ping_restores_and_hands_on_to_resonator():
@@ -475,3 +483,17 @@ def test_v037_the_recorders_main_tap_is_one_place():
     from dnfw.waverider import dsp
     assert SM.MAIN_TAP == dsp.MAIN_TAP_L2 == dsp.MNM_DT_L2 + dsp.MNM_DT_BYTES
     assert 0x20088400 <= dsp.MAIN_TAP_L2 and dsp.MAIN_TAP_L2 + dsp.MAIN_TAP_BYTES <= 0x200B0000
+
+
+def test_rift_link_tables():
+    """RIFT v0.16: ORGAN's, THOLET's and SMEAR's tables come over the sample link (the DSP image's
+    1 MiB): in the pool's table area, below READY, each where its program reads it"""
+    from dnfw.sampler import machines as SM
+    data = dsp.link_tables()
+    assert len(data) == dsp.LINK_TABLES_BYTES
+    assert dsp.LINK_TABLES_DDR + len(data) <= dsp.LINK_READY_DDR
+    assert dsp.LINK_TABLES_DDR + SM.TABLE_ROOM - 512 >= dsp.LINK_TABLES_DDR + len(data)
+    from dnfw.organ import program as OP
+    off = dsp.ORGAN_TABLES_DDR - dsp.LINK_TABLES_DDR
+    assert data[off:off + len(OP.tables_bytes())] == OP.tables_bytes()
+    assert not any(a == dsp.ORGAN_TABLES_DDR or a == dsp.THOLET_TABLES_DDR for _, a, _ in dsp.ddr_spans())

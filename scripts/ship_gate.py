@@ -132,6 +132,7 @@ from dnfw.waverider import dsp                             # noqa: E402
 
 sys.path.insert(0, str(HERE))
 import gate_cache                                          # noqa: E402
+import gen_logos as GL                                     # noqa: E402  (RIFT v0.16: MACHINE SEL's logos)
 
 MAIN_BASE = 0x40000400
 # CODE chunks that hold only data, reached through a pointer and never jumped to.
@@ -178,6 +179,9 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_fascia_coldfire.py",                    # v0.45: FASCIA on the ColdFire (type 18)
          "test/test_fascia_program.py",                     # v0.45: FASCIA's DSP program (run mode = live.py)
          "test/test_digidrum_program.py", "test/test_tholet_program.py",   # RIFT v0.15: THOLET (run mode = live.py)
+         # RIFT v0.16: SMEAR: its transform, grains, voice and stage (run mode = live.py)
+         "test/test_smear_fft.py", "test/test_smear_grn.py", "test/test_smear_live.py", "test/test_smear_program.py",
+         "test/test_smear_voice.py", "test/test_smear_stage.py", "test/test_logos.py",
          # RIFT v0.12: LIGATURE's wirings (the DSP's decode = live, garbage safe, the seeded table the
          # factory patches; the build's wire.json = live's) and its machine table
          "test/test_ligature_program.py", "test/test_ligature_machines.py", "test/test_ligature_live.py",
@@ -218,6 +222,8 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("ligedit", "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)"),
        ("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("tholet", "THOLET: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
+       ("smear", "SMEAR: MACHINE SEL, its start, its two pages, LFO names (ColdFire)"),
+       ("logos", "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)"),
        ("alloc", "GRID allocate slice locks (ColdFire)"),
        ("multisel", "multi-select delete (ColdFire)"),
        ("unused", "SELECT UNUSED (ColdFire)"),
@@ -1770,9 +1776,12 @@ def main() -> int:
             pst = ["wait:2", f"poke:{snd0 + 0xDE:#x}:{SMq.TYPE_OF['ONESHOT']:02x}",
                    f"poke:{snd0 + 0x14 + 2 * pslot:#x}:0000", "wait:4"]
             pst += [f"call:{lay['smp_quant']:#x}:sound0:{pslot}:0x100:{SMq.PLAY_REC}"] * 2
+            # RIFT v0.16: type 9 is SMEAR (no MODE): its WIN, seven windows, one a detent from GAUS
+            wslot = SMq.RECORDS[262][0]
             pst += [f"poke:{snd0 + 0xDE:#x}:{SMq.TYPE_OF['WERP']:02x}",
-                    f"poke:{snd0 + 0x14 + 2 * mslot:#x}:0000", "wait:4"]
-            pst += [f"call:{lay['smp_quant']:#x}:sound0:{mslot}:0x100:{mrec}"] * 2
+                    f"poke:{snd0 + 0x14 + 2 * wslot:#x}:0000", "wait:4"]
+            pst += [f"call:{lay['smp_quant']:#x}:sound0:{wslot}:0x100:262"] * 2
+            _ = (mrec, mslot)
             pjs = work / "playdet.json"
             pd_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
                       "--snapshot", snap, "--steps", ",".join(pst), "--png-dir", work / "playdet", "--json", pjs]
@@ -1783,8 +1792,9 @@ def main() -> int:
                     return False, out[-800:]
                 d0 = [c["d0"] for c in json.loads(pjs.read_text())["direct_calls"]]
                 good = d0 == [0, 32 << 8, 0, 0]
-                return good, ("PLAY: one detent keeps FWD, the second moves on (two a choice); MODE keeps four"
-                              if good else f"d0 {d0}, want [0, {32 << 8}, 0, 0]")
+                return good, ("PLAY: one detent keeps FWD, the second moves on (two a choice); SMEAR's WIN keeps "
+                              "GAUS through two (four detents a window, as every choice; RIFT v0.16)" if good
+                              else f"d0 {d0}, want [0, {32 << 8}, 0, 0]")
             later("playdet", "PLAY two detents a choice (ColdFire)", "PLAY two detents a choice (ColdFire)",
                   [pd_cmd, sorted(EMU_ENV.items())], pd_body)
 
@@ -3026,6 +3036,134 @@ def main() -> int:
                               "and left out" if good else why)
             later("tholet", "THOLET: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)",
                   "THOLET: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)", [g_cmd, sorted(EMU_ENV.items())], g_body)
+
+        # 6f7. RIFT v0.16: SMEAR (type 9, in WERP's place): MACHINE SEL's commit gives it its own start
+        # (rec.c smr_default: SPD +1, the loop the whole sample...), its page 1 and its own page 2 are
+        # drawn (each its own, neither another machine's), its records named and offered to the LFOs
+        if "smp_machine_commit" in lay and "wr_lfo_mask" in lay:
+            from dnfw.sampler import machines as SMs    # noqa: PLC0415
+            from dnfw.waverider import pages as PGs     # noqa: PLC0415
+            kit = 0x4210C08C
+            snd0 = kit + 52
+            ty_ = snd0 + 0xDE
+            recs = 0x401F7F94
+            cm = lay["smp_machine_commit"]
+            smr = SMs.TYPE_OF["WERP"]
+            rows = [ln for ln in PGs.smr_defaults_header().splitlines() if "smr_" in ln]
+            rids = [int(x) for x in rows[0].split("{")[1].split("}")[0].split(",")]
+            dws = [int(x) for x in rows[1].split("{")[1].split("}")[0].split(",")]
+            ss = [f"wait:3,poke:{ty_:#x}:08", f"poke:{snd0 + 20 + 2 * 43:#x}:0500", "wait:4", "tap:2", "wait:6",
+                  "func-src", "wait:20", "down", "wait:4", "yes", "wait:20",
+                  f"call:{cm:#x}:arg1@{cm:#x}:0:{smr}:arg4@{cm:#x}:arg5@{cm:#x}", "wait:10", "types"]
+            ss += [f"mem:{snd0 + 20 + 2 * SMs.RECORDS[r][0]:#x}:2" for r in rids]
+            ss += ["no", "wait:10", "png:p0", "tap:2", "wait:10", "png:p1"]
+            named = [r for r, _s, _l in SMs.PAGES["WERP"] + SMs.PAGES2["WERP"] if r]
+            ss += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named]
+            ss += [f"call:{lay['wr_lfo_mask']:#x}:{r}" for r in named]
+            sjs, ssf = work / "smear.json", work / "smear.steps"
+            ssf.write_text(",".join(ss))
+            sm_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{ssf}", "--png-dir", work / "smear",
+                      "--json", sjs]
+
+            def sm_body(tdir):
+                rc, out = run("smear", sm_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and sjs.exists():
+                    r = json.loads(sjs.read_text())
+                    m = r["memory"]
+                    keys = [k for k in m if not k.startswith("types")]
+                    words = [int(m[k], 16) for k in keys[:len(rids)]]
+                    ptrs = [int(m[k], 16) for k in keys[len(rids):]]
+                    blobs = list(platform.runtime(sec3))
+
+                    def cstr(ptr):
+                        for va, blob in blobs:
+                            if va <= ptr < va + len(blob):
+                                end = blob.index(b"\0", ptr - va)
+                                return blob[ptr - va:end].decode("ascii", "replace")
+                        return f"<{ptr:#x}>"
+                    shorts = [cstr(x) for x in ptrs]
+                    want_s = [sh for r_, sh, _l in SMs.PAGES["WERP"] + SMs.PAGES2["WERP"] if r_]
+                    masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
+                    shots = {k: pathlib.Path(v).read_bytes() for k, v in r["screens"].items()}
+                    types = m.get("types@0") or [None]
+                    facts = {"MACHINE SEL's commit: track 1 is SMEAR (type 9)": types[0] == smr,
+                             "its controls at SMEAR's own start (smr_default)": words == dws,
+                             "page 1 and page 2 drawn, each its own": shots.get("p0") != shots.get("p1"),
+                             "its records named for SMEAR (TUNE SPD BLND SAMP STRT SIZE DENS LEV OVLP SPRY PRND WIN)":
+                                 shorts == want_s,
+                             "every one an LFO destination": len(masks) == len(named) and all(x != 0 for x in masks),
+                             "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees")}
+                    good = all(facts.values())
+                    why = (json.dumps({k: v for k, v in facts.items() if not v}) + f" words={[hex(w) for w in words]} "
+                           f"want={[hex(w) for w in dws]} shorts={shorts} masks={masks} types={types[:2]}")[:1500]
+                return good, ("SMEAR: MACHINE SEL gives it its own start; its two pages drawn; its twelve records "
+                              "named and offered to the LFOs" if good else why)
+            later("smear", "SMEAR: MACHINE SEL, its start, its two pages, LFO names (ColdFire)",
+                  "SMEAR: MACHINE SEL, its start, its two pages, LFO names (ColdFire)", [sm_cmd, sorted(EMU_ENV.items())], sm_body)
+
+        # 6f8. RIFT v0.16 (owner, 2026-11-21): MACHINE SEL's picture is the logo of the machine under
+        # the cursor when it is one of RIFT's (csrc/waverider/page.c lg_draw, scripts/gen_logos.py);
+        # DIGIDRUM's label reads DRUM, the sample machines' SAMP. The snapshot's rows predate RIFT's
+        # synth machines, so lg_force stands in for the cursor's type for those; the sample machines
+        # are reached by the cursor itself (ONESHOT). Negative controls: THOLET (no logo yet), the
+        # cursor's own stock machine and the FLTR column keep stock's picture, pixel for pixel.
+        if "lg_force" in lay:
+            from PIL import Image                   # noqa: PLC0415
+            lgf = lay["lg_force"]
+            ls_ = ["func-src", "wait:20", "png:s0"]
+            for t in (18, 19, 20, 21, 22, 17, 23):
+                ls_ += [f"poke:{lgf:#x}:{t:08x}", "down", "wait:4", "up", "wait:5", f"png:t{t}"]
+            ls_ += [f"poke:{lgf:#x}:ffffffff", "down", "wait:4", "up", "wait:5", "png:back",
+                    "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:5", "png:one",
+                    f"poke:{lgf:#x}:00000012", "right", "wait:6", "png:fltr", f"poke:{lgf:#x}:ffffffff"]
+            ljs, lsf = work / "logos.json", work / "logos.steps"
+            lsf.write_text(",".join(ls_))
+            lg_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", f"@{lsf}", "--png-dir", work / "logos", "--json", ljs]
+
+            def lg_body(tdir):
+                rc, out = run("logos", lg_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and ljs.exists():
+                    import numpy as np                  # noqa: PLC0415
+                    r = json.loads(ljs.read_text())
+                    sh = {n: np.array(Image.open(f).convert("L"))[::6, ::6] > 128 for n, f in r["screens"].items()}
+                    want = {n: np.array(Image.open(GL.SRC / f"{n}.png").convert("1")) for n in GL.ORDER}
+
+                    def pic(n):                         # the logo's rows 10..41, x 0..45
+                        return sh[n][10:42, 0:46] if n in sh else None
+
+                    def lbl(n):                         # the label's rows 44..51, x 13..35 (four letters, centred)
+                        return sh[n][44:52, 13:36] if n in sh else None
+
+                    def word(w):
+                        o = np.zeros((8, 23), bool)
+                        for i, ch in enumerate(w):
+                            for y, row in enumerate(GL.GLYPHS[ch]):
+                                for x, c in enumerate(row):
+                                    o[y, 6 * i + x] = c == "#"
+                        return o
+                    same = lambda u, v: u is not None and v is not None and np.array_equal(u, v)   # noqa: E731
+                    per = {18: "fascia", 19: "organ", 20: "silt", 21: "ligature", 22: "digidrum"}
+                    facts = {f"type {t}: the {n.upper()} logo": same(pic(f"t{t}"), want[n]) for t, n in per.items()}
+                    facts["DIGIDRUM's label reads DRUM"] = same(lbl("t22"), word("DRUM"))
+                    facts["FLEX: its own logo, and REC"] = same(pic("t17"), want["flex"]) and same(sh["t17"][44:52, 16:33] if "t17" in sh else None, word("REC")[:, :17])
+                    facts["the synth logos keep SYN's label"] = all(same(lbl(f"t{t}"), lbl("s0")) for t in (18, 19, 20, 21))
+                    facts["ONESHOT under the cursor: the DT2 logo and SAMP"] = same(pic("one"), want["dt2"]) and same(lbl("one"), word("SAMP"))
+                    facts["THOLET (no logo yet): stock's picture, pixel for pixel"] = same(sh.get("t23"), sh.get("s0"))
+                    facts["a stock machine under the cursor: stock's picture, pixel for pixel"] = same(sh.get("back"), sh.get("s0"))
+                    facts["the FLTR column: no logo drawn"] = "fltr" in sh and not any(same(sh["fltr"][10:42, 0:46], w) for w in want.values())
+                    facts["no fault reported, no stack freed"] = not r.get("fault_reports") and not r.get("stack_frees")
+                    good = all(facts.values())
+                    why = json.dumps({k: v for k, v in facts.items() if not v})[:1200]
+                return good, ("MACHINE SEL: FASCIA, ORGAN, SILT, LIGATURE and DIGIDRUM (DRUM) show their logos, FLEX "
+                              "its own and REC, the other sample machines the DT2 logo and SAMP; THOLET, stock's machines and the FLTR column keep "
+                              "stock's picture, pixel for pixel" if good else why)
+            later("logos", "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)",
+                  "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)",
+                  [lg_cmd, sorted(EMU_ENV.items())], lg_body)
 
         # 6p. v0.33: our overlays let go when the page under them goes (docs/freeze-hunt.md).
         # The sample list opened on track 1 (a SAMP turn), then TRK + [TRIG 2] to track 2, a

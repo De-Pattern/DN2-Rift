@@ -92,19 +92,25 @@ def _lv():
 TYPE_SHORT = {"PHASE": "PHAS", "WAVE": "WAVE", "SLOPE": "SLOP", "CYCLE": "CYCL", "SLEW": "SLEW", "LP": "LP",
               "BP": "BP", "HP": "HP", "ADD": "ADD", "MULT": "MULT", "MIX": "MIX", "FOLD": "FOLD", "COMP": "COMP",
               "XOR": "XOR", "FLIP": "FLIP", "HOLD": "HOLD", "SKIN": "SKIN", "BAR": "BAR", "SAT": "SAT",
-              "RUNG": "RUNG", "IMPLS": "IMPL", "CREAS": "CRES"}
+              "RUNG": "RUNG", "IMPLS": "IMPL", "CREAS": "CRES",
+              "TICK": "TICK", "ENV": "ENV", "VCA": "VCA", "CDIV": "CDIV", "DUST": "DUST", "CHAOS": "CHAO",
+              "CRUSH": "CRSH", "LISSA": "LISA"}
 TYPE_LONG = {"PHASE": "PHASE", "WAVE": "WAVE", "SLOPE": "SLOPE", "CYCLE": "CYCLE", "SLEW": "SLEW",
              "LP": "LOW PASS", "BP": "BAND PASS", "HP": "HIGH PASS", "ADD": "ADD", "MULT": "MULTIPLY",
              "MIX": "MIX", "FOLD": "FOLD", "COMP": "COMPARE", "XOR": "XOR", "FLIP": "FLIP", "HOLD": "HOLD",
              "SKIN": "SKIN", "BAR": "BAR", "SAT": "SATURATE", "RUNG": "RUNGLER", "IMPLS": "IMPULSE",
-             "CREAS": "CREASE"}
+             "CREAS": "CREASE", "TICK": "TICK", "ENV": "ENVELOPE", "VCA": "VCA", "CDIV": "CLOCK DIV",
+             "DUST": "DUST", "CHAOS": "CHAOS", "CRUSH": "CRUSH", "LISSA": "LISSAJOUS"}
 # each type's two settings (live.Voice._run's x1, x2), four letters at most
 TYPE_SETS = {"PHASE": ("RATI", "TUNE"), "WAVE": ("SHAP", "WARP"), "SLOPE": ("RISE", "FALL"),
              "CYCLE": ("RATE", "SKEW"), "SLEW": ("RISE", "FALL"), "LP": ("CUT", "RES"), "BP": ("CUT", "RES"),
              "HP": ("CUT", "RES"), "ADD": ("OFFS", "GAIN"), "MULT": ("OFFS", "GAIN"), "MIX": ("MIX", "GAIN"),
              "FOLD": ("DRIV", "OFFS"), "COMP": ("LEVL", "THRS"), "XOR": ("LEVL", "THRS"), "FLIP": ("LEVL", "THRS"),
              "HOLD": ("STEP", "GLID"), "SKIN": ("TUNE", "BRIT"), "BAR": ("TUNE", "BRIT"), "SAT": ("DRIV", "OFFS"),
-             "RUNG": ("LOOP", "LEN"), "IMPLS": ("RATE", "DCAY"), "CREAS": ("GAIN", "OFFS")}
+             "RUNG": ("LOOP", "LEN"), "IMPLS": ("RATE", "DCAY"), "CREAS": ("GAIN", "OFFS"),
+             # v0.15 (WEFT's names)
+             "TICK": ("RATE", "CHNC"), "ENV": ("ATK", "REL"), "VCA": ("LEVL", "CURV"), "CDIV": ("RATI", "WIDT"),
+             "DUST": ("DENS", "CLMP"), "CHAOS": ("R", "RATE"), "CRUSH": ("BITS", "RATE"), "LISSA": ("RATE", "RATI")}
 SOURCE_NAMES = ("----",) + tuple(f"B{i}" for i in range(1, 13)) + ("PTCH", "GATE", "TRIG", "VEL", "NOIS", "LFO1", "LFO2")
 BLOCK_CHARS = "123456789ABC"              # the grid's block numbers: 1..9, then A B C (WEFT's)
 

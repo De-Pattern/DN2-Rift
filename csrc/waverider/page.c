@@ -175,6 +175,84 @@ static void wr_names(void)
     names_on = key;
 }
 
+/* RIFT v0.16 (owner, 2026-11-21): MACHINE SEL's picture is the logo of the machine under the
+ * cursor when it is one of RIFT's (scripts/gen_logos.py); the sample machines' label reads SAMP
+ * and DIGIDRUM's DRUM. Drawn over stock's picture once stock has drawn the screen; stock's
+ * machines keep stock's picture. MACHINE SEL is the screen's top view when its vtable is
+ * MachineSelectionView's; the type under the cursor is stock's own 0x4005b162(view). */
+#include "logos.h"
+#define LG_VT       0x401DF9D8u                 /* MachineSelectionView's vtable */
+#define LG_TYPE_AT  ((int (*)(void *))0x4005B162u)
+extern void *wr_screen_obj;
+/* the gate's: a type to draw in place of the cursor's (-1: the cursor's). The emulator's snapshot
+ * holds MACHINE SEL's rows from before RIFT's synth machines were listed, so the gate sets it to
+ * show each logo; nothing else writes it */
+int lg_force __attribute__((section(".data"), aligned(4))) = -1;
+static int lg_ram(u32 a) { return a >= 0x44000000u && a < 0x48000000u && !(a & 3u); }
+
+static void *lg_view(void)
+{
+    u32 s = (u32)wr_screen_obj;
+    if (!lg_ram(s))
+        return 0;
+    u32 node = *(volatile u32 *)(s + 28);
+    if (!lg_ram(node) || node == s + 20)
+        return 0;
+    u32 v = *(volatile u32 *)(node + 8);
+    return lg_ram(v) && *(volatile u32 *)v == LG_VT ? (void *)v : 0;
+}
+
+/* the logo (and the label: 0 none, 1 SAMP, 2 DRUM, 3 REC) for machine type t; -1 stock's */
+static int lg_logo_of(int t, int *label)
+{
+    *label = 0;
+    switch (t) {
+    case 18: return LOGO_FASCIA;
+    case 19: return LOGO_ORGAN;
+    case 20: return LOGO_SILT;
+    case 21: return LOGO_LIGATURE;
+    case 22: *label = 2; return LOGO_DIGIDRUM;
+    case 17: *label = 3; return LOGO_FLEX;
+    case 8: case 9: case 10: case 11: case 12: case 13:
+        *label = 1; return LOGO_DT2;
+    }
+    return -1;
+}
+
+#define LG_TOP 10                               /* the logo's first row, from the top */
+#define LG_PIC_X1 45                            /* the picture's room: x 0..45, rows 9..42 */
+#define LG_LBL_X0 9                             /* the label's room, between its arrows */
+#define LG_LBL_X1 37
+#define LG_LBL_TOP 44                           /* the label's rows 44..51 */
+static void lg_draw(void *c)
+{
+    void *v = lg_view();
+    if (!v || *(volatile u32 *)((u32)v + 424) != 0)   /* the SRC column only */
+        return;
+    int label, k = lg_logo_of(lg_force >= 0 ? lg_force : LG_TYPE_AT(v), &label);
+    if (k < 0)
+        return;
+    for (int r = 9; r <= 42; r++)
+        for (int x = 0; x <= LG_PIC_X1; x++)
+            SET_PIXEL(c, x, 63 - r, 0);
+    const unsigned char *b = ms_logos[k];
+    for (int r = 0; r < LOGO_H; r++)
+        for (int x = 0; x < LOGO_W; x++)
+            if (b[r * LOGO_BPR + (x >> 3)] & (0x80 >> (x & 7)))
+                SET_PIXEL(c, x, 63 - (LG_TOP + r), 1);
+    if (!label)
+        return;
+    for (int r = LG_LBL_TOP; r < LG_LBL_TOP + 8; r++)
+        for (int x = LG_LBL_X0; x <= LG_LBL_X1; x++)
+            SET_PIXEL(c, x, 63 - r, 0);
+    int n = ms_label_n[label - 1], x0 = 24 - (6 * n - 1) / 2;   /* centred on stock's SYN (x 24): x 13..35 for four, 16..32 for three */
+    for (int i = 0; i < n; i++)                 /* letters 5 wide, 1 apart */
+        for (int r = 0; r < 8; r++)
+            for (int x = 0; x < 5; x++)
+                if (ms_label[label - 1][i][r] & (0x10 >> x))
+                    SET_PIXEL(c, x0 + 6 * i + x, 63 - (LG_LBL_TOP + r), 1);
+}
+
 /* v0.22: the UI loop's draw of its screen (0x4011d32a(screen, canvas), at 0x4002e4ca),
  * then, while it is up, the RECORDER over all of it (rec.c, smp_page.c) */
 #define SCREEN_DRAW ((void (*)(void *, void *))0x4011D32Au)
@@ -219,8 +297,10 @@ void wr_screen(void *screen, void *canvas)
         smp_fb_draw(canvas, smp_samp_of(UI_TRACK));
     else if (smp_list_visible())                /* v0.25: the sample list, over the title bar too */
         smp_list_draw(canvas);
-    else
+    else {
         tn_kb_draw(canvas);                     /* KB SETUP's H slot, when KB SETUP is on top */
+        lg_draw(canvas);                        /* RIFT v0.16: MACHINE SEL's logos */
+    }
 }
 
 /* the UI loop's redraw test, as stock (and the names kept current, once a loop; and
@@ -487,15 +567,10 @@ static void smp_picture(void *c, void *view, int kind)
         b = (s + len) * w / n;
         for (int j = 0; j <= n && n <= 32; j++)
             px(c, x0 + j * w / n, POS_Y + 2);
-    } else if (kind == SMP_WERP_KIND) {         /* the whole sample, its segments ticked */
-        int v = smp_get(view, SMP_SEG_ID), j = 0;
-        while (j < 7 && v >= smp_seg_steps[j])
-            j++;
-        int n = 32 >> j;                        /* (per bar; the ticks are drawn up to 32) */
-        a = 0;
-        b = w;
-        for (int i = 0; i <= n && n <= 32; i++)
-            px(c, x0 + i * w / n, POS_Y + 2);
+    } else if (kind == SMP_WERP_KIND) {         /* RIFT v0.16 SMEAR: the loop, STRT and SIZE squared */
+        int st = smp_get(view, SMP_STRT_ID), sz = smp_get(view, SMP_SIZE_ID);
+        a = st * w / 128;
+        b = a + (w - a) * sz * sz / (127 * 127);
     } else {
         a = smp_pos(view, SMP_STRT_ID, w);     /* v0.48: the fine word (fmt.c smp_fine) */
         b = a + smp_pos(view, SMP_LEN_ID, w);

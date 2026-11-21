@@ -80,6 +80,7 @@ from dnfw.organ import program as OGP                           # noqa: E402  (R
 from dnfw.silt import program as SLP                            # noqa: E402  (RIFT: SILT's, in FASCIA's walk)
 from dnfw.ligature import program as LGP                        # noqa: E402  (RIFT: LIGATURE's, in FASCIA's walk)
 from dnfw.digidrum import program as DDP                           # noqa: E402  (RIFT: DIGIDRUM's, in FASCIA's walk)
+from dnfw.perc.program import RIFT as PP_RIFT                    # noqa: E402
 from dnfw.tholet import program as THP                          # noqa: E402  (RIFT: THOLET's, in FASCIA's walk)
 from dnfw.fascia import machines as FSM                         # noqa: E402
 
@@ -150,10 +151,16 @@ def init_on(snap, m2mach, image: Image, warm: bool = False):
     # v0.26: the tables the ColdFire sends over the link at power-on (the host's pitch table
     # and zpack, at the pool's table area), then the word that says they are whole
     Lm = PL.layout().md
-    shipped = MDK.tables_bytes()
-    for k in range(0, len(shipped), 4):
-        m2.poke(runner.state, Lm.T[MDK.SHIPPED] + k, struct.unpack_from("<I", shipped, k)[0])
-    m2.poke(runner.state, Lm.ready, SM.TABLE_MAGIC)
+    if PP_RIFT:      # RIFT v0.16: ORGAN's, THOLET's and SMEAR's (dsp.link_tables), as link.c sends them
+        shipped = dsp.link_tables()
+        for k in range(0, len(shipped), 4):
+            m2.poke(runner.state, dsp.LINK_TABLES_DDR + k, struct.unpack_from("<I", shipped, k)[0])
+        m2.poke(runner.state, dsp.LINK_READY_DDR, SM.TABLE_MAGIC)
+    else:
+        shipped = MDK.tables_bytes()
+        for k in range(0, len(shipped), 4):
+            m2.poke(runner.state, Lm.T[MDK.SHIPPED] + k, struct.unpack_from("<I", shipped, k)[0])
+        m2.poke(runner.state, Lm.ready, SM.TABLE_MAGIC)
     if warm:
         # v0.17: the Machinedrum's sine and tables as the DSP has them 0.7 s after power-on
         # (it fills them itself, 32 blocks; the "sine" run checks that fill word for word),
@@ -220,7 +227,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
     run on the DSP's memory at that entry); loop entries."""
     state = init
     out = {"machine": [], "amp_in": [], "amp_out": [], "buffers": [], "buffer_bits": [], "t5_inputs": [],
-           "perc": [], "smp": [], "fsc": [], "loop_entries": 0, "smp_entries": 0, "fsc_entries": 0,
+           "perc": [], "smp": [], "fsc": [], "smr": [], "loop_entries": 0, "smp_entries": 0, "fsc_entries": 0,
            "setup": []}
     instr = wall = 0
     for b in range(blocks):
@@ -309,11 +316,42 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                                             for k in range(SP.STATE_STRIDE // 4)]}
                               for t in tap.get("smp_model", {})}
 
+        def at_smear(r):
+            # RIFT v0.16: smear.asm's entry, smp.asm's tail: the sample machines' outputs, then
+            # SMEAR's model (dnfw.smear.stage run on the DSP's memory here): every track whose
+            # mailbox is on, its buffer; the stage's words; each such track's state in DDR
+            at_after_smp(r)
+            if "smr_model" in tap:
+                return
+            from dnfw.perc.dsl import Mem as _Mem, Prog as _Prog
+            from dnfw.smear import stage as _SG
+            st = r.state
+            S_ = dsp.smear_layout()
+            on = [t for t in range(16) if m2.word(st, S_.mb(t, _SG.MB_ON)) == _SG.MB_MAGIC]
+            mem = _Mem(lambda a, st=st: m2.word(st, a) or 0)
+            pr = _Prog("run", mem=mem)
+            _SG.stage(pr, S_)
+            words = [S_.INIT, S_.CLOCK, S_.LOWN0, S_.LOWN1, S_.LAGE0, S_.LAGE1]
+            tap["smr_words"] = words
+            tap["smr_model"] = {"tracks": {t: [mem.get(tap["bufs"][t] + 4 * k) for k in range(BLOCK)] for t in on},
+                                "words": [mem.get(w) for w in words],
+                                "state": {t: [mem.get(S_.STATE + 512 * t + 4 * k) for k in range(S_.V.STATE_WORDS)]
+                                          for t in on},
+                                "steps": pr.steps}
+
         def at_fsc(r):
-            # v0.45: FASCIA's entry, smp.asm's tail: the sample machines' outputs (as before at
-            # PING_SW), then FASCIA's model (dnfw.fascia.program run on the DSP's memory here) for
+            # v0.45: FASCIA's entry (RIFT v0.16: smear.asm's tail): SMEAR's outputs, then FASCIA's model (dnfw.fascia.program run on the DSP's memory here) for
             # every type-18 slot, in the order the DSP walks them (PERC's ORDER: the newest first)
             at_after_smp(r)
+            if "smr_model" in tap and "smr_dsp" not in tap:
+                st = r.state
+                S_ = dsp.smear_layout()
+                m_ = tap["smr_model"]
+                tap["smr_dsp"] = {"tracks": {t: [m2.word(st, tap["bufs"][t] + 4 * k) or 0 for k in range(BLOCK)]
+                                             for t in m_["tracks"]},
+                                  "words": [m2.word(st, w) or 0 for w in tap["smr_words"]],
+                                  "state": {t: [m2.word(st, S_.STATE + 512 * t + 4 * k) or 0
+                                                for k in range(S_.V.STATE_WORDS)] for t in m_["state"]}}
             if "fsc_model" in tap:
                 return
             out["fsc_entries"] += 1
@@ -390,7 +428,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
             out["setup"].append(("none-arm", b, None))
 
         hooks = {m3.DISPATCH: at_dispatch, dsp.PERC_SW: at_loop, dsp.SMP_SW: at_after_perc,
-                 dsp.FSC_SW: at_fsc, dsp.PING_SW: at_after_fsc,
+                 dsp.SMEAR_SW: at_smear, dsp.FSC_SW: at_fsc, dsp.PING_SW: at_after_fsc,
                  LOOP_RESUME: at_resume,
                  m3.AMP_STAGE: amp, AMP_RETURN: amp_ret, SETUP_GUARD: guard,
                  SETUP_TABLE_READ: table_read, SETUP_NONE: none_arm}
@@ -429,6 +467,15 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                                + (0 if t in got else SP.STATE_STRIDE // 4),
                                "out": [V.bits_f32(x) for x in got.get(t, {}).get("out", [])],
                                "model_steps": model[t]["steps"]} for t in model})
+        sm, sg = tap.get("smr_model"), tap.get("smr_dsp")
+        out["smr"].append(None if sm is None else {
+            "tracks": {t: {"mismatches": sum(1 for x, y in zip(sm["tracks"][t], (sg or {}).get("tracks", {}).get(t, [])) if x != y)
+                           + (0 if sg and t in sg["tracks"] else BLOCK),
+                           "bits": list((sg or {}).get("tracks", {}).get(t, []))} for t in sm["tracks"]},
+            "words_ok": bool(sg) and sm["words"] == sg["words"],
+            "state_mismatches": sum(sum(1 for x, y in zip(sm["state"][t], (sg or {}).get("state", {}).get(t, [])) if x != y)
+                                    for t in sm["state"]),
+            "steps": sm["steps"]})
         model, got = tap.get("fsc_model", {}), tap.get("fsc_dsp", {})
         out["fsc"].append({t: {"out_mismatches": sum(1 for x, y in zip(model[t]["out"], got.get(t, {}).get("out", [])) if x != y)
                                + (0 if t in got else BLOCK),
@@ -500,8 +547,14 @@ def perc_links_ok() -> bool:
     return (f"JUMP {dsp.PERC_SW:#x};" in count
             and re.findall(r"JUMP (0x[0-9a-f]+);\s*// smp.asm's wr_smp", perc) == [f"{dsp.SMP_SW:#x}"]
             # v0.45: smp.asm's tail into fascia.asm's wr_fsc, and FASCIA's into the shared tail
-            and re.findall(r"JUMP (0x[0-9a-f]+);\s*// fascia.asm's wr_fsc",
-                           (SHARC / "smp.asm").read_text(encoding="utf-8")) == [f"{dsp.FSC_SW:#x}"]
+            # RIFT v0.16: smp.asm's tail into smear.asm's wr_smr, and SMEAR's into fascia.asm's wr_fsc
+            and (re.findall(r"JUMP (0x[0-9a-f]+);\s*// fascia.asm's wr_fsc",
+                            (SHARC / "smp.asm").read_text(encoding="utf-8")) == [f"{dsp.FSC_SW:#x}"]
+                 if not hasattr(dsp, "SMEAR_SW") else
+                 re.findall(r"JUMP (0x[0-9a-f]+);\s*// smear.asm's wr_smr",
+                            (SHARC / "smp.asm").read_text(encoding="utf-8")) == [f"{dsp.SMEAR_SW:#x}"]
+                 and re.findall(r"JUMP (0x[0-9a-f]+);\s*// fascia.asm's wr_fsc",
+                                (SHARC / "smear.asm").read_text(encoding="utf-8")) == [f"{dsp.FSC_SW:#x}"])
             and re.findall(r"JUMP (0x[0-9a-f]+);\s*// the shared tail",
                            (SHARC / "fascia.asm").read_text(encoding="utf-8")) == [f"{dsp.PING_SW:#x}"])
 
@@ -603,7 +656,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,tholet,tstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,tholet,tstress,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -662,7 +715,17 @@ def main(argv=None):
 
         def warm():
             if not warm_init:
-                warm_init.append(init_on(snap, m2mach, Image(dk, m5.stream), warm=True))
+                w0 = init_on(snap, m2mach, Image(dk, m5.stream), warm=True)
+                if PP_RIFT and hasattr(dsp, "SMEAR_SW"):
+                    # RIFT v0.16: and SMEAR's power-on tables computed (a part a block, four blocks
+                    # once READY holds; on the unit, about a second after power-on, long before a
+                    # note): four silent blocks, so the runs that start warm do not carry that work
+                    # in their first blocks (fkeep, whose held notes are struck in block 0)
+                    from dnfw.smear import fft as SMF
+                    rr0 = run_blocks(w0, lambda b: fsc_frame(sound, machines, {}, trig=()), SMF.INIT_PARTS)
+                    assert rr0["ok"], "SMEAR's power-on blocks"
+                    w0 = rr0["state"]
+                warm_init.append(w0)
             return warm_init[0]
         if "map" in steps:
             print("\nstep 2: map")
@@ -711,7 +774,7 @@ def main(argv=None):
             gc.collect()
         if "chords" in steps:
             print("\nstep 3k: four-note chords on each Monomachine machine, the memory clock (v0.36); "
-                  "and on the sample machines ONESHOT, WERP, SLICE (v0.38)")
+                  "and on the sample machines ONESHOT, SLICE (v0.38; RIFT v0.16: no WERP)")
             results["3k_chords"] = step_chords(warm(), sound, machines, cold=init)
             show(results["3k_chords"])
             gc.collect()
@@ -749,7 +812,11 @@ def main(argv=None):
                                ("tholet", "THOLET bit-exact to live.Voice, in FASCIA's walk (RIFT)",
                                 lambda: step_tholet(warm(), sound, machines)),
                                ("tstress", "sixteen THOLET voices under the guard (RIFT)",
-                                lambda: step_tstress(warm(), sound, machines))):
+                                lambda: step_tstress(warm(), sound, machines)),
+                               ("smear", "SMEAR (smear.asm) bit-exact to its program, lanes, notes, an empty slot (RIFT v0.16)",
+                                lambda: step_smear(warm(), sound, machines)),
+                               ("mstress", "sixteen SMEAR tracks: every block returns, finite (RIFT v0.16)",
+                                lambda: step_mstress(warm(), sound, machines))):
             if key in steps:
                 print(f"\nstep 3{key}: {title}")
                 results[f"3_{key}"] = fn()
@@ -1778,7 +1845,7 @@ def step_smp_chords(init, sound, machines, blocks=12, only=()) -> tuple[dict, di
     slice_notes = tuple((24 + k) << 8 for k in SMP_CHORD_SLICES)
     cases = {
         "ONESHOT": (SM.TYPE_OF["ONESHOT"], smp_words({SM.SAMP_REC: 4}), notes),
-        "WERP": (SM.TYPE_OF["WERP"], smp_words({SM.SAMP_REC: 4}), notes),
+        # (RIFT v0.16: type 9 is SMEAR: its chords are the smear part's)
         "SLICE": (SM.TYPE_OF["SLICE"], smp_words({SM.SAMP_REC: 4, SM.SLICE_REC: 0}), slice_notes),
     }
     res, nums = {}, {}
@@ -1935,7 +2002,7 @@ def step_cost(init, sound, machines) -> dict:
                     f.param(0, slot, w)
                 return f.to_bytes()
             measure(name, fb)
-        for name in (("ONESHOT", "WERP", "STRETCH", "REPITCH", "GRID", "SLICE") if only != "mnm" else ()):
+        for name in (("ONESHOT", "STRETCH", "REPITCH", "GRID", "SLICE") if only != "mnm" else ()):   # (RIFT v0.16: no WERP)
             measure(name, (lambda ty: lambda b: base_frame(sound, machines, t0=ty, trigger=b == 1,
                                                           overrides=smp_words({SM.SAMP_REC: 4})).to_bytes())(SM.TYPE_OF[name]))
     finally:
@@ -2198,10 +2265,9 @@ def step_smp(init, sound, machines, blocks) -> dict:
     STR, REP = SM.TYPE_OF["STRETCH"], SM.TYPE_OF["REPITCH"]
 
     def timed(b):
-        f = base_frame(sound, machines, t0=WERP, trigger=b == 1, others={1: STR, 2: REP},
+        f = base_frame(sound, machines, t0=STR, trigger=b == 1, others={1: STR, 2: REP},   # RIFT v0.16: STRETCH in WERP's place
                        trigger_others=True,
-                       overrides=smp_words({SM.SAMP_REC: 4, SM.BARS_REC: 0, SM.SEG_REC: 20,
-                                            SM.MODE_REC: 80}))
+                       overrides=smp_words({SM.SAMP_REC: 4, SM.BARS_REC: 0}))
         for t, ws in ((1, smp_words({SM.SAMP_REC: 1, SM.BARS_REC: 0})),
                       (2, smp_words({SM.SAMP_REC: 2, SM.BARS_REC: 13}))):
             for slot, w in ws.items():
@@ -2341,7 +2407,7 @@ def step_smp(init, sound, machines, blocks) -> dict:
            {"PERC beside them is bit-exact to its model and sounds":
             mx["ok"] and perc_exact(mx)[0] > 0 and perc_exact(mx)[1:] == (0, 0)
             and V.peak(perc_series(mx, 2)) > 0.05}),
-        "v0.15: WERP, STRETCH and REPITCH at 140 BPM sound (peak > 0.05), bit-exact (above)":
+        "v0.15: STRETCH (twice) and REPITCH at 140 BPM sound (peak > 0.05), bit-exact (above) (RIFT v0.16: no WERP)":
             runs["timed"]["ok"] and all(V.peak(smp_series(runs["timed"], t)) > 0.05 for t in (0, 1, 2)),
         "v0.18: CFAD is gone (the DT2's ONESHOT has no such control): its record changes nothing; the loop sounds":
             runs["cfad"]["ok"] and runs["nocfad"]["ok"]
@@ -4547,6 +4613,93 @@ def step_tstress(init, sound, machines) -> dict:
         "the newest note heard in most blocks (newest first)": out["newest_heard"] >= 0.8,
         "every buffer finite": out["finite"],
     }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+# -- RIFT v0.16: SMEAR ---------------------------------------------------------------------------
+SMR = SM.TYPE_OF["WERP"]
+
+
+def smr_words(kn: dict) -> dict:
+    """frame slot -> word for SMEAR: smp_words plus the knobs KN {name: 0..127} on their records"""
+    from dnfw.smear import live as SLV
+    vals = {SM.SMEAR_RECORDS[c]: (round(v * SM.RECORDS[SM.SMEAR_RECORDS[c]][2] / 127) if c != "SAMP" else v)
+            for c, v in {**SLV.DEFAULTS, "SAMP": 4, **kn}.items() if c != "TUNE"}
+    return smp_words(vals)
+
+
+def smr_frame(sound, machines, tracks: dict, trig=()) -> bytes:
+    """TRACKS = {t: knobs}: SMEAR on each; TRIG the tracks triggered"""
+    t0 = 0 if 0 in tracks else None
+    f = base_frame(sound, machines, t0=SMR if t0 == 0 else 0, overrides=smr_words(tracks[0]) if t0 == 0 else None,
+                   trigger=False)
+    for t, kn in tracks.items():
+        if t:
+            f.header(FR.MACHINE, t, SMR)
+        f.header(FR.NOTE, t, 0x3C00)
+        for slot, w in smr_words(kn).items():
+            f.param(t, slot, w)
+    for t in trig:
+        f.trigger(t, masks=(34,))
+    return f.to_bytes()
+
+
+def smr_check(rr) -> dict:
+    blocks = [b for b in rr["smr"] if b is not None]
+    mism = sum(v["mismatches"] for b in blocks for v in b["tracks"].values())
+    words = all(b["words_ok"] for b in blocks)
+    st = sum(b["state_mismatches"] for b in blocks)
+    peak = 0.0
+    for b in blocks:
+        for v in b["tracks"].values():
+            for x in v["bits"]:
+                f_ = V.bits_f32(x)
+                if math.isfinite(f_):
+                    peak = max(peak, abs(f_))
+    fin = all(math.isfinite(V.bits_f32(x)) for b in blocks for v in b["tracks"].values() for x in v["bits"])
+    return {"blocks": len(blocks), "out_mismatches": mism, "words_ok": words, "state_mismatches": st,
+            "peak": peak, "finite": fin, "ok": rr["ok"]}
+
+
+def step_smear(init, sound, machines) -> dict:
+    """RIFT v0.16: SMEAR's stage (smear.asm) against its program run on the DSP's own memory each
+    block (dnfw.smear.stage, itself held to live.Voice by test_smear_stage), bit for bit: VOC
+    alone (a lane), PLAY, GRN, two tracks at once taking both lanes, a third stealing one, an
+    empty slot; every output, the stage's words and every voice's state"""
+    res = {}
+    n = 60
+    cases = {
+        "VOC alone": ({0: dict(BLND=0, SPD=72)}, {0: (1,)}),
+        "PLAY and GRN": ({0: dict(BLND=64, SPD=90), 1: dict(BLND=127, DENS=100, OVLP=90)}, {0: (1,), 1: (2,)}),
+        "three tracks, two lanes": ({0: dict(BLND=20), 1: dict(BLND=30), 2: dict(BLND=10)}, {0: (1,), 1: (3,), 2: (5, 30)}),
+        "an empty slot": ({0: dict(BLND=64, SAMP=0)}, {0: (1,)}),
+    }
+    for name, (tracks, trigs) in cases.items():
+        rr = run_blocks(init, lambda b, tracks=tracks, trigs=trigs: smr_frame(
+            sound, machines, tracks, trig=tuple(t for t, bs in trigs.items() if b in bs)), n)
+        c = smr_check(rr)
+        need = name != "an empty slot"
+        c["ok"] = bool(c["ok"] and c["blocks"] >= n - 2 and c["out_mismatches"] == 0 and c["words_ok"]
+                       and c["state_mismatches"] == 0 and c["finite"] and ((c["peak"] > 1e-3) == need))
+        res[name] = c
+        print(f"    smear {name}: {c}", flush=True)
+    checks = {f"{k}: bit-exact (outputs, words, states), finite, {'sounding' if k != 'an empty slot' else 'silent'}": v["ok"]
+              for k, v in res.items()}
+    return {"ok": all(checks.values()), "checks": checks, "numbers": res}
+
+
+def step_mstress(init, sound, machines) -> dict:
+    """RIFT v0.16: sixteen SMEAR tracks (VOC, PLAY and GRN), a note on the next track every block:
+    every block returns, every buffer finite, the stage bit-exact to its program"""
+    tracks = {t: dict(BLND=(t * 9) % 128, DENS=110, OVLP=110) for t in range(16)}
+    nb = 24
+    rr = run_blocks(init, lambda b: smr_frame(sound, machines, tracks, trig=(b % 16,) if b >= 1 else ()), nb)
+    c = smr_check(rr)
+    fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    out = {**c, "buffers_finite": fin, "instructions_per_block": rr.get("instructions", 0) // nb}
+    print(f"    mstress: {out}", flush=True)
+    checks = {"every block returns": bool(rr["ok"]), "every buffer finite": bool(fin),
+              "the stage bit-exact to its program": c["out_mismatches"] == 0 and c["words_ok"] and c["state_mismatches"] == 0}
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 
 

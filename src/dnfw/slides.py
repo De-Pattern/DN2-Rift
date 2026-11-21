@@ -60,7 +60,7 @@ PASTE_SITES = (
 # (voice); ONESHOT, STRETCH and REPITCH also follow STRT (26), LEN (45) and LOOP (44) while the
 # note sounds (live: follow); GRID's and SLICE's slice and WERP's segments are taken at the note.
 SAMPLE_SLIDE = {8: (25, 30, 26, 45, 44),          # ONESHOT
-                9: (25, 30),                      # WERP
+                9: (25, 30, 26, 41, 42, 44, 45, 47, 36, 48),   # RIFT v0.16 SMEAR: every knob, every block (WIN, 49, a choice: no)
                 10: (25, 30, 26, 45),             # STRETCH
                 11: (30, 26, 45),                 # REPITCH (no TUNE on its page)
                 12: (25, 30),                     # GRID

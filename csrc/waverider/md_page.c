@@ -21,6 +21,11 @@
  */
 #include "wr_gen.h"
 
+#if WR_RIFT   /* RIFT v0.17: no Machinedrum or Monomachine machine: their pages are never drawn (the image's room) */
+int md_page_draw(void *view, void *c, int page, int type) { (void)view; (void)c; (void)page; (void)type; return 0; }
+int mnm_page_draw(void *view, void *c, int mi) { (void)view; (void)c; (void)mi; return 0; }
+#else
+
 typedef unsigned int u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
@@ -518,3 +523,4 @@ int mnm_page_draw(void *view, void *c, int mi)
     }
     return 1;
 }
+#endif

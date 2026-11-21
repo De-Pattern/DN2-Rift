@@ -98,7 +98,7 @@ class Dsp:
 
 
 def compare(knobs_of, events: dict, blocks: int, slot: int = 0, dsp: Dsp | None = None,
-            offs=(), vels: dict | None = None, stop_at_first=True, table_of=None):
+            offs=(), vels: dict | None = None, stop_at_first=True, table_of=None, tempo_of=None):
     """slot SLOT for BLOCKS blocks; EVENTS: block -> note (a trig); OFFS: the blocks with a note-off;
     KNOBS_OF(block) -> the 32 knobs. -> (dsp output, live output, first mismatching block or None)"""
     dsp = dsp or Dsp()
@@ -116,8 +116,10 @@ def compare(knobs_of, events: dict, blocks: int, slot: int = 0, dsp: Dsp | None 
         off = k in offs
         f = Frame()
         f.lig(slot, words, note, trig, vel, off)
+        tempo = 14400 if tempo_of is None else tempo_of(k)    # v0.15: BPM x 120 (120 BPM)
+        f.half(P.TEMPO_OFF, tempo)
         got = dsp.block(f, [slot])[slot]
-        want = v.dsp_block(knobs_seen(words), trig, FB.note_seen(note), vel, off)
+        want = v.dsp_block(knobs_seen(words), trig, FB.note_seen(note), vel, off, tempo)
         a.append(got)
         b.append(want)
         if first is None and not np.array_equal(got.view(np.uint32), want.view(np.uint32)):

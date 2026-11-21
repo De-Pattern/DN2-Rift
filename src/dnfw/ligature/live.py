@@ -31,12 +31,24 @@ INV16 = F(1.0 / 16777216.0)
 NONE, PHASE, WAVE, SLOPE, CYCLE, SLEW, LP, BP, HP, ADD, MULT, MIX = range(12)
 FOLD, COMP, XOR, FLIP, HOLD = 14, 15, 18, 19, 22
 SKIN, BAR, SAT, RUNGLER, IMPULSE, CREASE = 26, 27, 32, 50, 69, 70
+# v0.15 (owner, 2026-11-20): WEFT's clocks, particles and modular basics
+DUST, TICK, CHAOS, CRUSH, LISSA, CDIV, VCA, ENV = 23, 24, 40, 41, 51, 56, 72, 73
 TYPES = (PHASE, WAVE, SLOPE, CYCLE, SLEW, LP, BP, HP, ADD, MULT, MIX, FOLD, COMP, XOR, FLIP, HOLD,
-         SKIN, BAR, SAT, RUNGLER, IMPULSE, CREASE)
+         SKIN, BAR, SAT, RUNGLER, IMPULSE, CREASE,
+         TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA)
 TYPE_NAMES = {PHASE: "PHASE", WAVE: "WAVE", SLOPE: "SLOPE", CYCLE: "CYCLE", SLEW: "SLEW", LP: "LP",
               BP: "BP", HP: "HP", ADD: "ADD", MULT: "MULT", MIX: "MIX", FOLD: "FOLD", COMP: "COMP",
               XOR: "XOR", FLIP: "FLIP", HOLD: "HOLD", SKIN: "SKIN", BAR: "BAR", SAT: "SAT",
-              RUNGLER: "RUNG", IMPULSE: "IMPLS", CREASE: "CREAS"}
+              RUNGLER: "RUNG", IMPULSE: "IMPLS", CREASE: "CREAS",
+              TICK: "TICK", ENV: "ENV", VCA: "VCA", CDIV: "CDIV", DUST: "DUST", CHAOS: "CHAOS",
+              CRUSH: "CRUSH", LISSA: "LISSA"}
+# TICK's divisions of the tempo, in sixteenths (rv_weftdef.h wf_div_v): 4 bars .. a 64th
+DIV = tuple(F(x) for x in (64.0, 32.0, 16.0, 8.0, 4.0, 8.0 / 3.0, 2.0, 4.0 / 3.0, 1.0, 2.0 / 3.0, 0.5, 0.25))
+# CDIV's ratios (wf_cdr_v): negative multiplies, positive divides
+CDR = (-4, -3, -2, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32, 64)
+# LISSA's X turns to Y turns (wf_lratio_v); X is the block's output
+LRATIO = ((1, 1), (1, 2), (2, 1), (2, 3), (3, 2), (3, 4), (4, 3), (3, 5), (5, 4))
+FS = F(48000.0)
 # the sources an input can take besides a block 1-12
 S_PITCH, S_GATE, S_TRIG, S_VEL, S_NOISE, S_LFO1, S_LFO2 = 13, 14, 15, 16, 17, 18, 19
 NSRC = 20                                 # 0 (nothing), blocks 1..12, the sources 13..19
@@ -282,6 +294,8 @@ class Voice:
         self.buf = np.zeros((NB, SUB), np.float32)          # each block's last 32 samples
         self.last_patch = -1
         self.table = None                    # v0.12: the WIRE area's words as the DSP sees them
+        self.bpm = F(120.0)                  # v0.15: the tempo (the frame's word 108 / 120)
+        self.pos = F(0.0)                    # v0.15: TICK's clock, in sixteenths since the note
 
     def reset(self):
         self.blk = [Block() for _ in range(NB)]
@@ -293,6 +307,7 @@ class Voice:
         self.on = True
         self.trig = True
         self.gate = F(1.0)
+        self.pos = F(0.0)
         self.note_n = F(note)
         self.vel = F(vel)
         self.quiet = 0
@@ -339,6 +354,8 @@ class Voice:
         src[S_LFO2, :] = sin_turns(self.lfo[1])
         trg = src[S_TRIG]
         gatev = self.gate
+        bp = self.bpm if self.bpm > F(20.0) else F(20.0)
+        self.pinc = F(F(DT * bp) * F(1.0 / 15.0))      # sixteenths a sample
 
         def inp(s):
             if 1 <= s <= NB:
@@ -365,6 +382,9 @@ class Voice:
             yo = np.zeros(SUB, np.float32)
             self._run(ty, S, x1, x2, pa, ka, pb, kb, ac, bc, trg, gatev, hz, yo)
             self.buf[i, :] = yo
+        self.pos = F(self.pos + F(self.pinc * F(SUB)))
+        if self.pos >= F(65536.0):
+            self.pos = F(self.pos - F(65536.0))
         y = self.buf[outb - 1]
         # the voice's level: VSNS (velocity on the level), DRIV (into a soft clip), LEVL
         vs = F(F(kn[5]) * INV127)
@@ -652,6 +672,143 @@ class Voice:
                     keep = F(xs_uni(self.rng2) * F(0.999)) < x1
                     S.st = ((S.st << 1) | (last if keep else nb)) & mask
                 yo[j] = F(F(F((S.st >> (L - 3)) & 7) * F(2.0 / 7.0)) - F(1.0))
+        elif ty == TICK:                     # a click each DIV of the tempo, CHANCE of it sounding
+            L = DIV[WN(x1, 12)]               # A: a gate on it; B: each click up to half a DIV late
+            rL = recip(L)
+            spb = F(F(FS * F(15.0)) * recip(self.bpm if self.bpm > F(20.0) else F(20.0)))   # samples a 16th
+            for j in range(SUB):
+                at = floorf(F(F(self.pos + F(self.pinc * F(j))) * rL))
+                y = F(0.0)
+                a = F(pa[j] * ka)
+                if at != S.hold or trg[j] > F(0.0):
+                    S.hold = at
+                    if (not ac or a > F(0.0)) and F(xs_uni(self.rng2) * F(0.999)) < x2:
+                        if bc:
+                            b = F(pb[j] * kb)
+                            b = b if b >= F(0.0) else F(-b)
+                            S.s1 = F(F(F(F(F(b * xs_uni(self.rng2)) * L) * F(0.5)) * spb) + F(1.0))
+                        else:
+                            S.s1 = F(1.0)
+                if S.s1 > F(0.0):
+                    S.s1 = F(S.s1 - F(1.0))
+                    if S.s1 <= F(0.0):
+                        y = F(1.0)
+                yo[j] = y
+        elif ty == DUST:                     # particles in clumps; A: density; B (else each note): a burst
+            c1 = F(F(0.5) * exp2f(F(x1 * F(12.0))))
+            tau = F(0.04)
+            dec = F(F(1.0) - F(DT * recip(tau)))
+            for j in range(SUB):
+                rate = F(c1 * exp2f(F(F(pa[j] * ka) * F(6.0)))) if ac else c1
+                rt = recip(F(F(rate * tau) + F(1e-3)))
+                br = F(F(x2 * F(0.95)) * rt)
+                y = F(0.0)
+                S.s1 = F(S.s1 * dec)
+                if bc:
+                    e, S.prevb = rise(F(pb[j] * kb), S.prevb, F(0.0))
+                else:
+                    e = trg[j] > F(0.0)
+                if e:
+                    S.s1 = F(S.s1 + F(F(F(6.0) * rt) * F(F(0.2) + x2)))
+                if S.s1 > F(400.0):
+                    S.s1 = F(400.0)
+                if xs_uni(self.rng2) < F(F(rate * F(F(1.0) + S.s1)) * DT):
+                    y = F(F(0.25) + F(F(0.75) * xs_uni(self.rng2)))
+                    S.s1 = F(S.s1 + br)
+                yo[j] = y
+        elif ty == CHAOS:                    # the logistic map, stepped by A's rises (else at RATE); B: r
+            c1 = F(F(F(0.1) * exp2f(F(x2 * F(14.6)))) * DT)
+            c2 = F(F(3.4) + F(F(0.6) * x1))
+            for j in range(SUB):
+                if ac:
+                    stp, S.prev = rise(F(pa[j] * ka), S.prev, F(0.0))
+                else:
+                    S.ph = F(S.ph + c1)
+                    stp = S.ph >= F(1.0)
+                    if stp:
+                        S.ph = wwrap(S.ph)
+                if not (S.y > F(0.0001) and S.y < F(0.9999)):
+                    S.y = F(F(0.1) + F(F(0.8) * xs_uni(self.rng2)))
+                if stp:
+                    r = clampf(F(c2 + F(F(pb[j] * kb) * F(0.3))) if bc else c2, F(2.8), F(4.0))
+                    S.y = F(F(r * S.y) * F(F(1.0) - S.y))
+                yo[j] = F(F(S.y * F(2.0)) - F(1.0))
+        elif ty == CRUSH:                    # A held for RATE samples at a time, in BITS' levels; B: the rate
+            c1 = F(F(0.5) * exp2f(F(F(16.0) - F(x1 * F(15.0)))))
+            rc1 = recip(c1)
+            c2 = exp2f(F(x2 * F(6.0)))
+            for j in range(SUB):
+                hl = F(c2 * exp2f(F(F(pb[j] * kb) * F(3.0)))) if bc else c2
+                S.ph = F(S.ph + F(1.0))
+                if S.ph >= hl:
+                    S.ph = F(0.0)
+                    S.hold = F(floorf(F(F(F(pa[j] * ka) * c1) + F(0.5))) * rc1)
+                yo[j] = S.hold
+        elif ty == VCA:                      # A as loud as LEVEL plus B; CURVE linear to a cube
+            for j in range(SUB):
+                g = clampf(F(x1 + F(pb[j] * kb)) if bc else x1, F(0.0), F(1.0))
+                g = F(g + F(F(F(F(g * g) * g) - g) * x2))
+                yo[j] = F(F(pa[j] * ka) * g) if ac else g
+        elif ty == ENV:                      # ATTACK while the gate (A, else the note's) is up, RELEASE after
+            kr = wk(wtime(x1))
+            kf = wk(wtime(x2))
+            yv = S.y if S.y == S.y else F(0.0)
+            for j in range(SUB):
+                sc = exp2f(F(F(-F(pb[j] * kb)) * F(4.0))) if bc else F(1.0)
+                g = F(pa[j] * ka) if ac else gatev
+                if g > F(0.5):
+                    yv = F(yv + F(F(F(1.25) - yv) * clampf(F(kr * sc), F(0.0), F(1.0))))
+                    if yv > F(1.0):
+                        yv = F(1.0)
+                else:
+                    yv = F(yv - F(yv * clampf(F(kf * sc), F(0.0), F(1.0))))
+                yo[j] = yv
+            S.y = yv
+        elif ty == CDIV:                     # a pulse on A's first rise of each RATIO (or RATIO between)
+            n = CDR[WN(x1, 16)]               # WIDTH: its length; B: back to the first
+            for j in range(SUB):
+                fire = False
+                S.ph = F(S.ph + F(1.0))
+                if bc:
+                    e, S.prevb = rise(F(pb[j] * kb), S.prevb, F(0.25))
+                    if e:
+                        S.s1 = F(0.0)
+                        S.z[0] = F(64.0)
+                if ac:
+                    e, S.prev = rise(F(pa[j] * ka), S.prev, F(0.25))
+                else:
+                    e = False
+                if e:
+                    if S.ph < F(F(8.0) * FS):
+                        S.hold = S.ph
+                    S.ph = F(0.0)
+                    if n > 0:
+                        fire = S.s1 < F(0.5)
+                        S.s1 = F(S.s1 + F(1.0))
+                        if S.s1 >= F(n):
+                            S.s1 = F(0.0)
+                    else:
+                        fire = True
+                        S.z[0] = F(1.0)
+                elif n < 0 and S.hold > F(0.0) and S.z[0] < F(-n) and \
+                        S.ph >= F(F(S.hold * S.z[0]) * recip(F(-n))):
+                    fire = True
+                    S.z[0] = F(S.z[0] + F(1.0))
+                if fire:
+                    P = F(S.hold * F(n)) if n > 0 else F(S.hold * recip(F(-n)))
+                    w_ = F(x2 * P)
+                    S.s2 = w_ if w_ > F(1.0) else F(1.0)
+                y = F(0.0)
+                if S.s2 > F(0.0):
+                    y = F(1.0)
+                    S.s2 = F(S.s2 - F(1.0))
+                yo[j] = y
+        elif ty == LISSA:                    # X and Y sines at RATIO of one RATE: X out; A: the rate
+            c1 = F(F(F(0.02) * exp2f(F(x1 * F(17.0)))) * DT)
+            r0 = F(LRATIO[WN(x2, 9)][0])
+            for j in range(SUB):
+                S.ph = wwrap(F(S.ph + F(c1 * exp2f(F(F(pa[j] * ka) * F(5.0)))) if ac else F(S.ph + c1)))
+                yo[j] = sin_turns(F(S.ph * r0))
         else:
             raise ValueError(ty)
 
@@ -668,7 +825,8 @@ class SlotVoice(Voice):
         super().__init__(slot_seed(slot))
         self.slot = slot
 
-    def dsp_block(self, knobs, trig: bool, note: float, vel: int, off: bool) -> np.ndarray:
+    def dsp_block(self, knobs, trig: bool, note: float, vel: int, off: bool, tempo: int = 14400) -> np.ndarray:
+        self.bpm = F(F(float(tempo & 0xFFFF)) * F(1.0 / 120.0))     # v0.15: the frame's word 108
         if trig:
             self.note(note, F(min(int(vel), 127)) * INV127)
         if off:

@@ -38,12 +38,13 @@ NK = len(LV.CONTROLS)
 NB = LV.NB
 assert NK == 32 and BLOCK == LV.SUB
 OFF_WORD = 0x25C4B0                          # the frame's mask 36: the note-off, low half, bit t
+TEMPO_OFF = 2 * 108                           # v0.15: the frame's header word 108, BPM x 120
 MAGIC = LV.MAGIC
 
 # -- the voice's words (in the slot's FASCIA state) ------------------------------------------------
 VOICE = St().w("on", "pending", "fading")
 assert [VOICE[x] for x in ("on", "pending", "fading")] == [FP_.VOICE[x] for x in ("on", "pending", "fading")]
-VOICE.w("magic", "rng", "rng2", "gate", "trig", "note", "vel", "quiet", "lfo0", "lfo1", "lastp")
+VOICE.w("magic", "rng", "rng2", "gate", "trig", "note", "vel", "quiet", "lfo0", "lfo1", "lastp", "pos")
 BW = ("ph", "y", "st", "prev", "prevb", "s1", "s2", "hold", "g2", "d2") + tuple(f"z{j}" for j in range(2 * LV.NM))
 BSTRIDE = 24                                  # a block's words
 assert len(BW) <= BSTRIDE
@@ -61,7 +62,10 @@ TAB = {"KREC": (0, 4 * NK)}
 TAB["RATIO"] = (TAB["KREC"][0] + TAB["KREC"][1], 16)
 TAB["PATCH"] = (TAB["RATIO"][0] + 16, LV.NP * PROW)
 TAB["TYPEMAP"] = (TAB["PATCH"][0] + TAB["PATCH"][1], 256)       # v0.12: a raw type -> itself or 0
-TABLE_WORDS = TAB["TYPEMAP"][0] + TAB["TYPEMAP"][1]
+TAB["DIV"] = (TAB["TYPEMAP"][0] + 256, 12)                     # v0.15: TICK's divisions (sixteenths)
+TAB["CDR"] = (TAB["DIV"][0] + 12, 16)                          # v0.15: CDIV's ratios, as floats
+TAB["LR0"] = (TAB["CDR"][0] + 16, 9)                           # v0.15: LISSA's X turns
+TABLE_WORDS = TAB["LR0"][0] + TAB["LR0"][1]
 
 
 def _krec() -> list[int]:
@@ -89,7 +93,9 @@ def _patch_words() -> list[int]:
 
 
 def tables_bytes() -> bytes:
-    vals = _krec() + [bits(f32(float(x))) for x in LV.RATIO] + _patch_words() + list(LV.TYPEMAP)
+    vals = (_krec() + [bits(f32(float(x))) for x in LV.RATIO] + _patch_words() + list(LV.TYPEMAP)
+            + [bits(f32(float(x))) for x in LV.DIV] + [bits(f32(float(x))) for x in LV.CDR]
+            + [bits(f32(float(r[0]))) for r in LV.LRATIO])
     assert len(vals) == TABLE_WORDS
     return struct.pack(f"<{len(vals)}I", *vals)
 
@@ -124,7 +130,8 @@ WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC)) | set(re
                      | {"trig", "nn", "k146", "tmp0", "tmp1", "cc", "off", "tvel", "cnt0", "cnt1", "cnt2",
                         "krp", "kep", "vba", "tanh_x", "tanh_n",
                         "x1", "x2", "kx1", "kx2", "sa", "sb", "v", "v2", "o", "kr", "kf", "kh", "g", "tx", "tg2",
-                        "ri", "rl3", "sp", "yp", "dp", "saddr", "ybuf", "prow", "bwp", "outp"}))
+                        "ri", "rl3", "sp", "yp", "dp", "saddr", "ybuf", "prow", "bwp", "outp",
+                        "ti", "cdi", "lri", "tl", "cdn", "lr0", "fire", "bpw"}))
 ARRAYS = {"eff": NK, "ain": BLOCK, "bin": BLOCK, "tg": BLOCK, "nz": BLOCK, "mc": 3 * LV.NM}
 
 
@@ -372,6 +379,7 @@ class LG(OP.OG):
             self.icmp(V("on"), "EQ", 0, self.reset)
             self.iset(V("on"), 1)
             self.iset(V("trig"), 1)
+            self.fz(V("pos"))
             p.fconst(0, 1.0)
             self.st(V("gate"), 0)
             p.ld(0, C["nn"])
@@ -539,6 +547,16 @@ class LG(OP.OG):
         self.set(c("slfo2"), sin_turns(V("lfo1")))
         for j in range(BLOCK):
             self.set(self.a("nz", j), u_nz() * k(2.0) - k(1.0))
+        # v0.15: the tempo (the frame's header word 108: BPM x 120), TICK's clock in sixteenths
+        p.iconst(10, 0)
+        PP.half(p, 4, TEMPO_OFF, 10)
+        p.iconst(12, 0)
+        p.float_(4, 4, 12)
+        p.st(C["bpw"], 4)
+        self.set(c("bp"), c("bpw") * k(1.0 / 120.0))
+        self.cmp(c("bp"), "LE", k(20.0), lambda: self.set(c("bp"), k(20.0)))
+        self.set(c("pinc"), (k(LV.DT) * c("bp")) * k(1.0 / 15.0))
+        self.set(c("spb"), (k(48000.0) * k(15.0)) * recip(c("bp")))
         # the blocks
         p.iconst(0, 0)
         p.st(C["bi"], 0)
@@ -553,6 +571,8 @@ class LG(OP.OG):
             p.iop(9, 9, "+", 12)
             p.st(C["bi"], 9)
         self.ivloop("cnt2", one)
+        self.set(V("pos"), V("pos") + c("pinc") * k(float(BLOCK)))
+        self.cmp(V("pos"), "GE", k(65536.0), lambda: self.set(V("pos"), V("pos") - k(65536.0)))
         self.output()
 
     def factory(self) -> None:
@@ -862,7 +882,12 @@ class LG(OP.OG):
                  (LVm.FLIP, "l_logic", self.k_logic), (LVm.HOLD, "l_hold", self.k_hold),
                  (LVm.SKIN, "l_modes", self.k_modes), (LVm.BAR, "l_modes", self.k_modes),
                  (LVm.SAT, "l_satk", self.k_sat), (LVm.RUNGLER, "l_rung", self.k_rung),
-                 (LVm.IMPULSE, "l_impl", self.k_impulse), (LVm.CREASE, "l_creas", self.k_crease))
+                 (LVm.IMPULSE, "l_impl", self.k_impulse), (LVm.CREASE, "l_creas", self.k_crease),
+                 # v0.15: WEFT's clocks, particles and modular basics
+                 (LVm.TICK, "l_tick", self.k_tick), (LVm.CDIV, "l_cdiv", self.k_cdiv),
+                 (LVm.DUST, "l_dust", self.k_dust), (LVm.CHAOS, "l_chaos", self.k_chaos),
+                 (LVm.CRUSH, "l_crush", self.k_crush), (LVm.VCA, "l_vca", self.k_vca),
+                 (LVm.ENV, "l_env", self.k_env), (LVm.LISSA, "l_lissa", self.k_lissa))
         for ty, name, body in table:
             self.icmp(c("ty"), "EQ", ty, lambda name=name, body=body: self.rt(name, body))
 
@@ -1381,6 +1406,242 @@ class LG(OP.OG):
             p.iop(0, 0, "AND", 12)
             p.st(C["ri"], 0)
             self.out_((fi(self.ci("ri")) * k(2.0 / 7.0)) - k(1.0))
+        self.samples(body)
+
+    # -- v0.15: WEFT's clocks, particles and modular basics (live.Voice._run) ------------------------
+    def tlook(self, dst: str, idx: str, tab: str) -> None:
+        """c(dst) = the float at TAB[tab][c(idx)] (an int word)"""
+        p, C = self.p, self.L.C
+        p.ld(0, C[idx])
+        p.lsh(0, 0, 2)
+        p.ipass(8, 0)
+        p.iconst(12, self.L.tables + 4 * TAB[tab][0])
+        p.iop(0, 8, "+", 12)
+        p.seti(1, 0)
+        p.ldi(0, 0, 1)
+        p.st(C[dst], 0)
+
+    def floor_to(self, dst: Mv, e) -> None:
+        """dst = floorf(e)"""
+        p = self.p
+        self.ev(w(e), 0)
+        p.fpass(15, 0)
+        OP._floor_f(p, 15, 14)
+        self.st(dst, 14)
+
+    def k_tick(self) -> None:
+        c, B, V = self.c, self.B, self.V
+        self.wn("ti", c("x1"), 12)
+        self.tlook("tl", "ti", "DIV")
+        self.set(c("trl"), recip(c("tl")))
+
+        def body():
+            self.floor_to(c("at"), (V("pos") + c("pinc") * fi(self.ci("jj"))) * c("trl"))
+            self.fz(c("ty1"))
+            self.set(c("ta"), self.A_())
+
+            def fire():
+                self.set(B("hold"), c("at"))
+
+                def go():
+                    def late():
+                        self.set(c("tb"), FP_.ab(self.B_()))
+                        self.set(B("s1"), ((((c("tb") * u_rg()) * c("tl")) * k(0.5)) * c("spb")) + k(1.0))
+                    self.icmp(c("bc"), "NE", 0, late, lambda: self.set(B("s1"), k(1.0)))
+
+                def chance():
+                    self.set(c("tmp1"), u_rg() * k(0.999))
+                    self.cmp(c("tmp1"), "LT", c("x2"), go)
+                self.icmp(c("ac"), "EQ", 0, chance, lambda: self.cmp(c("ta"), "GT", k(0.0), chance))
+            self.cmp(c("at"), "NE", B("hold"), fire, lambda: self.cmp(self.TG(), "GT", k(0.0), fire))
+
+            def count():
+                self.set(B("s1"), B("s1") - k(1.0))
+                self.cmp(B("s1"), "LE", k(0.0), lambda: self.set(c("ty1"), k(1.0)))
+            self.cmp(B("s1"), "GT", k(0.0), count)
+            self.out_w(c("ty1"))
+        self.samples(body)
+
+    def k_cdiv(self) -> None:
+        c, B = self.c, self.B
+        self.wn("cdi", c("x1"), 16)
+        self.tlook("cdn", "cdi", "CDR")            # the ratio, a float: n
+
+        def body():
+            self.iset(c("fire"), 0)
+            self.set(B("ph"), B("ph") + k(1.0))
+
+            def back():
+                self.rise(self.B_(), B("prevb"), k(0.25))
+
+                def first():
+                    self.fz(B("s1"))
+                    self.set(B("z0"), k(64.0))
+                self.icmp(c("e"), "NE", 0, first)
+            self.icmp(c("bc"), "NE", 0, back)
+            self.iset(c("e"), 0)
+            self.icmp(c("ac"), "NE", 0, lambda: self.rise(self.A_(), B("prev"), k(0.25)))
+
+            def rose():
+                self.cmp(B("ph"), "LT", k(8.0 * 48000.0), lambda: self.set(B("hold"), B("ph")))
+                self.fz(B("ph"))
+
+                def div():
+                    self.cmp(B("s1"), "LT", k(0.5), lambda: self.iset(c("fire"), 1))
+                    self.set(B("s1"), B("s1") + k(1.0))
+                    self.cmp(B("s1"), "GE", c("cdn"), lambda: self.fz(B("s1")))
+
+                def mul():
+                    self.iset(c("fire"), 1)
+                    self.set(B("z0"), k(1.0))
+                self.cmp(c("cdn"), "GT", k(0.0), div, mul)
+
+            def between():
+                def c3():
+                    self.set(c("nn3"), -c("cdn"))
+                    self.cmp(B("z0"), "LT", c("nn3"), lambda: self.cmp(
+                        B("ph"), "GE", (B("hold") * B("z0")) * recip(c("nn3")),
+                        lambda: (self.iset(c("fire"), 1), self.set(B("z0"), B("z0") + k(1.0)))))
+                self.cmp(c("cdn"), "LT", k(0.0), lambda: self.cmp(B("hold"), "GT", k(0.0), c3))
+            self.icmp(c("e"), "NE", 0, rose, between)
+
+            def fired():
+                self.cmp(c("cdn"), "GT", k(0.0), lambda: self.set(c("cp"), B("hold") * c("cdn")),
+                         lambda: self.set(c("cp"), B("hold") * recip(-c("cdn"))))
+                self.set(c("cw"), c("x2") * c("cp"))
+                self.cmp(c("cw"), "GT", k(1.0), lambda: self.set(B("s2"), c("cw")), lambda: self.set(B("s2"), k(1.0)))
+            self.icmp(c("fire"), "NE", 0, fired)
+            self.fz(c("ty1"))
+
+            def high():
+                self.set(c("ty1"), k(1.0))
+                self.set(B("s2"), B("s2") - k(1.0))
+            self.cmp(B("s2"), "GT", k(0.0), high)
+            self.out_w(c("ty1"))
+        self.samples(body)
+
+    def k_dust(self) -> None:
+        c, B = self.c, self.B
+        self.set(c("c1"), k(0.5) * exp2f(c("x1") * k(12.0)))
+        self.set(c("dec"), k(1.0) - k(LV.DT) * recip(k(0.04)))
+
+        def body():
+            self.icmp(c("ac"), "NE", 0, lambda: self.set(c("rate"), c("c1") * exp2f(self.A_() * k(6.0))),
+                      lambda: self.set(c("rate"), c("c1")))
+            self.set(c("rt"), recip((c("rate") * k(0.04)) + k(1e-3)))
+            self.set(c("br"), (c("x2") * k(0.95)) * c("rt"))
+            self.fz(c("ty1"))
+            self.set(B("s1"), B("s1") * c("dec"))
+
+            def by_trig():
+                self.iset(c("e"), 0)
+                self.cmp(self.TG(), "GT", k(0.0), lambda: self.iset(c("e"), 1))
+            self.icmp(c("bc"), "NE", 0, lambda: self.rise(self.B_(), B("prevb"), k(0.0)), by_trig)
+            self.icmp(c("e"), "NE", 0, lambda: self.set(B("s1"), B("s1") + (k(6.0) * c("rt")) * (k(0.2) + c("x2"))))
+            self.cmp(B("s1"), "GT", k(400.0), lambda: self.set(B("s1"), k(400.0)))
+
+            def particle():
+                self.set(c("ty1"), k(0.25) + k(0.75) * u_rg())
+                self.set(B("s1"), B("s1") + c("br"))
+            self.set(c("tmp1"), u_rg())
+            self.cmp(c("tmp1"), "LT", (c("rate") * (k(1.0) + B("s1"))) * k(LV.DT), particle)
+            self.out_w(c("ty1"))
+        self.samples(body)
+
+    def k_chaos(self) -> None:
+        c, B = self.c, self.B
+        self.set(c("c1"), (k(0.1) * exp2f(c("x2") * k(14.6))) * k(LV.DT))
+        self.set(c("c2"), k(3.4) + k(0.6) * c("x1"))
+
+        def body():
+            def own():
+                self.set(B("ph"), B("ph") + c("c1"))
+                self.iset(c("e"), 0)
+
+                def over():
+                    self.iset(c("e"), 1)
+                    self.wrap(B("ph"))
+                self.cmp(B("ph"), "GE", k(1.0), over)
+            self.icmp(c("ac"), "NE", 0, lambda: self.rise(self.A_(), B("prev"), k(0.0)), own)
+
+            def reseed():
+                self.set(B("y"), k(0.1) + k(0.8) * u_rg())
+            self.cmp(B("y"), "GT", k(0.0001), lambda: self.cmp(B("y"), "LT", k(0.9999), None, reseed), reseed)
+
+            def step():
+                self.icmp(c("bc"), "NE", 0, lambda: self.set(c("cr"), c("c2") + self.B_() * k(0.3)),
+                          lambda: self.set(c("cr"), c("c2")))
+                self.clamp(c("cr"), 2.8, 4.0)
+                self.set(B("y"), (c("cr") * B("y")) * (k(1.0) - B("y")))
+            self.icmp(c("e"), "NE", 0, step)
+            self.out_(B("y") * k(2.0) - k(1.0))
+        self.samples(body)
+
+    def k_crush(self) -> None:
+        c, B = self.c, self.B
+        self.set(c("c1"), k(0.5) * exp2f(k(16.0) - c("x1") * k(15.0)))
+        self.set(c("rc1"), recip(c("c1")))
+        self.set(c("c2"), exp2f(c("x2") * k(6.0)))
+
+        def body():
+            self.icmp(c("bc"), "NE", 0, lambda: self.set(c("hl"), c("c2") * exp2f(self.B_() * k(3.0))),
+                      lambda: self.set(c("hl"), c("c2")))
+            self.set(B("ph"), B("ph") + k(1.0))
+
+            def take():
+                self.fz(B("ph"))
+                self.floor_to(c("tmp0"), (self.A_() * c("c1")) + k(0.5))
+                self.set(B("hold"), c("tmp0") * c("rc1"))
+            self.cmp(B("ph"), "GE", c("hl"), take)
+            self.out_w(B("hold"))
+        self.samples(body)
+
+    def k_vca(self) -> None:
+        c = self.c
+
+        def body():
+            self.icmp(c("bc"), "NE", 0, lambda: self.set(c("g"), c("x1") + self.B_()), lambda: self.set(c("g"), c("x1")))
+            self.clamp(c("g"), 0.0, 1.0)
+            self.set(c("g"), c("g") + (((c("g") * c("g")) * c("g")) - c("g")) * c("x2"))
+            self.icmp(c("ac"), "NE", 0, lambda: self.out_(self.A_() * c("g")), lambda: self.out_w(c("g")))
+        self.samples(body)
+
+    def k_env(self) -> None:
+        c, B, V = self.c, self.B, self.V
+        self.wk("kr", self.wtime(c("x1")))
+        self.wk("kf", self.wtime(c("x2")))
+        self.cmp(B("y"), "NE", B("y"), lambda: self.fz(B("y")))
+
+        def body():
+            self.icmp(c("bc"), "NE", 0, lambda: self.set(c("sc"), exp2f((-self.B_()) * k(4.0))),
+                      lambda: self.set(c("sc"), k(1.0)))
+            self.icmp(c("ac"), "NE", 0, lambda: self.set(c("gg"), self.A_()), lambda: self.set(c("gg"), V("gate")))
+
+            def att():
+                self.set(c("kk"), c("kr") * c("sc"))
+                self.clamp(c("kk"), 0.0, 1.0)
+                self.set(B("y"), B("y") + (k(1.25) - B("y")) * c("kk"))
+                self.cmp(B("y"), "GT", k(1.0), lambda: self.set(B("y"), k(1.0)))
+
+            def rel():
+                self.set(c("kk"), c("kf") * c("sc"))
+                self.clamp(c("kk"), 0.0, 1.0)
+                self.set(B("y"), B("y") - B("y") * c("kk"))
+            self.cmp(c("gg"), "GT", k(0.5), att, rel)
+            self.out_w(B("y"))
+        self.samples(body)
+
+    def k_lissa(self) -> None:
+        c, B = self.c, self.B
+        self.set(c("c1"), (k(0.02) * exp2f(c("x1") * k(17.0))) * k(LV.DT))
+        self.wn("lri", c("x2"), 9)
+        self.tlook("lr0", "lri", "LR0")
+
+        def body():
+            self.icmp(c("ac"), "NE", 0, lambda: self.set(B("ph"), B("ph") + c("c1") * exp2f(self.A_() * k(5.0))),
+                      lambda: self.set(B("ph"), B("ph") + c("c1")))
+            self.wrap(B("ph"))
+            self.out_(sin_turns(B("ph") * c("lr0")))
         self.samples(body)
 
     # -- the voice's level and the rest ------------------------------------------------------------

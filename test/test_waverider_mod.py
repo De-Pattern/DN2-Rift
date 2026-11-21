@@ -62,7 +62,7 @@ def test_applies_to_both_sections(applied, dn2_111):
     # v0.26: and the tables the ColdFire sends the DSP at power-on (dnfw.mods.waverider._tables)
     from dnfw.md import rom as md_rom
     from dnfw.perc import program as PPm
-    want = 3 if PPm.RIFT else 5 if md_rom.available() else 3   # RIFT: no MD graphics, no MD/MnM tables
+    want = 4 if PPm.RIFT else 5 if md_rom.available() else 3   # RIFT: no MD graphics; v0.16: its own tables (ORGAN, THOLET, SMEAR)
     # v0.37: and the start-up animation: the stamp's code and its frames (ANIZ); v0.39: and
     # the mod's version label over its last frame (ANZL)
     kinds = [kind for kind, _ in chunks]
