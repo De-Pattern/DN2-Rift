@@ -80,8 +80,11 @@ effect runs; the note's pitch is TUNED mode's pitch.
   code trimmed.
 - **CPU:** per sample about 30 delay reads and writes and 10 one-pole filters: well under one FASCIA
   voice. It runs inside the guard's frame like every machine.
-- **ColdFire image:** 998 bytes left after v0.16's logos: the FX machine's records and pages must be
-  small, or room freed (the Monomachine's page code is already stubbed out in RIFT).
+- **ColdFire image:** 998 bytes left after v0.16's logos. The FX machine (a MACHINE SEL row, its
+  pages, the BUS page's cells and [TRIG] keys) needs more, so room is freed first: the page
+  renderer's chunk (`csrc/waverider/page.c` and what it links, 203 KB) still carries code for
+  machines RIFT no longer offers (Waverider's wave spans, PERC's and the Monomachine's leftovers);
+  each is measured (the linked map's symbol sizes) and stubbed under `WR_RIFT` as `md_page.c` was.
 
 ## 4. The gate (as every engine)
 
