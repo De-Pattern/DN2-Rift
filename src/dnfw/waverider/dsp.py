@@ -237,6 +237,11 @@ SILT_DELAY_SPAN = 16 * 0xC000
 LIG_TABLES_DDR = 0x81227000
 # DIGIDRUM (type 22, dnfw.digidrum.program): its knobs' records and the modes' anchors (after LIGATURE's)
 DIGIDRUM_TABLES_DDR = 0x81229000
+# PLATEAU (type 23, dnfw.plateau.program; RIFT v0.17, the first FX machine): its knobs' and mask's
+# records (after DIGIDRUM's, where v0.15's THOLET tables were); its one instance's owner word and lines
+# in THOLET's former ring (1 MB at 0x82600000: 0x100 + 83,968 words, cleared by the DSP itself)
+PLATEAU_TABLES_DDR = 0x8122A000
+PLATEAU_DDR = 0x82600000
 # RIFT v0.17 (owner, 2026-11-21): THOLET (v0.15, type 23) removed; its ring's DDR (0x82600000, 1 MB)
 # and its link tables' room (+0x5000) are free; SMEAR's places are kept where v0.16 put them.
 # RIFT v0.16: SMEAR (type 9, dnfw.smear, docs/smear.md): smear.asm between smp.asm and fascia.asm.
@@ -416,6 +421,7 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("SILT's players' constants (dnfw.silt.program.tables_bytes; RIFT)", SILT_TABLES_DDR, _silt_tables()),
         ("LIGATURE's patches (dnfw.ligature.program.tables_bytes; RIFT)", LIG_TABLES_DDR, _lig_tables()),
         ("DIGIDRUM's records and anchors (dnfw.digidrum.program.tables_bytes; RIFT)", DIGIDRUM_TABLES_DDR, _dgd_tables()),
+        ("PLATEAU's records (dnfw.plateau.program.tables_bytes; RIFT v0.17)", PLATEAU_TABLES_DDR, _plt_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -466,6 +472,11 @@ def smear_layout():
                       SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
                       ((SMEAR_LANE0_L2, SMEAR_LANE0_DDR), (SMEAR_LANE1_W, SMEAR_LANE1_DDR)), PP.BUFFERS,
                       pairs=SMEAR_PAIRS_DDR, ready=LINK_READY_DDR, cost=SMEAR_MBOX + 16 * 128)   # (the guard's cost words after the mailboxes)
+
+
+def _plt_tables() -> bytes:
+    from ..plateau import ddr
+    return ddr.tables_bytes()
 
 
 def _dgd_tables() -> bytes:
