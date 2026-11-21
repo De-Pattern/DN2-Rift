@@ -268,6 +268,33 @@ def main() -> int:
     put32(VOICE_SOUND + 4 * 0, 0)
     put32(FRAMES, frames0)                             # the clock back where the UI left it
 
+    # ---- RIFT v0.18: GLASS (filter 6): its names on the FLTR page while the active track's filter is it --
+    if "glass_names" in lay:
+        from dnfw.glass import pages as GLP              # noqa: PLC0415
+        UI_T = 0x42431A6C
+        ui_was = machine.read(UI_T, 1)
+        snd_t = kit + 52 + SOUND_STRIDE * 5
+        f_was = machine.read(snd_t + 0xDF, 1)
+        machine.write(UI_T, bytes([5]))
+
+        def long_of(rid):
+            pt = machine.long(0x401F7F94 + 60 * rid + 0x28)
+            return machine.read(pt, 16).split(b"\0")[0].decode("latin-1") if pt else ""
+        stock_names = {rid: long_of(rid) for rid in GLP.ids()}
+        machine.write(snd_t + 0xDF, bytes([6]))
+        call(lay["glass_names"])
+        on_names = {rid: long_of(rid) for rid in GLP.ids()}
+        machine.write(snd_t + 0xDF, bytes([0]))
+        call(lay["glass_names"])
+        off_names = {rid: long_of(rid) for rid in GLP.ids()}
+        machine.write(snd_t + 0xDF, f_was)
+        machine.write(UI_T, ui_was)
+        call(lay["glass_names"])
+        want = {rid: GLP.SETS[6][rid][0] for rid in GLP.ids()}
+        check("RIFT v0.18: a GLASS track's FLTR records carry GLASS's names (LPG, ATK/DEC BEND, Ring Time); "
+              "Multi-Mode's own names come back on another filter", on_names == want and off_names == stock_names,
+              f"on {on_names}, off {off_names}")
+
     # ---- the LED compose's site is ours (FLEX REC's recorder trigs on the [TRIG] LEDs) -----------
     led_site = machine.read(0x4002C880, 6)
     check("the LED compose's site is ours (recorder trigs on the [TRIG] LEDs while FLEX REC is up)",
