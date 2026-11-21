@@ -3185,7 +3185,7 @@ wr_smr_else_247.:
       L0 = DM(0x200a2828);              // given back
       L3 = DM(0x200a282c);              // given back
       L5 = DM(0x200a2830);              // given back
-      JUMP 0xbe0000;                    // fascia.asm's wr_fsc
+      JUMP 0xbdf400;                    // fascia.asm's wr_fsc
 .GLOBAL wr_smr_sub_csn.;
 wr_smr_sub_csn.:
       R12 = 0x7ff;
