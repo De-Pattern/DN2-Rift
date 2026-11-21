@@ -246,6 +246,92 @@ def main() -> int:
         shots[name] = show("flex_setup_" + name, True)
     flex_state()
     put32(SEQ_PLAYING, 0)
+
+    # RIFT v0.17: REC BUS (smp_page.c, bn_sub 2): sixteen cells, two rows of eight (x0 = 6 + 15 * (k & 7),
+    # canvas y1 40 / 21, y0 = y1 - 8; screen row = 63 - y). A track in the bus: its cell filled; out: empty;
+    # a FLEX track out: struck (two diagonals). Every lit pixel is the title band (rows <= 9), a cell, its
+    # number (the eight rows above it) or the hint (rows >= 52). An empty bus is refused (the mask stays)
+    def cell(k):
+        x0 = 6 + 15 * (k & 7)
+        y1 = 40 if k < 8 else 21
+        return x0, y1 - 8, y1
+
+    def interior(k):
+        x0, y0, y1 = cell(k)
+        return {(x, 63 - y) for x in range(x0 + 1, x0 + 10) for y in range(y0 + 1, y1)}
+
+    def strike(k):
+        x0, y0, _ = cell(k)
+        return {(x0 + 1 + d, 63 - (y0 + d)) for d in range(1, 8)} | {(x0 + 9 - d, 63 - (y0 + d)) for d in range(1, 8)}
+
+    def placed(p):
+        x, r = p
+        if r <= 9 or r >= 52:
+            return True
+        for k in range(16):
+            x0, y0, y1 = cell(k)
+            if x0 <= x <= x0 + 10 and 63 - y1 - 8 <= r <= 63 - y0:
+                return True
+        return False
+
+    snd = kit + 52 + SOUND_STRIDE * T
+    def bus_shot(name):
+        put32(lay["rt_on"], 1)
+        put32(lay["bn_sub"], 2)
+        put32(lay["rec_overlay"], 1)
+        return show("rec_bus_" + name, False)
+
+    def bus_bad(px, mask, flex):
+        why = []
+        for k in range(16):
+            inn = interior(k) & px
+            x0, y0, y1 = cell(k)
+            border = ({(x, 63 - y) for x in range(x0, x0 + 11) for y in (y0, y1)} |
+                      {(x, 63 - y) for y in range(y0, y1 + 1) for x in (x0, x0 + 10)}) - \
+                     {(x, 63 - y) for x in (x0, x0 + 10) for y in (y0, y1)}      # (box's corners are rounded)
+            if not border <= px:
+                why.append(f"cell {k + 1}: its box not whole")
+            if mask >> k & 1:
+                if inn != interior(k):
+                    why.append(f"cell {k + 1}: in, not filled ({len(inn)}/63)")
+            elif k in flex:
+                if inn != strike(k):
+                    why.append(f"cell {k + 1}: FLEX out, not struck")
+            elif inn:
+                why.append(f"cell {k + 1}: out, {len(inn)} pixels inside")
+        stray = sorted(p for p in px if not placed(p))
+        if stray:
+            why.append(f"stray pixels {stray[:4]}")
+        if not {p for p in px if p[1] <= 9}:
+            why.append("no title")
+        if not {p for p in px if p[1] >= 52}:
+            why.append("no hint")
+        return why
+
+    t3 = snd - SOUND_STRIDE * T + SOUND_STRIDE * 3 + 0xDE
+    t3_was = bytes(uc.mem_read(t3, 1))
+    bus = {}
+    m0 = call(lay["bus_mask"], T)[0] & 0xFFFF
+    bus["default"] = (m0 == 0xFFFE, bus_bad(bus_shot("default"), m0, {T}), f"mask {m0:04x}")
+    machine.write(t3, bytes([BOUNCE]))                    # track 4 a FLEX track too: out of the default, struck
+    call(lay["bus_toggle"], T, 5)                         # [TRIG 6] and [TRIG 9]: out
+    call(lay["bus_toggle"], T, 8)
+    m1 = call(lay["bus_mask"], T)[0] & 0xFFFF
+    want1 = 0xFFFF & ~(1 << T) & ~(1 << 3) & ~(1 << 5) & ~(1 << 8)
+    st1 = call(lay["bus_stored"], T)[0] & 0xFFFF
+    bus["edited"] = (m1 == want1 and st1 == want1, bus_bad(bus_shot("edited"), m1, {T, 3}),
+                     f"mask {m1:04x}, stored {st1:04x}, wanted {want1:04x}")
+    for k in range(16):                                   # down to track 3 alone, then [TRIG 3] once more
+        if k != 2 and m1 >> k & 1:
+            call(lay["bus_toggle"], T, k)
+    call(lay["bus_toggle"], T, 2)
+    m2 = call(lay["bus_mask"], T)[0] & 0xFFFF
+    bus["one_left"] = (m2 == 1 << 2, bus_bad(bus_shot("one_left"), m2, {T, 3}), f"mask {m2:04x}")
+    machine.write(t3, t3_was)
+    bad_bus = {k: (ok, why, d) for k, (ok, why, d) in bus.items() if not ok or why}
+    check("v0.17 REC BUS: sixteen cells in two rows (in: filled, out: empty, a FLEX track out: struck), the "
+          "title and the hint, nothing else drawn; the default (every track but FLEX's), an edited mask "
+          "(stored in the sound) and an empty bus refused", not bad_bus, bad_bus)
     put32(lay["rec_overlay"], 0)
     put32(lay["bn_sub"], 0)
     common = set.intersection(*shots.values()) if shots else set()
