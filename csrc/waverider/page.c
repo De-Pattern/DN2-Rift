@@ -245,7 +245,7 @@ static void lg_draw(void *c)
     for (int r = LG_LBL_TOP; r < LG_LBL_TOP + 8; r++)
         for (int x = LG_LBL_X0; x <= LG_LBL_X1; x++)
             SET_PIXEL(c, x, 63 - r, 0);
-    int n = ms_label_n[label - 1], x0 = 24 - (6 * n - 1) / 2;   /* centred on stock's SYN: x 12..34 for four */
+    int n = ms_label_n[label - 1], x0 = 24 - (6 * n - 1) / 2;   /* centred on stock's SYN (x 24): x 13..35 for four, 16..32 for three */
     for (int i = 0; i < n; i++)                 /* letters 5 wide, 1 apart */
         for (int r = 0; r < 8; r++)
             for (int x = 0; x < 5; x++)

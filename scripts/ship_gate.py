@@ -3135,8 +3135,8 @@ def main() -> int:
                     def pic(n):                         # the logo's rows 10..41, x 0..45
                         return sh[n][10:42, 0:46] if n in sh else None
 
-                    def lbl(n):                         # the label's rows 44..51, x 12..34
-                        return sh[n][44:52, 12:35] if n in sh else None
+                    def lbl(n):                         # the label's rows 44..51, x 13..35 (four letters, centred)
+                        return sh[n][44:52, 13:36] if n in sh else None
 
                     def word(w):
                         o = np.zeros((8, 23), bool)
