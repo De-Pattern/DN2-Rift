@@ -26,7 +26,11 @@ LFOs, mutes and p-locks all work on the effect as they do on any machine.
   - FX1: PRED SIZE DCAY DIFF / DAMP BAND MIX LEV
   - FX2: LOCT TLOW MSPD MDEP / HOLD TUNE CLR SRC
 
-## 2. How tracks feed it (the decision to make)
+## 2. How tracks feed it
+
+**Decided (owner, 2026-11-21): route A, the pre-filter bus; a source keeps its own dry output** (a
+send: its level down for 100 % wet). Stereo (route B) can follow.
+
 
 What is known (docs/fx-platform.md §1): RIFT's chain runs inside the engine's block after every
 voice's machine has rendered and before the stock per-voice chain (filter, amp, pan, sends, mix).
