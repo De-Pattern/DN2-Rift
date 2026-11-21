@@ -547,8 +547,14 @@ def perc_links_ok() -> bool:
     return (f"JUMP {dsp.PERC_SW:#x};" in count
             and re.findall(r"JUMP (0x[0-9a-f]+);\s*// smp.asm's wr_smp", perc) == [f"{dsp.SMP_SW:#x}"]
             # v0.45: smp.asm's tail into fascia.asm's wr_fsc, and FASCIA's into the shared tail
-            and re.findall(r"JUMP (0x[0-9a-f]+);\s*// fascia.asm's wr_fsc",
-                           (SHARC / "smp.asm").read_text(encoding="utf-8")) == [f"{dsp.FSC_SW:#x}"]
+            # RIFT v0.16: smp.asm's tail into smear.asm's wr_smr, and SMEAR's into fascia.asm's wr_fsc
+            and (re.findall(r"JUMP (0x[0-9a-f]+);\s*// fascia.asm's wr_fsc",
+                            (SHARC / "smp.asm").read_text(encoding="utf-8")) == [f"{dsp.FSC_SW:#x}"]
+                 if not hasattr(dsp, "SMEAR_SW") else
+                 re.findall(r"JUMP (0x[0-9a-f]+);\s*// smear.asm's wr_smr",
+                            (SHARC / "smp.asm").read_text(encoding="utf-8")) == [f"{dsp.SMEAR_SW:#x}"]
+                 and re.findall(r"JUMP (0x[0-9a-f]+);\s*// fascia.asm's wr_fsc",
+                                (SHARC / "smear.asm").read_text(encoding="utf-8")) == [f"{dsp.FSC_SW:#x}"])
             and re.findall(r"JUMP (0x[0-9a-f]+);\s*// the shared tail",
                            (SHARC / "fascia.asm").read_text(encoding="utf-8")) == [f"{dsp.PING_SW:#x}"])
 

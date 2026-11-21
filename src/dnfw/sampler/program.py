@@ -3267,7 +3267,9 @@ def program(L: Layout, next_sw: int, prefix: str = "sm") -> str:
     p.e("COMP(R0, R12);")
     p.jump("LT", top)
     G.end_mark(p)                            # v0.32: our voices' time, for the guard's limit
-    p.e(f"JUMP {next_sw:#x};", "fascia.asm's wr_fsc (v0.45), then ping.asm's tail (which restores)")
+    from ..waverider import dsp as _dsp      # noqa: PLC0415
+    p.e(f"JUMP {next_sw:#x};", "smear.asm's wr_smr (RIFT v0.16), then fascia.asm's wr_fsc" if next_sw == _dsp.SMEAR_SW
+        else "fascia.asm's wr_fsc (v0.45), then ping.asm's tail (which restores)")
     p.emit_subs()
     p.raw(".wr_smp..end:")
     p.raw("      .type wr_smp.,STT_FUNC;")

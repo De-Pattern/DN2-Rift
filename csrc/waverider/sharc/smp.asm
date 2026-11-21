@@ -5311,7 +5311,7 @@ wr_sm_next_138.:
       IF LT JUMP 0xbf27d6;                   // -> wr_sm_slot_137.
       R8 = EMUCLK;                      // v0.32: our voices are done
       DM(0x2de028) = R8;
-      JUMP 0xbd8800;                    // fascia.asm's wr_fsc (v0.45), then ping.asm's tail (which restores)
+      JUMP 0xbd8800;                    // smear.asm's wr_smr (RIFT v0.16), then fascia.asm's wr_fsc
 .GLOBAL wr_sm_sub_exp2.;
 wr_sm_sub_exp2.:
       R12 = 0x41800000;                 // 16.0

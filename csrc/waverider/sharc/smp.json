@@ -1,6 +1,6 @@
 {
   "source": "csrc/waverider/sharc/smp.asm",
-  "source_sha256": "295d520cb36933907bca51863a8ef0b1bd8e9f8b69bbedbc8ef95f2bd29be4cb",
+  "source_sha256": "63ffab807c70ee6b0ba4e8d5b1c76ae6b15da592d5d692388c823a18898d34f5",
   "toolchain": "selache selas -proc ADSP-21569 (js216/selache 2b26d3b, GPL-3.0, WSL)",
   "section": "seg_pmco",
   "load_sw": "0xbf1800",
