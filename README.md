@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.15** | 2026-11-21 | THOLET, a piano leaning toward a Rhodes with a grain cloud (Error Kit's concept); KEYBOARD HOLD (PTN + KEYBOARD) from the DN2 mk2 mod | `builds/v0.15-THOLET/` | yes |
+| **v0.16** | 2026-11-21 | SMEAR, a Nebulae-style looper (VOC, PLAY and GRN readers of one loop, BLND between them); LIGATURE's eight new blocks (TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA); MACHINE SEL logos for RIFT's machines | `builds/v0.16-SMEAR/` | yes |
+| v0.15 | 2026-11-21 | THOLET, a piano leaning toward a Rhodes with a grain cloud (Error Kit's concept); KEYBOARD HOLD (PTN + KEYBOARD) from the DN2 mk2 mod | `builds/v0.15-THOLET/` | yes |
 | v0.14 | 2026-11-21 | MONTUNE: FLEX takes of MAIN and IN +12 dB on playback, MON on the RECORDER, MICROTUNING (11 factory tunings, USER 1..8, per track, saved with the project) | `builds/v0.14-MONTUNE/` | yes |
 | v0.13 | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
 | v0.12 | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
@@ -42,6 +43,59 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.16 · SMEAR
+
+- **File:** `RIFT_v0.16_SMEAR_OS1.11.syx` (`builds/v0.16-SMEAR/`)
+- **sha256:** `27e78d5763c42c49cff63f7831d50b88b6ce8073a0a04bfa800685202c2afdc4`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `7f917f1` (this repository)
+
+**Adds**
+
+- **SMEAR** (type 9, in WERP's place; `dnfw.smear`, `docs/smear.md`): a Nebulae-style looper.
+  - Three readers of one loop:
+    - VOC, a phase vocoder on two lanes shared by the instrument (L2 and DDR);
+    - PLAY, a tape read;
+    - GRN, eight grains (seven windows).
+  - BLND moves between them.
+  - Its own chain stage, `smear.asm`, runs between `smp.asm` and `fascia.asm`. It has a mailbox written by the sample machines' glue, its own cost guard, and L0/L3/L5 kept around it.
+  - Pages:
+    - page 1: TUNE SPD BLND SAMP / STRT SIZE DENS LEV;
+    - page 2: OVLP SPRY PRND WIN (four detents a window).
+  - MACHINE SEL and TRK + CLEAR give it its own start (`smr_default`). SIZE reads LEN's 0..120 record.
+- **The tables over the sample link:**
+  - ORGAN's, THOLET's and SMEAR's tables (48 KB) are sent by the ColdFire at power-on (`K_TABLES`, `TABLE_LOAD`, a READY magic).
+  - Each machine is silent until READY.
+  - This keeps the DSP's upload under 1 MiB (1,043,650 of 1,048,575 unpacked).
+- **LIGATURE: eight new blocks**, ports of WEFT's (`rv_weft.c`): TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA.
+- **MACHINE SEL logos** (owner, 2026-11-21):
+  - The logos: FASCIA, ORGAN, SILT, LIGATURE, DIGIDRUM (label DRUM), FLEX (REC) and the DT2 sample machines (SAMP).
+  - How it is drawn: `csrc/waverider/page.c` `lg_draw` draws over stock's picture in the SRC column, after stock has drawn the screen. It finds MACHINE SEL by its view's vtable, and the machine by stock's own type-under-cursor (`0x4005b162`).
+  - The logo data: `scripts/gen_logos.py`, from `src/dnfw/waverider/logos/*.png`, 46 × 32.
+- **Room for it:**
+  - In RIFT, the Monomachine page code (`md_page.c`) is stubbed. The image has 998 bytes left.
+- Gate:
+  - emulator steps `smear`, `logos` (each machine's picture pixel for pixel; THOLET, a stock machine and the FLTR column stock's) and `ligature`;
+  - runner parts `smear`, `mstress`, the v0.17 blocks in `ligature`;
+  - unit tests `test_smear_*`, `test_logos`, the lig tests;
+  - the decode check now follows smp → smear → fascia.
+
+**Known issues**
+
+- SMEAR's second VOC lane runs from DDR: its speed on the unit is unmeasured (the guard keeps the frame either way).
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet.
+
+**Tests**
+
+1. MACHINE SEL: Smear in WERP's place. Load a sample; BLND 0: the sample stretched.
+2. SPD to FRZ: the sound held; STRT scans.
+3. BLND 127; DENS, OVLP, SPRY; WIN through its seven.
+4. Three SMEAR tracks: all sound; the oldest's VOC gives way.
+5. Power-cycle with ORGAN or THOLET on a track: they sound within a second of the start.
+6. LIGATURE: TICK -> ENV -> VCA on a WAVE: gated in time; DUST, CHAOS, LISSA as modulators.
+7. MACHINE SEL: each logo under the cursor (DRUM, REC, SAMP labels); FM TONE and the FLTR column stock.
 
 ## v0.15 · THOLET
 
