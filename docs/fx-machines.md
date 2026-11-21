@@ -69,6 +69,11 @@ own output muted).
 The FX track sounds while it has a note: TRIG it (a held note, a long trig or KEYBOARD HOLD) and the
 effect runs; the note's pitch is TUNED mode's pitch.
 
+**Mono (owner, 2026-11-21: "lets keep it mono").** The FX track's output is its own voice's mono
+block, through its own filter, amp, pan, sends and LEVEL like any machine. A stereo output (the
+effect's L and R added into the main mix where MON adds the input, the track's chain bypassed) was
+weighed and set aside.
+
 ## 3. What it costs
 
 - **Memory:** the tank and input lines at SIZE 1.0 are about 36,000 samples (145 KB in float32,
