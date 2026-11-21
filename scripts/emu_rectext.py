@@ -39,6 +39,7 @@ RAM_REC, ID_REC, TAG = 0x52, 202, 0x20
 PAT_LOCK_TABLE = 97872                  # v0.44: the pattern's lock table inside the pattern object (rectrig.c)
 CTL_FRAME = 0x80005E60
 BOUNCE = 17
+PLT = 24                                  # RIFT v0.17: PLATEAU
 SLOT_BUF, SLOT_SRC, SLOT_RLEN, SLOT_CHAN = 35, 38, 40, 46
 
 report: dict = {"checks": {}}
@@ -329,9 +330,40 @@ def main() -> int:
     bus["one_left"] = (m2 == 1 << 2, bus_bad(bus_shot("one_left"), m2, {T, 3}), f"mask {m2:04x}")
     machine.write(t3, t3_was)
     bad_bus = {k: (ok, why, d) for k, (ok, why, d) in bus.items() if not ok or why}
+    # RIFT v0.17: PLATEAU's BUS page (rec.c px_draw, the same drawing, its own screen): track 5 on
+    # PLATEAU, FLEX on track 1 (T) and track 4: its own cell struck, FLEX's struck, nothing of the page
+    # under it left (the title is its own)
+    if "px_on" in lay:
+        TPX = 4
+        tpx = kit + 52 + SOUND_STRIDE * TPX + 0xDE
+        tpx_was = bytes(uc.mem_read(tpx, 1))
+        machine.write(tpx, bytes([PLT]))
+        machine.write(t3, bytes([BOUNCE]))
+        put32(lay["bn_sub"], 0)
+        put32(lay["rec_overlay"], 0)
+        mp = 0b1010101011100101                              # (as its three records would hold it)
+        from dnfw.plateau import machines as PLM             # noqa: PLC0415
+        for v, sl in zip(PLM.mask_values(mp), PLM.MASK_SLOTS):
+            machine.write(kit + 52 + SOUND_STRIDE * TPX + 20 + 2 * sl, struct.pack(">H", v << 8))
+        ui_was = bytes(uc.mem_read(0x42431A6C, 1))            # UI_TRACK_B (one byte): the PLATEAU track's
+        machine.write(0x42431A6C, bytes([TPX]))              # (px_poll lets go of another track's)
+        put32(lay["px_track"], TPX)
+        put32(lay["px_on"], 1)
+        mpx = call(lay["bus_mask"], TPX)[0] & 0xFFFF
+        px = show("plateau_bus", False)
+        why = bus_bad(px, mpx & ~(1 << TPX), {T, 3, TPX})
+        if mpx != mp:
+            why.append(f"mask {mpx:#06x}, records {mp:#06x}")
+        if why:
+            bad_bus["plateau"] = (False, why, f"mask {mpx:#06x}")
+        put32(lay["px_on"], 0)
+        machine.write(0x42431A6C, ui_was)
+        machine.write(tpx, tpx_was)
+        machine.write(t3, t3_was)
     check("v0.17 REC BUS: sixteen cells in two rows (in: filled, out: empty, a FLEX track out: struck), the "
           "title and the hint, nothing else drawn; the default (every track but FLEX's), an edited mask "
-          "(stored in the sound) and an empty bus refused", not bad_bus, bad_bus)
+          "(stored in the sound) and an empty bus refused; PLATEAU's BUS page the same, its own screen, its own "
+          "track struck (v0.17)", not bad_bus, bad_bus)
     put32(lay["rec_overlay"], 0)
     put32(lay["bn_sub"], 0)
     common = set.intersection(*shots.values()) if shots else set()

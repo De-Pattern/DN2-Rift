@@ -2764,6 +2764,8 @@ void bus_page_draw(void *c, u32 t, int fx)
     extern u32 bus_mask(u32 t);
     extern int rt_is_bounce(u32 t);
     extern int rt_is_plt(u32 t);
+    if (fx)                                      /* (its own screen: over the page, nothing of it left) */
+        clear(c, 0, 0, 127, 63);
     if (fx)
         LABEL_TEXT(c, LABEL_FONT, 2, 57, 0, 0, 0, "T%02d PLATEAU BUS", (int)t + 1);
     else

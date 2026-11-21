@@ -560,7 +560,7 @@ void bn_save(void)
  * or out (rectrig.c bus_toggle), YES or NO closes it; it closes when the track or its machine changes.
  * Drawn by smp_page.c's bus_page_draw (FLEX's REC BUS page's), its LEDs by bn_led_walk */
 int px_on __attribute__((section(".data"))) = 0;
-static int px_track __attribute__((section(".data"))) = -1;
+int px_track __attribute__((section(".data"))) = -1;
 int px_visible(void) { return px_on; }
 
 void px_draw(void *c)
