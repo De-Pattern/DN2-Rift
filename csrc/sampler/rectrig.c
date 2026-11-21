@@ -235,6 +235,30 @@ void fx_set(u32 t, int k, int v)                /* the UI's (rec.c): the word, t
  * sound before v0.17 holds: every track but the FLEX ones (FX tracks too, in time) */
 #define BUS_SRC (SMP_REC_SOURCES - 1)
 int rt_is_bounce(u32 t);
+int rt_is_plt(u32 t);
+
+/* RIFT v0.17: PLATEAU (the FX machine) keeps its BUS in three of its own records (wr_gen.h's
+ * plt_mask_slot: six, six and four bits as knob values 0..63), set through the knob's path (rec.c's
+ * plt_set_mask) so the frame the DSP reads them from has them. Its own track never counts */
+static u32 plt_mask_of(u32 t)
+{
+    const u8 *snd = sound_of(t);
+    if (!snd)
+        return 0;
+    const volatile u16 *w = (const volatile u16 *)(snd + SOUND_PARAMS);
+    return ((u32)w[plt_mask_slot[0]] >> 8 & 63u) | ((u32)w[plt_mask_slot[1]] >> 8 & 63u) << 6
+        | ((u32)w[plt_mask_slot[2]] >> 8 & 15u) << 12;
+}
+
+u32 plt_default_mask(u32 t)                     /* every track but T, FLEX's and the FX tracks */
+{
+    u32 m = 0;
+    for (u32 k = 0; k < 16; k++)
+        if (k != t && !rt_is_bounce(k) && !rt_is_plt(k))
+            m |= 1u << k;
+    return m;
+}
+
 u32 bus_stored(u32 t)
 {
     const u8 *snd = sound_of(t);
@@ -244,13 +268,15 @@ u32 bus_stored(u32 t)
     return (u32)(w[FX_SLOT[FX_CHAN]] & 0xFFu) | (u32)(w[FX_SLOT[FX_RLEN]] & 0xFFu) << 8;
 }
 
-u32 bus_mask(u32 t)                             /* the tracks BUS sums for FLEX track T */
+u32 bus_mask(u32 t)                             /* the tracks BUS sums for FLEX track T (PLATEAU's: its own) */
 {
+    if (rt_is_plt(t))
+        return plt_mask_of(t);
     u32 m = bus_stored(t);
     if (m)
         return m;
     for (u32 k = 0; k < 16; k++)
-        if (!rt_is_bounce(k))
+        if (!rt_is_bounce(k) && !rt_is_plt(k))
             m |= 1u << k;
     return m;
 }
@@ -260,6 +286,13 @@ void bus_toggle(u32 t, u32 k)                   /* [TRIG k + 1] on REC BUS */
     const u8 *snd = sound_of(t);
     if (!snd || k > 15)
         return;
+    if (rt_is_plt(t)) {                         /* RIFT v0.17: PLATEAU's BUS page */
+        extern void plt_set_mask(u32 track, u32 mask);
+        u32 pm = plt_mask_of(t) ^ (1u << k);
+        if (k != t && pm)                       /* (never its own track; never empty) */
+            plt_set_mask(t, pm);
+        return;
+    }
     if (!fx_valid(t))
         fx_set(t, FX_SRC, fx_get(t, FX_SRC));   /* (the settings marked first, at their defaults) */
     u32 m = bus_mask(t) ^ (1u << k);
@@ -274,6 +307,12 @@ int rt_is_bounce(u32 t)                         /* v0.49: FLEX (type 17, BOUNCE'
 {
     const u8 *snd = sound_of(t);
     return snd && snd[SOUND_TYPE] == BOUNCE_TYPE;
+}
+
+int rt_is_plt(u32 t)                            /* RIFT v0.17: PLATEAU (the FX machine) on track t */
+{
+    const u8 *snd = sound_of(t);
+    return snd && snd[SOUND_TYPE] == PLT_TYPE;
 }
 
 /* v0.49: BUF over the knob's whole travel, BUF 1..8 an eighth of it each (BOUNCE's read 0..7 of a

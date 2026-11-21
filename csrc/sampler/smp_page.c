@@ -2756,6 +2756,36 @@ static void step_cell(void *c, int x, int y, u32 v, int head)
         hline(c, x, x + 6, y - 2, 0);
 }
 
+/* RIFT v0.17: the BUS page (the 2026-11-09 mockup): FLEX's REC BUS (FX 0) and PLATEAU's BUS (FX 1).
+ * Two rows of eight cells, the sixteen tracks: in the bus, filled; out, empty; a FLEX or an FX track
+ * out, struck (out by default: no effect feeds itself); PLATEAU's own track, struck always */
+void bus_page_draw(void *c, u32 t, int fx)
+{
+    extern u32 bus_mask(u32 t);
+    extern int rt_is_bounce(u32 t);
+    extern int rt_is_plt(u32 t);
+    if (fx)
+        LABEL_TEXT(c, LABEL_FONT, 2, 57, 0, 0, 0, "T%02d PLATEAU BUS", (int)t + 1);
+    else
+        LABEL_TEXT(c, LABEL_FONT, 2, 57, 0, 0, 0, "T%02d FLEX REC BUS", (int)t + 1);
+    hline(c, 0, 127, 54, 0);
+    u32 m = bus_mask(t);
+    for (u32 k = 0; k < 16; k++) {               /* two rows of eight: 1..8, 9..16 */
+        int x0 = 6 + 15 * (int)(k & 7), y1 = k < 8 ? 40 : 21, y0 = y1 - 8;
+        LABEL(c, x0 + 5, y1 + 3, "%d", (int)k + 1);
+        box(c, x0, y0, x0 + 10, y1, 0);
+        if (m >> k & 1u && !(fx && k == t))
+            fill(c, x0 + 1, y0 + 1, x0 + 9, y1 - 1);
+        else if (rt_is_bounce(k) || rt_is_plt(k))   /* a FLEX or an FX track, out: struck */
+            for (int d = 1; d < 8; d++) {
+                SET_PIXEL(c, x0 + 1 + d, y0 + d, 1);
+                SET_PIXEL(c, x0 + 9 - d, y0 + d, 1);
+            }
+    }
+    LABEL(c, 64, 2, "%s", fx ? "[TRIG] IN / OUT   NO: BACK" : "[TRIG] IN / OUT   SRC BUS");
+}
+
+
 static void bn_view_draw(void *c, int heard)
 {
     extern int rt_on, rt_qrec, rt_arm, rec_rlen, bn_page, bn_sub, rec_src, rec_chan, rec_gain;
@@ -2778,24 +2808,7 @@ static void bn_view_draw(void *c, int heard)
     extern int bn_clear_ask, bn_cleared;
     extern u32 bn_cleared_at;
     if (bn_sub == 2) {                           /* RIFT v0.17: REC BUS (the 2026-11-09 mockup) */
-        extern u32 bus_mask(u32 t);
-        extern int rt_is_bounce(u32 t);
-        LABEL_TEXT(c, LABEL_FONT, 2, 57, 0, 0, 0, "T%02d FLEX REC BUS", (int)t + 1);
-        hline(c, 0, 127, 54, 0);
-        u32 m = bus_mask(t);
-        for (u32 k = 0; k < 16; k++) {           /* two rows of eight: 1..8, 9..16 */
-            int x0 = 6 + 15 * (int)(k & 7), y1 = k < 8 ? 40 : 21, y0 = y1 - 8;
-            LABEL(c, x0 + 5, y1 + 3, "%d", (int)k + 1);
-            box(c, x0, y0, x0 + 10, y1, 0);
-            if (m >> k & 1u)
-                fill(c, x0 + 1, y0 + 1, x0 + 9, y1 - 1);
-            else if (rt_is_bounce(k))            /* a FLEX track, out: struck */
-                for (int d = 1; d < 8; d++) {
-                    SET_PIXEL(c, x0 + 1 + d, y0 + d, 1);
-                    SET_PIXEL(c, x0 + 9 - d, y0 + d, 1);
-                }
-        }
-        LABEL(c, 64, 2, "%s", "[TRIG] IN / OUT   SRC BUS");
+        bus_page_draw(c, t, 0);
         return;
     }
     if (bn_sub == 1 && bn_clear_ask) {

@@ -13,7 +13,7 @@ from __future__ import annotations
 from ..fascia import machines as FM
 from ..organ import machines as OM
 
-TYPE = 23                                  # THOLET's type in v0.15 and v0.16 (v0.17 removed it)
+TYPE = 24                                  # RIFT v0.17 (23, THOLET's, is a gone type: it loads as FM Tone)
 KIND = TYPE - 4
 LONG, SHORT = "Plateau", "PLT"
 LISTED = True
@@ -62,3 +62,66 @@ def mask_values(mask: int) -> tuple[int, int, int]:
 def mask_of(values) -> int:
     a, b, c = values
     return (a & 63) | (b & 63) << 6 | (c & 15) << 12
+
+
+def word_of(c: str, k: int) -> int:
+    return FM.word_of(RIDES[c], k)
+
+
+def option(c: str, k: int) -> int:
+    n = len(CHOICES[c])
+    return min((min(max(k, 0), 127) * n) >> 7, n - 1)
+
+
+def rep_word(c: str, o: int) -> int:
+    ks = [k for k in range(128) if option(c, k) == o]
+    return word_of(c, (ks[0] + ks[-1]) // 2)
+
+
+def default_words() -> dict[str, int]:
+    out = {c: word_of(c, KNOB_DEFAULTS[c]) for c in KNOB_DEFAULTS}
+    out.update({c: rep_word(c, o) for c, o in OPT_DEFAULTS.items()})
+    return out
+
+
+def c_header() -> str:
+    """the tables csrc/ reads (wr_gen.h), as DIGIDRUM's, prefix plt_; and the BUS mask's three
+    records (plt_mask_rid, plt_mask_slot: six, six and four bits as knob values)"""
+    q = chr(34)
+    rows = [SLOTS[c] for c in CONTROLS]
+    names: list[str] = []
+    boxes: list[str] = []
+    at = []
+    for c in CONTROLS:
+        at.append(len(names) if is_choice(c) else 0)
+        if is_choice(c):
+            names += list(CHOICES[c])
+            boxes += list(CHOICES[c])
+    if any(len(b) > 4 for b in boxes) or any(len(n) > 7 for n in names) or any(len(x) > 5 for x in LABELS.values()):
+        raise ValueError("a PLATEAU name is too long for its box, the header or its label")
+    dw = default_words()
+    nolfo = [SLOTS[c][0] for c in NO_LFO] or [0]
+
+    def arr(xs):
+        return ", ".join(str(x) for x in xs)
+    return "\n".join([
+        "/* PLATEAU (dnfw.plateau.machines; RIFT v0.17, the first FX machine) */",
+        f"#define PLT_TYPE {TYPE}", f"#define PLT_KIND {KIND}", f"#define PLT_N {len(CONTROLS)}",
+        f"#define PLT_PAGES {len(PAGES)}",
+        f"static const unsigned short plt_rid[PLT_N] = {{{arr(r for r, _s, _l, _t in rows)}}};",
+        f"static const unsigned char plt_slot[PLT_N] = {{{arr(s for _r, s, _l, _t in rows)}}};",
+        f"static const unsigned char plt_lo[PLT_N] = {{{arr(lo for _r, _s, lo, _t in rows)}}};",
+        f"static const unsigned char plt_top[PLT_N] = {{{arr(t for _r, _s, _l, t in rows)}}};",
+        f"static const unsigned char plt_choices[PLT_N] = {{{arr(len(CHOICES[c]) if is_choice(c) else 0 for c in CONTROLS)}}};",
+        f"static const unsigned char plt_choice_at[PLT_N] = {{{arr(at)}}};",
+        f"static const char plt_choice_name[{len(names)}][8] = {{{', '.join(q + n + q for n in names)}}};",
+        f"static const char plt_choice_box[{len(boxes)}][5] = {{{', '.join(q + b + q for b in boxes)}}};",
+        f"static const unsigned char plt_bipolar[PLT_N] = {{{arr(int(c in BIPOLAR) for c in CONTROLS)}}};",
+        f"static const char plt_label[PLT_N][6] = {{{', '.join(q + LABELS[c] + q for c in CONTROLS)}}};",
+        f"static const unsigned short plt_default[PLT_N] = {{{arr(dw[c] for c in CONTROLS)}}};",
+        f"#define PLT_NOLFO_N {len(nolfo)}",
+        f"static const unsigned short plt_nolfo[PLT_NOLFO_N] = {{{arr(nolfo)}}};",
+        f"static const unsigned short plt_mask_rid[3] = {{{arr(FM.SLOTS[r][0] for r in MASK_RIDES)}}};",
+        f"static const unsigned char plt_mask_slot[3] = {{{arr(MASK_SLOTS)}}};",
+        "",
+    ])

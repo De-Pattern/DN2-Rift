@@ -1,4 +1,4 @@
-"""PLATEAU's DSP program (machine type 23, RIFT v0.17's first FX machine): `dnfw.plateau.live.Voice`
+"""PLATEAU's DSP program (machine type 24, RIFT v0.17's first FX machine): `dnfw.plateau.live.Voice`
 on the SHARC, in FASCIA's expression compiler with ORGAN's leaves (exp2f, expf, sin_turns, recip).
 The same calls are the assembly text and, run in Python, its exact model; test_plateau_program holds
 the run mode to live.Voice bit for bit.
@@ -31,7 +31,7 @@ from ..sampler import machines as SM
 from . import live as LV
 
 F = np.float32
-TYPE = 23                              # THOLET's type in v0.15 and v0.16 (removed in v0.17)
+TYPE = 24                              # RIFT v0.17: after THOLET's 23 (gone: a saved THOLET track loads as FM Tone)
 NK = 16
 MAGIC = 0x504C5421                     # 'PLT!'
 assert BLOCK == LV.SUB

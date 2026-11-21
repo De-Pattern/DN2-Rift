@@ -131,7 +131,8 @@ def test_the_list_offers_our_machines_then_the_sample_machines_before_midi(appli
     from dnfw.ligature import machines as LGM
     from dnfw.digidrum import machines as RSM
     if PP.RIFT:   # RIFT (owner, 2026-11-13): no PERC or Monomachine machine; FASCIA after the stock four
-        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
+        from dnfw.plateau import machines as PLM
+        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), *([24] if PLM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
         assert not set(types) & {5, *MM.TYPES}
     else:
         assert types == [0, 2, 1, 3, 5, *MM.TYPES, *([18] if FM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]

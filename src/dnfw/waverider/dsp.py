@@ -193,7 +193,7 @@ LOOKUP16_DM = 0x2DEE04                       # 16 words; 0x2dee00 is the [-1] gu
 from ..mnm import machines as _mnm_types    # noqa: E402
 from ..sampler import machines as _smp_types
 from ..fascia import machines as _fsc_types  # noqa: E402
-MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 5)   # RIFT v0.17: 23 again (THOLET, 23, removed)   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
+MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 7)   # RIFT v0.17: 25, PLATEAU at 24 (23, THOLET's, gone: FM Tone's engine)   # RIFT v0.17: 23 again (THOLET, 23, removed)   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
 SMP_ENGINE_SLOT = 5                          # the engine slot the sample machines borrow
 SMP_TYPES = _smp_types.TYPES                 # ONESHOT WERP STRETCH REPITCH GRID SLICE (v0.19); v0.44 BOUNCE (17)
 ENGINES = {5: "PERC", 8: "ONESHOT", 12: "GRID"}   # types with an engine of ours
@@ -206,7 +206,8 @@ from ..organ import machines as _org_types  # noqa: E402
 from ..silt import machines as _slt_types  # noqa: E402
 from ..ligature import machines as _lig_types  # noqa: E402
 from ..digidrum import machines as _dgd_types  # noqa: E402
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
+from ..plateau import machines as _plt_types  # noqa: E402  (RIFT v0.17: PLATEAU, type 24)
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, _plt_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable
@@ -237,7 +238,7 @@ SILT_DELAY_SPAN = 16 * 0xC000
 LIG_TABLES_DDR = 0x81227000
 # DIGIDRUM (type 22, dnfw.digidrum.program): its knobs' records and the modes' anchors (after LIGATURE's)
 DIGIDRUM_TABLES_DDR = 0x81229000
-# PLATEAU (type 23, dnfw.plateau.program; RIFT v0.17, the first FX machine): its knobs' and mask's
+# PLATEAU (type 24, dnfw.plateau.program; RIFT v0.17, the first FX machine): its knobs' and mask's
 # records (after DIGIDRUM's, where v0.15's THOLET tables were); its one instance's owner word and lines
 # in THOLET's former ring (1 MB at 0x82600000: 0x100 + 83,968 words, cleared by the DSP itself)
 PLATEAU_TABLES_DDR = 0x8122A000
