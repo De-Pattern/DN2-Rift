@@ -2777,7 +2777,28 @@ static void bn_view_draw(void *c, int heard)
      * the track's buffer is emptied (rec.c bn_clear_ask, rectrig.c rt_clear) */
     extern int bn_clear_ask, bn_cleared;
     extern u32 bn_cleared_at;
-    if (bn_sub && bn_clear_ask) {
+    if (bn_sub == 2) {                           /* RIFT v0.17: REC BUS (the 2026-11-09 mockup) */
+        extern u32 bus_mask(u32 t);
+        extern int rt_is_bounce(u32 t);
+        LABEL_TEXT(c, LABEL_FONT, 2, 57, 0, 0, 0, "T%02d FLEX REC BUS", (int)t + 1);
+        hline(c, 0, 127, 54, 0);
+        u32 m = bus_mask(t);
+        for (u32 k = 0; k < 16; k++) {           /* two rows of eight: 1..8, 9..16 */
+            int x0 = 6 + 15 * (int)(k & 7), y1 = k < 8 ? 40 : 21, y0 = y1 - 8;
+            LABEL(c, x0 + 5, y1 + 3, "%d", (int)k + 1);
+            box(c, x0, y0, x0 + 10, y1, 0);
+            if (m >> k & 1u)
+                fill(c, x0 + 1, y0 + 1, x0 + 9, y1 - 1);
+            else if (rt_is_bounce(k))            /* a FLEX track, out: struck */
+                for (int d = 1; d < 8; d++) {
+                    SET_PIXEL(c, x0 + 1 + d, y0 + d, 1);
+                    SET_PIXEL(c, x0 + 9 - d, y0 + d, 1);
+                }
+        }
+        LABEL(c, 64, 2, "%s", "[TRIG] IN / OUT   SRC BUS");
+        return;
+    }
+    if (bn_sub == 1 && bn_clear_ask) {
         LABEL_TEXT(c, LABEL_FONT, 2, 57, 0, 0, 0, "T%02d FLEX REC SETUP", (int)t + 1);
         hline(c, 0, 127, 54, 0);
         TEXT(c, FONT, 64, 38, CENTRED, "CLEAR BUF %02d?", (int)b + 1);
@@ -2785,7 +2806,7 @@ static void bn_view_draw(void *c, int heard)
         LABEL(c, 64, 12, "%s", "YES / NO");
         return;
     }
-    if (bn_sub) {                                /* REC SETUP */
+    if (bn_sub == 1) {                           /* REC SETUP */
         LABEL_TEXT(c, LABEL_FONT, 2, 57, 0, 0, 0, "T%02d FLEX REC SETUP", (int)t + 1);
         hline(c, 0, 127, 54, 0);
         const char *src = smp_rec_src[rec_src > SMP_REC_SOURCES - 1 ? SMP_REC_SOURCES - 1 : rec_src < 0 ? 0 : rec_src];

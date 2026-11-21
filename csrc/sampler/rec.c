@@ -179,7 +179,10 @@ int rec_visible(void)
 int rec_chan __attribute__((section(".data"))) = 0;
 static void src_of(int s, u32 *src, u32 *chan)
 {
+    extern u32 bus_mask(u32 t);
     *src = (u32)(s < 0 ? 0 : s);
+    if (s == SMP_REC_SOURCES - 1)               /* RIFT v0.17: BUS: its tracks in bits 16..31 */
+        *src |= bus_mask(*(volatile unsigned char *)0x42431A6Cu) << 16;
     *chan = (u32)(rec_chan < 0 ? 0 : rec_chan > 2 ? 2 : rec_chan);
 }
 
@@ -335,7 +338,7 @@ int rec_view __attribute__((section(".data"))) = 0;      /* v0.41's REC TRIGS vi
  * 0.4 s) arms the spent one-shots again; a single YES is RECORD NOW, taken once the 0.4 s
  * have passed with no second YES */
 int bn_page __attribute__((section(".data"))) = 0;
-int bn_sub __attribute__((section(".data"))) = 0;          /* v0.49 FLEX REC: 0 REC TRIGS, 1 REC SETUP */
+int bn_sub __attribute__((section(".data"))) = 0;          /* v0.49 FLEX REC: 0 REC TRIGS, 1 REC SETUP; RIFT v0.17: 2 REC BUS */
 /* v0.51 (owner; Error Kit: "how do I delete a buffer?"): FUNC + NO on REC SETUP asks CLEAR BUF n?
  * for the track's buffer (the one BUF names); YES empties it (rectrig.c rt_clear), NO or any
  * other key leaves it. bn_cleared: 1 emptied, 2 refused (it was recording), at bn_cleared_at */
@@ -408,6 +411,12 @@ static u32 bn_led_sig __attribute__((section(".data"))) = 0xFFFFFFFFu;
 static u32 bn_led_val(u32 k, u32 *mode)         /* step k of the page shown -> palette index */
 {
     u32 t = UI_TRACK_B, step = (u32)bn_page * 16u + k;
+    extern int bn_sub;
+    if (bn_sub == 2) {                          /* RIFT v0.17: REC BUS: the tracks in the bus, lit */
+        extern u32 bus_mask(u32 t);
+        *mode = (bus_mask(t) >> k & 1u) ? 2u : 1u;
+        return *mode == 2u ? LED_REC : 1u;
+    }
     unsigned char *table = sl_ui_table_now();
     extern u32 rt_trig_get(const unsigned char *table, u32 t, u32 step);
     u32 v = table && step < bn_len() ? rt_trig_get(table, t, step) : 0xFFFFu;
@@ -452,7 +461,7 @@ void bn_led_poll(void)
     extern void *wr_screen_obj;
     u32 sig = 0x5EEDu;
     if (bn_active()) {
-        sig = 0x1000000u | (u32)bn_page << 16 | bn_pages() << 8;
+        sig = 0x1000000u | (u32)bn_page << 16 | bn_pages() << 8 | (u32)bn_sub << 4;
         for (u32 k = 0; k < 16; k++) {
             u32 mode, val = bn_led_val(k, &mode);
             sig = sig * 31u + val * 4u + mode;
@@ -2082,9 +2091,17 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
                 return (u32)it;
             }
         }
-        if (bn_active() && bn_sub && press && code == K_NO && smp_func_held) {   /* v0.51: FUNC + NO: CLEAR BUF n? */
+        if (bn_active() && bn_sub == 1 && press && code == K_NO && smp_func_held) {   /* v0.51: FUNC + NO: CLEAR BUF n? */
             bn_clear_ask = 1;
             bn_yes_at = 0;
+            smp_overlay_dirty = 1;
+            eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (bn_active() && bn_sub == 2 && press && code >= K_TRIG1 && code <= K_TRIG1 + 15) {   /* RIFT v0.17: REC BUS */
+            extern void bus_toggle(u32 t, u32 k);
+            bus_toggle(UI_TRACK_B, (u32)(code - K_TRIG1));
             smp_overlay_dirty = 1;
             eaten |= 1u << code;
             it[0] = IT_DROP;
@@ -2102,7 +2119,7 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
         }
         if (bn_active() && press && (code == K_LEFT || code == K_RIGHT)) {   /* v0.49: REC TRIGS / REC SETUP */
             extern int bn_sub;
-            bn_sub = code == K_RIGHT;
+            bn_sub = code == K_RIGHT ? (bn_sub < 2 ? bn_sub + 1 : 2) : (bn_sub > 0 ? bn_sub - 1 : 0);   /* RIFT v0.17: and REC BUS */
             smp_overlay_dirty = 1;
         }
         if (bn_active() && press && code == 22) {         /* PAGE: the next page of steps */

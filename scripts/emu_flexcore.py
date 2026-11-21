@@ -242,6 +242,29 @@ def main() -> int:
     passes(1)
     check("ARM OFF: a pass fires nothing", L("rt_fired") == fired1, f"fired +{L('rt_fired') - fired1}")
     call(lay["fx_set"], T, 5, 1)
+    # ---- RIFT v0.17: SRC BUS: the chosen tracks, kept in the sound; the take's source word ---------
+    if "bus_mask" in lay:
+        flex_bits = sum(1 << k for k in range(16) if call(lay["rt_is_bounce"], k)[0] & 0xFF)
+        m0 = call(lay["bus_mask"], T)[0]
+        check("RIFT v0.17: BUS by default: every track but the FLEX ones", m0 == 0xFFFF & ~flex_bits,
+              f"{m0:#06x} (FLEX {flex_bits:#06x})")
+        call(lay["bus_toggle"], T, 3)                  # [TRIG 4] on REC BUS: track 4 out
+        call(lay["bus_toggle"], T, 9)                  # [TRIG 10]: out
+        m1, st1 = call(lay["bus_mask"], T)[0], call(lay["bus_stored"], T)[0]
+        call(lay["fx_set"], T, 1, 2)                   # CHAN R and R.LEN 1 again: the bus kept
+        call(lay["fx_set"], T, 2, 1)
+        m2_, ch = call(lay["bus_mask"], T)[0], call(lay["fx_get"], T, 1)[0]
+        call(lay["fx_set"], T, 1, 0)
+        check("RIFT v0.17: [TRIG 4] and [TRIG 10] take tracks 4 and 10 out, stored in the sound; CHAN and "
+              "R.LEN set again keep it", m1 == m0 & ~(1 << 3 | 1 << 9) and st1 == m1 and m2_ == m1 and ch == 2,
+              f"{m1:#06x} stored {st1:#06x} after {m2_:#06x} chan {ch}")
+        call(lay["fx_set"], T, 0, 18)                  # SRC BUS
+        gen0 = L("rt_gen")
+        passes(1)
+        w2 = machine.long(lay["rt_w"] + 8)
+        check("RIFT v0.17: a take from SRC BUS sends source 18 with the bus's tracks in bits 16..31",
+              L("rt_gen") != gen0 and w2 == 18 | m1 << 16, f"{w2:#010x} gen +{L('rt_gen') - gen0}")
+        call(lay["fx_set"], T, 0, 0)
     put32(VOICE_SOUND + 4 * 0, 0)
     put32(FRAMES, frames0)                             # the clock back where the UI left it
 

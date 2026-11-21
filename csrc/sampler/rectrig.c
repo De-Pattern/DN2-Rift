@@ -226,8 +226,48 @@ void fx_set(u32 t, int k, int v)                /* the UI's (rec.c): the word, t
         w[FX_SLOT[FX_SRC]] = (u16)(w[FX_SLOT[FX_SRC]] | FX_MARK);
     }
     v = v < FX_LO[k] ? FX_LO[k] : v > FX_TOP[k] ? FX_TOP[k] : v;
-    u16 low = k == FX_SRC ? FX_MARK : 0;
+    u16 low = k == FX_SRC ? FX_MARK : k == FX_CHAN || k == FX_RLEN ? (u16)(w[FX_SLOT[k]] & 0xFFu) : 0;
     w[FX_SLOT[k]] = (u16)((u32)(v + (k == FX_GAIN ? 25 : 0)) << 8 | low);
+}
+
+/* RIFT v0.17 (owner, 2026-11-21): BUS, the FLEX track's chosen tracks (bit t), in the low bytes of
+ * CHAN's and R.LEN's words (their values are the high bytes; fx_set keeps these). 0, as every
+ * sound before v0.17 holds: every track but the FLEX ones (FX tracks too, in time) */
+#define BUS_SRC (SMP_REC_SOURCES - 1)
+int rt_is_bounce(u32 t);
+u32 bus_stored(u32 t)
+{
+    const u8 *snd = sound_of(t);
+    if (!snd || !fx_valid(t))
+        return 0;
+    const volatile u16 *w = (const volatile u16 *)(snd + SOUND_PARAMS);
+    return (u32)(w[FX_SLOT[FX_CHAN]] & 0xFFu) | (u32)(w[FX_SLOT[FX_RLEN]] & 0xFFu) << 8;
+}
+
+u32 bus_mask(u32 t)                             /* the tracks BUS sums for FLEX track T */
+{
+    u32 m = bus_stored(t);
+    if (m)
+        return m;
+    for (u32 k = 0; k < 16; k++)
+        if (!rt_is_bounce(k))
+            m |= 1u << k;
+    return m;
+}
+
+void bus_toggle(u32 t, u32 k)                   /* [TRIG k + 1] on REC BUS */
+{
+    const u8 *snd = sound_of(t);
+    if (!snd || k > 15)
+        return;
+    if (!fx_valid(t))
+        fx_set(t, FX_SRC, fx_get(t, FX_SRC));   /* (the settings marked first, at their defaults) */
+    u32 m = bus_mask(t) ^ (1u << k);
+    if (!m)                                     /* (an empty bus records nothing: the last stays) */
+        return;
+    volatile u16 *w = (volatile u16 *)(snd + SOUND_PARAMS);
+    w[FX_SLOT[FX_CHAN]] = (u16)((w[FX_SLOT[FX_CHAN]] & 0xFF00u) | (m & 0xFFu));
+    w[FX_SLOT[FX_RLEN]] = (u16)((w[FX_SLOT[FX_RLEN]] & 0xFF00u) | (m >> 8));
 }
 
 int rt_is_bounce(u32 t)                         /* v0.49: FLEX (type 17, BOUNCE's) on track t */
@@ -331,7 +371,7 @@ int rt_trig(u32 track, u32 step, u32 b)         /* -> 1: the take started */
     u32 seq = 0x80008000u | (++rt_n & 0x7FFFu);  /* low half's bit 15: a buffer take (rec.c) */
     rt_w[0] = seq;
     rt_w[1] = CMD_NOW;
-    rt_w[2] = src > 17 ? 0 : src;
+    rt_w[2] = src == BUS_SRC ? src | bus_mask(track) << 16 : src > 17 ? 0 : src;   /* RIFT v0.17: BUS */
     u32 gain = (u32)(fx_get(track, FX_GAIN) + 25) << 24;   /* v0.50: GAIN (rec.c rec_gain_bits); v0.51 the track's */
     rt_w[3] = (chan > 2 ? 2 : chan) | (place / 512u) << 8 | gain;
     rt_w[4] = THR_FLOOR | (steps & 0x7FFFu) << 16;   /* the take's steps: the DSP keeps them */
@@ -707,6 +747,8 @@ static u32 ms_mask_now(void)
         int src = fx_get(t, FX_SRC);
         if (src >= 2 && src < 18 && (u32)(src - 2) != t)
             m |= 1u << (src - 2);
+        else if (src == BUS_SRC)                /* RIFT v0.17: every track in the bus */
+            m |= bus_mask(t) & ~(1u << t);
     }
     ms_playing_mask = playing;
     return m;
