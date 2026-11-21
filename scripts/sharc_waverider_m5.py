@@ -81,6 +81,7 @@ from dnfw.silt import program as SLP                            # noqa: E402  (R
 from dnfw.ligature import program as LGP                        # noqa: E402  (RIFT: LIGATURE's, in FASCIA's walk)
 from dnfw.digidrum import program as DDP                           # noqa: E402  (RIFT: DIGIDRUM's, in FASCIA's walk)
 from dnfw.plateau import program as PLP                            # noqa: E402  (RIFT v0.17: PLATEAU's, in FASCIA's walk)
+from dnfw.glass import program as GLP                              # noqa: E402  (RIFT v0.18: GLASS, at the walk's end)
 from dnfw.perc.program import RIFT as PP_RIFT                    # noqa: E402
 from dnfw.fascia import machines as FSM                         # noqa: E402
 
@@ -107,6 +108,7 @@ SL_L = SLP.layout()             # RIFT: SILT (type 20), in FASCIA's walk
 LG_L = LGP.layout()             # RIFT: LIGATURE (type 21), in FASCIA's walk
 DD_L = DDP.layout()             # RIFT: DIGIDRUM (type 22), in FASCIA's walk
 PL_L = PLP.layout()             # RIFT v0.17: PLATEAU (type 24), in FASCIA's walk
+GL_L = GLP.layout()             # RIFT v0.18: GLASS (filter 6), at FASCIA's walk's end
 
 
 def fsc_base(t: int) -> int:
@@ -227,7 +229,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
     run on the DSP's memory at that entry); loop entries."""
     state = init
     out = {"machine": [], "amp_in": [], "amp_out": [], "buffers": [], "buffer_bits": [], "t5_inputs": [],
-           "perc": [], "smp": [], "fsc": [], "smr": [], "loop_entries": 0, "smp_entries": 0, "fsc_entries": 0,
+           "perc": [], "smp": [], "fsc": [], "smr": [], "glass": [], "loop_entries": 0, "smp_entries": 0, "fsc_entries": 0,
            "setup": []}
     instr = wall = 0
     for b in range(blocks):
@@ -399,12 +401,29 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 model[t] = {"out": [mem.get(buf + 4 * k) for k in range(BLOCK)],
                             "state": [mem.get(fsc_base(t) + 4 * k) for k in range(nw)],
                             "steps": p_.steps, "nw": nw, "type": ty}
+            # RIFT v0.18: GLASS on every slot whose filter is 6, after the walk (its own pass): each such
+            # slot's buffer, record and frame as GLASS reads them, kept for live; the walk's models re-read
+            gl = [t for t in range(16) if frame_word(st, FR.header_offset(FR.FILTER, t)) == 6]
+            if gl:
+                tap["glass_in"] = {t: {"x": [mem.get((m2.word(st, PP.BUFFERS + 4 * t) or 0) + 4 * k) for k in range(BLOCK)],
+                                       "rec": {o: mem.get(V.track_record(t) + o) for o in GLP.LV.FIELDS},
+                                       "note": frame_word(st, FR.header_offset(FR.NOTE, t)),
+                                       "trig": bool(((m2.word(st, TRIG_WORD) or 0) >> 16) & (1 << t))} for t in gl}
+                _p, mem = GLP.run_walk(GL_L, None, mem)
+                for t in model:
+                    buf = m2.word(st, PP.BUFFERS + 4 * t) or 0
+                    model[t]["out"] = [mem.get(buf + 4 * k) for k in range(BLOCK)]
+                tap["glass_model"] = {t: [mem.get((m2.word(st, PP.BUFFERS + 4 * t) or 0) + 4 * k) for k in range(BLOCK)]
+                                      for t in gl}
             tap["fsc_model"] = model
 
         def at_after_fsc(r):
             # the shared tail's entry, FASCIA's tail: what FASCIA left in each of its slots
             if "fsc_dsp" in tap:
                 return
+            if "glass_in" in tap:                    # RIFT v0.18: what GLASS left in its slots
+                tap["glass_dsp"] = {t: [m2.word(r.state, tap["bufs"][t] + 4 * k) or 0 for k in range(BLOCK)]
+                                    for t in tap["glass_in"]}
             tap["fsc_dsp"] = {t: {"out": [m2.word(r.state, tap["bufs"][t] + 4 * k) or 0 for k in range(BLOCK)],
                                   "state": [m2.word(r.state, fsc_base(t) + 4 * k) or 0
                                             for k in range(m_["nw"])]}
@@ -490,6 +509,8 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                                "model_steps": model[t]["steps"],
                                **({"trk": tap["trk"]} if model[t]["type"] == PLP.TYPE and "trk" in tap else {})}
                            for t in model})
+        out["glass"].append({t: {**g_, "model": tap.get("glass_model", {}).get(t), "dsp": tap.get("glass_dsp", {}).get(t)}
+                             for t, g_ in tap.get("glass_in", {}).items()})
         instr += res[2]
         state = r
     return {**out, "ok": True, "blocks": blocks, "instructions": instr, "wall_s": round(wall, 1),
@@ -661,7 +682,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,plateau,pstress,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,plateau,pstress,glass,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -728,7 +749,7 @@ def main(argv=None):
                     # in their first blocks (fkeep, whose held notes are struck in block 0)
                     from dnfw.smear import fft as SMF
                     rr0 = run_blocks(w0, lambda b: fsc_frame(sound, machines, {}, trig=()), SMF.INIT_PARTS)
-                    assert rr0["ok"], "SMEAR's power-on blocks"
+                    assert rr0["ok"], ("SMEAR's power-on blocks", rr0.get("halt"), rr0.get("blocks"))
                     w0 = rr0["state"]
                 warm_init.append(w0)
             return warm_init[0]
@@ -818,6 +839,8 @@ def main(argv=None):
                                 lambda: step_plateau(warm(), sound, machines)),
                                ("pstress", "a PLATEAU track beside fifteen FASCIA voices under the guard (RIFT v0.17)",
                                 lambda: step_pstress(warm(), sound, machines)),
+                               ("glass", "GLASS (filter 6) bit-exact to live.Voice on FM Tone and FASCIA tracks (RIFT v0.18)",
+                                lambda: step_glass(warm(), sound, machines)),
                                ("smear", "SMEAR (smear.asm) bit-exact to its program, lanes, notes, an empty slot (RIFT v0.16)",
                                 lambda: step_smear(warm(), sound, machines)),
                                ("mstress", "sixteen SMEAR tracks: every block returns, finite (RIFT v0.16)",
@@ -4680,6 +4703,106 @@ def step_pstress(init, sound, machines) -> dict:
         "every buffer finite": out["finite"],
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+# -- RIFT v0.18: GLASS, the FLTR type 6 -----------------------------------------------------------
+def glass_frame(sound, machines, fm: dict, fascias: dict, trig=(), filt=6) -> bytes:
+    """a frame: FM = {t: settings} FM Tone tracks, FASCIAS = {t: (panel, note, vel, settings)}; every one on
+    filter FILT with SETTINGS = {slot: word} on its filter records (frame.RECORD_FIELDS' slots)"""
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    f = base_frame(sound, machines, t0=FSM.TYPE, others={t: 0 for t in fm}, trigger=False)   # (FM Tone's own sound)
+    for t, sets in fm.items():
+        f.header(FR.FILTER, t, filt)
+        f.header(FR.NOTE, t, 0x3C00)
+        for slot, w_ in sets.items():
+            f.param(t, slot, w_)
+    for t, (panel, note, vel, sets) in fascias.items():
+        f.header(FR.MACHINE, t, FSM.TYPE)
+        for c, word in FB.panel_words(panel).items():
+            f.param(t, FSM.SLOTS[c][1], word)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
+        f.header(FR.FILTER, t, filt)
+        for slot, w_ in sets.items():
+            f.param(t, slot, w_)
+    for t in trig:
+        f.trigger(t)
+    for t in range(16):
+        f.put(0xA5A + 2 * t, t)
+    return f.to_bytes()
+
+
+def glass_vs_live(rr, t, freq_skew=0.0):
+    """(blocks where GLASS's DSP output differs from live.Voice run on what it read, blocks where the model
+    differs from the DSP, the peak, blocks seen)"""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.glass import live as GLV           # noqa: PLC0415
+    v = GLV.Voice()
+    bad = mbad = seen = 0
+    pk = ipk = 0.0
+    for blk in rr.get("glass", []):
+        g = blk.get(t)
+        if not g:
+            continue
+        seen += 1
+        rec = {o: np.array([x or 0], np.uint32).view(np.float32)[0] for o, x in g["rec"].items()}
+        if freq_skew:
+            rec[GLV.R_FREQ] = np.float32(rec[GLV.R_FREQ] + np.float32(freq_skew))
+        x = np.array([w_ or 0 for w_ in g["x"]], np.uint32).view(np.float32)
+        nn = np.float32(np.float32(g["note"] or 0) * np.float32(1.0 / 256.0))
+        want = v.block(rec, g["trig"], nn, x)
+        got = np.array([w_ or 0 for w_ in (g["dsp"] or [0] * 32)], np.uint32)
+        if not np.array_equal(got, want.view(np.uint32)):
+            bad += 1
+        if g["model"] is None or [m_ or 0 for m_ in g["model"]] != list(got):
+            mbad += 1
+        gf = got.view(np.float32)
+        pk = max(pk, float(np.max(np.abs(np.nan_to_num(gf)))))
+        ipk = max(ipk, float(np.max(np.abs(np.nan_to_num(x)))))
+    return bad, mbad, pk, seen, ipk
+
+
+def step_glass(init, sound, machines) -> dict:
+    """RIFT v0.18: GLASS's assembled code against live.Voice, bit for bit, on what it read: two FM Tone
+    tracks (stock voices) and a FASCIA track on filter 6, each its own settings (RES high, the morph, ENV
+    with bends, LPG); the walk's model of every FASCIA slot still exact; a track on Multi-Mode beside them
+    untouched by GLASS; a negative control (FREQ + 1/128 in live)."""
+    res = {}
+    fp = fsc_audition()["01_tubular_bell"][0]
+    s0 = {67: 0x5800, 68: 0x7400, 66: 0x0000}                          # LP, RES high
+    s1 = {67: 0x4000, 68: 0x6000, 66: 0x7F00, 69: 0x6400, 71: 0x1800, 72: 0x3000, 73: 0x1000, 74: 0x7000}   # HP, ENV, bends
+    s3 = {67: 0x6000, 68: 0x5000, 66: 0x3F80, 70: 0x7F00, 72: 0x4000}   # BP, LPG
+    n = 24
+    rr = run_blocks(init, lambda b: glass_frame(sound, machines, {1: s0, 2: s1}, {3: (fp, 60, 1.0, s3)},
+                                                trig=(1, 2, 3) if b in (1, 12) else ()), n)
+    ex = fsc_exact(rr)
+    import numpy as _np                          # noqa: PLC0415
+    print("    (FM track 1 at our tail's return / the dispatch's end:",
+          max(float(_np.max(_np.abs(_np.nan_to_num(_np.array(m_[1], _np.float32))))) for m_ in rr["machine"] if m_),
+          max(float(_np.max(_np.abs(_np.nan_to_num(_np.array(b_[1], _np.float32))))) for b_ in rr["buffers"] if b_), ")")
+    for t, name in ((1, "FM Tone, LP, RES high"), (2, "FM Tone, HP, ENV with bends"), (3, "FASCIA, BP, LPG")):
+        bad, mbad, pk, seen, ipk = glass_vs_live(rr, t)
+        ok = bool(rr["ok"] and bad == 0 and mbad == 0 and seen >= n - 2 and ipk > 1e-3 and pk > 1e-4)
+        res[name] = {"ok": ok, "live_blocks_differing": bad, "model_blocks_differing": mbad, "peak": pk,
+                     "input_peak": ipk, "blocks": seen}
+        print(f"    glass {name}: {'ok' if ok else 'FAIL'} (live {bad}, model {mbad}, peak {pk:.3g}, its input {ipk:.3g}, "
+              f"{seen} blocks)", flush=True)
+    neg = glass_vs_live(rr, 3, freq_skew=1.0 / 128)[0]
+    print(f"    glass negative control: {'ok' if neg > 0 else 'FAIL'} ({neg} blocks told apart)", flush=True)
+    rr2 = run_blocks(init, lambda b: glass_frame(sound, machines, {1: s0, 2: s1}, {3: (fp, 60, 1.0, s3)},
+                                                 trig=(1, 2, 3) if b in (1, 12) else (), filt=0), 8)
+    untouched = rr2["ok"] and not any(blk for blk in rr2.get("glass", []))
+    print("    (on Multi-Mode, FM track 1 at the dispatch's end:",
+          max(float(_np.max(_np.abs(_np.nan_to_num(_np.array(b_[1], _np.float32))))) for b_ in rr2["buffers"] if b_), ")")
+    print(f"    glass Multi-Mode tracks: {'not ours' if untouched else 'FAIL'}", flush=True)
+    checks = {
+        "two FM Tone tracks on GLASS (LP with RES high; HP with ENV and bends): bit-exact to the model and live":
+            res["FM Tone, LP, RES high"]["ok"] and res["FM Tone, HP, ENV with bends"]["ok"],
+        "a FASCIA track on GLASS (BP, LPG): bit-exact; the walk's own models exact": res["FASCIA, BP, LPG"]["ok"] and ex[1:] == (0, 0),
+        "the comparison tells live with FREQ 1/128 off apart (negative control)": neg > 0,
+        "tracks on Multi-Mode: GLASS leaves them alone": untouched,
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "walk_model": ex}}
 
 
 # -- RIFT v0.16: SMEAR ---------------------------------------------------------------------------

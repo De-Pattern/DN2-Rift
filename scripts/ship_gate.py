@@ -713,8 +713,10 @@ def main() -> int:
                                            if dsp_changed else [])
         # v0.27: SHFT (7) and GRAN (8) removed: 7 and 8 load as Multi-Mode now; v0.45: PING (6)
         # removed too, so the LOAD bound is stock again and every type above 5 loads as Multi-Mode
+        # RIFT v0.18: GLASS is filter 6: LOAD keeps 6 (its bound -1..6); 7 and 8 load as Multi-Mode
+        glass_on = "glass_list" in W.SPEC.get("layout", {})
         types += ["--filter-type", "2"] + (["--filter-type", "6", "--filter-type", "7",
-                                            "--filter-type", "8", "--filter-max", "5"]
+                                            "--filter-type", "8", "--filter-max", "6" if glass_on else "5"]
                                            if dsp_changed else [])
         if "fx_get" in W.SPEC.get("layout", {}):   # v0.51: FLEX REC's settings in the sound, through SAVE/LOAD
             types += ["--fx-roundtrip"]

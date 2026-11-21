@@ -51,6 +51,7 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           ("dstress",),           # RIFT: sixteen DIGIDRUM voices under the guard
           ("plateau",),           # RIFT v0.17: PLATEAU (type 24) bit-exact on the bus, the one instance, a negative control
           ("pstress",),           # RIFT v0.17: a PLATEAU track beside fifteen FASCIA voices under the guard
+          ("glass",),             # RIFT v0.18: GLASS (filter 6) bit-exact on FM Tone and FASCIA tracks, a negative control
           ("smear",),             # RIFT v0.16: SMEAR's stage bit-exact to its program, lanes, an empty slot
           ("mstress",))           # RIFT v0.16: sixteen SMEAR tracks
 # RIFT (2026-11-13): no Machinedrum or Monomachine engine. The runner's parts that test only
