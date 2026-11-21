@@ -300,7 +300,7 @@ BLOCKS = [
      "GAIN: how far the halves are pushed apart.", "OFFS: the offset.",
      "A: first input.", "B: second input."),
 ]
-# RIFT v0.17: WEFT's clocks, particles and modular basics (shown when the tree has them)
+# RIFT v0.16: WEFT's clocks, particles and modular basics (shown when the tree has them)
 BLOCKS_17 = [
     ("TICK", "TICK", "Tick", "A clock locked to the Digitone's tempo, like a metro: a one-sample click every DIV, which sounds with CHANCE's probability. Clock a SLOPE, ENV, HOLD, CDIV or RUNG with it for tempo-synced patterns.",
      "RATE: the division of the tempo, 4 bars to a 64th (4 BAR, 2 BAR, 1 BAR, 1/2, 1/4, 1/6, 1/8, 1/12, 1/16, 1/24, 1/32, 1/64).", "CHNC: the chance a tick sounds (127: every one).",
@@ -410,7 +410,7 @@ def build() -> str:
     nav += [("versions", "Versions")]
     s = []
     newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM) and (v != "0.16" or HAS_SMEAR)
-                  and (v != "0.17" or "TICK" in getattr(LM, "TYPE_SETS", {})))
+                  )
     s.append(f"<h1>RIFT</h1><p class=\"dim\">The manual · covers v{E(newest)}</p>")
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
 
@@ -498,7 +498,7 @@ def build() -> str:
              "".join(f"<tr><th><b>{E(a)}</b></th><td>{E(b)}</td></tr>" for a, b in SOURCES) + "</table>")
     s.append("<h3>The blocks</h3>")
     s.append(p("Signals are roughly -1..+1 (audio) or 0..1 (envelopes, gates). Any output can feed any input, audio or control: that is the fun of it."
-               + (" Since v0.17, TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH and LISSA too (the last eight below)." if "TICK" in getattr(LM, "TYPE_SETS", {}) else "")))
+               + (" Since v0.16, TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH and LISSA too (the last eight below)." if "TICK" in getattr(LM, "TYPE_SETS", {}) else "")))
     s.append("<table class=\"blk\"><tr><th>Block</th><th>What it does</th><th>Settings (knobs)</th><th>Inputs</th></tr>")
     blocks = list(BLOCKS)
     if "TICK" in getattr(LM, "TYPE_SETS", {}):
@@ -591,16 +591,15 @@ def build() -> str:
 
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
     for vid, title, items in VERSIONS:
-        if (vid == "0.15" and not TM) or (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and "TICK" not in getattr(LM, "TYPE_SETS", {})):
+        if (vid == "0.15" and not TM) or (vid == "0.16" and not HAS_SMEAR):
             continue
         s.append(f"<div class=\"box\" id=\"v{vid}\"><b>v{vid} · {E(title)}</b>" + ul(*items) + "</div>")
     return PAGE_HEAD + "\n".join(s) + "\n</main></body></html>\n"
 
 
 VERSIONS = [
-    ("0.17", "BLOCKS", ["LIGATURE: eight new blocks from WEFT: TICK (a clock on the tempo, with CHANCE), ENV, VCA, CDIV (clock divider), DUST, CHAOS, CRUSH, LISSA (a Lissajous LFO).",
-                        "Includes v0.16."]),
     ("0.16", "SMEAR", ["SMEAR, a granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place.",
+                       "LIGATURE: eight new blocks from WEFT: TICK (a clock on the tempo, with CHANCE), ENV, VCA, CDIV (clock divider), DUST, CHAOS, CRUSH, LISSA (a Lissajous LFO).",
                        "ORGAN's, THOLET's and SMEAR's tables come from the ColdFire at power-on (the DSP's upload had no room): those three machines are silent for the first moment after power-on.",
                        "Includes v0.15."]),
     ("0.15", "THOLET", ["THOLET, a piano that leans toward a Rhodes, with a grain cloud (Error Kit's concept).",
