@@ -269,6 +269,16 @@ REC_PAGE = ((252, "SRC", "Rec Source"), (259, "CHAN", "Rec Channel"), (0, "-", "
 # DSP's source numbers: 0, 1, 2 + t); CHAN MONO L+R, MONO L, MONO R for any of them (the DSP
 # records one channel; the DT2's STEREO L R is not here). Choice k of SRC is source k.
 SRC_NAMES = ("IN", "MAIN") + tuple(f"TRK{t}" for t in range(1, 17))
+# RIFT v0.17 (owner, 2026-11-21): BUS, the sum of chosen tracks' own blocks (each what TRK<t>
+# records: after its filter and amp, before LEVEL, so FLEX's MUTE SRC leaves it whole); the
+# command's source word carries the tracks, bit t + 16 for track t (dnfw.sampler.program.recorder)
+SRC_NAMES = SRC_NAMES + ("BUS",)
+SRC_BUS = len(SRC_NAMES) - 1               # 18
+BUS_MASK_DM = 0x2DD600                     # the bus's tracks (bit t), as the last command gave them
+BUS_T_DM = BUS_MASK_DM + 4                 # the sum's loop: the track's bit, its block, the count
+BUS_SRC_DM = BUS_MASK_DM + 8
+BUS_CNT_DM = BUS_MASK_DM + 12
+BUS_BLK = BUS_MASK_DM + 0x40               # the sum: L 32 floats, R at + 0x80 (TRK_BUF's layout)
 CHAN_NAMES = ("L+R", "L", "R")
 RLEN_MAX = 0                               # R.LEN 0 is MAX, 1..127 steps of the sequencer
 

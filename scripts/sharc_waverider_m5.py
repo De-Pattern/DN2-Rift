@@ -2659,6 +2659,31 @@ def step_rec(init, sound, machines, blocks) -> dict:
     rec3.pop("state", None)
     close3 = bool(got3) and max(abs(a - b) for a, b in zip(got3, want3)) <= 2 / 32768
 
+    # run 3b, RIFT v0.17: BUS, tracks 6 and 9 (buckets 5 and 8), L+R: the two blocks summed, each
+    # back to its level as a track's take is; track 7 (bucket 6) carries a loud tone the bus leaves out
+    busA = [0.3 * _m.sin(2 * _m.pi * 330 * k / 48000) for k in range(32 * n)]
+    busB = [0.2 * _m.sin(2 * _m.pi * 770 * k / 48000) for k in range(32 * n)]
+    st3b = {"b": 0}
+    mask3b = 1 << 5 | 1 << 8
+
+    def at_dispatch_3b(r):
+        b = st3b["b"]
+        if b == 0:
+            command(r, 12, SM.CMD_NOW, src=SM.SRC_BUS | mask3b << 16, chan=0, dest=2, place=0x8000)
+        for k in range(32):
+            for t, x in ((5, busA[32 * b + k]), (8, busB[32 * b + k]), (6, 0.9)):
+                m2.poke(r.state, SM.TRK_BUF + SM.TRK_STRIDE * t + 4 * k, bits(x * g))
+                m2.poke(r.state, SM.TRK_BUF + SM.TRK_STRIDE * t + 0x80 + 4 * k, bits(x * g))
+        st3b["b"] += 1
+    rec3b = run_blocks(init, frames_2, n, extra_hooks={m3.DISPATCH: at_dispatch_3b})
+    ok3b = rec3b["ok"]
+    st3bs = rec3b["state"].state if ok3b else None
+    words3b, got3b = recorded(st3bs, 2) if ok3b else ([0] * 4, [])
+    want3b = ([0.0] * 32 + [max(-32768, min(32767, int(min(0.999969, max(-1.0, (a + b))) * 32768.0))) / 32768.0
+                            for a, b in zip(busA, busB)])[:words3b[1]]   # (the sum: made in fascia.asm, read the next block)
+    rec3b.pop("state", None)
+    close3b = bool(got3b) and max(abs(a - b) for a, b in zip(got3b, want3b)) <= 3 / 32768
+
     # run 4, v0.38: ARM (blskk on v0.37: THRES 0 "catches everything"). IN carries a noise
     # floor at about -50 dB (a hiss with a DC offset: over v0.30's fixed -60 dB floor, as an
     # input with something plugged in can be) for the first `quiet` blocks, then a tone at
@@ -2805,6 +2830,9 @@ def step_rec(init, sound, machines, blocks) -> dict:
         "v0.37: MAIN, L+R: the main mix as the master mix call takes it (the tap), into SAMP 126, "
         "not silence (within 2 LSB)":
             ok3 and words3[1] == 32 * n and close3 and max(abs(x) for x in got3) > 0.2,
+        "RIFT v0.17: BUS of tracks 6 and 9, L+R: their two blocks summed, track 7's left out, "
+        "into SAMP 126 (within 3 LSB)":
+            ok3b and words3b[1] == 32 * n and close3b and max(abs(x) for x in got3b) > 0.3,
         "the status while recording: state 2, the command's sequence, frames / 64, the peak":
             ok2 and all(ok_status(h) and h[0] == SM.STATUS_MAGIC | 2 and h[1] == 7 and h[2] == (32 * n) >> 6
                         and abs(h[3] / 32767 - max(abs(x) for x in left[-32:])) < 0.01 for h in stat2),

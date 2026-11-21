@@ -3691,6 +3691,11 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
         p.iconst(0, v)
         p.st(addr, 0)
     p.pool = {v: a for a, v in L.pool.items()}
+    # RIFT v0.17: BUS, the chosen tracks' blocks summed, while the recorder's source is BUS
+    from ..sampler import program as _SPg, machines as _SMg
+    p.ld(0, _dsp.SMP_SCRATCH_DM + 4 * _SPg.SC_WORDS.index("rsrc"))
+    p.iconst(12, _SMg.SRC_BUS)
+    p.if_(0, "EQ", 12, lambda: _SPg.emit_bus(p), kind="i")
     p.iconst(0, 0)
     p.st(L.order_i, 0)
     top = p.label("slot")
