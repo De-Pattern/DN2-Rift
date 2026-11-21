@@ -132,6 +132,7 @@ from dnfw.waverider import dsp                             # noqa: E402
 
 sys.path.insert(0, str(HERE))
 import gate_cache                                          # noqa: E402
+import gen_logos as GL                                     # noqa: E402  (RIFT v0.16: MACHINE SEL's logos)
 
 MAIN_BASE = 0x40000400
 # CODE chunks that hold only data, reached through a pointer and never jumped to.
@@ -3112,7 +3113,7 @@ def main() -> int:
             from PIL import Image                   # noqa: PLC0415
             lgf = lay["lg_force"]
             ls_ = ["func-src", "wait:20", "png:s0"]
-            for t in (18, 19, 20, 21, 22, 23):
+            for t in (18, 19, 20, 21, 22, 17, 23):
                 ls_ += [f"poke:{lgf:#x}:{t:08x}", "down", "wait:4", "up", "wait:5", f"png:t{t}"]
             ls_ += [f"poke:{lgf:#x}:ffffffff", "down", "wait:4", "up", "wait:5", "png:back",
                     "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:5", "png:one",
@@ -3126,7 +3127,6 @@ def main() -> int:
                 rc, out = run("logos", lg_cmd, logs, env=EMU_ENV, trace=tdir)
                 why, good = out[-800:], False
                 if rc == 0 and ljs.exists():
-                    import gen_logos as GL              # noqa: PLC0415
                     import numpy as np                  # noqa: PLC0415
                     r = json.loads(ljs.read_text())
                     sh = {n: np.array(Image.open(f).convert("L"))[::6, ::6] > 128 for n, f in r["screens"].items()}
@@ -3149,6 +3149,7 @@ def main() -> int:
                     per = {18: "fascia", 19: "organ", 20: "silt", 21: "ligature", 22: "digidrum"}
                     facts = {f"type {t}: the {n.upper()} logo": same(pic(f"t{t}"), want[n]) for t, n in per.items()}
                     facts["DIGIDRUM's label reads DRUM"] = same(lbl("t22"), word("DRUM"))
+                    facts["FLEX: its own logo, and REC"] = same(pic("t17"), want["flex"]) and same(sh["t17"][44:52, 16:33] if "t17" in sh else None, word("REC")[:, :17])
                     facts["the synth logos keep SYN's label"] = all(same(lbl(f"t{t}"), lbl("s0")) for t in (18, 19, 20, 21))
                     facts["ONESHOT under the cursor: the DT2 logo and SAMP"] = same(pic("one"), want["dt2"]) and same(lbl("one"), word("SAMP"))
                     facts["THOLET (no logo yet): stock's picture, pixel for pixel"] = same(sh.get("t23"), sh.get("s0"))
@@ -3157,8 +3158,8 @@ def main() -> int:
                     facts["no fault reported, no stack freed"] = not r.get("fault_reports") and not r.get("stack_frees")
                     good = all(facts.values())
                     why = json.dumps({k: v for k, v in facts.items() if not v})[:1200]
-                return good, ("MACHINE SEL: FASCIA, ORGAN, SILT, LIGATURE and DIGIDRUM (DRUM) show their logos, the "
-                              "sample machines the DT2 logo and SAMP; THOLET, stock's machines and the FLTR column keep "
+                return good, ("MACHINE SEL: FASCIA, ORGAN, SILT, LIGATURE and DIGIDRUM (DRUM) show their logos, FLEX "
+                              "its own and REC, the other sample machines the DT2 logo and SAMP; THOLET, stock's machines and the FLTR column keep "
                               "stock's picture, pixel for pixel" if good else why)
             later("logos", "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)",
                   "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)",

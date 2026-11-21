@@ -202,7 +202,7 @@ static void *lg_view(void)
     return lg_ram(v) && *(volatile u32 *)v == LG_VT ? (void *)v : 0;
 }
 
-/* the logo (and the label: 0 none, 1 SAMP, 2 DRUM) for machine type t; -1 stock's */
+/* the logo (and the label: 0 none, 1 SAMP, 2 DRUM, 3 REC) for machine type t; -1 stock's */
 static int lg_logo_of(int t, int *label)
 {
     *label = 0;
@@ -212,7 +212,8 @@ static int lg_logo_of(int t, int *label)
     case 20: return LOGO_SILT;
     case 21: return LOGO_LIGATURE;
     case 22: *label = 2; return LOGO_DIGIDRUM;
-    case 8: case 9: case 10: case 11: case 12: case 13: case 17:
+    case 17: *label = 3; return LOGO_FLEX;
+    case 8: case 9: case 10: case 11: case 12: case 13:
         *label = 1; return LOGO_DT2;
     }
     return -1;
@@ -244,11 +245,12 @@ static void lg_draw(void *c)
     for (int r = LG_LBL_TOP; r < LG_LBL_TOP + 8; r++)
         for (int x = LG_LBL_X0; x <= LG_LBL_X1; x++)
             SET_PIXEL(c, x, 63 - r, 0);
-    for (int i = 0; i < 4; i++)                 /* four letters, 5 wide, 1 apart: x 12..34 */
+    int n = ms_label_n[label - 1], x0 = 24 - (6 * n - 1) / 2;   /* centred on stock's SYN: x 12..34 for four */
+    for (int i = 0; i < n; i++)                 /* letters 5 wide, 1 apart */
         for (int r = 0; r < 8; r++)
             for (int x = 0; x < 5; x++)
                 if (ms_label[label - 1][i][r] & (0x10 >> x))
-                    SET_PIXEL(c, 12 + 6 * i + x, 63 - (LG_LBL_TOP + r), 1);
+                    SET_PIXEL(c, x0 + 6 * i + x, 63 - (LG_LBL_TOP + r), 1);
 }
 
 /* v0.22: the UI loop's draw of its screen (0x4011d32a(screen, canvas), at 0x4002e4ca),

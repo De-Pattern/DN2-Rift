@@ -3,8 +3,8 @@
     python3 scripts/gen_logos.py [--check]
 
 Each logo is 46 x 32 pixels, 1 bit, drawn in MACHINE SEL's picture (x 0..45, rows 10..41 from the top)
-when the machine under the cursor is one of RIFT's; the sample machines' column label reads SAMP and
-DIGIDRUM's DRUM, in the stock label's own 8-row letters (copied by eye from its SYN).
+when the machine under the cursor is one of RIFT's; the sample machines' column label reads SAMP,
+DIGIDRUM's DRUM and FLEX's REC, in the stock label's own 8-row letters (copied by eye from its SYN).
 """
 from __future__ import annotations
 
@@ -17,18 +17,21 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src/dnfw/waverider/logos"
 OUT = ROOT / "csrc/waverider/logos.h"
 W, H = 46, 32
-ORDER = ("organ", "fascia", "silt", "ligature", "digidrum", "dt2")
+ORDER = ("organ", "fascia", "silt", "ligature", "digidrum", "dt2", "flex")
 # the label's letters, 5 x 8, as the stock SYN's (rows top to bottom)
 GLYPHS = {
+    " ": (".....",) * 8,
     "S": (".####", "#####", "##...", "####.", ".####", "...##", "#####", "####."),
     "A": (".###.", "#####", "##.##", "##.##", "#####", "#####", "##.##", "##.##"),
     "M": ("##.##", "#####", "#####", "#.#.#", "##.##", "##.##", "##.##", "##.##"),
     "P": ("####.", "#####", "##.##", "##.##", "#####", "####.", "##...", "##..."),
     "D": ("####.", "#####", "##.##", "##.##", "##.##", "##.##", "#####", "####."),
     "R": ("####.", "#####", "##.##", "##.##", "####.", "#####", "##.##", "##.##"),
+    "E": ("#####", "#####", "##...", "####.", "####.", "##...", "#####", "#####"),
+    "C": (".####", "#####", "##...", "##...", "##...", "##...", "#####", ".####"),
     "U": ("##.##", "##.##", "##.##", "##.##", "##.##", "##.##", "#####", ".###."),
 }
-LABELS = ("SAMP", "DRUM")
+LABELS = ("SAMP", "DRUM", "REC")
 
 
 def logo_rows(name: str) -> list[int]:
@@ -59,11 +62,12 @@ def text() -> str:
     for i, n in enumerate(ORDER):
         L.append(f"#define LOGO_{n.upper()} {i}")
     L.append("/* the labels' letters: each row a byte, bit 4 the leftmost of five */")
-    L.append("static const unsigned char ms_label[2][4][8] = {")
+    L.append(f"static const unsigned char ms_label[{len(LABELS)}][4][8] = {{")
     for lab in LABELS:
         L.append("    {" + ", ".join("{" + ",".join(f"0x{int(r.replace('#', '1').replace('.', '0'), 2):02x}" for r in GLYPHS[c]) + "}"
-                               for c in lab) + "},   /* " + lab + " */")
+                               for c in lab.ljust(4)) + "},   /* " + lab + " */")
     L.append("};")
+    L.append("static const unsigned char ms_label_n[] = {" + ", ".join(str(len(x)) for x in LABELS) + "};")
     return "\n".join(L) + "\n"
 
 
