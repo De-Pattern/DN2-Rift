@@ -54,7 +54,8 @@ from ..organ import machines as _org            # noqa: E402  (RIFT: ORGAN, type
 from ..silt import machines as _slt             # noqa: E402  (RIFT: SILT, type 20)
 from ..ligature import machines as _lig         # noqa: E402  (RIFT: LIGATURE, type 21)
 from ..digidrum import machines as _dgd            # noqa: E402  (RIFT: DIGIDRUM, type 22)
-NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
+from ..tholet import machines as _tho              # noqa: E402  (RIFT: THOLET, type 23)
+NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE, _tho.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
 CLONE = 1                               # WaveTone
 LONG_NAME, SHORT_NAME = "Perc", "PRC"           # v0.11: PERC in Waverider's place
 MACHINE_NAMES = {5: ("Perc", "PRC"),
@@ -66,6 +67,7 @@ MACHINE_NAMES = {5: ("Perc", "PRC"),
                  _slt.TYPE: (_slt.LONG, _slt.SHORT),          # RIFT: SILT, after ORGAN
                  _lig.TYPE: (_lig.LONG, _lig.SHORT),          # RIFT: LIGATURE, after SILT
                  _dgd.TYPE: (_dgd.LONG, _dgd.SHORT),          # RIFT: DIGIDRUM, after LIGATURE
+                 _tho.TYPE: (_tho.LONG, _tho.SHORT),          # RIFT: THOLET, after DIGIDRUM
                  **{t: _mnm.LIST_NAMES[n] for t, n in zip(_mnm.TYPES, _mnm.NAMES)}}   # v0.26
 if set(MACHINE_NAMES) != set(NEW_TYPES):
     raise ImportError(f"machine types {sorted(set(NEW_TYPES) - set(MACHINE_NAMES))} have no machine")
@@ -91,7 +93,7 @@ LIST_DN2MK2 = (0, 2, 1, 3, 5, *_mnm.TYPES, *((_fsc.TYPE,) if _fsc.LISTED else ()
 from ..perc import program as _pp           # noqa: E402
 GONE_TYPES = (5, *_mnm.TYPES) if _pp.RIFT else ()
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
-    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()),
+    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()), *((_tho.TYPE,) if _tho.LISTED else ()),
      *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
@@ -251,6 +253,8 @@ slot_shim:
     cmpi.l  #{_lig.TYPE},%d0                    | RIFT: and LIGATURE
     beq.s   3f
     cmpi.l  #{_dgd.TYPE},%d0                    | RIFT: and DIGIDRUM
+    beq.s   3f
+    cmpi.l  #{_tho.TYPE},%d0                    | RIFT: and THOLET
     bne.s   2f
 3:  moveq   #{_fsc.FM_SLOT_FIRST},%d0
     cmp.l   %a0,%d0
@@ -398,6 +402,8 @@ canon_valid:
     cmpi.l  #{_lig.TYPE},%d3                    | RIFT: and LIGATURE
     beq.s   5f
     cmpi.l  #{_dgd.TYPE},%d3                    | RIFT: and DIGIDRUM
+    beq.s   5f
+    cmpi.l  #{_tho.TYPE},%d3                    | RIFT: and THOLET
     bne.s   3f
 5:  moveq   #0,%d3
     cmpi.l  #{_fsc.FM_OWNED[1][0]},%d2
@@ -967,7 +973,7 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
                  "rec_overlay", "rec_src", "rec_dest", "smp_ram", "rec_phase", "trim_slot",
                  "trim_n", "trim_s", "trim_e", "nm_cur", "nm_text", "slc_state", "slc_page_seen", "slc_seen_draw", "slc_letgo", "slc_open_track",
                  "smp_analyse", "smp_analysis", "smp_onsets", "smp_slices_set", "smp_slices_get",
-                 "slc_nfr", "slc_sl", "slc_ns", "slc_cur", "slc_grid_n", "smp_pos", "smp_pos_at", "smp_periods", "smp_dir_ok", "smp_meta_ok", "smp_lst_open", "smp_fb_open", "smp_fb_folder", "smp_fb_cur", "smp_fb_count", "smp_fb_mark_count", "smp_fb_mark_unused", "smp_fb_marked", "smp_fb_menu", "smp_mod_apply", "smp_quant", "smp_samp_turned", "smp_overlay_dirty", "rec_pv_on", "smp_func_held", "smp_question_up", "sn_opens", "sn_results", "sn_up", "smp_machine_commit", "smp_rx", "smp_fb_store", "smp_lib_refresh", "smp_lib_pending", "smp_lp_queued", "smp_lib_state", "smp_lib_writes", "smp_lib_load", "smp_lib_slot_of", "smp_lib_preview", "smp_lib_preview_stop", "smp_fb_rowtext", "smp_mq_off", "smp_fb_mcur", "smp_lp_done", "smp_lp_full", "smp_rec_store_named", "smp_name_set", "smp_formats", "smp_rs_done", "smp_rs_last", "smp_trim", "smp_l_order", "smp_walk_total", "smp_held_lo", "smp_held_hi", "smp_knob_d", "smp_knob_at", "smp_knob_code", "smp_dsp_load", "smp_load_peak", "smp_load_seen", "smp_load_at", "wr_screen_obj", "rec_state", "rec_heard", "slc_kb_c", "slc_alloc_n", "smp_tables", "smp_pv_state", "trim_zoom", "trim_head_x", "sl_ui_table_now", "smp_push_slot", "sl_rec_knob", "sl_rec_held", "sl_rec_table", "rec_view", "rec_rlen", "rec_link", "rec_room", "as_done", "rec_saved_slot", "rec_rstrt", "rec_thres", "rec_src", "rec_chan", "sl_rec_page", "smp_rec_place", "smp_slot_empty", "smp_pl_dirp", "rec_combo", "rec_overlay", "rt_on", "rt_play", "rt_rplace", "rt_rbytes", "rt_pend", "rt_cur", "rt_cur_end", "rt_manual", "rt_qrec", "rt_qplay", "rt_pos", "rt_steps", "rt_nx_place", "rt_nx_room", "rt_nx_need", "rt_w", "rt_gen", "q_gen", "q_fire", "q_cancel", "rt_fired", "rt_refused", "rt_swaps", "rt_qfired", "rt_why", "rt_why_at", "rt_trig", "rt_bounce_samp", "rt_is_bounce", "rt_buf_of", "rt_trig_get", "rt_trig_toggle", "rt_rearm", "rt_count", "rt_take_handover", "rt_regions", "rt_rsteps", "rt_last_step", "rt_used", "rt_fired_at", "rt_fired_trk", "rt_why_trk", "rt_last_key", "bn_page", "bn_yes_at", "bn_active", "bn_led_walk", "bn_led_poll", "bn_led_claims", "bn_open", "bn_save", "bn_pages", "bn_said_at", "bn_said_n", "bn_nothing_at", "rt_frame", "rt_poll", "rt_cut", "smp_rt_sent", "rec_rt_take", "rt_q_set", "rt_q_waiting", "rt_knob", "rt_state", "rt_arm", "rt_req", "bn_sub", "rt_flex_req", "rt_req_waiting", "rt_buf_value", "rt_buf_code", "rt_samp_buf", "smp_samp_direct", "rec_gain", "sl_knob_push", "rt_clear", "bn_clear_ask", "bn_cleared", "bn_cleared_at", "fx_get", "fx_set", "fx_valid", "ms_frame", "fsc_clear_hook", "fsc_cleared", "ms_mask", "ms_frames", "ms_playing_mask", "ms_play_force", "rt_mute_knob", "bn_mute", "rec_peak", "rec_mon", "rec_sent_chan", "tn_retune", "tn_poll", "tn_pop", "tn_draw", "tn_kb_draw", "tn_kb_up", "tn_visible", "tn_set", "tn_offset", "tn_publish", "tn_cur", "tn_root", "tn_mask", "tn_ui", "tn_user", "tn_snap", "tn_sel", "tn_frames", "tn_writes", "tn_reads", "tn_bad", "tn_owner", "tn_opens", "tn_note", "tn_from", "slc_view0", "slc_fv_n", "slc_fv_lo", "slc_fv_hi", "slc_fine_views", "slc_live_sends", "slc_grid_jumps", "smp_save_keep", "slc_follows", "slc_snaps", "smp_fine_reads", "smp_frames_read",
+                 "slc_nfr", "slc_sl", "slc_ns", "slc_cur", "slc_grid_n", "smp_pos", "smp_pos_at", "smp_periods", "smp_dir_ok", "smp_meta_ok", "smp_lst_open", "smp_fb_open", "smp_fb_folder", "smp_fb_cur", "smp_fb_count", "smp_fb_mark_count", "smp_fb_mark_unused", "smp_fb_marked", "smp_fb_menu", "smp_mod_apply", "smp_quant", "smp_samp_turned", "smp_overlay_dirty", "rec_pv_on", "smp_func_held", "smp_question_up", "sn_opens", "sn_results", "sn_up", "smp_machine_commit", "smp_rx", "smp_fb_store", "smp_lib_refresh", "smp_lib_pending", "smp_lp_queued", "smp_lib_state", "smp_lib_writes", "smp_lib_load", "smp_lib_slot_of", "smp_lib_preview", "smp_lib_preview_stop", "smp_fb_rowtext", "smp_mq_off", "smp_fb_mcur", "smp_lp_done", "smp_lp_full", "smp_rec_store_named", "smp_name_set", "smp_formats", "smp_rs_done", "smp_rs_last", "smp_trim", "smp_l_order", "smp_walk_total", "smp_held_lo", "smp_held_hi", "smp_knob_d", "smp_knob_at", "smp_knob_code", "smp_dsp_load", "smp_load_peak", "smp_load_seen", "smp_load_at", "wr_screen_obj", "rec_state", "rec_heard", "slc_kb_c", "slc_alloc_n", "smp_tables", "smp_pv_state", "trim_zoom", "trim_head_x", "sl_ui_table_now", "smp_push_slot", "sl_rec_knob", "sl_rec_held", "sl_rec_table", "rec_view", "rec_rlen", "rec_link", "rec_room", "as_done", "rec_saved_slot", "rec_rstrt", "rec_thres", "rec_src", "rec_chan", "sl_rec_page", "smp_rec_place", "smp_slot_empty", "smp_pl_dirp", "rec_combo", "rec_overlay", "rt_on", "rt_play", "rt_rplace", "rt_rbytes", "rt_pend", "rt_cur", "rt_cur_end", "rt_manual", "rt_qrec", "rt_qplay", "rt_pos", "rt_steps", "rt_nx_place", "rt_nx_room", "rt_nx_need", "rt_w", "rt_gen", "q_gen", "q_fire", "q_cancel", "rt_fired", "rt_refused", "rt_swaps", "rt_qfired", "rt_why", "rt_why_at", "rt_trig", "rt_bounce_samp", "rt_is_bounce", "rt_buf_of", "rt_trig_get", "rt_trig_toggle", "rt_rearm", "rt_count", "rt_take_handover", "rt_regions", "rt_rsteps", "rt_last_step", "rt_used", "rt_fired_at", "rt_fired_trk", "rt_why_trk", "rt_last_key", "bn_page", "bn_yes_at", "bn_active", "bn_led_walk", "bn_led_poll", "bn_led_claims", "bn_open", "bn_save", "bn_pages", "bn_said_at", "bn_said_n", "bn_nothing_at", "rt_frame", "rt_poll", "rt_cut", "smp_rt_sent", "rec_rt_take", "rt_q_set", "rt_q_waiting", "rt_knob", "rt_state", "rt_arm", "rt_req", "bn_sub", "rt_flex_req", "rt_req_waiting", "rt_buf_value", "rt_buf_code", "rt_samp_buf", "smp_samp_direct", "rec_gain", "sl_knob_push", "rt_clear", "bn_clear_ask", "bn_cleared", "bn_cleared_at", "fx_get", "fx_set", "fx_valid", "ms_frame", "fsc_clear_hook", "fsc_cleared", "ms_mask", "ms_frames", "ms_playing_mask", "ms_play_force", "rt_mute_knob", "bn_mute", "rec_peak", "rec_mon", "rec_sent_chan", "tn_retune", "tn_poll", "tn_pop", "tn_draw", "tn_kb_draw", "tn_kb_up", "tn_visible", "tn_set", "tn_offset", "tn_publish", "tn_cur", "tn_root", "tn_mask", "tn_ui", "tn_user", "tn_snap", "tn_sel", "tn_frames", "tn_writes", "tn_reads", "tn_bad", "tn_owner", "tn_opens", "tn_note", "tn_from", "slc_view0", "slc_fv_n", "slc_fv_lo", "slc_fv_hi", "slc_fine_views", "slc_live_sends", "slc_grid_jumps", "smp_save_keep", "kh_on", "kh_close", "kh_set", "slc_follows", "slc_snaps", "smp_fine_reads", "smp_frames_read",
                  "jmp_on", "jmp_armed", "jmp_pending", "jmp_count", "jmp_last", "jmp_loaded", "jmp_dirty",
                  "jmp_reads", "jmp_writes", "jmp_to", "jmp_from", "jmp_key", "jmp_poll", "jmp_forced",
                  # v0.38: per-project pools

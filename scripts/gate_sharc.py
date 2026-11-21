@@ -48,7 +48,9 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           ("ligature",),          # RIFT: LIGATURE (type 21) bit-exact, two at once, a machine switch, a negative control
           ("lstress",),           # RIFT: sixteen LIGATURE voices under the guard
           ("digidrum",),          # RIFT: DIGIDRUM (type 22) bit-exact, two at once, a machine switch, a negative control
-          ("dstress",))           # RIFT: sixteen DIGIDRUM voices under the guard
+          ("dstress",),           # RIFT: sixteen DIGIDRUM voices under the guard
+          ("tholet",),            # RIFT: THOLET (type 23) bit-exact, two at once, a note-off, a machine switch, a negative control
+          ("tstress",))           # RIFT: sixteen THOLET voices under the guard
 # RIFT (2026-11-13): no Machinedrum or Monomachine engine. The runner's parts that test only
 # them do not exist on RIFT (sharc_waverider_m5.py, RIFT_GONE); the rest run as before, with
 # rstress in place of the PERC/MnM stress scenarios.

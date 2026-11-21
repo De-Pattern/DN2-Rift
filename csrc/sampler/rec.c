@@ -1786,7 +1786,9 @@ static int ram_ok(u32 a)
 {
     return a >= 0x40000000u && a < 0x48000000u && !(a & 3);
 }
-int smp_question_up(void)
+/* v0.64: the first view on the screen of class CLS, or with CLS 0 of any question's class;
+ * 0 none (jump.c finds the PTN view with it) */
+u32 smp_view_of(u32 want)
 {
     extern void *wr_screen_obj;
     u32 s = (u32)wr_screen_obj;
@@ -1797,13 +1799,18 @@ int smp_question_up(void)
         u32 v = *(volatile u32 *)(node + 8);
         if (ram_ok(v)) {
             u32 cls = *(volatile u32 *)v;
-            if (cls == QUESTION_VTABLE || cls == PROGRESS_VTABLE || cls == MESSAGE_VTABLE
-                || cls == SN_VIEW_VT)           /* v0.54: the stock NAME screen */
-                return 1;
+            if (want ? cls == want
+                : (cls == QUESTION_VTABLE || cls == PROGRESS_VTABLE || cls == MESSAGE_VTABLE
+                   || cls == SN_VIEW_VT))       /* v0.54: the stock NAME screen */
+                return v;
         }
         node = *(volatile u32 *)node;
     }
     return 0;
+}
+int smp_question_up(void)
+{
+    return smp_view_of(0) != 0;
 }
 
 /* v0.30: the keys held now (codes 0..63), every key item seen here: TRIG + YES (stock's
@@ -1832,9 +1839,34 @@ int smp_knob_d __attribute__((section(".data"))) = 0;       /* v0.32: the last k
 u32 smp_knob_at __attribute__((section(".data"))) = 0;
 int smp_knob_code __attribute__((section(".data"))) = 0;     /* v0.48: which knob (1..8: A..H), its value shown */
 
+/* v0.64 KEYBOARD HOLD (docs/kbhold.md; the owner, 2026-11-19/20): PTN + KEYBOARD (below, in
+ * smp_ui_pop) turns kh_on, and with it stock's own sustain (what MIDI CC 64 sets) on all 16
+ * tracks: 0x40126d4a(track, on). While a track's sustain is on, stock's note-off for a played
+ * note (0x4012182a: the [TRIG] keys in KEYBOARD mode, MIDI in, the arp's held keys) is kept in
+ * the track's list (0x40126e30) instead of sent; sustain off sends every kept note-off. So a
+ * note already held when HOLD comes on is latched when its key is let go, and the arpeggiator
+ * keeps the held keys. The sequencer's notes never pass there. kh_press / kh_pend: one item held
+ * back for the next call of the receive (PTN's release, after the NO that closes the PTN view) */
+#define KH_ITEM 16
+#define SUSTAIN ((void (*)(u32, u32))0x40126D4Au)            /* (track, on): stock's CC 64 */
+u32 kh_on __attribute__((section(".data"))) = 0;
+static u32 kh_pend __attribute__((section(".data"))) = 0;
+static u8 kh_press[KH_ITEM] __attribute__((section(".data")));
+
+void kh_set(u32 on)                             /* PTN + KEYBOARD */
+{
+    kh_on = on;
+    for (u32 t = 0; t < 16; t++)
+        SUSTAIN(t, on);
+}
+
 u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock receive returns it */
 {
-    u8 *it = (u8 *)UI_POP(queue);
+    u8 *it = kh_press;                          /* v0.64: the held-back item before stock's */
+    if (!kh_pend)
+        it = (u8 *)UI_POP(queue);
+    u32 kh_serving = kh_pend;
+    kh_pend = 0;
     if (!it)
         return (u32)it;
     u32 code = (u32)it[4] << 24 | (u32)it[5] << 16 | (u32)it[6] << 8 | it[7];
@@ -1869,6 +1901,31 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
         *h = down ? *h | bit : *h & ~bit;
         if (down && code >= 25 && code <= 40)   /* v0.33: when each [TRIG] went down */
             smp_trig_at[code - 25] = *(volatile u32 *)0x4058E8D4u;
+    }
+    /* v0.64 KEYBOARD HOLD: PTN held, a fresh KEYBOARD without FUNC turns it on or off (stock:
+     * KEYBOARD's own toggle, taken before any view; dropped here), KB HOLD ON / OFF on the PTN
+     * view's line. When PTN is let go, a NO press goes first and then PTN's release (kh_press):
+     * jump.c hands that NO to the PTN view's stock handler (kh_close 2), which closes it as a
+     * PTN + [TRIG] does (left open, the next [TRIG] picks a pattern; measured) */
+    if (it[0] == IT_KEY && !kh_serving) {
+        extern void jmp_hold_say(u32 on);
+        extern u32 kh_close;
+        if (code == 18 && down && !(flags & F_REPEAT) && (smp_held_lo >> 23 & 1u)) {
+            kh_set(!kh_on);
+            jmp_hold_say(kh_on);
+            kh_close = 1;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (code == 23 && !down && kh_close == 1) {
+            for (int k = 0; k < KH_ITEM; k++)
+                kh_press[k] = it[k];
+            kh_pend = 1;
+            it[7] = 12;                         /* K_NO, pressed */
+            it[11] = F_PRESS;
+            kh_close = 2;
+            return (u32)it;
+        }
     }
     if (it[0] == IT_KEY && code == K_SRC) {     /* v0.35: SYN held: the pages' values (O14) */
         if (down && (flags & F_REPEAT))
