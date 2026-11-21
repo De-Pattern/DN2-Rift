@@ -28,8 +28,27 @@ LFOs, mutes and p-locks all work on the effect as they do on any machine.
 
 ## 2. How tracks feed it
 
-**Decided (owner, 2026-11-21): route A, the pre-filter bus; a source keeps its own dry output** (a
-send: its level down for 100 % wet). Stereo (route B) can follow.
+**Decided (owner, 2026-11-21): route A; a source keeps its own dry output** (a send: its level down
+for 100 % wet). Stereo (route B) can follow.
+
+**The bus matrix (owner, 2026-11-21: "route multiple tracks into this track via a bus matrix, which
+we did mockup for the initial flex track but never used").** FLEX's 2026-11-09 design
+(dn2mk2-firmware e6f441a, `docs/flex-mockups/flex-screens-b.png`, "T08 FLEX: REC BUS"), now the FX
+track's **BUS** page:
+
+- Two rows of eight numbered cells, the sixteen tracks. **[TRIG n] toggles track n**: a selected
+  cell is drawn filled (as a p-lock is highlighted) and its key's LED lit.
+- **The FX track itself, every other FX track and every FLEX track are out by default**, drawn
+  struck (the mockup's FLEX cell), so no effect feeds itself or another; pressed in deliberately.
+- **What is summed: each track's own block**, the one the recorder's TRK1..16 and Overbridge read
+  (`SM.TRK_BUF + 0x100 t`, L at +0, R at +0x80: the track's audio after its own filter, amp and pan,
+  the block before). Each track's LEVEL is applied in the bus by the ColdFire's word, so the balance is
+  as heard. This replaces section 6's open question: the DSP already keeps one block per **track**,
+  so no voice-to-track mapping is needed.
+- Stored per FX track and pattern (with its other settings); the mask rides the sample link as the
+  recorder's words do.
+- The cost: one multiply-add a sample a selected track, at most sixteen.
+- Later, the same matrix as FLEX's SRC **BUS** (record the sum), as first designed.
 
 
 What is known (docs/fx-platform.md §1): RIFT's chain runs inside the engine's block after every
@@ -80,11 +99,7 @@ WARP (the Tonverk's Frequency Warper) and CHRONO (Chrono Pitch), whose reference
 
 ## 6. Open, to research before the DSP work
 
-- **Which voice is whose track.** The bus sums "the chosen tracks' voices". The DSP's buffers are
-  per voice (`fx/platform.py` VOICE_BUFS); with dynamic voice allocation a track's notes move between
-  voices. What tells the tail which track each voice is playing this block (the frame's per-voice
-  words, the machines' slot state, PERC's `mnm_ages` order) is the first thing to pin down, on the
-  SHARC runner, before any code.
+- ~~Which voice is whose track~~: settled by the per-track blocks (`SM.TRK_BUF`, section 2).
 - **The FX track's own voice.** It must hold a voice while the effect rings (a note that does not
   end, or the track kept "sounding" while its tail is above silence), and that voice must not be
   stolen by the dynamic allocator.
