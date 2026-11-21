@@ -93,9 +93,8 @@ def _sel_note() -> str:
         from ..silt import machines as _s
         from ..ligature import machines as _l
         from ..digidrum import machines as _d
-        from ..tholet import machines as _t
         names = [m.LONG.upper() if hasattr(m, "LONG") else "FASCIA"
-                 for m in (_f, _o, _s, _l, _d, _t) if getattr(m, "LISTED", True)]
+                 for m in (_f, _o, _s, _l, _d) if getattr(m, "LISTED", True)]
         return f"MACHINE SEL offers {', '.join(names)} after SWARMER, then the sample machines"
     return (f"MACHINE SEL offers {SPEC['names'][0].upper()} after SWARMER "
             f"(type {SPEC['new_type']}; WaveTone's pages)")
@@ -116,7 +115,7 @@ def _chunks() -> list[tuple[int, bytes, str]]:
         if md is not None:
             out.append(md)
         out.append(_tables())
-    else:                 # RIFT v0.16: ORGAN's, THOLET's and SMEAR's tables, over the link at power-on
+    else:                 # RIFT v0.16: ORGAN's and SMEAR's tables, over the link at power-on
         out.append(_rift_tables())
     return out
 
@@ -127,7 +126,7 @@ def _rift_tables() -> tuple[int, bytes, str]:
     from ..waverider import dsp
     data = dsp.link_tables()
     return (SM.TABLE_LOAD, struct.pack("<II", SM.TABLE_MAGIC, len(data)) + data,
-            "ORGAN's, THOLET's and SMEAR's tables, sent to the DSP at power-on (RIFT v0.16)")
+            "ORGAN's and SMEAR's tables, sent to the DSP at power-on (RIFT v0.16; v0.17 without THOLET's)")
 
 
 def _tables() -> tuple[int, bytes, str]:

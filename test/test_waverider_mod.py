@@ -62,7 +62,7 @@ def test_applies_to_both_sections(applied, dn2_111):
     # v0.26: and the tables the ColdFire sends the DSP at power-on (dnfw.mods.waverider._tables)
     from dnfw.md import rom as md_rom
     from dnfw.perc import program as PPm
-    want = 4 if PPm.RIFT else 5 if md_rom.available() else 3   # RIFT: no MD graphics; v0.16: its own tables (ORGAN, THOLET, SMEAR)
+    want = 4 if PPm.RIFT else 5 if md_rom.available() else 3   # RIFT: no MD graphics; v0.16: its own tables (ORGAN, SMEAR)
     # v0.37: and the start-up animation: the stamp's code and its frames (ANIZ); v0.39: and
     # the mod's version label over its last frame (ANZL)
     kinds = [kind for kind, _ in chunks]
@@ -130,9 +130,8 @@ def test_the_list_offers_our_machines_then_the_sample_machines_before_midi(appli
     from dnfw.perc import program as PP
     from dnfw.ligature import machines as LGM
     from dnfw.digidrum import machines as RSM
-    from dnfw.tholet import machines as THM
     if PP.RIFT:   # RIFT (owner, 2026-11-13): no PERC or Monomachine machine; FASCIA after the stock four
-        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), *([23] if THM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
+        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
         assert not set(types) & {5, *MM.TYPES}
     else:
         assert types == [0, 2, 1, 3, 5, *MM.TYPES, *([18] if FM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]

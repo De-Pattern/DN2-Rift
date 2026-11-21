@@ -172,8 +172,7 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
         from ..silt import machines as SLx     # RIFT: and SILT (20)
         from ..ligature import machines as LGx  # RIFT: and LIGATURE (21)
         from ..digidrum import machines as DGx     # RIFT: and DIGIDRUM (22)
-        from ..tholet import machines as THx       # RIFT: and THOLET (23)
-        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE, SLx.TYPE, LGx.TYPE, DGx.TYPE, THx.TYPE))):
+        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE, SLx.TYPE, LGx.TYPE, DGx.TYPE))):
             p.iconst(12, lo)
             if lo == hi:
                 p.if_(2, "EQ", 12, lambda: p.iconst(14, 1), kind="i")

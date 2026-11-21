@@ -193,7 +193,7 @@ LOOKUP16_DM = 0x2DEE04                       # 16 words; 0x2dee00 is the [-1] gu
 from ..mnm import machines as _mnm_types    # noqa: E402
 from ..sampler import machines as _smp_types
 from ..fascia import machines as _fsc_types  # noqa: E402
-MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 6)   # RIFT: 24, THOLET at 23   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
+MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 5)   # RIFT v0.17: 23 again (THOLET, 23, removed)   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
 SMP_ENGINE_SLOT = 5                          # the engine slot the sample machines borrow
 SMP_TYPES = _smp_types.TYPES                 # ONESHOT WERP STRETCH REPITCH GRID SLICE (v0.19); v0.44 BOUNCE (17)
 ENGINES = {5: "PERC", 8: "ONESHOT", 12: "GRID"}   # types with an engine of ours
@@ -206,8 +206,7 @@ from ..organ import machines as _org_types  # noqa: E402
 from ..silt import machines as _slt_types  # noqa: E402
 from ..ligature import machines as _lig_types  # noqa: E402
 from ..digidrum import machines as _dgd_types  # noqa: E402
-from ..tholet import machines as _tho_types  # noqa: E402
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, _tho_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable
@@ -238,16 +237,12 @@ SILT_DELAY_SPAN = 16 * 0xC000
 LIG_TABLES_DDR = 0x81227000
 # DIGIDRUM (type 22, dnfw.digidrum.program): its knobs' records and the modes' anchors (after LIGATURE's)
 DIGIDRUM_TABLES_DDR = 0x81229000
-# THOLET (type 23, dnfw.tholet.program; the concept is Error Kit's): its records, mu-law's levels, the
-# six strikes and the partials' constants (after DIGIDRUM's); each slot's cloud ring, 64 KB a slot
-# (above SILT's lines, below the sample pool; cleared by the DSP itself, 512 words a block)
-THOLET_TABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x5000  # RIFT v0.16: over the sample link; 0x8122a000 in v0.15
-THOLET_RING_DDR = 0x82600000
-THOLET_RING_SPAN = 16 * 0x10000
+# RIFT v0.17 (owner, 2026-11-21): THOLET (v0.15, type 23) removed; its ring's DDR (0x82600000, 1 MB)
+# and its link tables' room (+0x5000) are free; SMEAR's places are kept where v0.16 put them.
 # RIFT v0.16: SMEAR (type 9, dnfw.smear, docs/smear.md): smear.asm between smp.asm and fascia.asm.
 # Its code in the L2 room perc.asm's move left (0x200b1000..0x200bc000), lane 0's working frames
 # after it; its voice's scratch, the stage's words and the mailboxes in the Machinedrum's former
-# L2 (RIFT loads none of it); its tables, states and lane 1 in DDR after THOLET's ring.
+# L2 (RIFT loads none of it); its tables, states and lane 1 in DDR.
 SMEAR_L2_LOAD = 0x200B1000
 SMEAR_SW = 0xB80000 + (SMEAR_L2_LOAD - 0x20000000) // 2
 SMEAR_LANE0_L2 = 0x200B7800                  # WF, WB (16 KB) to 0x200bb800
@@ -255,18 +250,18 @@ SMEAR_L2_SPAN = SMEAR_LANE0_L2 - SMEAR_L2_LOAD   # the code's room: 26 KB
 SMEAR_VB_L2 = 0x200A0000                     # program.VLayout (9.2 KB)
 SMEAR_SCR_L2 = 0x200A2800                    # the stage's words (64 B)
 SMEAR_MBOX = 0x200A3000                      # 16 mailboxes x 128 B
-SMEAR_DDR = THOLET_RING_DDR + THOLET_RING_SPAN   # 0x82700000
+SMEAR_DDR = 0x82700000                       # (after v0.16's THOLET ring)
 SMEAR_TABLES_DDR = SMEAR_DDR                 # WIN (computed), then the transform's: pairs (loaded), twiddles (computed)
-SMEAR_VTABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x8000   # the voice's tables and grain windows (over the link)
-SMEAR_QSIN_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0xA000      # the quarter sine (over the link)
-SMEAR_PAIRS_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0xB000     # the transform's swap pairs (over the link)
-# RIFT v0.16 (the DSP's 1 MiB upload: SMEAR left it 30 KB over): ORGAN's, THOLET's and SMEAR's
+SMEAR_VTABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x5000   # the voice's tables and grain windows (over the link)
+SMEAR_QSIN_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x7000      # the quarter sine (over the link)
+SMEAR_PAIRS_DDR = 0x84000000 + _smp_types.TABLE_AREA + 0x8000     # the transform's swap pairs (over the link)
+# RIFT v0.16 (the DSP's 1 MiB upload: SMEAR left it 30 KB over): ORGAN's and SMEAR's (v0.16: THOLET's too)
 # tables are no longer in the DSP image. The ColdFire sends them at power-on over the sample link
 # into the pool's table area (csrc/sampler/link.c K_TABLES, v0.26's route for the Machinedrum's),
-# then READY's magic; ORGAN, THOLET and SMEAR stay silent until it is there
+# then READY's magic; ORGAN and SMEAR stay silent until it is there
 LINK_TABLES_DDR = 0x84000000 + _smp_types.TABLE_AREA
 LINK_READY_DDR = 0x84000000 + _smp_types.TABLE_READY
-LINK_TABLES_BYTES = 0xC000
+LINK_TABLES_BYTES = 0x9000                    # RIFT v0.17: 0xC000 with THOLET's (v0.16)
 SMEAR_STATE_DDR = SMEAR_DDR + 0x14000        # 16 x 512 B
 SMEAR_LANE0_DDR = SMEAR_DDR + 0x18000        # P, RING (16,392 B each lane)
 SMEAR_LANE1_DDR = SMEAR_DDR + 0x1C800
@@ -444,19 +439,19 @@ def _perc_sine() -> bytes:
 
 def link_tables() -> bytes:
     """RIFT v0.16: the bytes the ColdFire sends to LINK_TABLES_DDR at power-on (dnfw.mods.waverider
-    _tables): ORGAN's at +0, THOLET's at +0x5000, SMEAR's voice tables at +0x8000, its quarter sine
-    at +0xA000, its swap pairs at +0xB000 (dnfw.waverider.dsp's *_DDR)"""
+    _tables): ORGAN's at +0, SMEAR's voice tables at +0x5000, its quarter sine at +0x7000, its swap
+    pairs at +0x8000 (dnfw.waverider.dsp's *_DDR; RIFT v0.17: THOLET's +0x5000 gone, SMEAR's moved down)"""
     from ..smear import stage as SG, program as SP
     import struct as _st
 
     def b(ws):
         return b"".join(_st.pack("<I", w & 0xFFFFFFFF) for w in ws)
     out = bytearray(LINK_TABLES_BYTES)
-    for at, data in ((ORGAN_TABLES_DDR, _organ_tables()), (THOLET_TABLES_DDR, _tho_tables()),
+    for at, data in ((ORGAN_TABLES_DDR, _organ_tables()),
                      (SMEAR_VTABLES_DDR, b(SP.voice_tables_words())), (SMEAR_QSIN_DDR, b(SG.qsin_words())),
                      (SMEAR_PAIRS_DDR, b(SG.pairs_words()))):
         off = at - LINK_TABLES_DDR
-        nxt = min([x - LINK_TABLES_DDR for x in (THOLET_TABLES_DDR, SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
+        nxt = min([x - LINK_TABLES_DDR for x in (SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
                                                  SMEAR_PAIRS_DDR) if x > at] + [LINK_TABLES_BYTES])
         if off + len(data) > nxt:
             raise DspError(f"the link's tables: {len(data)} bytes at +{off:#x} run into +{nxt:#x}")
@@ -475,11 +470,6 @@ def smear_layout():
 
 def _dgd_tables() -> bytes:
     from ..digidrum import ddr
-    return ddr.tables_bytes()
-
-
-def _tho_tables() -> bytes:
-    from ..tholet import ddr
     return ddr.tables_bytes()
 
 

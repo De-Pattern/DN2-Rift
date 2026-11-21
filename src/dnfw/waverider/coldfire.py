@@ -54,8 +54,7 @@ from ..organ import machines as _org            # noqa: E402  (RIFT: ORGAN, type
 from ..silt import machines as _slt             # noqa: E402  (RIFT: SILT, type 20)
 from ..ligature import machines as _lig         # noqa: E402  (RIFT: LIGATURE, type 21)
 from ..digidrum import machines as _dgd            # noqa: E402  (RIFT: DIGIDRUM, type 22)
-from ..tholet import machines as _tho              # noqa: E402  (RIFT: THOLET, type 23)
-NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE, _tho.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
+NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
 CLONE = 1                               # WaveTone
 LONG_NAME, SHORT_NAME = "Perc", "PRC"           # v0.11: PERC in Waverider's place
 MACHINE_NAMES = {5: ("Perc", "PRC"),
@@ -67,7 +66,6 @@ MACHINE_NAMES = {5: ("Perc", "PRC"),
                  _slt.TYPE: (_slt.LONG, _slt.SHORT),          # RIFT: SILT, after ORGAN
                  _lig.TYPE: (_lig.LONG, _lig.SHORT),          # RIFT: LIGATURE, after SILT
                  _dgd.TYPE: (_dgd.LONG, _dgd.SHORT),          # RIFT: DIGIDRUM, after LIGATURE
-                 _tho.TYPE: (_tho.LONG, _tho.SHORT),          # RIFT: THOLET, after DIGIDRUM
                  **{t: _mnm.LIST_NAMES[n] for t, n in zip(_mnm.TYPES, _mnm.NAMES)}}   # v0.26
 if set(MACHINE_NAMES) != set(NEW_TYPES):
     raise ImportError(f"machine types {sorted(set(NEW_TYPES) - set(MACHINE_NAMES))} have no machine")
@@ -93,7 +91,7 @@ LIST_DN2MK2 = (0, 2, 1, 3, 5, *_mnm.TYPES, *((_fsc.TYPE,) if _fsc.LISTED else ()
 from ..perc import program as _pp           # noqa: E402
 GONE_TYPES = (5, *_mnm.TYPES) if _pp.RIFT else ()
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
-    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()), *((_tho.TYPE,) if _tho.LISTED else ()),
+    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()),
      *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
@@ -253,8 +251,6 @@ slot_shim:
     cmpi.l  #{_lig.TYPE},%d0                    | RIFT: and LIGATURE
     beq.s   3f
     cmpi.l  #{_dgd.TYPE},%d0                    | RIFT: and DIGIDRUM
-    beq.s   3f
-    cmpi.l  #{_tho.TYPE},%d0                    | RIFT: and THOLET
     bne.s   2f
 3:  moveq   #{_fsc.FM_SLOT_FIRST},%d0
     cmp.l   %a0,%d0
@@ -402,8 +398,6 @@ canon_valid:
     cmpi.l  #{_lig.TYPE},%d3                    | RIFT: and LIGATURE
     beq.s   5f
     cmpi.l  #{_dgd.TYPE},%d3                    | RIFT: and DIGIDRUM
-    beq.s   5f
-    cmpi.l  #{_tho.TYPE},%d3                    | RIFT: and THOLET
     bne.s   3f
 5:  moveq   #0,%d3
     cmpi.l  #{_fsc.FM_OWNED[1][0]},%d2

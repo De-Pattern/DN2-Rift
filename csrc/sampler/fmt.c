@@ -708,12 +708,6 @@ DGD_F(8) DGD_F(9) DGD_F(10) DGD_F(11) DGD_F(12) DGD_F(13) DGD_F(14) DGD_F(15)
 static void (*const dgd_fns[])(int, char *) = {dgd_f0, dgd_f1, dgd_f2, dgd_f3, dgd_f4, dgd_f5, dgd_f6, dgd_f7,
     dgd_f8, dgd_f9, dgd_f10, dgd_f11, dgd_f12, dgd_f13, dgd_f14, dgd_f15};
 _Static_assert(sizeof dgd_fns / sizeof dgd_fns[0] == DGD_N, "one formatter a DIGIDRUM control");
-#define THO_F(j) static void tho_f##j(int v, char *b) { fsc_text(&wr_mach_tho, j, v, b); }
-THO_F(0) THO_F(1) THO_F(2) THO_F(3) THO_F(4) THO_F(5) THO_F(6) THO_F(7)   /* RIFT: THOLET's 16 */
-THO_F(8) THO_F(9) THO_F(10) THO_F(11) THO_F(12) THO_F(13) THO_F(14) THO_F(15)
-static void (*const tho_fns[])(int, char *) = {tho_f0, tho_f1, tho_f2, tho_f3, tho_f4, tho_f5, tho_f6, tho_f7,
-    tho_f8, tho_f9, tho_f10, tho_f11, tho_f12, tho_f13, tho_f14, tho_f15};
-_Static_assert(sizeof tho_fns / sizeof tho_fns[0] == THO_N, "one formatter a THOLET control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -788,9 +782,6 @@ void smp_formats(int kind)
     if (kind == DGD_KIND)                       /* RIFT: DIGIDRUM's (FASCIA's records too) */
         for (int j = 0; j < DGD_N; j++)
             RECORD_FMT(dgd_rid[j]) = (void *)dgd_fns[j];
-    if (kind == THO_KIND)                       /* RIFT: THOLET's (FASCIA's records too) */
-        for (int j = 0; j < THO_N; j++)
-            RECORD_FMT(tho_rid[j]) = (void *)tho_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.

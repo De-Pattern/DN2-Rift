@@ -659,7 +659,7 @@ wr_smr_else_72.:
       F1 = FLOAT R5 BY R12;
       R0 = DM(0x200a0014);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74097400;
+      R12 = -0x7409a400;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
@@ -672,7 +672,7 @@ wr_smr_else_72.:
       DM(0x200a0058) = R5;
       R0 = DM(0x200a0004);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74098000;
+      R12 = -0x7409b000;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
@@ -694,21 +694,21 @@ wr_smr_else_74.:
       DM(0x200a0064) = R0;
       R0 = DM(0x200a0008);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74097e00;
+      R12 = -0x7409ae00;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
       DM(0x200a0068) = R0;
       R0 = DM(0x200a0008);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74097c00;
+      R12 = -0x7409ac00;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
       DM(0x200a006c) = R0;
       R0 = DM(0x200a0008);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74097a00;
+      R12 = -0x7409aa00;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
@@ -1867,7 +1867,7 @@ wr_smr_loop_155.:
       R15 = R15 - R12;
       IF NE JUMP 0xbd94ee;                   // -> wr_smr_loop_155.
       // bit-reversal: swap the pairs in the table
-      R8 = -0x74095000;
+      R8 = -0x74098000;
       I3 = R8;
       R15 = 0x1f0;
 .GLOBAL wr_smr_loop_156.;
@@ -2377,20 +2377,20 @@ wr_smr_else_80.:
       DM(0x200a0104) = R0;
       R0 = DM(0x200a0018);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74097800;
+      R12 = -0x7409a800;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
       DM(0x200a0108) = R0;
       R0 = DM(0x200a001c);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74097400;
+      R12 = -0x7409a400;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
       R1 = DM(0x200a0018);
       R1 = LSHIFT R1 BY 2;
-      R12 = -0x74097600;
+      R12 = -0x7409a600;
       R1 = R12 + R1;
       I3 = R1;
       R1 = DM(0, I3);
@@ -2416,7 +2416,7 @@ wr_smr_else_80.:
       DM(0x200a010c) = R2;
       R0 = DM(0x200a0020);
       R0 = LSHIFT R0 BY 2;
-      R12 = -0x74097400;
+      R12 = -0x7409a400;
       R0 = R12 + R0;
       I3 = R0;
       R0 = DM(0, I3);
@@ -2435,7 +2435,7 @@ wr_smr_else_80.:
       R0 = MIN(R0, R12);
       R12 = 0x204;
       R0 = R0 * R12 (SSI);
-      R12 = -0x74097000;
+      R12 = -0x7409a000;
       R0 = R12 + R0;
       DM(0x200a0118) = R0;
       R0 = DM(0x200a003c);
@@ -3021,7 +3021,7 @@ wr_smr_lwok_236.:
       IF NE JUMP 0xbd9c16;                   // -> wr_smr_loop_221.
       R2 = DM(0x200a002c);
       R2 = LSHIFT R2 BY 2;
-      R12 = -0x74097200;
+      R12 = -0x7409a200;
       R2 = R12 + R2;
       I3 = R2;
       R2 = DM(0, I3);
@@ -3203,7 +3203,7 @@ wr_smr_sub_csn.:
 .GLOBAL wr_smr_else_251.;
 wr_smr_else_251.:
       R3 = LSHIFT R3 BY 2;
-      R13 = -0x74096000;
+      R13 = -0x74099000;
       R3 = R13 + R3;
       I3 = R3;
       R4 = DM(0, I3);
@@ -3235,7 +3235,7 @@ wr_smr_else_252.:
 .GLOBAL wr_smr_else_253.;
 wr_smr_else_253.:
       R3 = LSHIFT R3 BY 2;
-      R13 = -0x74096000;
+      R13 = -0x74099000;
       R3 = R13 + R3;
       I3 = R3;
       R4 = DM(0, I3);
@@ -3270,7 +3270,7 @@ wr_smr_sub_csp.:
 .GLOBAL wr_smr_else_255.;
 wr_smr_else_255.:
       R3 = LSHIFT R3 BY 2;
-      R13 = -0x74096000;
+      R13 = -0x74099000;
       R3 = R13 + R3;
       I3 = R3;
       R4 = DM(0, I3);
@@ -3302,7 +3302,7 @@ wr_smr_else_256.:
 .GLOBAL wr_smr_else_257.;
 wr_smr_else_257.:
       R3 = LSHIFT R3 BY 2;
-      R13 = -0x74096000;
+      R13 = -0x74099000;
       R3 = R13 + R3;
       I3 = R3;
       R4 = DM(0, I3);
@@ -3335,7 +3335,7 @@ wr_smr_sub_cos.:
 .GLOBAL wr_smr_else_259.;
 wr_smr_else_259.:
       R3 = LSHIFT R3 BY 2;
-      R13 = -0x74096000;
+      R13 = -0x74099000;
       R3 = R13 + R3;
       I3 = R3;
       R4 = DM(0, I3);
@@ -3353,7 +3353,7 @@ wr_smr_else_260.:
 .GLOBAL wr_smr_sub_fwd0.;
 wr_smr_sub_fwd0.:
       // bit-reversal: swap the pairs in the table
-      R8 = -0x74095000;
+      R8 = -0x74098000;
       I3 = R8;
       R15 = 0x1f0;
 .GLOBAL wr_smr_loop_261.;
