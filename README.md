@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.13** | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
+| **v0.14** | 2026-11-21 | MONTUNE: FLEX takes of MAIN and IN +12 dB on playback, MON on the RECORDER, MICROTUNING (11 factory tunings, USER 1..8, per track, saved with the project) | `builds/v0.14-MONTUNE/` | yes |
+| v0.13 | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
 | v0.12 | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
 | v0.11 | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
 | v0.10 | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
@@ -40,6 +41,43 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.14 · MONTUNE
+
+- **File:** `RIFT_v0.14_MONTUNE_OS1.11.syx` (`builds/v0.14-MONTUNE/`)
+- **sha256:** `d3b5728922eca19b7f39dd055e235dac0cef9bed2bb913a048ca04347bcb5d3a`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `153423e` (this repository)
+
+**Adds**
+
+- **FLEX takes of MAIN and IN, +12 dB on playback** (the owner and Error Kit, 2026-11-20): the
+  recorder marks a FLEX take's buffer half when its source is MAIN or IN (`MAIN_MARK`, bit 15 of
+  the buffer directory's steps word); a voice on a marked half plays it `MAIN_PLAY_DB` (12) louder.
+  The take is stored as recorded, never boosted into the clamp. TRK takes unchanged (TRK_HW_DB 24).
+- **MON on the RECORDER** (the DN2 mk2 mod's v0.59, from dn2mk2-firmware 9682441, aee05a8):
+  knob C; with SRC IN the input is heard while armed or recording (`rec.c`; pvmix and smp
+  regenerated here).
+- **MICROTUNING** (the mod's v0.61, a7fee88, 796f5d6, 8812fba): `tune.c` as is; KB SETUP's H is
+  TUNE; TUNING and EDIT; a record per project at 0x6E0400..0x6E04FF (memory map updated).
+  RIFT's machines read the frame's note word as note + fine / 256, so all of them are retuned;
+  SLICE and GRID never.
+- Gate: runner part `mainmark` (the mark for MAIN and IN only, a track's none; the frames the same
+  either way; playback +12 dB sample for sample; a 0 dB negative control); `recorder`, `rectext`
+  (MON), the runner's `pvmix` (MON's mix); `tune`, `tunerec`; unit tests `test_mon`, `test_tunings`.
+
+**Known issues**
+
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet (as in the mod).
+
+**Tests**
+
+1. FLEX from MAIN at GAIN 0: about the level heard, no distortion; from IN with the input up: the same.
+2. FLEX from a track: unchanged.
+3. RECORDER, SRC IN, C = MON ON: the input heard while armed and recording; MON in the corner.
+4. KB SETUP's H: a tuning on the track; push: TUNING (ROOT, TRK, ALL); a USER tuning's EDIT.
+5. SAVE, LOAD another, LOAD back, power-cycle: the tuning kept.
 
 ## v0.13 · PARITY
 
