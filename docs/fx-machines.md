@@ -77,3 +77,14 @@ effect runs; the note's pitch is TUNED mode's pitch.
 
 WARP (the Tonverk's Frequency Warper) and CHRONO (Chrono Pitch), whose reference models exist
 (`src/dnfw/fx/warp.py`, `chrono.py`), then the rest of docs/fx-platform.md's list.
+
+## 6. Open, to research before the DSP work
+
+- **Which voice is whose track.** The bus sums "the chosen tracks' voices". The DSP's buffers are
+  per voice (`fx/platform.py` VOICE_BUFS); with dynamic voice allocation a track's notes move between
+  voices. What tells the tail which track each voice is playing this block (the frame's per-voice
+  words, the machines' slot state, PERC's `mnm_ages` order) is the first thing to pin down, on the
+  SHARC runner, before any code.
+- **The FX track's own voice.** It must hold a voice while the effect rings (a note that does not
+  end, or the track kept "sounding" while its tail is above silence), and that voice must not be
+  stolen by the dynamic allocator.
