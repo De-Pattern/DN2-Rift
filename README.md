@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.14** | 2026-11-21 | MONTUNE: FLEX takes of MAIN and IN +12 dB on playback, MON on the RECORDER, MICROTUNING (11 factory tunings, USER 1..8, per track, saved with the project) | `builds/v0.14-MONTUNE/` | yes |
+| **v0.15** | 2026-11-21 | THOLET, a piano leaning toward a Rhodes with a grain cloud (Error Kit's concept); KEYBOARD HOLD (PTN + KEYBOARD) from the DN2 mk2 mod | `builds/v0.15-THOLET/` | yes |
+| v0.14 | 2026-11-21 | MONTUNE: FLEX takes of MAIN and IN +12 dB on playback, MON on the RECORDER, MICROTUNING (11 factory tunings, USER 1..8, per track, saved with the project) | `builds/v0.14-MONTUNE/` | yes |
 | v0.13 | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
 | v0.12 | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
 | v0.11 | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
@@ -41,6 +42,48 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.15 · THOLET
+
+- **File:** `RIFT_v0.15_THOLET_OS1.11.syx` (`builds/v0.15-THOLET/`)
+- **sha256:** `55650a6772453f5e77af099336ca4a0ab49dfef6881c1d3210e80d9393097583`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `2f6874e` (this repository)
+
+**Adds**
+
+- **THOLET** (type 23, kind 19; the concept is Error Kit's; `dnfw.tholet`, `docs/tholet.md`):
+  - It renders in FASCIA's walk; MACHINE SEL lists it after DIGIDRUM; it has two LINE pages
+    (SYN1 PIANO: TUNE HAMR TONE FELT / DEC EP STRK LEV; SYN2 CLOUD: GRAN GDEN GSIZ GFM / GSPR REL VSNS BRTH).
+  - Its sound:
+    - a strike: one of six Kawai grand transients (VCSL, CC0), 50 ms at 24 kHz in μ-law;
+    - 2 × 12 string partials as two-pole resonators; FELT adds a felt layer; EP morphs toward a Rhodes tine and adds the pickup's bark;
+    - a grain cloud in a DDR ring (8 expodec grains), swelling into the tail;
+    - REL is the damper at the note-off.
+  - A retune keeps each ringing partial's amplitude and phase. Before this, a TUNE jump of 4 octaves mid-note rang 10× too loud.
+  - Bit-exact: `live.Voice` = the program's run mode (`test_tholet_program`, 24 tests) = the assembled code (runner part `tholet`). Runner part `tstress` runs sixteen voices under the guard.
+  - Its tables are in DDR (`THOLET_TABLES_DDR`, `THOLET_RING_DDR`).
+- **perc.asm moved 16 KB lower** (0x200bc000), so fascia.asm has 140 KB of room (134.7 KB used).
+- **KEYBOARD HOLD**, from the DN2 mk2 mod's v0.64 (dn2mk2-firmware 13a1d0b, 59fdcb4, 1541dab):
+  - PTN + KEYBOARD switches stock's sustain (MIDI CC 64's) on all 16 tracks.
+  - Notes already held stay latched; MIDI notes in and the arp's keys are held too; HOLD off releases them all.
+  - The PTN view shows KB HOLD ON or OFF.
+  - Gate step: `kbhold`.
+- Includes v0.14.
+- Gate: ColdFire step 6f6 `tholet` (MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR); `kbhold`; runner parts `tholet`, `tstress`; unit tests `test_tholet_program`.
+
+**Known issues**
+
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet.
+- The DSP image has 1.3 KB of its 1 MiB upload left (v0.16 moves tables to the ColdFire).
+
+**Tests**
+
+1. MACHINE SEL: THOLET after DIGIDRUM; a note: a piano's strike and strings; HAMR through its six.
+2. FELT, EP, STRK; DEC; page 2: GRAN up, a held note breaks into grains; short trigs: REL damps.
+3. Turn TUNE quickly while a note rings: no jump in level.
+4. PTN + KEYBOARD: KB HOLD ON; a chord played and let go keeps sounding; MIDI notes held too; again: all released.
 
 ## v0.14 · MONTUNE
 
