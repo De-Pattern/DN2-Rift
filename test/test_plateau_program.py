@@ -159,3 +159,24 @@ def test_emits():
     n = sum(1 for x in p.lines if x.startswith("      ") and not x.strip().startswith("//"))
     print("instructions", n)
     assert 500 < n < 2600
+
+
+def test_a_bus_that_is_not_a_number_never_reaches_the_lines():
+    """a NaN, an infinity or a runaway on the bus is taken as 0: the output stays finite, bit for bit"""
+    dsp = B.Dsp()
+    v = L.Voice(3)
+    for kb in range(CLEAR + 20):
+        words = B.knobs_words(B.panel_knobs())
+        bl, br = B.bus_blocks(kb)
+        if kb in (CLEAR + 3, CLEAR + 9):
+            bl[0][5] = np.float32("nan")
+            br[2][7] = np.float32("inf")
+            bl[5][1] = np.float32(1.0e9)
+        f = B.Frame()
+        f.plt(3, words, 60.0, kb == 0, 0b100101, 3)
+        f.tracks(bl, br)
+        got = dsp.block(f, [3])[3]
+        want = v.block(B.live_knobs(words), kb == 0, B.FB.note_seen(60.0), L.bus_sum(bl, br, 0b100101, 3))
+        assert np.array_equal(got.view(np.uint32), want.view(np.uint32)), kb
+        assert np.isfinite(got).all(), kb
+    assert np.abs(got).max() > 0

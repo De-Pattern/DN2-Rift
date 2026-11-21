@@ -33,6 +33,7 @@ SUB = 32
 INV127 = F(F(1.0) / F(127.0))
 KR = F(F(48000.0) / F(29761.0))      # Dattorro's lengths are at 29,761 Hz
 IDLE = F(1.0e-5)
+IN_MAX = F(64.0)                     # an input sample not under this (or not a number) is taken as 0
 QUIET_BLOCKS = 1500                  # a second of silence in and out: the voice rests
 CHUNK = 4096                         # words cleared a block while a fresh instance starts
 WMASK = 0xFFFFFF
@@ -222,6 +223,8 @@ class Voice:
         ipk = F(0.0)
         for i in range(SUB):
             x = F(0.0) if k["HOLD"] else F(bus[i] * hig)
+            if not (abs(x) < IN_MAX):            # (a NaN or a runaway on the bus never reaches the lines)
+                x = F(0.0)
             ipk = max(ipk, F(abs(x)))
             self.wr("pre", x)
             if pred > 0:

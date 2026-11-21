@@ -797,6 +797,8 @@ class PG(OP.OG):
             self.ptr(4, "bp")
             self.set(c("x"), Mv("i", 4, 0) * c("hig"))
         self.icmp(self.ci("hold"), "NE", 0, lambda: self.fz(c("x")), heard)
+        # live's guard: kept only if |x| < IN_MAX (a NaN compares unordered: LT false, so it is zeroed)
+        self.cmp(ab(c("x")), "LT", k(LV.IN_MAX), lambda: None, lambda: self.fz(c("x")))
         self.set(c("ipk"), mx(c("ipk"), ab(c("x"))))
         self.ld(0, c("x"))
         self.wr_from("pre", 0)
