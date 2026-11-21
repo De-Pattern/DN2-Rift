@@ -180,7 +180,7 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_digidrum_program.py", "test/test_tholet_program.py",   # RIFT v0.15: THOLET (run mode = live.py)
          # RIFT v0.16: SMEAR: its transform, grains, voice and stage (run mode = live.py)
          "test/test_smear_fft.py", "test/test_smear_grn.py", "test/test_smear_live.py", "test/test_smear_program.py",
-         "test/test_smear_voice.py", "test/test_smear_stage.py",
+         "test/test_smear_voice.py", "test/test_smear_stage.py", "test/test_logos.py",
          # RIFT v0.12: LIGATURE's wirings (the DSP's decode = live, garbage safe, the seeded table the
          # factory patches; the build's wire.json = live's) and its machine table
          "test/test_ligature_program.py", "test/test_ligature_machines.py", "test/test_ligature_live.py",
@@ -222,6 +222,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("tholet", "THOLET: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("smear", "SMEAR: MACHINE SEL, its start, its two pages, LFO names (ColdFire)"),
+       ("logos", "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)"),
        ("alloc", "GRID allocate slice locks (ColdFire)"),
        ("multisel", "multi-select delete (ColdFire)"),
        ("unused", "SELECT UNUSED (ColdFire)"),
@@ -3100,6 +3101,68 @@ def main() -> int:
                               "named and offered to the LFOs" if good else why)
             later("smear", "SMEAR: MACHINE SEL, its start, its two pages, LFO names (ColdFire)",
                   "SMEAR: MACHINE SEL, its start, its two pages, LFO names (ColdFire)", [sm_cmd, sorted(EMU_ENV.items())], sm_body)
+
+        # 6f8. RIFT v0.16 (owner, 2026-11-21): MACHINE SEL's picture is the logo of the machine under
+        # the cursor when it is one of RIFT's (csrc/waverider/page.c lg_draw, scripts/gen_logos.py);
+        # DIGIDRUM's label reads DRUM, the sample machines' SAMP. The snapshot's rows predate RIFT's
+        # synth machines, so lg_force stands in for the cursor's type for those; the sample machines
+        # are reached by the cursor itself (ONESHOT). Negative controls: THOLET (no logo yet), the
+        # cursor's own stock machine and the FLTR column keep stock's picture, pixel for pixel.
+        if "lg_force" in lay:
+            from PIL import Image                   # noqa: PLC0415
+            lgf = lay["lg_force"]
+            ls_ = ["func-src", "wait:20", "png:s0"]
+            for t in (18, 19, 20, 21, 22, 23):
+                ls_ += [f"poke:{lgf:#x}:{t:08x}", "down", "wait:4", "up", "wait:5", f"png:t{t}"]
+            ls_ += [f"poke:{lgf:#x}:ffffffff", "down", "wait:4", "up", "wait:5", "png:back",
+                    "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:5", "png:one",
+                    f"poke:{lgf:#x}:00000012", "right", "wait:6", "png:fltr", f"poke:{lgf:#x}:ffffffff"]
+            ljs, lsf = work / "logos.json", work / "logos.steps"
+            lsf.write_text(",".join(ls_))
+            lg_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                      "--snapshot", snap, "--steps", f"@{lsf}", "--png-dir", work / "logos", "--json", ljs]
+
+            def lg_body(tdir):
+                rc, out = run("logos", lg_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and ljs.exists():
+                    import gen_logos as GL              # noqa: PLC0415
+                    import numpy as np                  # noqa: PLC0415
+                    r = json.loads(ljs.read_text())
+                    sh = {n: np.array(Image.open(f).convert("L"))[::6, ::6] > 128 for n, f in r["screens"].items()}
+                    want = {n: np.array(Image.open(GL.SRC / f"{n}.png").convert("1")) for n in GL.ORDER}
+
+                    def pic(n):                         # the logo's rows 10..41, x 0..45
+                        return sh[n][10:42, 0:46] if n in sh else None
+
+                    def lbl(n):                         # the label's rows 44..51, x 12..34
+                        return sh[n][44:52, 12:35] if n in sh else None
+
+                    def word(w):
+                        o = np.zeros((8, 23), bool)
+                        for i, ch in enumerate(w):
+                            for y, row in enumerate(GL.GLYPHS[ch]):
+                                for x, c in enumerate(row):
+                                    o[y, 6 * i + x] = c == "#"
+                        return o
+                    same = lambda u, v: u is not None and v is not None and np.array_equal(u, v)   # noqa: E731
+                    per = {18: "fascia", 19: "organ", 20: "silt", 21: "ligature", 22: "digidrum"}
+                    facts = {f"type {t}: the {n.upper()} logo": same(pic(f"t{t}"), want[n]) for t, n in per.items()}
+                    facts["DIGIDRUM's label reads DRUM"] = same(lbl("t22"), word("DRUM"))
+                    facts["the synth logos keep SYN's label"] = all(same(lbl(f"t{t}"), lbl("s0")) for t in (18, 19, 20, 21))
+                    facts["ONESHOT under the cursor: the DT2 logo and SAMP"] = same(pic("one"), want["dt2"]) and same(lbl("one"), word("SAMP"))
+                    facts["THOLET (no logo yet): stock's picture, pixel for pixel"] = same(sh.get("t23"), sh.get("s0"))
+                    facts["a stock machine under the cursor: stock's picture, pixel for pixel"] = same(sh.get("back"), sh.get("s0"))
+                    facts["the FLTR column: no logo drawn"] = "fltr" in sh and not any(same(sh["fltr"][10:42, 0:46], w) for w in want.values())
+                    facts["no fault reported, no stack freed"] = not r.get("fault_reports") and not r.get("stack_frees")
+                    good = all(facts.values())
+                    why = json.dumps({k: v for k, v in facts.items() if not v})[:1200]
+                return good, ("MACHINE SEL: FASCIA, ORGAN, SILT, LIGATURE and DIGIDRUM (DRUM) show their logos, the "
+                              "sample machines the DT2 logo and SAMP; THOLET, stock's machines and the FLTR column keep "
+                              "stock's picture, pixel for pixel" if good else why)
+            later("logos", "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)",
+                  "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)",
+                  [lg_cmd, sorted(EMU_ENV.items())], lg_body)
 
         # 6p. v0.33: our overlays let go when the page under them goes (docs/freeze-hunt.md).
         # The sample list opened on track 1 (a SAMP turn), then TRK + [TRIG 2] to track 2, a
