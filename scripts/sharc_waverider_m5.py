@@ -715,7 +715,17 @@ def main(argv=None):
 
         def warm():
             if not warm_init:
-                warm_init.append(init_on(snap, m2mach, Image(dk, m5.stream), warm=True))
+                w0 = init_on(snap, m2mach, Image(dk, m5.stream), warm=True)
+                if PP_RIFT and hasattr(dsp, "SMEAR_SW"):
+                    # RIFT v0.16: and SMEAR's power-on tables computed (a part a block, four blocks
+                    # once READY holds; on the unit, about a second after power-on, long before a
+                    # note): four silent blocks, so the runs that start warm do not carry that work
+                    # in their first blocks (fkeep, whose held notes are struck in block 0)
+                    from dnfw.smear import fft as SMF
+                    rr0 = run_blocks(w0, lambda b: fsc_frame(sound, machines, {}, trig=()), SMF.INIT_PARTS)
+                    assert rr0["ok"], "SMEAR's power-on blocks"
+                    w0 = rr0["state"]
+                warm_init.append(w0)
             return warm_init[0]
         if "map" in steps:
             print("\nstep 2: map")
