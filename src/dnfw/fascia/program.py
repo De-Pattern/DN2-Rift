@@ -3673,6 +3673,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     from ..ligature import program as LP
     from ..digidrum import program as DP
     from ..plateau import program as XP
+    from ..glass import program as GLP
     from ..waverider import dsp as _dsp
     if organ_tables is None:
         organ_tables = _dsp.ORGAN_TABLES_DDR
@@ -3816,6 +3817,9 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.iconst(12, 16)
     p.e("COMP(R0, R12);")
     p.jump("LT", top)
+    # RIFT v0.18: GLASS, the FLTR type 6: every slot on it filtered in place, every machine's buffer
+    # whole (dnfw.glass.program; the stock chain skips its filter stage for it)
+    gg = GLP.walk(p, GLP.Layout(L, _dsp.GLASS_STATE_DDR))
     G.end_mark(p)                              # our voices' time, for the guard's limit
     p.e(f"JUMP {next_sw:#x};", "the shared tail (ping.asm's wr_ping: restores the registers)")
     p.scr_on = True                            # the routines and leaves run inside a voice only
@@ -3825,6 +3829,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     lg[0].emit_rts()                           # LIGATURE's (l_render, the kernels)
     rg[0].emit_rts()                           # DIGIDRUM's (r_render)
     xg[0].emit_rts()                           # PLATEAU's (p_render, p_ap, p_apf)
+    gg.emit_rts()                              # GLASS's (g_slot, g_bend)
     p.emit_subs()
     p.scr_on = False
     p.raw(".wr_fsc..end:")

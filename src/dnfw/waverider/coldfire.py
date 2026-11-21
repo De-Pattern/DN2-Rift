@@ -645,7 +645,8 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
     from .. import slides as SL
     from .. import modversion                   # v0.39: the mod's version (VERSION), shown at the browser's top
     from . import tunings as TU                 # v0.61: the factory tunings
-    cimage, csyms, cbss = compile_c(pages.c_header() + SL.c_header(stock) + TU.c_header()
+    from ..glass import pages as glass_pages
+    cimage, csyms, cbss = compile_c(pages.c_header() + glass_pages.c_header() + SL.c_header(stock) + TU.c_header()
                                     + modversion.c_define(),
                                      base=pages.C_LOAD)
     if cbss:
@@ -996,10 +997,14 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
                  "lig_state", "lig_blk", "lig_cur", "lig_edits", "lig_saves", "lig_loads", "lig_seeds", "lig_seen_draw", "lig_word", "lig_pop", "lig_poll", "lig_draw", "lig_visible", "lig_wbytes", "lig_track_slot", "smp_wire_sent", "smp_wire_push", "smp_pl_wire_changed", "smp_lig_draw",
                  "wr_lfo_mask", "fsc_q_off"):   # the sample link's state (v0.15)
         layout[name] = csyms[name]
-    # v0.45: PING removed (owner, 2026-11-08): its chunk (the FLTR list's 'Ping', the filter
-    # names, the LOAD bound, slot_to_id, the descriptor, the curve) is no longer composed, so
-    # all of those stay stock and a sound saved with filter 6 loads as Multi-Mode
+    # v0.45: PING removed (owner, 2026-11-08). RIFT v0.18: GLASS, filter type 6, in its place
+    # (dnfw.glass.coldfire: the FLTR list's 'Glass', the filter names, the LOAD bound, slot_to_id,
+    # the descriptor, the curve, in PING's former chunk at 0x4670f000)
+    from ..glass import coldfire as glass_cf
+    gbuilt = glass_cf.compose(content, edit, assemble)
+    layout.update(gbuilt["layout"])
     return {"content": bytes(content), "edits": edits, "layout": layout,
             "chunk": {"load": pages.LOAD, "code": chunk},
             "c_chunk": {"load": pages.C_LOAD, "code": cimage},
-            "machines_chunk": {"load": MCHUNK, "code": bytes(mchunk)}}
+            "machines_chunk": {"load": MCHUNK, "code": bytes(mchunk)},
+            "glass_chunk": gbuilt["chunk"]}
