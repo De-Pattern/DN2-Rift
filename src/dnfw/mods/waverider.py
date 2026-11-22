@@ -110,6 +110,9 @@ def _chunks() -> list[tuple[int, bytes, str]]:
     if "machines_chunk" in SPEC:
         out.append((SPEC["machines_chunk"]["load"], bytes.fromhex(SPEC["machines_chunk"]["code"]),
                     "the machine shims, names, attributes and MACHINE SEL list"))
+    if "glass_chunk" in SPEC:                       # RIFT v0.18: GLASS's FLTR-list shims, list and names
+        out.append((SPEC["glass_chunk"]["load"], bytes.fromhex(SPEC["glass_chunk"]["code"]),
+                    "GLASS's FLTR-list shims, list and names (filter type 6; PING's P2)"))
     from ..perc import program as _pp
     if not _pp.RIFT:      # RIFT: no Machinedrum or Monomachine engine reads these, so the build
         md = _md_ui()     # needs neither firmware file (the link sends no tables: smp_tables -1)

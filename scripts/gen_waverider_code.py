@@ -30,6 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from dnfw.cli.files import read_image                   # noqa: E402
+from dnfw.glass import coldfire as glass_cf               # noqa: E402  (RIFT v0.18: GLASS, filter 6)
 from dnfw.firmware.load import load                     # noqa: E402
 from dnfw.patch.assemble import assemble, available     # noqa: E402
 from dnfw.waverider import coldfire as CF               # noqa: E402
@@ -71,12 +72,13 @@ def main() -> int:
         "names": [CF.LONG_NAME, CF.SHORT_NAME],
         "edits": edits,
         "guards": [{"va": va, "bytes": want, "what": why}
-                   for va, want, why in CF.GUARDS + CF.JUMP_GUARDS + CF.SLIDE_DRAW_GUARDS],
+                   for va, want, why in CF.GUARDS + CF.JUMP_GUARDS + CF.SLIDE_DRAW_GUARDS + glass_cf.GUARDS],
         "layout": {k: v for k, v in sorted(built["layout"].items())},
         "chunk": {"load": built["chunk"]["load"], "code": built["chunk"]["code"].hex()},
         "c_chunk": {"load": built["c_chunk"]["load"], "code": built["c_chunk"]["code"].hex()},
         "machines_chunk": {"load": built["machines_chunk"]["load"],
                            "code": built["machines_chunk"]["code"].hex()},
+        "glass_chunk": {"load": built["glass_chunk"]["load"], "code": built["glass_chunk"]["code"].hex()},
     }
     text = (json.dumps(code, indent=1) + "\n").encode()
     if "--check" in sys.argv[1:]:               # v0.33: the gate's: the committed code is the sources'

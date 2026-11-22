@@ -221,7 +221,8 @@ FSC_STATE_SPAN = 8 * 0xF80                   # dnfw.fascia.program.STRIDE
 # RIFT (SILT, 2026-11-17): the code moved into PERC's former room (RIFT's perc.asm, its chain head and
 # the sample machines' shared code, is 7.7 KB there): FASCIA, ORGAN and SILT need about 84 KB;
 # 0x200b1000..0x200bc000 is free again (44 KB; to 0x200c0000 until v0.14)
-FSC_L2_LOAD = PERC_L2_LOAD + 0x4000          # 0x200c0000, 16 KB after perc.asm's start (0x200c4000 until v0.14)
+FSC_L2_LOAD = PERC_L2_LOAD + 0x2800          # 0x200be800, 10 KB after perc.asm's start (RIFT v0.18, GLASS: perc.asm is 9 KB; 16 KB, 0x200c0000, v0.15..v0.17; 0x200c4000 until v0.14)
+assert FSC_L2_LOAD % CODE_SPAN == 0
 FSC_L2_SPAN = SMP_L2_LOAD - FSC_L2_LOAD        # to smp.asm's 0x200e3000: 140 KB (124 KB until v0.14)
 FSC_SW = 0xB80000 + (FSC_L2_LOAD - 0x20000000) // 2
 FSC_SCRATCH_DM = MNM_RENDER_DM + MNM_RENDER_BYTES          # 0x2e6400 .. REGION's end 0x2e7000
@@ -243,6 +244,9 @@ DIGIDRUM_TABLES_DDR = 0x81229000
 # in THOLET's former ring (1 MB at 0x82600000: 0x100 + 83,968 words, cleared by the DSP itself)
 PLATEAU_TABLES_DDR = 0x8122A000
 PLATEAU_DDR = 0x82600000
+# GLASS (RIFT v0.18, the FLTR type 6, dnfw.glass.program): each slot's filter, envelope and vactrol
+# state, 64 bytes a slot (after PLATEAU's lines, in THOLET's former ring)
+GLASS_STATE_DDR = 0x82680000
 # RIFT v0.17 (owner, 2026-11-21): THOLET (v0.15, type 23) removed; its ring's DDR (0x82600000, 1 MB)
 # and its link tables' room (+0x5000) are free; SMEAR's places are kept where v0.16 put them.
 # RIFT v0.16: SMEAR (type 9, dnfw.smear, docs/smear.md): smear.asm between smp.asm and fascia.asm.

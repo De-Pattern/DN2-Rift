@@ -175,6 +175,46 @@ static void wr_names(void)
     names_on = key;
 }
 
+/* RIFT v0.18: GLASS (src/dnfw/glass/pages.py; the DN2 mk2 mod's PING mechanism): while the active
+ * track's filter is GLASS (type 6, the byte at sound+0xDF), the records whose meaning GLASS changes
+ * carry its names; the stock pointers go back when it is not. The same mechanism as wr_names, on
+ * records it does not touch. */
+static const char *glass_stock_long[GLASS_NAMED] __attribute__((section(".data")));
+static const char *glass_stock_short[GLASS_NAMED] __attribute__((section(".data")));
+static int glass_on __attribute__((section(".data"))) = -2;   /* -2: not yet run */
+
+static int glass_active(void)                   /* which of glass_filters the active track's is, or -1 */
+{
+    u8 t = UI_TRACK;
+    unsigned char *kit = KIT_POINTER;
+    if (t > 15 || !kit)
+        return -1;
+    signed char f = (signed char)kit[52u + 1163u * t + 0xDFu];
+    for (int k = 0; k < GLASS_SETS; k++)
+        if (f == glass_filters[k])
+            return k;
+    return -1;
+}
+
+void glass_names(void)
+{
+    int on = glass_active();
+    if (on == glass_on)
+        return;
+    for (int k = 0; k < GLASS_NAMED; k++) {
+        u32 id = glass_named_ids[k];
+        if (glass_on == -2) {                   /* the first call: keep the stock pointers */
+            glass_stock_long[k] = NAME_LONG(id);
+            glass_stock_short[k] = NAME_SHORT(id);
+        }
+        const char *l = on >= 0 ? glass_named_long[on][k] : 0;
+        const char *sh = on >= 0 ? glass_named_short[on][k] : 0;
+        NAME_LONG(id) = l ? l : glass_stock_long[k];
+        NAME_SHORT(id) = sh ? sh : glass_stock_short[k];
+    }
+    glass_on = on;
+}
+
 /* RIFT v0.16 (owner, 2026-11-21): MACHINE SEL's picture is the logo of the machine under the
  * cursor when it is one of RIFT's (scripts/gen_logos.py); the sample machines' label reads SAMP
  * and DIGIDRUM's DRUM. Drawn over stock's picture once stock has drawn the screen; stock's
@@ -202,7 +242,7 @@ static void *lg_view(void)
     return lg_ram(v) && *(volatile u32 *)v == LG_VT ? (void *)v : 0;
 }
 
-/* the logo (and the label: 0 none, 1 SAMP, 2 DRUM, 3 REC) for machine type t; -1 stock's */
+/* the logo (and the label: 0 none, 1 SAMP, 2 DRUM, 3 REC, 4 FX) for machine type t; -1 stock's */
 static int lg_logo_of(int t, int *label)
 {
     *label = 0;
@@ -213,7 +253,9 @@ static int lg_logo_of(int t, int *label)
     case 21: return LOGO_LIGATURE;
     case 22: *label = 2; return LOGO_DIGIDRUM;
     case 17: *label = 3; return LOGO_FLEX;
-    case 8: case 9: case 10: case 11: case 12: case 13:
+    case 24: *label = 4; return LOGO_PLATEAU;           /* RIFT v0.18: its own logo, FX (owner) */
+    case 9: *label = 1; return LOGO_SMEAR;              /* RIFT v0.18: SMEAR's own logo, SAMP */
+    case 8: case 10: case 11: case 12: case 13:
         *label = 1; return LOGO_DT2;
     }
     return -1;
@@ -322,6 +364,7 @@ int wr_poll(void *screen)
     jmp_poll();                                 /* DIRECT JUMP's setting, read and written (csrc/jump) */
     rec_poll();
     wr_names();
+    glass_names();                              /* RIFT v0.18: GLASS's names on the FLTR page */
     /* the RECORDER's meter and state move: a redraw asked for as stock asks (the dirty
      * byte), 25 times a second. v0.15..v0.19 answered 1 here without setting the byte:
      * the loop then pushed its other buffer undrawn (0x4011d32a draws only when the byte

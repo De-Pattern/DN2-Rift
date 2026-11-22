@@ -3664,6 +3664,77 @@ def off(g: FP) -> None:
     p.sti(VOICE["FO"] + FORM["wetok"], 2, 0)
 
 
+def sanitize(p, L: "Layout") -> None:
+    """RIFT v0.18 (the owner, 2026-11-22: a SMEAR note gave a burst, then the whole unit went silent
+    until a reboot): every slot's block, after every RIFT machine and GLASS and before the stock
+    chain, is checked: a sample that is not finite or not under 64 (its exponent field 133 or more: on a slot our code wrote,
+    NaN and infinity have 255) zeroes the slot's whole block, and the slot's last-type word is made
+    impossible (-1), so its voice starts afresh at the next block (the life words and every
+    machine's magic cleared, as on a machine change). Nothing non-finite reaches the filters, the
+    sends or the master, whose state would keep it for good. A finite block is left as it is."""
+    p.iconst(0, 0)
+    p.st(L.order_i, 0)
+    top = p.label("san")
+    p.place(top)
+    # only a slot our code wrote: a RIFT machine (18..24), SMEAR (9), or GLASS's filter (6); the stock
+    # machines' blocks stay exactly as stock leaves them (the runner's stock part, bit for bit)
+    from ..glass import program as _GLP
+    p.ld(9, L.order_i)
+    PP.raw_type(p, 2)
+    p.ld(9, L.order_i)
+    p.iop(10, 9, "+", 9)
+    PP.half(p, 4, _GLP.FILTER_HDR, 10)
+    p.iconst(3, 0)
+    p.iconst(12, 18)
+    p.if_(2, "GE", 12, lambda: (p.iconst(12, 24), p.if_(2, "LE", 12, lambda: p.iconst(3, 1), kind="i")), kind="i")
+    p.iconst(12, 9)
+    p.if_(2, "EQ", 12, lambda: p.iconst(3, 1), kind="i")
+    p.iconst(12, 6)
+    p.if_(4, "EQ", 12, lambda: p.iconst(3, 1), kind="i")
+    p.ifz(3, "NE", lambda: _sanitize_slot(p, L))
+    p.ld(0, L.order_i)
+    p.iconst(12, 1)
+    p.iop(0, 12, "+", 0)
+    p.st(L.order_i, 0)
+    p.iconst(12, 16)
+    p.e("COMP(R0, R12);")
+    p.jump("LT", top)
+
+
+def _sanitize_slot(p, L: "Layout") -> None:
+    p.ld(9, L.order_i)
+    p.lsh(12, 9, 2)
+    p.iconst(11, BUFFERS)
+    p.iop(12, 11, "+", 12)
+    p.seti(1, 12)
+    p.ldi(0, 0, 1)                             # the slot's block
+    p.ipass(10, 0)
+    p.seti(1, 0)
+    p.iconst(8, 0)
+
+    def scan():
+        p.ldpost(0, 1)
+        p.lsh(0, 0, -23)
+        p.iconst(14, 0xFF)
+        p.iop(0, 0, "AND", 14)
+        p.iop(8, 8, "MAX", 0)                 # the largest exponent field
+    p.loop_r(15, 32, scan, one=13)
+    p.iconst(14, 127 + 6)                      # 2^6 = 64
+
+    def bad():
+        p.seti(1, 10)
+        p.iconst(0, 0)
+        p.loop_r(15, 32, lambda: p.stpost(1, 0), one=13)
+        p.ld(9, L.order_i)
+        p.lsh(12, 9, 2)
+        p.iconst(11, L.lasttype)
+        p.iop(12, 11, "+", 12)
+        p.seti(1, 12)
+        p.iconst(0, -1)
+        p.sti(0, 1, 0)
+    p.if_(8, "GE", 14, bad, kind="i")
+
+
 def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | None = None) -> str:
     """fascia.asm: entered by smp.asm's tail; on to NEXT_SW (the shared tail) when done. RIFT: it
     renders ORGAN's slots (type 19, dnfw.organ.program) in the same walk"""
@@ -3673,6 +3744,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     from ..ligature import program as LP
     from ..digidrum import program as DP
     from ..plateau import program as XP
+    from ..glass import program as GLP
     from ..waverider import dsp as _dsp
     if organ_tables is None:
         organ_tables = _dsp.ORGAN_TABLES_DDR
@@ -3793,8 +3865,9 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.place(plt)                               # RIFT v0.17: PLATEAU (type 24, dnfw.plateau.program)
     XL_ = XP.Layout(L, _dsp.PLATEAU_TABLES_DDR, _dsp.PLATEAU_DDR)
     xg = []
-    G.around(p, L.C["t"], L.cost, BUFFERS, lambda: xg.append(XP.voice(p, XL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+    G.around(p, L.C["t"], L.cost, BUFFERS, lambda: xg.append(XP.voice(p, XL_)))
+    # (RIFT v0.18: PLATEAU is never stolen: left out of a block, it is tried again the next; stolen,
+    # an INF note's reverb stayed silent for good, the owner's "plateau does nothing")
     p.jump("", nxt)
     p.place(notready)                          # RIFT v0.16: before the link's tables: silence
     p.ld(9, L.C["t"])
@@ -3816,6 +3889,10 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.iconst(12, 16)
     p.e("COMP(R0, R12);")
     p.jump("LT", top)
+    # RIFT v0.18: GLASS, the FLTR type 6: every slot on it filtered in place, every machine's buffer
+    # whole (dnfw.glass.program; the stock chain skips its filter stage for it)
+    gg = GLP.walk(p, GLP.Layout(L, _dsp.GLASS_STATE_DDR))
+    sanitize(p, L)                             # RIFT v0.18: nothing non-finite or runaway leaves our code
     G.end_mark(p)                              # our voices' time, for the guard's limit
     p.e(f"JUMP {next_sw:#x};", "the shared tail (ping.asm's wr_ping: restores the registers)")
     p.scr_on = True                            # the routines and leaves run inside a voice only
@@ -3825,6 +3902,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     lg[0].emit_rts()                           # LIGATURE's (l_render, the kernels)
     rg[0].emit_rts()                           # DIGIDRUM's (r_render)
     xg[0].emit_rts()                           # PLATEAU's (p_render, p_ap, p_apf)
+    gg.emit_rts()                              # GLASS's (g_slot, g_bend)
     p.emit_subs()
     p.scr_on = False
     p.raw(".wr_fsc..end:")

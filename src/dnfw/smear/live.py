@@ -324,12 +324,21 @@ def _speed(k: int) -> float:
     return s
 
 
+# RIFT v0.18 (the owner, 2026-11-22): VOC is off until it is redesigned to fit the unit. Its jobs cost
+# 200..260k cycles a block on the unit's cost model (instructions + memory stalls, sharc_waverider_m5
+# step rcost) beside an idle frame's 416k of 667k: a VOC note overran the frame and silenced the unit
+VOC_ON = False
+
+
 def _tables():
     from . import model as M
     t = {}
     t["SPD"] = np.array([_speed(k) for k in range(128)], f32)
     b = np.array([M.law_blend(k / 127) for k in range(128)], f32)
     t["VG"], t["PG"], t["GG"] = b[:, 0].copy(), b[:, 1].copy(), b[:, 2].copy()
+    if not VOC_ON:     # RIFT v0.18 (owner): VOC off: its share of BLND played by PLAY, VOC never runs
+        t["PG"] = (b[:, 0] + b[:, 1]).astype(f32)
+        t["VG"] = np.zeros(128, f32)
     gf = np.array([M.law_density(k / 127) for k in range(128)])
     t["GINC"] = (gf / SR).astype(f32)
     t["GLEN"] = np.where(gf < 4, 4.0, 6.0) * 1000.0 / gf       # ms at full overlap, less 1

@@ -95,7 +95,7 @@ from ..perc import program as _pp           # noqa: E402
 GONE_TYPES = (5, *_mnm.TYPES, _plt.TYPE - 1) if _pp.RIFT else ()   # RIFT v0.17: and THOLET's 23
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
     (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()), *((_plt.TYPE,) if _plt.LISTED else ()),
-     *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
+     *(9,), *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, 9, _fsc.TYPE)), 4)   # v0.18: SMEAR (9) first of the sample machines (owner)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
 LIST_CAP = 0x4004D906                   # lea %a0@(20),%a0 -- the vector's capacity
@@ -452,7 +452,35 @@ load_keep:
     move.l  %sp@+,%d2
     rts
 """
-SHIM2_LABELS = ("canon_valid",) + (("load_keep",) if GONE_TYPES else ())
+FX_GROUP = 5                            # RIFT v0.18: the FX machines (PLATEAU, 24, on), a section of their own
+FX_FIRST = _plt.TYPE
+SHIMS2 += f"""
+| RIFT v0.18 (owner: "Plateau should be in its own category separated by the horizontal dividing
+| lines"): group(type), MACHINE SEL's sections, as {GROUP_FN:#010x} was (its 34 bytes now jump here):
+| a negative type 0; the synths 0..3 -> 1; MIDI (4) -> 2; the FX machines ({FX_FIRST}..) -> {FX_GROUP}; the
+| sample machines {SAMPLER_FIRST}..{SAMPLER_LAST} -> {SAMPLER_GROUP}; every other type -> {SAMPLE_GROUP}. Only d0 and d1.
+group_fn:
+    moveq   #0,%d0
+    move.l  %sp@(4),%d1
+    blt.s   9f
+    moveq   #1,%d0
+    subq.l  #4,%d1
+    bcs.s   9f
+    moveq   #2,%d0
+    tst.l   %d1
+    beq.s   9f
+    moveq   #{FX_GROUP},%d0
+    cmpi.l  #{FX_FIRST - 4},%d1
+    bcc.s   9f
+    moveq   #{SAMPLER_GROUP},%d0
+    subq.l  #{SAMPLER_FIRST - 4},%d1
+    bcs.s   8f
+    subq.l  #{SAMPLER_LAST - SAMPLER_FIRST + 1},%d1
+    bcs.s   9f
+8:  moveq   #{SAMPLE_GROUP},%d0
+9:  rts
+"""
+SHIM2_LABELS = ("canon_valid",) + (("load_keep",) if GONE_TYPES else ()) + ("group_fn",)
 
 # -- 7. getMachineType(track): WaveTone for the UI, the real type for identity ----------
 TRACK_TYPE_READ = 0x4004B816            # mvs.b %a0@(222),%d0 ; bra.s exit
@@ -645,7 +673,8 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
     from .. import slides as SL
     from .. import modversion                   # v0.39: the mod's version (VERSION), shown at the browser's top
     from . import tunings as TU                 # v0.61: the factory tunings
-    cimage, csyms, cbss = compile_c(pages.c_header() + SL.c_header(stock) + TU.c_header()
+    from ..glass import pages as glass_pages
+    cimage, csyms, cbss = compile_c(pages.c_header() + glass_pages.c_header() + SL.c_header(stock) + TU.c_header()
                                     + modversion.c_define(),
                                      base=pages.C_LOAD)
     if cbss:
@@ -711,9 +740,10 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
          f"MACHINE SEL list: the vector's capacity, {n} longs", bytes.fromhex("41e80014"))
     edit(LIST_BEGIN, bytes.fromhex("4879") + _long(layout["list"]),
          "MACHINE SEL list: the copy's start", bytes.fromhex("4879") + _long(LIST_STOCK_VA))
-    edit(GROUP_FN, group_function(assemble), f"the MACHINE SEL group: our synth machines ({SAMPLE_GROUP}) "
-         f"and the sample machines ({SAMPLER_GROUP}) are sections of their own, divided off like MIDI",
-         GROUP_STOCK)
+    edit(GROUP_FN, bytes.fromhex("4ef9") + _long(layout["group_fn"]) + bytes.fromhex("4e71") * 14,
+         f"the MACHINE SEL group: our synth machines ({SAMPLE_GROUP}), the sample machines ({SAMPLER_GROUP}) "
+         f"and (RIFT v0.18) the FX machines ({FX_GROUP}) are sections of their own, divided off like MIDI "
+         "(group_fn, in the machines chunk)", GROUP_STOCK)
 
     # 2. the names
     for bound, base, op, col in NAME_SITES:
@@ -974,7 +1004,7 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
                  "rec_overlay", "rec_src", "rec_dest", "smp_ram", "rec_phase", "trim_slot",
                  "trim_n", "trim_s", "trim_e", "nm_cur", "nm_text", "slc_state", "slc_page_seen", "slc_seen_draw", "slc_letgo", "slc_open_track",
                  "smp_analyse", "smp_analysis", "smp_onsets", "smp_slices_set", "smp_slices_get",
-                 "slc_nfr", "slc_sl", "slc_ns", "slc_cur", "slc_grid_n", "smp_pos", "smp_pos_at", "smp_periods", "smp_dir_ok", "smp_meta_ok", "smp_lst_open", "smp_fb_open", "smp_fb_folder", "smp_fb_cur", "smp_fb_count", "smp_fb_mark_count", "smp_fb_mark_unused", "smp_fb_marked", "smp_fb_menu", "smp_mod_apply", "smp_quant", "smp_samp_turned", "smp_overlay_dirty", "rec_pv_on", "smp_func_held", "smp_question_up", "sn_opens", "sn_results", "sn_up", "smp_machine_commit", "smp_rx", "smp_fb_store", "smp_lib_refresh", "smp_lib_pending", "smp_lp_queued", "smp_lib_state", "smp_lib_writes", "smp_lib_load", "smp_lib_slot_of", "smp_lib_preview", "smp_lib_preview_stop", "smp_fb_rowtext", "smp_mq_off", "smp_fb_mcur", "smp_lp_done", "smp_lp_full", "smp_rec_store_named", "smp_name_set", "smp_formats", "smp_rs_done", "smp_rs_last", "smp_trim", "smp_l_order", "smp_walk_total", "smp_held_lo", "smp_held_hi", "smp_knob_d", "smp_knob_at", "smp_knob_code", "smp_dsp_load", "smp_load_peak", "smp_load_seen", "smp_load_at", "wr_screen_obj", "lg_force", "bus_mask", "bus_toggle", "bus_stored", "px_on", "px_track", "px_pop", "px_poll", "px_draw", "px_visible", "rt_is_plt", "plt_set_mask", "plt_default_mask", "bus_page_draw", "rec_state", "rec_heard", "slc_kb_c", "slc_alloc_n", "smp_tables", "smp_pv_state", "trim_zoom", "trim_head_x", "sl_ui_table_now", "smp_push_slot", "sl_rec_knob", "sl_rec_held", "sl_rec_table", "rec_view", "rec_rlen", "rec_link", "rec_room", "as_done", "rec_saved_slot", "rec_rstrt", "rec_thres", "rec_src", "rec_chan", "sl_rec_page", "smp_rec_place", "smp_slot_empty", "smp_pl_dirp", "rec_combo", "rec_overlay", "rt_on", "rt_play", "rt_rplace", "rt_rbytes", "rt_pend", "rt_cur", "rt_cur_end", "rt_manual", "rt_qrec", "rt_qplay", "rt_pos", "rt_steps", "rt_nx_place", "rt_nx_room", "rt_nx_need", "rt_w", "rt_gen", "q_gen", "q_fire", "q_cancel", "rt_fired", "rt_refused", "rt_swaps", "rt_qfired", "rt_why", "rt_why_at", "rt_trig", "rt_bounce_samp", "rt_is_bounce", "rt_buf_of", "rt_trig_get", "rt_trig_toggle", "rt_rearm", "rt_count", "rt_take_handover", "rt_regions", "rt_rsteps", "rt_last_step", "rt_used", "rt_fired_at", "rt_fired_trk", "rt_why_trk", "rt_last_key", "bn_page", "bn_yes_at", "bn_active", "bn_led_walk", "bn_led_poll", "bn_led_claims", "bn_open", "bn_save", "bn_pages", "bn_said_at", "bn_said_n", "bn_nothing_at", "rt_frame", "rt_poll", "rt_cut", "smp_rt_sent", "rec_rt_take", "rt_q_set", "rt_q_waiting", "rt_knob", "rt_state", "rt_arm", "rt_req", "bn_sub", "rt_flex_req", "rt_req_waiting", "rt_buf_value", "rt_buf_code", "rt_samp_buf", "smp_samp_direct", "rec_gain", "sl_knob_push", "rt_clear", "bn_clear_ask", "bn_cleared", "bn_cleared_at", "fx_get", "fx_set", "fx_valid", "ms_frame", "fsc_clear_hook", "fsc_cleared", "ms_mask", "ms_frames", "ms_playing_mask", "ms_play_force", "rt_mute_knob", "bn_mute", "rec_peak", "rec_mon", "rec_sent_chan", "tn_retune", "tn_poll", "tn_pop", "tn_draw", "tn_kb_draw", "tn_kb_up", "tn_visible", "tn_set", "tn_offset", "tn_publish", "tn_cur", "tn_root", "tn_mask", "tn_ui", "tn_user", "tn_snap", "tn_sel", "tn_frames", "tn_writes", "tn_reads", "tn_bad", "tn_owner", "tn_opens", "tn_note", "tn_from", "slc_view0", "slc_fv_n", "slc_fv_lo", "slc_fv_hi", "slc_fine_views", "slc_live_sends", "slc_grid_jumps", "smp_save_keep", "kh_on", "kh_close", "kh_set", "slc_follows", "slc_snaps", "smp_fine_reads", "smp_frames_read",
+                 "slc_nfr", "slc_sl", "slc_ns", "slc_cur", "slc_grid_n", "smp_pos", "smp_pos_at", "smp_periods", "smp_dir_ok", "smp_meta_ok", "smp_lst_open", "smp_fb_open", "smp_fb_folder", "smp_fb_cur", "smp_fb_count", "smp_fb_mark_count", "smp_fb_mark_unused", "smp_fb_marked", "smp_fb_menu", "smp_mod_apply", "smp_quant", "smp_samp_turned", "smp_overlay_dirty", "rec_pv_on", "smp_func_held", "smp_question_up", "sn_opens", "sn_results", "sn_up", "smp_machine_commit", "smp_rx", "smp_fb_store", "smp_lib_refresh", "smp_lib_pending", "smp_lp_queued", "smp_lib_state", "smp_lib_writes", "smp_lib_load", "smp_lib_slot_of", "smp_lib_preview", "smp_lib_preview_stop", "smp_fb_rowtext", "smp_mq_off", "smp_fb_mcur", "smp_lp_done", "smp_lp_full", "smp_rec_store_named", "smp_name_set", "smp_formats", "smp_rs_done", "smp_rs_last", "smp_trim", "smp_l_order", "smp_walk_total", "smp_held_lo", "smp_held_hi", "smp_knob_d", "smp_knob_at", "smp_knob_code", "smp_dsp_load", "smp_load_peak", "smp_load_seen", "smp_load_at", "wr_screen_obj", "lg_force", "bus_mask", "bus_toggle", "bus_stored", "px_on", "px_track", "px_pop", "glass_names", "px_poll", "px_draw", "px_visible", "rt_is_plt", "plt_set_mask", "plt_default_mask", "bus_page_draw", "rec_state", "rec_heard", "slc_kb_c", "slc_alloc_n", "smp_tables", "smp_pv_state", "trim_zoom", "trim_head_x", "sl_ui_table_now", "smp_push_slot", "sl_rec_knob", "sl_rec_held", "sl_rec_table", "rec_view", "rec_rlen", "rec_link", "rec_room", "as_done", "rec_saved_slot", "rec_rstrt", "rec_thres", "rec_src", "rec_chan", "sl_rec_page", "smp_rec_place", "smp_slot_empty", "smp_pl_dirp", "rec_combo", "rec_overlay", "rt_on", "rt_play", "rt_rplace", "rt_rbytes", "rt_pend", "rt_cur", "rt_cur_end", "rt_manual", "rt_qrec", "rt_qplay", "rt_pos", "rt_steps", "rt_nx_place", "rt_nx_room", "rt_nx_need", "rt_w", "rt_gen", "q_gen", "q_fire", "q_cancel", "rt_fired", "rt_refused", "rt_swaps", "rt_qfired", "rt_why", "rt_why_at", "rt_trig", "rt_bounce_samp", "rt_is_bounce", "rt_buf_of", "rt_trig_get", "rt_trig_toggle", "rt_rearm", "rt_count", "rt_take_handover", "rt_regions", "rt_rsteps", "rt_last_step", "rt_used", "rt_fired_at", "rt_fired_trk", "rt_why_trk", "rt_last_key", "bn_page", "bn_yes_at", "bn_active", "bn_led_walk", "bn_led_poll", "bn_led_claims", "bn_open", "bn_save", "bn_pages", "bn_said_at", "bn_said_n", "bn_nothing_at", "rt_frame", "rt_poll", "rt_cut", "smp_rt_sent", "rec_rt_take", "rt_q_set", "rt_q_waiting", "rt_knob", "rt_state", "rt_arm", "rt_req", "bn_sub", "rt_flex_req", "rt_req_waiting", "rt_buf_value", "rt_buf_code", "rt_samp_buf", "smp_samp_direct", "rec_gain", "sl_knob_push", "rt_clear", "bn_clear_ask", "bn_cleared", "bn_cleared_at", "fx_get", "fx_set", "fx_valid", "ms_frame", "fsc_clear_hook", "fsc_cleared", "ms_mask", "ms_frames", "ms_playing_mask", "ms_play_force", "rt_mute_knob", "bn_mute", "rec_peak", "rec_mon", "rec_sent_chan", "tn_retune", "tn_poll", "tn_pop", "tn_draw", "tn_kb_draw", "tn_kb_up", "tn_visible", "tn_set", "tn_offset", "tn_publish", "tn_cur", "tn_root", "tn_mask", "tn_ui", "tn_user", "tn_snap", "tn_sel", "tn_frames", "tn_writes", "tn_reads", "tn_bad", "tn_owner", "tn_opens", "tn_note", "tn_from", "slc_view0", "slc_fv_n", "slc_fv_lo", "slc_fv_hi", "slc_fine_views", "slc_live_sends", "slc_grid_jumps", "smp_save_keep", "kh_on", "kh_close", "kh_set", "slc_follows", "slc_snaps", "smp_fine_reads", "smp_frames_read",
                  "jmp_on", "jmp_armed", "jmp_pending", "jmp_count", "jmp_last", "jmp_loaded", "jmp_dirty",
                  "jmp_reads", "jmp_writes", "jmp_to", "jmp_from", "jmp_key", "jmp_poll", "jmp_forced",
                  # v0.38: per-project pools
@@ -996,10 +1026,17 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
                  "lig_state", "lig_blk", "lig_cur", "lig_edits", "lig_saves", "lig_loads", "lig_seeds", "lig_seen_draw", "lig_word", "lig_pop", "lig_poll", "lig_draw", "lig_visible", "lig_wbytes", "lig_track_slot", "smp_wire_sent", "smp_wire_push", "smp_pl_wire_changed", "smp_lig_draw",
                  "wr_lfo_mask", "fsc_q_off"):   # the sample link's state (v0.15)
         layout[name] = csyms[name]
-    # v0.45: PING removed (owner, 2026-11-08): its chunk (the FLTR list's 'Ping', the filter
-    # names, the LOAD bound, slot_to_id, the descriptor, the curve) is no longer composed, so
-    # all of those stay stock and a sound saved with filter 6 loads as Multi-Mode
+    # v0.45: PING removed (owner, 2026-11-08). RIFT v0.18: GLASS, filter type 6, in its place
+    # (dnfw.glass.coldfire: the FLTR list's 'Glass', the filter names, the LOAD bound, slot_to_id,
+    # the descriptor, the curve, in PING's former chunk at 0x4670f000)
+    from ..glass import coldfire as glass_cf
+    gbuilt = glass_cf.compose(content, edit, assemble)
+    clash = sorted(set(gbuilt["layout"]) & set(layout))
+    if clash:                                          # v0.18: a chunk label may not hide a C symbol
+        raise ValueError(f"GLASS's labels clash with the layout: {clash}")
+    layout.update(gbuilt["layout"])
     return {"content": bytes(content), "edits": edits, "layout": layout,
             "chunk": {"load": pages.LOAD, "code": chunk},
             "c_chunk": {"load": pages.C_LOAD, "code": cimage},
-            "machines_chunk": {"load": MCHUNK, "code": bytes(mchunk)}}
+            "machines_chunk": {"load": MCHUNK, "code": bytes(mchunk)},
+            "glass_chunk": gbuilt["chunk"]}

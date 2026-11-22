@@ -109,7 +109,7 @@ def test_coldfire_type_18():
         from dnfw.ligature import machines as LGM
         from dnfw.digidrum import machines as RSM
         from dnfw.plateau import machines as PLM
-        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(8) - (3 + LGM.LISTED + RSM.LISTED + PLM.LISTED)   # RIFT: then ORGAN, SILT, (LIGATURE,) (DIGIDRUM,) (PLATEAU,) the samples
+        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(9) - (3 + LGM.LISTED + RSM.LISTED + PLM.LISTED)   # RIFT: then ORGAN, SILT, (LIGATURE,) (DIGIDRUM,) (PLATEAU,) the samples (v0.18: SMEAR first)
         assert 23 not in lst                    # RIFT v0.17: THOLET's 23 never listed (a saved one loads as FM Tone)
     else:
         assert lst.index(F.TYPE) == lst.index(MM.TYPES[-1]) + 1 == lst.index(8) - 1   # after the MnM's, before the samples
