@@ -645,10 +645,32 @@ static int fsc_knob(const wr_mach_t *M, int j, int v)   /* a record's 0..top -> 
  *   A changed choice scrolls its word up in its box. The cells are 30 columns apart across the
  *   page (owner: no side panel); the page dots stay at the right. Nothing touches: one clear pixel apart. */
 #define FRAMES_NOW (*(volatile u32 *)0x4058E8D4u)
-static void sp(void *c, int x, int r)
+/* RIFT v0.19 (owner: "the gui icons seem to be too small ... a large gap at the bottom"): a glyph is
+ * drawn in its 17 x 12 design and scaled to stock's 22 x 16 here: while gs_on, a design pixel (x, r)
+ * inside the glyph at (gs_x, gs_r) fills its scaled block at (gs_X, gs_R) */
+static int gs_on __attribute__((section(".data"))) = 0, gs_x __attribute__((section(".data"))) = 0, gs_r __attribute__((section(".data"))) = 0, gs_X __attribute__((section(".data"))) = 0, gs_R __attribute__((section(".data"))) = 0;
+#define GS_W 17
+#define GS_H 12
+#define GS_SW 22
+#define GS_SH 16
+static void sp1(void *c, int x, int r)
 {
     if (x >= 0 && x < 124 && r >= 10 && r <= 63)
         on(c, x, 63 - r);
+}
+static void sp(void *c, int x, int r)
+{
+    if (!gs_on) {
+        sp1(c, x, r);
+        return;
+    }
+    int lx = x - gs_x, lr = r - gs_r;
+    if (lx < 0 || lr < 0 || lx >= GS_W || lr >= GS_H)
+        return;
+    int x0 = lx * GS_SW / GS_W, x1 = (lx + 1) * GS_SW / GS_W, r0 = lr * GS_SH / GS_H, r1 = (lr + 1) * GS_SH / GS_H;
+    for (int yy = r0; yy < r1; yy++)
+        for (int xx = x0; xx < x1; xx++)
+            sp1(c, gs_X + xx, gs_R + yy);
 }
 static void sline(void *c, int x0, int r0, int x1, int r1)
 {
@@ -896,7 +918,10 @@ void fsc_page_draw(void *view, void *c, int page, int kind)
         if (j >= M->n)
             break;
         u32 id = M->rid[j];
-        int x = (i & 3) * 30 + 5, r = i < 4 ? 11 : 38;   /* (owner: no panel, the eight cells across the page) */
+        /* RIFT v0.19 (owner): stock's sizes: a 22 x 16 icon, its label in stock's font under it, the two
+         * rows reaching the screen's foot as stock's pages do (icons rows 12..27 and 39..54, labels to
+         * rows 35 and 62); the cells 30 columns apart, centred on cx */
+        int cx = (i & 3) * 30 + 15, r = i < 4 ? 12 : 39, lb = i < 4 ? 35 : 62;
         int top, v = value(view, id, &top), n = M->choices[j], k = fsc_knob(M, j, v);
         (void)top;
         const char *lab = M->label[j];
@@ -910,7 +935,6 @@ void fsc_page_draw(void *view, void *c, int page, int kind)
             lig_set_label(view, M, j, llab);
             lab = llab;
         }
-        int ll = slen(lab, 5);
         if (n) {                                /* a choice: its word in a thin box; a change scrolls in */
             int o = (k * n) >> 7;
             if (o > n - 1)
@@ -923,36 +947,37 @@ void fsc_page_draw(void *view, void *c, int page, int kind)
                 ln_opt[i] = (u8)o;
                 ln_at[i] = now;
             }
-            shl(c, x + 1, x + 17, r + 1, 0); shl(c, x + 1, x + 17, r + 11, 0);
-            svl(c, x, r + 2, r + 10, 0); svl(c, x + 18, r + 2, r + 10, 0);
+            int bx = cx - 12;                   /* the box: 25 x 15, rows r .. r + 14 */
+            shl(c, bx + 1, bx + 23, r, 0); shl(c, bx + 1, bx + 23, r + 14, 0);
+            svl(c, bx, r + 1, r + 13, 0); svl(c, bx + 24, r + 1, r + 13, 0);
             const char *w = M->choice_box[M->choice_at[j] + o];
             u32 el = now - ln_at[i];
-            int f = el < 180u ? (int)(el * 8u / 180u) : 8;
-            if (f < 8) {
+            int f = el < 180u ? (int)(el * 10u / 180u) : 10;
+            if (f < 10) {
                 const char *ow = M->choice_box[M->choice_at[j] + ln_old[i]];
-                stext(c, x + 10 - TW(slen(ow, 4)) / 2 - 1, r + 4 - f, ow, 4, 1, r + 3, r + 9);
-                stext(c, x + 10 - TW(slen(w, 4)) / 2 - 1, r + 12 - f, w, 4, 1, r + 3, r + 9);
+                stext(c, cx - TW(slen(ow, 4)) / 2, r + 5 - f, ow, 4, 1, r + 2, r + 12);
+                stext(c, cx - TW(slen(w, 4)) / 2, r + 15 - f, w, 4, 1, r + 2, r + 12);
             } else
-                stext(c, x + 10 - TW(slen(w, 4)) / 2 - 1, r + 4, w, 4, 1, r + 3, r + 9);
-        } else
-            line_glyph(c, M->lglyph[j], x + 1, r, k);
+                stext(c, cx - TW(slen(w, 4)) / 2, r + 5, w, 4, 1, r + 2, r + 12);
+        } else {
+            gs_on = 1; gs_x = cx - 9; gs_r = r; gs_X = cx - 11; gs_R = r;
+            line_glyph(c, M->lglyph[j], cx - 9, r, k);
+            gs_on = 0;
+        }
         int lk = locked(view, id), sh = shows(i);
-        if (sh && !n) {                          /* the value in the label's place */
+        if (sh && !n) {                          /* the value in the label's place, on a lit bar (unless the cell is inverted) */
             char vb[32];
             u8 flag;
             vb[0] = 0;
             ((void (*)(int, char *))RECORD_FMT(id))(GET_VALUE(view, id, &flag), vb);
-            int vl = slen(vb, 5);
-            if (!lk) {
-                for (int rr = r + 15; rr <= r + 21; rr++)
-                    shl(c, x - 2, x + 20, rr, 0);
-                stext(c, x + 10 - TW(vl) / 2 - 1, r + 16, vb, 5, 0, 10, 63);
-            } else
-                stext(c, x + 10 - TW(vl) / 2 - 1, r + 16, vb, 5, 1, 10, 63);
+            vb[6] = 0;
+            TEXT(c, FONT, cx, 63 - lb, CENTRED, "%s", vb);
+            if (!lk)
+                invert(c, cx - 14, 63 - lb - 1, cx + 14, 63 - (lb - 7));
         } else
-            stext(c, x + 10 - TW(ll) / 2 - 1, r + 16, lab, 5, 1, 10, 63);
+            TEXT(c, FONT, cx, 63 - lb, CENTRED, "%.5s", lab);
         if (lk)                                  /* p-locked, its trig held: the cell inverted, as stock */
-            invert(c, x - 4, 63 - (r + 22), x + 22, 63 - r);
+            invert(c, cx - 15, 63 - lb - 1, cx + 14, 63 - (r - 1));
     }
 }
 
@@ -2285,6 +2310,54 @@ void smp_fb_draw(void *c, int samp)
     }
 }
 
+/* RIFT v0.19 (owner: "a granular sampler type waveform display" on SMEAR): under page 2's knobs, the
+ * sample's waveform strip, SMEAR's loop (STRT, SIZE: live.py's lstart and lsize), the read point (the
+ * DSP's own: smear's stage writes it as the voice's playhead) and a cloud of grains around it. The
+ * cloud is drawn from the knobs, not the DSP's grains: as many as DENS asks (2..10), spread as far
+ * as SPRY reaches round the read point, each as long as OVLP makes it, at heights that move with
+ * the frame clock: it moves with the playhead and answers every knob, but is not grain for grain */
+static void smr_cloud(void *c, void *view)
+{
+    int slot = value(view, SMP_SAMP_ID, 0);
+    int x0 = CELL_X(0) - 1, w = SMP_WAVE_W, cy = 13;
+    waveform(c, slot, x0, cy);
+    if (slot < 1 || !smp_overview(slot - 1)) {
+        ph_was = -1;
+        ph_draw_n = wr_draws - 1u;
+        return;
+    }
+    int st = value(view, SMR_STRT_ID, 0), sz = value(view, SMP_SIZE_ID, 0);
+    if (st > 127) st = 127;
+    if (sz > 127) sz = 127;
+    int a = st * (w - 1) / 128;                 /* lstart = STRT / 128 of the sample */
+    int b = a + (sz * sz) * (w - 1 - a) / (127 * 127);   /* lsize = SIZE^2 of the rest */
+    if (b < a + 1) b = a + 1;
+    marker(c, x0 + a, cy, 0);
+    marker(c, x0 + b, cy, 0);
+    playhead(c, x0, w, cy);
+    int ph = ph_was;
+    if (ph < 0)
+        return;
+    int xp = x0 + (int)((unsigned)ph * (unsigned)(w - 2) / POS_ONE);
+    int spry = value(view, SMR_SPRY_ID, 0), dens = value(view, SMR_DENS_ID, 0), ovlp = value(view, SMR_OVLP_ID, 0);
+    int reach = 1 + spry * spry * (b - a) / (127 * 127 * 2);   /* half the loop at SPRY's top */
+    int n = 2 + dens / 16, len = 1 + ovlp / 32;
+    u32 seed = (FRAMES_NOW >> 4) * 2654435761u + (u32)ph;
+    for (int g = 0; g < n; g++) {
+        seed = seed * 1664525u + 1013904223u;
+        int dx = (int)((seed >> 8) % (u32)(2 * reach + 1)) - reach;
+        int dy = (int)((seed >> 20) % (u32)(2 * SMP_WAVE_AMP - 1)) - (SMP_WAVE_AMP - 1);
+        int gx = xp + dx;
+        for (int k = 0; k < len; k++) {
+            int x = gx + k;
+            if (x >= x0 && x < x0 + w) {
+                SET_PIXEL(c, x, cy + dy, !pixel(c, x, cy + dy));       /* inverted: seen over the wave too */
+                SET_PIXEL(c, x, cy + dy + 1, !pixel(c, x, cy + dy + 1));
+            }
+        }
+    }
+}
+
 void smp_page_draw(void *view, void *c, int kind, int wave)
 {
     u32 ids[8];
@@ -2302,6 +2375,7 @@ void smp_page_draw(void *view, void *c, int kind, int wave)
                 cell(c, view, kind, smp_werp2_ids[i], CELL_X(i & 3), i < 4 ? TOP_Y : BOT_Y, 1, 0);
         }
         cell_i = -1;
+        smr_cloud(c, view);                     /* RIFT v0.19: the sample, its loop, the read point and its grains */
         return;
     }
     if (!wave) {                                /* page 1: the widgets and their labels */

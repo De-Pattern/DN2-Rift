@@ -519,6 +519,8 @@ def smp_c_header() -> str:
             f"#define WR_TYPES_LAST {TYPES_LAST}\n"
             f"static const unsigned short smp_ids[SMP_N][8] = {{\n{ids}\n}};\n"
             f"static const unsigned short smp_werp2_ids[8] = {{{', '.join(str(r) for r, _sh, _lo in _smp.PAGES2['WERP'])}}};\n#define SMP_SIZE_ID {_smp.SMEAR_RECORDS['SIZE']}\n"
+            f"#define SMR_STRT_ID {_smp.SMEAR_RECORDS['STRT']}\n#define SMR_SPRY_ID {_smp.SMEAR_RECORDS['SPRY']}\n"
+            f"#define SMR_DENS_ID {_smp.SMEAR_RECORDS['DENS']}\n#define SMR_OVLP_ID {_smp.SMEAR_RECORDS['OVLP']}\n"
             + smr_defaults_header() +
             f"static const char smp_machine[SMP_N][8] = {{{names}}};\n"
             f"#define SMP_PLAY_ID {_smp.PLAY_REC}\n#define SMP_SAMP_ID {_smp.SAMP_REC}\n"

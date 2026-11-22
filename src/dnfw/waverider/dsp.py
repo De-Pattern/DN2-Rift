@@ -472,7 +472,8 @@ def smear_layout():
     return SG.SLayout(SMEAR_SCR_L2, SMEAR_MBOX, SMEAR_STATE_DDR, SMEAR_VB_L2, SMEAR_TABLES_DDR,
                       SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
                       ((SMEAR_LANE0_L2, SMEAR_LANE0_DDR), (SMEAR_LANE1_W, SMEAR_LANE1_DDR)), PP.BUFFERS,
-                      pairs=SMEAR_PAIRS_DDR, ready=LINK_READY_DDR, cost=SMEAR_MBOX + 16 * 128)   # (the guard's cost words after the mailboxes)
+                      pairs=SMEAR_PAIRS_DDR, ready=LINK_READY_DDR, cost=SMEAR_MBOX + 16 * 128,
+                      smp_pos=SMP_STATE_DM)   # (the guard's cost words after the mailboxes)
 
 
 def _plt_tables() -> bytes:
