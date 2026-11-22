@@ -116,7 +116,7 @@ def test_silent_until_the_tables_are_in():
     assert mem.get(S.mb(2, ST.MB_ON)) == 0 and mem.get(S.LOWN0) in (0, None)
     mem.put(S.mb(5, ST.MB_ON), 1)                               # not the magic: off, its buffer untouched
     mem.put(READY, SM.TABLE_MAGIC)
-    for k in range(FT.INIT_PARTS - 1):              # the power-on work, a part a block: silent meanwhile
+    for k in range(FT.INIT_PARTS - 1 if LV.VOC_ON else 0):   # the power-on work, a part a block (RIFT v0.20: none while VOC is off)
         mail()
         ST.stage(Prog("run", mem=mem), S)
         assert mem.get(S.INIT) == ST.INIT_BUSY and mem.get(S.ISTEP) == k + 1
