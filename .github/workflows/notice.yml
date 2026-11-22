@@ -1,0 +1,37 @@
+# A notice (a warning, not a release) in Discord's RIFT ANNOUNCEMENTS: each notices/*.md a push
+# to main adds is posted as De-Pattern (first line "# TITLE", then the text). No release, no tag.
+name: Notice
+
+on:
+  push:
+    branches: [main]
+    paths: ['notices/*.md']
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Post each new notice
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then BEFORE="${{ github.sha }}~1"; fi
+          for F in $(git diff --name-only --diff-filter=A "$BEFORE" "${{ github.sha }}" -- 'notices/*.md'); do
+            head -1 "$F" | sed 's/^# *//' > title.txt
+            tail -n +2 "$F" | sed '1{/^$/d}' > body.md
+            if [ -z "$WEBHOOK" ]; then echo "::warning::DISCORD_WEBHOOK_URL is not set"; exit 0; fi
+            jq -n --rawfile t title.txt --rawfile b body.md '{
+              username: "De-Pattern",
+              allowed_mentions: {parse: []},
+              embeds: [{
+                title: ($t | rtrimstr("\n")),
+                description: $b[0:4000],
+                color: 15158332,
+                footer: {text: "RIFT · unofficial, not made or supported by Elektron"}
+              }]
+            }' | curl -fsS -H "Content-Type: application/json" -d @- "$WEBHOOK"
+          done
