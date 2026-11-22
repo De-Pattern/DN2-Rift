@@ -242,7 +242,7 @@ static void *lg_view(void)
     return lg_ram(v) && *(volatile u32 *)v == LG_VT ? (void *)v : 0;
 }
 
-/* the logo (and the label: 0 none, 1 SAMP, 2 DRUM, 3 REC) for machine type t; -1 stock's */
+/* the logo (and the label: 0 none, 1 SAMP, 2 DRUM, 3 REC, 4 FX) for machine type t; -1 stock's */
 static int lg_logo_of(int t, int *label)
 {
     *label = 0;
@@ -253,7 +253,9 @@ static int lg_logo_of(int t, int *label)
     case 21: return LOGO_LIGATURE;
     case 22: *label = 2; return LOGO_DIGIDRUM;
     case 17: *label = 3; return LOGO_FLEX;
-    case 8: case 9: case 10: case 11: case 12: case 13:
+    case 24: *label = 4; return LOGO_PLATEAU;           /* RIFT v0.18: its own logo, FX (owner) */
+    case 9: *label = 1; return LOGO_SMEAR;              /* RIFT v0.18: SMEAR's own logo, SAMP */
+    case 8: case 10: case 11: case 12: case 13:
         *label = 1; return LOGO_DT2;
     }
     return -1;

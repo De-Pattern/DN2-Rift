@@ -134,7 +134,7 @@ def test_the_list_offers_our_machines_then_the_sample_machines_before_midi(appli
     from dnfw.digidrum import machines as RSM
     if PP.RIFT:   # RIFT (owner, 2026-11-13): no PERC or Monomachine machine; FASCIA after the stock four
         from dnfw.plateau import machines as PLM
-        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), *([24] if PLM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
+        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), *([24] if PLM.LISTED else []), 9, 8, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.18: SMEAR (9) first of the sample machines; v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
         assert not set(types) & {5, *MM.TYPES}
     else:
         assert types == [0, 2, 1, 3, 5, *MM.TYPES, *([18] if FM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]
@@ -175,9 +175,16 @@ def test_the_group_function_gives_the_sample_machines_their_own_section(applied)
     # machines 8 to 12 4 (v0.13), else 0
     main = applied.payloads[3]
     code = at(main, CF.GROUP_FN, len(CF.GROUP_STOCK))
-    got = {t: _run_group(code, t) for t in (-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 16, 100)}
-    assert got == {-1: 0, 0: 1, 1: 1, 2: 1, 3: 1, 4: 2, 5: 3, 6: 3, 7: 3, 8: 4, 9: 4, 12: 4,
-                   13: 4, 14: 3, 16: 3, 100: 3}             # v0.19: 13 SLICE; v0.26: 14.. ours (3)
+    if code[:2] == bytes.fromhex("4ef9"):               # RIFT v0.18: a jump to group_fn (the FX machines' section)
+        target = struct.unpack(">I", code[2:6])[0]
+        assert target == waverider.SPEC["layout"]["group_fn"]
+        code = _chunked(target, 64)
+    got = {t: _run_group(code, t) for t in (-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 16, 22, 23, 24, 100)}
+    want = {-1: 0, 0: 1, 1: 1, 2: 1, 3: 1, 4: 2, 5: 3, 6: 3, 7: 3, 8: 4, 9: 4, 12: 4,
+            13: 4, 14: 3, 16: 3, 22: 3, 23: 3, 24: 3, 100: 3}   # v0.19: 13 SLICE; v0.26: 14.. ours (3)
+    if "group_fn" in waverider.SPEC["layout"]:
+        want.update({24: CF.FX_GROUP, 100: CF.FX_GROUP})        # RIFT v0.18: PLATEAU (24..) a section of its own
+    assert got == want
 
 
 def _run_group(code: bytes, t: int) -> int:
@@ -203,10 +210,14 @@ def _run_group(code: bytes, t: int) -> int:
             c, d1 = d1 < k, (d1 - k) & 0xFFFFFFFF
             z = d1 == 0
             pc += 2
+        elif op == 0x0C81:                                # cmpi.l #imm,%d1: C if d1 < imm (unsigned)
+            imm = struct.unpack_from(">I", code, pc + 2)[0]
+            c, z, n = d1 < imm, d1 == imm, bool((d1 - imm) & 0x80000000)
+            pc += 6
         elif op == 0x4E75:                                # rts
             return d0 & 0xFF
-        elif op >> 8 in (0x6D, 0x67, 0x65, 0x63):        # blt, beq, bcs, bls (.s)
-            take = {0x6D: n, 0x67: z, 0x65: c, 0x63: c or z}[op >> 8]
+        elif op >> 8 in (0x6D, 0x67, 0x65, 0x63, 0x64):  # blt, beq, bcs, bls, bcc (.s)
+            take = {0x6D: n, 0x67: z, 0x65: c, 0x63: c or z, 0x64: not c}[op >> 8]
             disp = (op & 0xFF) - 256 if op & 0x80 else op & 0xFF
             pc += 2 + (disp if take else 0)
         else:

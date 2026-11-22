@@ -3664,6 +3664,58 @@ def off(g: FP) -> None:
     p.sti(VOICE["FO"] + FORM["wetok"], 2, 0)
 
 
+def sanitize(p, L: "Layout") -> None:
+    """RIFT v0.18 (the owner, 2026-11-22: a SMEAR note gave a burst, then the whole unit went silent
+    until a reboot): every slot's block, after every RIFT machine and GLASS and before the stock
+    chain, is checked: a sample that is not finite or not under 64 (its exponent field 133 or more:
+    NaN and infinity have 255) zeroes the slot's whole block, and the slot's last-type word is made
+    impossible (-1), so its voice starts afresh at the next block (the life words and every
+    machine's magic cleared, as on a machine change). Nothing non-finite reaches the filters, the
+    sends or the master, whose state would keep it for good. A finite block is left as it is."""
+    p.iconst(0, 0)
+    p.st(L.order_i, 0)
+    top = p.label("san")
+    p.place(top)
+    p.ld(9, L.order_i)
+    p.lsh(12, 9, 2)
+    p.iconst(11, BUFFERS)
+    p.iop(12, 11, "+", 12)
+    p.seti(1, 12)
+    p.ldi(0, 0, 1)                             # the slot's block
+    p.ipass(10, 0)
+    p.seti(1, 0)
+    p.iconst(8, 0)
+
+    def scan():
+        p.ldpost(0, 1)
+        p.lsh(0, 0, -23)
+        p.iconst(14, 0xFF)
+        p.iop(0, 0, "AND", 14)
+        p.iop(8, 8, "MAX", 0)                 # the largest exponent field
+    p.loop_r(15, 32, scan, one=13)
+    p.iconst(14, 127 + 6)                      # 2^6 = 64
+
+    def bad():
+        p.seti(1, 10)
+        p.iconst(0, 0)
+        p.loop_r(15, 32, lambda: p.stpost(1, 0), one=13)
+        p.ld(9, L.order_i)
+        p.lsh(12, 9, 2)
+        p.iconst(11, L.lasttype)
+        p.iop(12, 11, "+", 12)
+        p.seti(1, 12)
+        p.iconst(0, -1)
+        p.sti(0, 1, 0)
+    p.if_(8, "GE", 14, bad, kind="i")
+    p.ld(0, L.order_i)
+    p.iconst(12, 1)
+    p.iop(0, 12, "+", 0)
+    p.st(L.order_i, 0)
+    p.iconst(12, 16)
+    p.e("COMP(R0, R12);")
+    p.jump("LT", top)
+
+
 def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | None = None) -> str:
     """fascia.asm: entered by smp.asm's tail; on to NEXT_SW (the shared tail) when done. RIFT: it
     renders ORGAN's slots (type 19, dnfw.organ.program) in the same walk"""
@@ -3820,6 +3872,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     # RIFT v0.18: GLASS, the FLTR type 6: every slot on it filtered in place, every machine's buffer
     # whole (dnfw.glass.program; the stock chain skips its filter stage for it)
     gg = GLP.walk(p, GLP.Layout(L, _dsp.GLASS_STATE_DDR))
+    sanitize(p, L)                             # RIFT v0.18: nothing non-finite or runaway leaves our code
     G.end_mark(p)                              # our voices' time, for the guard's limit
     p.e(f"JUMP {next_sw:#x};", "the shared tail (ping.asm's wr_ping: restores the registers)")
     p.scr_on = True                            # the routines and leaves run inside a voice only

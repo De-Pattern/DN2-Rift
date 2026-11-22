@@ -682,7 +682,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,plateau,pstress,glass,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,plateau,pstress,glass,sanitize,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -841,6 +841,8 @@ def main(argv=None):
                                 lambda: step_pstress(warm(), sound, machines)),
                                ("glass", "GLASS (filter 6) bit-exact to live.Voice on FM Tone and FASCIA tracks (RIFT v0.18)",
                                 lambda: step_glass(warm(), sound, machines)),
+                               ("sanitize", "no block leaves our code not finite or past 64: zeroed, the voice afresh (RIFT v0.18)",
+                                lambda: step_sanitize(warm(), sound, machines)),
                                ("smear", "SMEAR (smear.asm) bit-exact to its program, lanes, notes, an empty slot (RIFT v0.16)",
                                 lambda: step_smear(warm(), sound, machines)),
                                ("mstress", "sixteen SMEAR tracks: every block returns, finite (RIFT v0.16)",
@@ -4842,6 +4844,48 @@ def smr_check(rr) -> dict:
     fin = all(math.isfinite(V.bits_f32(x)) for b in blocks for v in b["tracks"].values() for x in v["bits"])
     return {"blocks": len(blocks), "out_mismatches": mism, "words_ok": words, "state_mismatches": st,
             "peak": peak, "finite": fin, "ok": rr["ok"]}
+
+
+def step_sanitize(init, sound, machines) -> dict:
+    """RIFT v0.18 (the owner, 2026-11-22: a SMEAR note gave a burst, then the whole unit silent until a
+    reboot): fascia.asm's last pass (fascia.program.sanitize) zeroes any slot's block holding a sample not
+    finite or not under 64, and marks the slot's voice to start afresh (its last-type word -1). Poked at
+    fascia.asm's entry, read at its end: NaN, +inf, -inf, 100.0 and -64.0 blocks zeroed; 1.0 and -63.9
+    blocks kept bit for bit (the negative controls); the untouched slots' blocks as they were."""
+    from dnfw.fascia import program as FPg     # noqa: PLC0415
+    nan, inf = 0x7FC00000, 0x7F800000
+    pokes = {2: nan, 3: inf, 4: 0xFF800000, 5: V.f32_bits(100.0) if hasattr(V, "f32_bits") else 0x42C80000,
+             6: 0xC2800000, 7: 0x3F800000, 8: 0xC27F999A}
+    bad_slots, kept_slots = {2, 3, 4, 5, 6}, {7, 8}
+    got, before = {}, {}
+    L = FPg.layout() if hasattr(FPg, "layout") else None
+
+    def at_entry(r):
+        for t in range(16):
+            a = m2.word(r.state, V.TRACK_BUFFERS + 4 * t)
+            if t in pokes:
+                for k in range(32):
+                    m2.poke(r.state, a + 4 * k, pokes[t] if k == 9 else 0x3E800000)
+            before[t] = [m2.word(r.state, a + 4 * k) for k in range(32)]
+
+    def at_end(r):
+        got["bufs"] = {t: [m2.word(r.state, m2.word(r.state, V.TRACK_BUFFERS + 4 * t) + 4 * k) for k in range(32)]
+                       for t in range(16)}
+        if L is not None:
+            got["last"] = {t: m2.word(r.state, L.lasttype + 4 * t) for t in range(16)}
+    rr = run_blocks(init, lambda b: fsc_frame(sound, machines, {}, trig=()), 3,
+                    extra_hooks={dsp.FSC_SW: at_entry, dsp.PING_SW: at_end})
+    bufs = got.get("bufs", {})
+    zeroed = {t: all(w == 0 for w in bufs.get(t, [1])) for t in bad_slots}
+    kept = {t: bufs.get(t) == before.get(t) for t in kept_slots | (set(range(16)) - bad_slots - kept_slots)}
+    last = got.get("last", {})
+    marked = all((last.get(t, 0) & 0xFFFFFFFF) == 0xFFFFFFFF for t in bad_slots) if L is not None else True
+    checks = {"every block returns": bool(rr["ok"]),
+              "NaN, +inf, -inf, 100.0 and -64.0 blocks zeroed": all(zeroed.values()),
+              "their voices marked to start afresh (last-type -1)": marked,
+              "negative controls: 1.0 and -63.9 kept, and every other slot's block, bit for bit": all(kept.values())}
+    print(f"    sanitize: zeroed {zeroed}, kept {kept}, last {last}", flush=True)
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"zeroed": zeroed, "kept": kept}}
 
 
 def step_smear(init, sound, machines) -> dict:

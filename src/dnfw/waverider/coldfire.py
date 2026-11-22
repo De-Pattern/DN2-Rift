@@ -95,7 +95,7 @@ from ..perc import program as _pp           # noqa: E402
 GONE_TYPES = (5, *_mnm.TYPES, _plt.TYPE - 1) if _pp.RIFT else ()   # RIFT v0.17: and THOLET's 23
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
     (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()), *((_plt.TYPE,) if _plt.LISTED else ()),
-     *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, _fsc.TYPE)), 4)
+     *(9,), *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, 9, _fsc.TYPE)), 4)   # v0.18: SMEAR (9) first of the sample machines (owner)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
 LIST_CAP = 0x4004D906                   # lea %a0@(20),%a0 -- the vector's capacity
@@ -452,7 +452,35 @@ load_keep:
     move.l  %sp@+,%d2
     rts
 """
-SHIM2_LABELS = ("canon_valid",) + (("load_keep",) if GONE_TYPES else ())
+FX_GROUP = 5                            # RIFT v0.18: the FX machines (PLATEAU, 24, on), a section of their own
+FX_FIRST = _plt.TYPE
+SHIMS2 += f"""
+| RIFT v0.18 (owner: "Plateau should be in its own category separated by the horizontal dividing
+| lines"): group(type), MACHINE SEL's sections, as {GROUP_FN:#010x} was (its 34 bytes now jump here):
+| a negative type 0; the synths 0..3 -> 1; MIDI (4) -> 2; the FX machines ({FX_FIRST}..) -> {FX_GROUP}; the
+| sample machines {SAMPLER_FIRST}..{SAMPLER_LAST} -> {SAMPLER_GROUP}; every other type -> {SAMPLE_GROUP}. Only d0 and d1.
+group_fn:
+    moveq   #0,%d0
+    move.l  %sp@(4),%d1
+    blt.s   9f
+    moveq   #1,%d0
+    subq.l  #4,%d1
+    bcs.s   9f
+    moveq   #2,%d0
+    tst.l   %d1
+    beq.s   9f
+    moveq   #{FX_GROUP},%d0
+    cmpi.l  #{FX_FIRST - 4},%d1
+    bcc.s   9f
+    moveq   #{SAMPLER_GROUP},%d0
+    subq.l  #{SAMPLER_FIRST - 4},%d1
+    bcs.s   8f
+    subq.l  #{SAMPLER_LAST - SAMPLER_FIRST + 1},%d1
+    bcs.s   9f
+8:  moveq   #{SAMPLE_GROUP},%d0
+9:  rts
+"""
+SHIM2_LABELS = ("canon_valid",) + (("load_keep",) if GONE_TYPES else ()) + ("group_fn",)
 
 # -- 7. getMachineType(track): WaveTone for the UI, the real type for identity ----------
 TRACK_TYPE_READ = 0x4004B816            # mvs.b %a0@(222),%d0 ; bra.s exit
@@ -712,9 +740,10 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
          f"MACHINE SEL list: the vector's capacity, {n} longs", bytes.fromhex("41e80014"))
     edit(LIST_BEGIN, bytes.fromhex("4879") + _long(layout["list"]),
          "MACHINE SEL list: the copy's start", bytes.fromhex("4879") + _long(LIST_STOCK_VA))
-    edit(GROUP_FN, group_function(assemble), f"the MACHINE SEL group: our synth machines ({SAMPLE_GROUP}) "
-         f"and the sample machines ({SAMPLER_GROUP}) are sections of their own, divided off like MIDI",
-         GROUP_STOCK)
+    edit(GROUP_FN, bytes.fromhex("4ef9") + _long(layout["group_fn"]) + bytes.fromhex("4e71") * 14,
+         f"the MACHINE SEL group: our synth machines ({SAMPLE_GROUP}), the sample machines ({SAMPLER_GROUP}) "
+         f"and (RIFT v0.18) the FX machines ({FX_GROUP}) are sections of their own, divided off like MIDI "
+         "(group_fn, in the machines chunk)", GROUP_STOCK)
 
     # 2. the names
     for bound, base, op, col in NAME_SITES:

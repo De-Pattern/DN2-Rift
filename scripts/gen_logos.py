@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src/dnfw/waverider/logos"
 OUT = ROOT / "csrc/waverider/logos.h"
 W, H = 46, 32
-ORDER = ("organ", "fascia", "silt", "ligature", "digidrum", "dt2", "flex")
+ORDER = ("organ", "fascia", "silt", "ligature", "digidrum", "dt2", "flex", "plateau", "smear")   # RIFT v0.18: PLATEAU and SMEAR (owner)
 # the label's letters, 5 x 8, as the stock SYN's (rows top to bottom)
 GLYPHS = {
     " ": (".....",) * 8,
@@ -30,8 +30,10 @@ GLYPHS = {
     "E": ("#####", "#####", "##...", "####.", "####.", "##...", "#####", "#####"),
     "C": (".####", "#####", "##...", "##...", "##...", "##...", "#####", ".####"),
     "U": ("##.##", "##.##", "##.##", "##.##", "##.##", "##.##", "#####", ".###."),
+    "F": ("#####", "#####", "##...", "####.", "####.", "##...", "##...", "##..."),
+    "X": ("##.##", "##.##", ".###.", "..#..", ".###.", "##.##", "##.##", "##.##"),
 }
-LABELS = ("SAMP", "DRUM", "REC")
+LABELS = ("SAMP", "DRUM", "REC", "FX")   # v0.18: FX for PLATEAU (owner: "FX label underneath, not SYN")
 
 
 def logo_rows(name: str) -> list[int]:
