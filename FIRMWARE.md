@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.16** | 2026-11-21 | SMEAR, a Nebulae-style looper (VOC, PLAY and GRN readers of one loop, BLND between them); LIGATURE's eight new blocks (TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA); MACHINE SEL logos for RIFT's machines | `builds/v0.16-SMEAR/` | yes |
+| **v0.17** | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
+| v0.16 | 2026-11-21 | SMEAR, a Nebulae-style looper (VOC, PLAY and GRN readers of one loop, BLND between them); LIGATURE's eight new blocks (TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA); MACHINE SEL logos for RIFT's machines | `builds/v0.16-SMEAR/` | yes |
 | v0.15 | 2026-11-21 | THOLET, a piano leaning toward a Rhodes with a grain cloud (Error Kit's concept); KEYBOARD HOLD (PTN + KEYBOARD) from the DN2 mk2 mod | `builds/v0.15-THOLET/` | yes |
 | v0.14 | 2026-11-21 | MONTUNE: FLEX takes of MAIN and IN +12 dB on playback, MON on the RECORDER, MICROTUNING (11 factory tunings, USER 1..8, per track, saved with the project) | `builds/v0.14-MONTUNE/` | yes |
 | v0.13 | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
@@ -43,6 +44,47 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.17 · PLATEAU
+
+- **File:** `RIFT_v0.17_PLATEAU_OS1.11.syx` (`builds/v0.17-PLATEAU/`)
+- **sha256:** `3adfd4eb8044ced0842b83bd7af850eefc1b8c75b77634affe254aea498ef501`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `01cbc1c` (this repository)
+
+**Adds**
+
+- **PLATEAU** (type 24, `dnfw.plateau`, `docs/fx-machines.md`): RIFT's first FX machine, a plate reverb after Dattorro's 1997 design (the network Valley's Plateau is built on; Plateau's code is not used).
+  - It is a track: its input is the **BUS**, the chosen tracks' blocks (what TRK1..16 record), summed; its output is the track's voice, mono, through the track's own filter, amp, pan, sends and LEVEL. The sources keep their dry output.
+  - Pages: FX1 PLATE: PRED SIZE DCAY DIFF / DAMP BAND LCUT LEV; FX2 TANK: TLOW MSPD MDEP HOLD / TUND IGN DRV ERLY.
+  - **The BUS page:** FUNC + VOICE on a PLATEAU track (not the RECORDER): sixteen cells, [TRIG n] in or out, the LEDs lit, YES or NO back. The mask rides three of its records (six, six and four bits as knob values), set through the knob's path. A new PLATEAU track starts with every track but FX and FLEX tracks; its own track never.
+  - One instance: its lines (336 KB) in THOLET's former DDR ring; the newest voice to start owns them, an older one goes quiet; a fresh one clears them (21 blocks of silence).
+  - The bus is guarded: a sample not finite or not under 64 is taken as 0.
+- **BUS for FLEX:** SRC BUS records the sum of chosen tracks; REC BUS, FLEX REC's third page (RIGHT from REC SETUP), picks them. MUTE SRC mutes every bus track. The mask rides CHAN's and R.LEN's low bytes; a take's source word carries it (bits 16..31). fascia.asm makes the sum, the recorder reads it the next block.
+- **THOLET removed** completely (type 23 is a gone type: a saved THOLET track loads as FM Tone). Room: the image 12.6 KB, the DSP 8.2 KB; PLATEAU uses 7.8 KB of the DSP's.
+- **DIGIDRUM's logo** is the owner's drum hit.
+- Gate:
+  - runner parts `plateau` (bit-exact in the assembled walk on the bus it read; its own track never summed; the lines' clearing; TUNED, HOLD with DRV; a second track taking the one instance; a negative control) and `pstress` (beside fifteen FASCIA voices under the guard: 0.36 of the frame); `rec` run 3b (BUS);
+  - emulator: `flexcore` (BUS on FLEX; PLATEAU's defaults and mask, its BUS page through the firmware's keys, LEDs, its own track refused, NO and a track change close it), `rectext` (REC BUS and PLATEAU's BUS page pixel for pixel);
+  - unit tests `test_plateau_program` (17, a negative control).
+
+**Known issues**
+
+- PLATEAU's voice is an ordinary voice: on a busy pattern the dynamic allocator can take it. Reserve one for its track in the voice allocation menu.
+- A bus of many loud tracks can clip PLATEAU's input or a FLEX BUS take: turn IGN (or FLEX's GAIN) down.
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet.
+
+**Tests**
+
+1. MACHINE SEL: Plateau after DIGIDRUM. On a free track, an INF trig; two other tracks playing.
+2. FUNC + VOICE on it: the BUS page; every track but its own (struck) and any FLEX track lit. [TRIG] a playing track out and in: the reverb follows.
+3. SIZE, DCAY, DIFF, DAMP; HOLD ON (the tail freezes), OFF (it fades).
+4. TUND ON: play notes on the PLATEAU track: the plate rings at each note.
+5. A second PLATEAU track triggered: it takes over, the first goes quiet.
+6. FLEX: REC SETUP, RIGHT to REC BUS; pick two tracks; SRC BUS; record a take: both tracks in it.
+7. A project with a THOLET track (v0.15/v0.16): it opens as FM Tone.
+8. MACHINE SEL: DIGIDRUM shows the drum hit (DRUM).
 
 ## v0.16 · SMEAR
 

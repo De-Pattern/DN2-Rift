@@ -35,6 +35,8 @@ def have(mod: str) -> bool:
 
 
 HAS_THOLET = have("dnfw.tholet.machines")
+HAS_PLATEAU = have("dnfw.plateau.machines")      # RIFT v0.17: the first FX machine
+HAS_GLASS = have("dnfw.glass.live")              # RIFT v0.18: the FLTR type GLASS
 
 
 def has_smear() -> bool:
@@ -195,6 +197,25 @@ DIGIDRUM_OWN = {
     "SHIM": "Shimmer: the second metallic oscillator's ratio.",
     "RADIO": "Radio: the first oscillator's ratio, a broadcast-like metallic colour.",
     "MOD": "Modulation: the FM amount between the metallic oscillators.",
+}
+
+PLATEAU = {
+    "PRED": "Pre-delay: the time before the reverb starts, up to half a second.",
+    "SIZE": "Size of the plate: from a small, metallic space to a huge one.",
+    "DCAY": "Decay: how long the tail lasts. HOLD on page 2 makes it endless.",
+    "DIFF": "Diffusion: how smeared the reflections are. Low: you hear the echoes; high: a smooth wash.",
+    "DAMP": "Damping: how fast the highs die in the tail (darker as it rises).",
+    "BAND": "Input high cut: the brightness of what goes in.",
+    "LCUT": "Input low cut: takes the low end out of what goes in.",
+    "LEV": "Level of the reverb (the track's own LEVEL and AMP still apply).",
+    "TLOW": "Tank low cut: takes the low end out of the tail itself (a lighter, less boomy decay).",
+    "MSPD": "Modulation speed: how fast the tail's delays drift (chorus-like movement).",
+    "MDEP": "Modulation depth: how far they drift.",
+    "HOLD": "HOLD (OFF/ON): freezes the tail; the input closes and the decay is endless. Turn it off to let it fade.",
+    "TUND": "TUNED (OFF/ON): the tank's loop length follows the note you play: the reverb becomes a resonator, ringing at the note's pitch.",
+    "IGN": "Input gain: how hard the BUS drives the reverb (64 about unity).",
+    "DRV": "Drive: a soft saturation inside the tank: warmer, and it keeps a HOLD or a loud BUS from building up.",
+    "ERLY": "Early: mixes the diffused input (the first reflections) into the output.",
 }
 
 THOLET = {
@@ -397,20 +418,25 @@ def build() -> str:
     from dnfw.ligature import machines as LM
     from dnfw.digidrum import machines as DM
     TM = importlib.import_module("dnfw.tholet.machines") if HAS_THOLET else None
+    PM = importlib.import_module("dnfw.plateau.machines") if HAS_PLATEAU else None
 
     nav = [("start", "Start here"), ("install", "Install &amp; recovery"), ("ui", "Using RIFT's machines"),
            ("fascia", "FASCIA"), ("organ", "ORGAN"), ("silt", "SILT"), ("ligature", "LIGATURE"),
            ("digidrum", "DIGIDRUM")]
     if TM:
         nav.append(("tholet", "THOLET"))
+    if PM:
+        nav.append(("plateau", "PLATEAU"))
     if HAS_SMEAR:
         nav.append(("smear", "SMEAR"))
+    if HAS_GLASS:
+        nav.append(("glass", "GLASS filter"))
     nav += [("samples", "Sample machines"), ("flex", "FLEX"), ("recorder", "Recorder"),
             ("tuning", "Microtuning"), ("perf", "Performance")]
     nav += [("versions", "Versions")]
     s = []
-    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM) and (v != "0.16" or HAS_SMEAR)
-                  )
+    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM or PM) and (v != "0.16" or HAS_SMEAR)
+                  and (v != "0.17" or PM) and (v != "0.18" or HAS_GLASS))
     s.append(f"<h1>RIFT</h1><p class=\"dim\">The manual · covers v{E(newest)}</p>")
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
 
@@ -419,7 +445,8 @@ def build() -> str:
                "It drops the Machinedrum and Monomachine engines and puts new synthesis machines in their place: "
                "<b>FASCIA</b> (physical percussion and tuned bodies), <b>ORGAN</b> (a pipe organ), <b>SILT</b> (material synthesis), "
                "<b>LIGATURE</b> (a patchable block synth), <b>DIGIDRUM</b> (digital drums)"
-               + (", <b>THOLET</b> (a felt/electric piano with a grain cloud)" if TM else "") +
+               + (", <b>THOLET</b> (a felt/electric piano with a grain cloud)" if TM else "")
+               + (", and <b>PLATEAU</b>, an FX machine (a plate reverb on its own track, fed by a BUS of the tracks you choose)" if PM else "") +
                ". It keeps the Digitakt II sample machines, FLEX, the +Drive library, the recorder, Direct Jump and parameter slides from the mod. "
                "Unofficial: not made or supported by Elektron."))
     s.append(p("Everything below works like the stock Digitone II unless it says otherwise: p-locks, LFOs, slides, kits and sounds, copy/paste, "
@@ -543,6 +570,42 @@ def build() -> str:
         s.append(p("<span class=\"credit\">Concept: Error Kit. Hammer samples: Kawai grand (VCSL, CC0).</span>"))
         s.append(table(TM, THOLET))
 
+    if PM:
+        s.append("<h2 id=\"plateau\">PLATEAU (an FX machine)</h2>")
+        s.append(p("RIFT's first <b>FX machine</b>: a plate reverb after Jon Dattorro's design (the one Valley's Plateau is built on), on a track of its own. "
+                   "It doesn't make a sound of its own: it reverberates the tracks on its <b>BUS</b>. Its output is the track's voice, mono, "
+                   "so the track's own filter, amp, LFOs, sends, LEVEL, mutes and p-locks all work on the reverb. The tracks you feed it keep their own dry sound: "
+                   "turn a source's level down if you want it 100% wet.",
+                   "<b>To use it:</b> MACHINE SEL: Plateau on a free track. Give it a long note: a trig with INF length (or hold it with KEYBOARD HOLD); "
+                   "the reverb runs while that note sounds, so the track's AMP envelope is the reverb's gate. "
+                   "To keep its voice, reserve one for the track in the stock voice allocation menu.",
+                   "<b>The BUS page:</b> on the PLATEAU track, <b>[FUNC] + [VOICE]</b> opens it: sixteen cells, one per track. "
+                   "[TRIG n] puts track n in or out; its LED is lit while it is in. YES or NO goes back. "
+                   "A new PLATEAU track starts with every track in except FLEX tracks and FX tracks (drawn struck through); its own track can never be in. "
+                   "The bus is saved with the sound, so it can differ per kit.",
+                   "<b>One reverb:</b> the reverb's memory is one, so one PLATEAU track plays at a time: the newest one to start takes it over, and an older one goes quiet. "
+                   "When a new PLATEAU starts it clears its memory first (about 15 ms of silence).",
+                   "<b>TUNED</b> turns the plate into a resonator at the note's pitch: play it melodically, or hold a note and HOLD the result."))
+        s.append("<table>" + "".join(
+            f"<tr><th><b>{E(c)}</b><br><span class=\"dim\">{E(PM.LONG_NAMES[c])}</span></th><td>{E(PLATEAU[c])}</td></tr>"
+            for c in PM.CONTROLS) + "</table>")
+
+    if HAS_GLASS:
+        s.append("<h2 id=\"glass\">GLASS (a filter type)</h2>")
+        s.append(p("A filter type after the Serge VCFQ, on <b>every</b> machine's FLTR page (MACHINE SEL's FLTR list: <b>Glass</b>, after Equalizer). "
+                   "It's a state-variable filter like Multi-Mode, built to ring: at high RES a hard hit rings as a clean, round tone, like tapping a wine glass, "
+                   "never clipped or harsh, and it keeps the low end under the ring. Great on very short, popping sounds.",
+                   "<b>Its page is Multi-Mode's</b>, with these meanings:"))
+        s.append(ul("<b>FREQ</b>: the cutoff, and the pitch the filter rings at.",
+                    "<b>RES</b> (Ring Time): how long a hit rings, from a few milliseconds to about four seconds, the same at every pitch. At the top it is a playable resonator: turn KEY.T up and the ring follows the notes.",
+                    "<b>TYPE</b>: the morph, low-pass (0) to band-pass (middle) to high-pass (top).",
+                    "<b>ENV</b>: the envelope's depth on the cutoff, up or down (middle: none).",
+                    "<b>ATK</b> and <b>DEC</b>: GLASS's own envelope, attack then decay from each trig.",
+                    "<b>ABND</b> (Attack Bend, on SUS) and <b>DBND</b> (Decay Bend, on REL): the shape of each segment: fully left exponential (slow, then fast), the middle straight, fully right logarithmic (fast, then slow).",
+                    "<b>LPG</b> (on page 2, in ENV DELAY's place): from 64, a low-pass gate: the level and the cutoff open together at each trig and close like a vactrol, quickly and then slowly (DEC sets how long). The classic bongo-like ping.",
+                    "<b>KEY.T</b>: how far the cutoff follows the note."))
+        s.append(p("<b>Note:</b> a sound saved with GLASS and loaded on stock firmware or the DN2 mk2 mod loads as Multi-Mode."))
+
     if HAS_SMEAR:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
         s.append(p("A granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through three readers of one loop: <b>VOC</b>, a phase vocoder that stretches without changing pitch (SPD 0 freezes the sound in place); <b>PLAY</b>, a plain tape-like read; and <b>GRN</b>, a cloud of grains. BLND moves between them. A note restarts the read at STRT and plays at its pitch, so SMEAR plays chromatically.",
@@ -565,6 +628,7 @@ def build() -> str:
     s.append("<h2 id=\"flex\">FLEX</h2>")
     s.append(p("FLEX is a live-buffer machine like the Octatrack's Flex: it records into one of eight buffers (B1..B8) and plays them back with ONESHOT's controls (BUF in SAMP's place). Every sample machine can also play a buffer."))
     s.append(ul("<b>Sources</b> (REC SETUP's SRC): <b>TRK1..16</b> (one track's own sound, before its level and sends: a bounce), <b>IN</b> (the external inputs), <b>MAIN</b> (the whole mix as heard, effects included; a FLEX track sounding is recorded too, the Octatrack way: mute it, or record with TRK, for a clean bounce).",
+                *(["<b>BUS</b> (v0.17): the sum of the tracks you choose, each as TRK would record it. Pick them on <b>REC BUS</b>, FLEX REC's third page (RIGHT from REC SETUP): sixteen cells, [TRIG n] puts track n in or out, its LED lit while it is in. It starts with every track but the FLEX tracks (and FX tracks); one track always stays in. MUTE SRC mutes every track on the bus. A loud bus can clip: turn GAIN down."] if HAS_PLATEAU else []),
                 "<b>Three ways to record:</b> recorder trigs on their step for R.LEN steps (a one-shot trig records once, then is spent; [YES] [YES] re-arms); <b>Q.REC</b>, trigless: [YES] while playing waits for the next boundary (OFF, 1, 2, 4, 8, 16, 32, 64 steps, or the pattern length); and the recorder's own ARM / R.STRT.",
                 "<b>R.LEN</b> counts steps at the pattern's scale; [FUNC] + turn moves it a bar (16 steps) a detent.",
                 "<b>MUTE SRC</b>: the source track is silenced in the mix while the FLEX track plays it back (held 0.2 s after the note).",
@@ -591,13 +655,21 @@ def build() -> str:
 
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
     for vid, title, items in VERSIONS:
-        if (vid == "0.15" and not TM) or (vid == "0.16" and not HAS_SMEAR):
+        if (vid == "0.15" and not (TM or PM)) or (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and not PM) \
+                or (vid == "0.18" and not HAS_GLASS):
             continue
         s.append(f"<div class=\"box\" id=\"v{vid}\"><b>v{vid} · {E(title)}</b>" + ul(*items) + "</div>")
     return PAGE_HEAD + "\n".join(s) + "\n</main></body></html>\n"
 
 
 VERSIONS = [
+    ("0.18", "GLASS", ["GLASS, a new filter type after the Serge VCFQ, on every machine's FLTR page: rings like glass at high RES, never clips, keeps the low end; its own envelope with ATTACK and DECAY BEND, and an LPG.",
+                       "Includes v0.17."]),
+    ("0.17", "PLATEAU", ["PLATEAU, RIFT's first FX machine: a plate reverb on its own track, fed by a BUS of the tracks you choose ([FUNC] + [VOICE] on its track).",
+                         "FLEX: SRC BUS records the sum of chosen tracks; REC BUS, a third page of FLEX REC (RIGHT from REC SETUP), picks them with the [TRIG] keys. MUTE SRC mutes every track on the bus.",
+                         "THOLET is removed: a saved THOLET track opens as FM Tone.",
+                         "DIGIDRUM's MACHINE SEL logo is the owner's drum hit.",
+                         "Includes v0.16."]),
     ("0.16", "SMEAR", ["SMEAR, a granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place.",
                        "LIGATURE: eight new blocks from WEFT: TICK (a clock on the tempo, with CHANCE), ENV, VCA, CDIV (clock divider), DUST, CHAOS, CRUSH, LISSA (a Lissajous LFO).",
                        "ORGAN's, THOLET's and SMEAR's tables come from the ColdFire at power-on (the DSP's upload had no room): those three machines are silent for the first moment after power-on.",
