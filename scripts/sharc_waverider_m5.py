@@ -682,7 +682,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,plateau,pstress,glass,sanitize,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,plateau,pstress,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -841,6 +841,8 @@ def main(argv=None):
                                 lambda: step_pstress(warm(), sound, machines)),
                                ("glass", "GLASS (filter 6) bit-exact to live.Voice on FM Tone and FASCIA tracks (RIFT v0.18)",
                                 lambda: step_glass(warm(), sound, machines)),
+                               ("rcost", "each RIFT machine's worst block on the unit's cost model; SMEAR's VOC within its guard's peak (RIFT v0.18)",
+                                lambda: step_rcost(warm(), sound, machines)),
                                ("sanitize", "no block leaves our code not finite or past 64: zeroed, the voice afresh (RIFT v0.18)",
                                 lambda: step_sanitize(warm(), sound, machines)),
                                ("smear", "SMEAR (smear.asm) bit-exact to its program, lanes, notes, an empty slot (RIFT v0.16)",
@@ -4844,6 +4846,58 @@ def smr_check(rr) -> dict:
     fin = all(math.isfinite(V.bits_f32(x)) for b in blocks for v in b["tracks"].values() for x in v["bits"])
     return {"blocks": len(blocks), "out_mismatches": mism, "words_ok": words, "state_mismatches": st,
             "peak": peak, "finite": fin, "ok": rr["ok"]}
+
+
+def step_rcost(init, sound, machines) -> dict:
+    """RIFT v0.18 (the owner's unit went silent after a SMEAR note: the emulator counts instructions,
+    the unit also waits on memory): each machine's worst block on the unit's cost model --
+    instructions + 0.95 x (4 x L2 + 10 x DDR accesses), 0.95 fitted so an idle frame is the 416,000
+    cycles the unit measures (docs/dsp-cost.md) -- less an idle frame's, over a hop and more after its
+    note. Checks: SMEAR's VOC never costs more than VOC_PEAK, the guard's expectation for it; every
+    machine's worst block, beside an idle frame, inside 0.92 of the 666,667-cycle frame."""
+    from dnfw.smear import stage as SMS, fft as SMF   # noqa: PLC0415
+    from dnfw.plateau import bench as PB          # noqa: PLC0415
+    counts, undo = _count_memory()
+    FRAME = 666_667
+
+    def worst(fb, n):
+        st, rows = init, []
+        for b in range(n):
+            for k in ("L1", "L2", "DDR"):
+                counts[k] = 0
+            counts["on"] = True
+            rr = run_blocks(st, lambda _b, b=b: fb(b), 1)
+            counts["on"] = False
+            if not rr["ok"]:
+                return None
+            st = rr["state"]
+            rows.append(rr.get("instructions", 0) + 0.95 * (4 * counts["L2"] + 10 * counts["DDR"]))
+        return rows
+    out = {}
+    try:
+        idle = worst(lambda b: fsc_frame(sound, machines, {}, trig=()), 3)
+        base = max(idle) if idle else 0.0
+        fp = fsc_audition()["01_tubular_bell"][0]
+        cases = {
+            "SMEAR VOC (BLND 0)": (lambda b: smr_frame(sound, machines, {0: dict(BLND=0)}, trig=(0,) if b == 1 else ()), 50),
+            "SMEAR PLAY (BLND 64)": (lambda b: smr_frame(sound, machines, {0: dict(BLND=64)}, trig=(0,) if b == 1 else ()), 24),
+            "SMEAR GRN (BLND 127)": (lambda b: smr_frame(sound, machines, {0: dict(BLND=127, DENS=127, OVLP=127)}, trig=(0,) if b == 1 else ()), 24),
+            "PLATEAU": (lambda b: plt_frame(sound, machines, {3: (PB.panel_knobs(DCAY=100), 60.0, 1)}, {}, trig=(3,) if b == 1 else ()), 30),
+            "FASCIA (a bell)": (lambda b: plt_frame(sound, machines, {}, {0: (fp, 60, 1.0)}, trig=(0,) if b == 1 else ()), 12),
+        }
+        for name, (fb, n) in cases.items():
+            r = worst(fb, n)
+            out[name] = {"worst_delta": (max(r) - base) if r else None, "ok_run": r is not None}
+            print(f"    rcost {name}: {out[name]}", flush=True)
+    finally:
+        undo()
+    voc = out["SMEAR VOC (BLND 0)"]["worst_delta"] or 1e12
+    checks = {"an idle frame measured": base > 0,
+              f"SMEAR's VOC worst block within the guard's VOC_PEAK ({SMS.VOC_PEAK:,})": voc <= SMS.VOC_PEAK,
+              "every other machine's worst block, beside an idle frame, inside 0.92 of the frame":
+              all(v["worst_delta"] is not None and base + v["worst_delta"] <= 0.92 * FRAME
+                  for k, v in out.items() if not k.startswith("SMEAR VOC"))}
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, **out}}
 
 
 def step_sanitize(init, sound, machines) -> dict:
