@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.17** | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
+| **v0.18** | 2026-11-22 | The silent-unit fix (SMEAR's VOC off, the guard expects a voice's peak, an output guard on every RIFT machine); PLATEAU no longer dropped beside other tracks; GLASS, a VCFQ-style filter on every machine; MACHINE SEL: PLATEAU's own section, SMEAR first of the samples, their logos | `builds/v0.18-GLASS/` | yes |
+| v0.17 | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
 | v0.16 | 2026-11-21 | SMEAR, a Nebulae-style looper (VOC, PLAY and GRN readers of one loop, BLND between them); LIGATURE's eight new blocks (TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA); MACHINE SEL logos for RIFT's machines | `builds/v0.16-SMEAR/` | yes |
 | v0.15 | 2026-11-21 | THOLET, a piano leaning toward a Rhodes with a grain cloud (Error Kit's concept); KEYBOARD HOLD (PTN + KEYBOARD) from the DN2 mk2 mod | `builds/v0.15-THOLET/` | yes |
 | v0.14 | 2026-11-21 | MONTUNE: FLEX takes of MAIN and IN +12 dB on playback, MON on the RECORDER, MICROTUNING (11 factory tunings, USER 1..8, per track, saved with the project) | `builds/v0.14-MONTUNE/` | yes |
@@ -44,6 +45,48 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.18 · GLASS
+
+- **File:** `RIFT_v0.18_GLASS_OS1.11.syx` (`builds/v0.18-GLASS/`)
+- **sha256:** `8e86233d9c16accfcaf22cae501a2809fc711e3aacc295fde0f0b2abc60e6f9a`
+- **Gated:** 2026-11-22, `CLEARED TO FLASH`
+- **Source:** `6f547dc` (this repository)
+
+**Fixes**
+
+- **The silent unit** (the owner and a tester, 2026-11-22: a SMEAR note gave a burst, then the whole unit silent until a reboot). SMEAR's VOC jobs cost 200..260k cycles a block on the unit's cost model (instructions + 0.95 x (4 L2 + 10 DDR accesses), fitted to the idle frame's measured 416k of 667k); the guard expected a voice's last block's cost, which VOC's light blocks kept low, so a heavy job ran the DSP past the frame. **VOC is off** (BLND's VOC share played by PLAY; `smear.live.VOC_ON`); the guard expects VOC's peak (`smear.stage.VOC_PEAK`) whenever it runs; and **an output guard**: fascia.asm's last pass zeroes any slot's block holding a sample not finite or not under 64 and starts its voice afresh (`fascia.program.sanitize`).
+- **PLATEAU silent beside other tracks**: the guard stole it (left out twice in a note); now it is only left out of a block that has no room, and tried again the next.
+- Gate: runner parts `rcost` (each machine's worst block on the unit's cost model against the frame; VOC within VOC_PEAK) and `sanitize` (NaN, +-inf, 100 and -64 blocks zeroed and their voices marked; 1.0 and -63.9 kept: negative controls).
+
+**Adds**
+
+- **GLASS** (filter type 6, `dnfw.glass`): a filter after the Serge VCFQ, on every machine (the owner, 2026-11-21: "high resonance without sounding clippy ... a more rounded, glassy sound ... not lose much low end with high resonance").
+  - A zero-delay-feedback state-variable filter at twice the rate; a quadratic knee inside the loop (exactly linear below it, bounded at twice it); RES as ring time (4 ms .. 4 s, the same at every pitch); the input eased and the lows given back as RES rises; TYPE the LP/BP/HP morph.
+  - Its own envelope: attack then decay from each trig, each segment bent (ABND on SUS, DBND on REL: exponential .. straight .. logarithmic); ENV on the cutoff; KEY.T.
+  - LPG (on ENV DELAY, from 64): a vactrol-like gate on the level and the cutoff (DEC sets its fall).
+  - DSP: at FASCIA's walk's end, on every slot whose filter is 6 (the stock unpack gives it DSP filter 0, so the chain skips its filter stage); its settings are Multi-Mode's fields in the track record; its state in DDR. fascia.asm moved 6 KB lower in L2 (perc.asm is 9 KB of its 16) to make room.
+  - ColdFire: the DN2 mk2 mod's PING P2 edits, as GLASS (the FLTR list's Glass, the names, LOAD keeps 6, Multi-Mode's records, descriptor and curve); GLASS's names on the FLTR page while a track's filter is it.
+- MACHINE SEL (owner): PLATEAU a section of its own (the FX machines, group 5: `group_fn`), with its own logo and FX under it; SMEAR first of the sample machines, with its own logo. Gate: the logos step checks both.
+- Gate: runner part `glass` (bit-exact on two WaveTone tracks and a FASCIA track, the walk's models exact, Multi-Mode tracks untouched, a negative control); engine step (filter 6 kept by SAVE/LOAD, 7 and 8 load as Multi-Mode); flexcore (GLASS's names on and off); unit tests `test_glass_program` (15, a negative control), `test_glass_coldfire`.
+
+**Known issues**
+
+- SMEAR's VOC is off until it is redesigned to fit the unit.
+
+- GLASS's layout is the interim one: ATTACK and DECAY BEND sit on SUS and REL (page 1), so GLASS's envelope has no sustain or release; LPG is a knob (ON from 64), not a switch.
+- A sound saved with GLASS loads as Multi-Mode on stock firmware or the DN2 mk2 mod.
+- PLATEAU's voice can be taken by the voice allocator on a busy pattern (reserve one).
+
+**Tests**
+
+0. SMEAR with a sample in SAMP: notes from the [TRIG] keys for a while, BLND across its range: it keeps sounding and nothing else goes silent. PLATEAU with two other tracks playing: the reverb stays.
+1. FLTR: Glass after Equalizer, on a stock machine and on a RIFT machine. RES up: short hits ring as clean tones, never harsh.
+2. TYPE through LP, BP, HP; FREQ and RES together.
+3. KEY.T up, RES high: play a melody: the ring follows the notes.
+4. ENV up; ABND and DBND fully left, then fully right: the sweep's shape changes.
+5. LPG (ENV DELAY page 2) above 64: bongo-like pings; DEC sets their length.
+6. Save the project with a GLASS track, power-cycle, load: still Glass.
 
 ## v0.17 · PLATEAU
 
