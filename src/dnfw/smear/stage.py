@@ -295,6 +295,9 @@ def stage(p: Prog, S: SLayout) -> None:
             p.iconst(1, INIT_BUSY)
             p.if_(0, "NE", 1, lambda: (p.iconst(2, 0), p.st(S.ISTEP, 2), p.iconst(2, INIT_BUSY),
                                        p.st(S.INIT, 2)), kind="i")
+            if not LV.VOC_ON:                   # RIFT v0.20: VOC off: no transform tables to compute
+                last()
+                return
             for k in range(FT.INIT_PARTS - 1):
                 p.ld(0, S.ISTEP)
                 p.iconst(1, k)
@@ -307,7 +310,8 @@ def stage(p: Prog, S: SLayout) -> None:
             p.if_(0, "EQ", 1, last, kind="i")
 
         def last():
-            FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN, part=FT.INIT_PARTS - 1)
+            if LV.VOC_ON:
+                FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN, part=FT.INIT_PARTS - 1)
             for at, n in S.clears:
                 p.iconst(0, 0)
                 p.iconst(9, at)

@@ -869,7 +869,8 @@ def emit_voice(p: Prog, V: VLayout) -> None:
     def vg_on():
         p.ld(0, V.LANE)
         p.ifz(0, "GE", voc)
-    p.if_(0, "GT", 1, vg_on)
+    if LV.VOC_ON:          # RIFT v0.20: VOC off (live.VOC_ON): its code left out, the DSP's room freed (VG is 0)
+        p.if_(0, "GT", 1, vg_on)
 
     # -- GRN
     def grn():
