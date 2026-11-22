@@ -242,6 +242,29 @@ def main() -> int:
     passes(1)
     check("ARM OFF: a pass fires nothing", L("rt_fired") == fired1, f"fired +{L('rt_fired') - fired1}")
     call(lay["fx_set"], T, 5, 1)
+    # ---- RIFT v0.17: SRC BUS: the chosen tracks, kept in the sound; the take's source word ---------
+    if "bus_mask" in lay:
+        flex_bits = sum(1 << k for k in range(16) if call(lay["rt_is_bounce"], k)[0] & 0xFF)
+        m0 = call(lay["bus_mask"], T)[0]
+        check("RIFT v0.17: BUS by default: every track but the FLEX ones", m0 == 0xFFFF & ~flex_bits,
+              f"{m0:#06x} (FLEX {flex_bits:#06x})")
+        call(lay["bus_toggle"], T, 3)                  # [TRIG 4] on REC BUS: track 4 out
+        call(lay["bus_toggle"], T, 9)                  # [TRIG 10]: out
+        m1, st1 = call(lay["bus_mask"], T)[0], call(lay["bus_stored"], T)[0]
+        call(lay["fx_set"], T, 1, 2)                   # CHAN R and R.LEN 1 again: the bus kept
+        call(lay["fx_set"], T, 2, 1)
+        m2_, ch = call(lay["bus_mask"], T)[0], call(lay["fx_get"], T, 1)[0]
+        call(lay["fx_set"], T, 1, 0)
+        check("RIFT v0.17: [TRIG 4] and [TRIG 10] take tracks 4 and 10 out, stored in the sound; CHAN and "
+              "R.LEN set again keep it", m1 == m0 & ~(1 << 3 | 1 << 9) and st1 == m1 and m2_ == m1 and ch == 2,
+              f"{m1:#06x} stored {st1:#06x} after {m2_:#06x} chan {ch}")
+        call(lay["fx_set"], T, 0, 18)                  # SRC BUS
+        gen0 = L("rt_gen")
+        passes(1)
+        w2 = machine.long(lay["rt_w"] + 8)
+        check("RIFT v0.17: a take from SRC BUS sends source 18 with the bus's tracks in bits 16..31",
+              L("rt_gen") != gen0 and w2 == 18 | m1 << 16, f"{w2:#010x} gen +{L('rt_gen') - gen0}")
+        call(lay["fx_set"], T, 0, 0)
     put32(VOICE_SOUND + 4 * 0, 0)
     put32(FRAMES, frames0)                             # the clock back where the UI left it
 
@@ -367,6 +390,69 @@ def main() -> int:
         call(lay["rec_combo"])                              # FUNC + VOICE again: closes
         panel.settle(10_000_000)
         check("FUNC + VOICE again closes it", L("rec_overlay") == 0)
+
+        # ---- RIFT v0.17: PLATEAU (type 24) on track 7: its defaults and BUS, its BUS page --------
+        if "px_on" in lay:
+            from dnfw.plateau import machines as PLM            # noqa: PLC0415
+            TP, UI_TRACK = 6, 0x42431A6C                        # (UI_TRACK_B: one byte)
+            ui_was = machine.read(UI_TRACK, 1)
+            snd_p = kit + 52 + SOUND_STRIDE * TP
+            type_put(TP, PLM.TYPE)
+            call(lay["fsc_cleared"], TP)                        # TRK + CLEAR's (and MACHINE SEL's) defaults
+            panel.settle(5_000_000)
+
+            def pmask():
+                v = [machine.read(snd_p + 20 + 2 * sl, 2)[0] for sl in PLM.MASK_SLOTS]
+                return PLM.mask_of(v)
+            words = [int.from_bytes(machine.read(snd_p + 20 + 2 * PLM.SLOTS[c][1], 2), "big") for c in PLM.CONTROLS]
+            dw = PLM.default_words()
+            flexb = sum(1 << k for k in range(16) if call(lay["rt_is_bounce"], k)[0] & 0xFF)
+            want0 = 0xFFFF & ~flexb & ~(1 << TP)
+            m0, d0 = call(lay["bus_mask"], TP)[0] & 0xFFFF, call(lay["plt_default_mask"], TP)[0] & 0xFFFF
+            check("RIFT v0.17: a PLATEAU track starts at its own defaults, its BUS every track but FLEX's, the FX "
+                  "tracks and its own, in its three records", words == [dw[c] for c in PLM.CONTROLS]
+                  and m0 == d0 == want0 == pmask(), f"bus {m0:#06x} default {d0:#06x} want {want0:#06x} "
+                  f"records {pmask():#06x}; words {[hex(x) for x in words][:4]}")
+            fm = call(lay["bus_mask"], T)[0] & 0xFFFF
+            st_f = call(lay["bus_stored"], T)[0] & 0xFFFF
+            check("RIFT v0.17: FLEX's BUS by default leaves the PLATEAU track out too",
+                  st_f != 0 or not fm >> TP & 1, f"flex bus {fm:#06x} (stored {st_f:#06x})")
+            machine.write(UI_TRACK, bytes([TP]))
+            panel.settle(5_000_000)
+            call(lay["rec_combo"])                              # FUNC + VOICE on the PLATEAU track
+            panel.settle(10_000_000)
+            panel.screen("plateau_bus")
+            check("RIFT v0.17: FUNC + VOICE on a PLATEAU track opens its BUS page, not the RECORDER",
+                  L("px_on") == 1 and L("rec_overlay") == 0, f"px_on {L('px_on')}, overlay {L('rec_overlay')}")
+            led_p = leds_whole()
+            lit = [k for k, (mode, _v) in enumerate(led_p) if mode == 2]
+            check(".. its [TRIG] LEDs lit for the tracks in its BUS", lit == [k for k in range(16) if m0 >> k & 1],
+                  f"lit {lit}")
+            # (after a tap the UI task is mid-flight: a call from here need not come back (it stopped in
+            # stock's 0x4011eb0e, D0 garbage), so what the taps did is read from memory: the records)
+            panel.tap(key(25 + 2))                              # [TRIG 3]: track 3 out
+            panel.settle(5_000_000)
+            m1 = pmask()
+            panel.tap(key(25 + TP))                             # [TRIG 7]: its own track: refused
+            panel.settle(5_000_000)
+            m2_ = pmask()
+            panel.tap(key(25 + 0))                              # [TRIG 1]: the FLEX track in
+            panel.settle(5_000_000)
+            m3 = pmask()
+            check(".. [TRIG 3] takes track 3 out, [TRIG 7] (its own) is refused, [TRIG 1] puts the FLEX track "
+                  "in, each in its records", m1 == m0 & ~(1 << 2) and m2_ == m1 and m3 == m1 | 1,
+                  f"{m0:#06x} -> {m1:#06x} -> {m2_:#06x} -> {m3:#06x}")
+            panel.tap(key(12))                                  # NO: back
+            panel.settle(10_000_000)
+            check(".. NO closes it", L("px_on") == 0, f"px_on {L('px_on')}")
+            call(lay["rec_combo"])
+            panel.settle(5_000_000)
+            machine.write(UI_TRACK, bytes([5]))                 # another track: it lets go
+            panel.settle(10_000_000)
+            check(".. and it closes when the track changes", L("px_on") == 0, f"px_on {L('px_on')}")
+            machine.write(UI_TRACK, ui_was)
+            type_put(TP, 0)
+            panel.settle(5_000_000)
         # (v0.50: FLEX REC's knobs C and G, and the SYN page's BUF, are emu_coupled_flex.py's links 1e,
         # 1f, 8: here a knob turned on a FLEX track sent the UI task through this harness's SENTINEL
         # -- stock's event loop jumped to 0x46a20400, the crash dump -- on v0.49's build as on v0.50's,

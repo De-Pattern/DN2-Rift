@@ -284,9 +284,13 @@ void wr_screen(void *screen, void *canvas)
     extern int tn_visible(void);                /* v0.61: TUNING (csrc/sampler/tune.c) */
     extern void tn_draw(void *canvas);
     extern void tn_kb_draw(void *canvas);
-    sl_screen(1, rec_visible() || slc_visible() || smp_fb_visible() || smp_list_visible() || lig_visible() || tn_visible());
+    extern int px_visible(void);                /* RIFT v0.17: PLATEAU's BUS page (csrc/sampler/rec.c) */
+    extern void px_draw(void *canvas);
+    sl_screen(1, rec_visible() || slc_visible() || smp_fb_visible() || smp_list_visible() || lig_visible() || tn_visible() || px_visible());
     if (tn_visible())
         tn_draw(canvas);
+    else if (px_visible())
+        px_draw(canvas);
     else if (rec_visible())
         rec_screen_draw(canvas);
     else if (slc_visible())
@@ -330,6 +334,8 @@ int wr_poll(void *screen)
     extern void lig_poll(void);
     extern int lig_visible(void);
     lig_poll();
+    extern void px_poll(void);                  /* RIFT v0.17: PLATEAU's BUS page lets go with its track */
+    px_poll();
     static int slc_was __attribute__((section(".data"))) = 0;
     int slc = slc_visible() || slc_busy() || lig_visible();   /* v0.12: LIGATURE's EDIT redrawn as SLICE's */      /* v0.23: SLICE's menus, and their notes */
     extern int smp_wants_redraw(void);          /* v0.25: a sample page's moving playhead */

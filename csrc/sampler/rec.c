@@ -53,6 +53,7 @@ typedef unsigned char u8;
 #define F_PRESS 0x01
 #define F_REPEAT 0x08                           /* v0.35: a held key's repeat (stock's "fresh press" is bit 0 and not this) */
 #define F_RELEASE 0x10
+#define K_TRIG1 25                              /* the sixteen [TRIG] keys: 25..40 (digikit's panel map) */
 enum { K_TRIG = 1, K_MOD = 6, K_PRESET = 7, K_SETTINGS = 8, K_YES = 10, K_UP = 11, K_NO = 12,
        K_LEFT = 13, K_DOWN = 14, K_RIGHT = 15, K_TRK = 16, K_PTN = 23, K_SONG = 24,
        K_FUNC = 17, K_PLAY = 20, K_ENC_A = 41, K_ENC_H = 48 };
@@ -69,6 +70,7 @@ extern void smp_list_close(void);
 extern void smp_list_settle(int v);
 extern void *smp_list_view;
 extern int smp_lst_orig, smp_overlay_dirty;     /* v0.25: the list, the folder browser */
+extern int px_on;                               /* RIFT v0.17: PLATEAU's BUS page is up (below) */
 extern int smp_fb_open, smp_fb_folder, smp_fb_cur;
 extern int smp_fb_item(int i, int *slot);
 extern int smp_fb_menu, smp_fb_mcur;
@@ -179,7 +181,10 @@ int rec_visible(void)
 int rec_chan __attribute__((section(".data"))) = 0;
 static void src_of(int s, u32 *src, u32 *chan)
 {
+    extern u32 bus_mask(u32 t);
     *src = (u32)(s < 0 ? 0 : s);
+    if (s == SMP_REC_SOURCES - 1)               /* RIFT v0.17: BUS: its tracks in bits 16..31 */
+        *src |= bus_mask(*(volatile unsigned char *)0x42431A6Cu) << 16;
     *chan = (u32)(rec_chan < 0 ? 0 : rec_chan > 2 ? 2 : rec_chan);
 }
 
@@ -335,7 +340,7 @@ int rec_view __attribute__((section(".data"))) = 0;      /* v0.41's REC TRIGS vi
  * 0.4 s) arms the spent one-shots again; a single YES is RECORD NOW, taken once the 0.4 s
  * have passed with no second YES */
 int bn_page __attribute__((section(".data"))) = 0;
-int bn_sub __attribute__((section(".data"))) = 0;          /* v0.49 FLEX REC: 0 REC TRIGS, 1 REC SETUP */
+int bn_sub __attribute__((section(".data"))) = 0;          /* v0.49 FLEX REC: 0 REC TRIGS, 1 REC SETUP; RIFT v0.17: 2 REC BUS */
 /* v0.51 (owner; Error Kit: "how do I delete a buffer?"): FUNC + NO on REC SETUP asks CLEAR BUF n?
  * for the track's buffer (the one BUF names); YES empties it (rectrig.c rt_clear), NO or any
  * other key leaves it. bn_cleared: 1 emptied, 2 refused (it was recording), at bn_cleared_at */
@@ -408,6 +413,12 @@ static u32 bn_led_sig __attribute__((section(".data"))) = 0xFFFFFFFFu;
 static u32 bn_led_val(u32 k, u32 *mode)         /* step k of the page shown -> palette index */
 {
     u32 t = UI_TRACK_B, step = (u32)bn_page * 16u + k;
+    extern int bn_sub;
+    if (bn_sub == 2 || px_on) {                 /* RIFT v0.17: REC BUS (PLATEAU's BUS): the tracks in the bus, lit */
+        extern u32 bus_mask(u32 t);
+        *mode = (bus_mask(t) >> k & 1u) ? 2u : 1u;
+        return *mode == 2u ? LED_REC : 1u;
+    }
     unsigned char *table = sl_ui_table_now();
     extern u32 rt_trig_get(const unsigned char *table, u32 t, u32 step);
     u32 v = table && step < bn_len() ? rt_trig_get(table, t, step) : 0xFFFFu;
@@ -427,14 +438,14 @@ static u32 bn_led_val(u32 k, u32 *mode)         /* step k of the page shown -> p
 
 void bn_led_walk(void *screen)
 {
-    if (bn_active()) {
+    if (bn_active() || px_on) {                 /* RIFT v0.17: and PLATEAU's BUS page */
         u32 lm = LED_MGR();
         if (lm) {
             for (u32 k = 0; k < 16; k++) {
                 u32 mode, val = bn_led_val(k, &mode);
                 LED_SET(lm, LED_TRIG0 + k, mode, val);
             }
-            for (u32 p = 0, n = bn_pages(); p < 8; p++)
+            for (u32 p = 0, n = bn_pages(); p < 8 && !px_on; p++)
                 LED_SET(lm, LED_PAGE0 + p, 2u,
                         p == (u32)bn_page ? LED_PG_EDIT : p < n ? LED_PG_ON : LED_PG_OFF);
             bn_led_claims++;
@@ -451,8 +462,8 @@ void bn_led_poll(void)
 {
     extern void *wr_screen_obj;
     u32 sig = 0x5EEDu;
-    if (bn_active()) {
-        sig = 0x1000000u | (u32)bn_page << 16 | bn_pages() << 8;
+    if (bn_active() || px_on) {
+        sig = 0x1000000u | (u32)bn_page << 16 | bn_pages() << 8 | (u32)bn_sub << 4;
         for (u32 k = 0; k < 16; k++) {
             u32 mode, val = bn_led_val(k, &mode);
             sig = sig * 31u + val * 4u + mode;
@@ -544,10 +555,69 @@ void bn_save(void)
     smp_overlay_dirty = 1;
 }
 
+/* RIFT v0.17: PLATEAU's BUS page (owner, 2026-11-21: "route multiple tracks into this track via a
+ * bus matrix"): FUNC + VOICE on a PLATEAU track opens it, not the RECORDER. [TRIG n] puts track n in
+ * or out (rectrig.c bus_toggle), YES or NO closes it; it closes when the track or its machine changes.
+ * Drawn by smp_page.c's bus_page_draw (FLEX's REC BUS page's), its LEDs by bn_led_walk */
+int px_on __attribute__((section(".data"))) = 0;
+int px_track __attribute__((section(".data"))) = -1;
+int px_visible(void) { return px_on; }
+
+void px_draw(void *c)
+{
+    extern void bus_page_draw(void *c, u32 t, int fx);
+    bus_page_draw(c, (u32)px_track, 1);
+}
+
+void px_poll(void)
+{
+    extern int rt_is_plt(u32 t);
+    if (px_on && ((int)UI_TRACK_B != px_track || !rt_is_plt(UI_TRACK_B))) {
+        px_on = 0;
+        smp_overlay_dirty = 1;
+    }
+}
+
+int px_pop(u8 *it)                              /* the UI's item -> 1: ours */
+{
+    if (!px_on)
+        return 0;
+    u32 code = (u32)it[4] << 24 | (u32)it[5] << 16 | (u32)it[6] << 8 | it[7];
+    u32 flags = (u32)it[8] << 24 | (u32)it[9] << 16 | (u32)it[10] << 8 | it[11];
+    int press = it[0] == IT_KEY && (flags & F_PRESS) && !(flags & F_RELEASE);
+    if (it[0] == IT_KNOB)                       /* (the page is covered: its knobs wait) */
+        return 1;
+    if (it[0] != IT_KEY || code == K_FUNC)
+        return 0;
+    if (code >= K_TRIG1 && code <= K_TRIG1 + 15) {
+        if (press) {
+            extern void bus_toggle(u32 t, u32 k);
+            bus_toggle((u32)px_track, code - K_TRIG1);
+            smp_overlay_dirty = 1;
+        }
+        return 1;
+    }
+    if (code == K_YES || code == K_NO) {
+        if (press) {
+            px_on = 0;
+            smp_overlay_dirty = 1;
+        }
+        return 1;
+    }
+    return code >= K_UP && code <= K_RIGHT;
+}
+
 /* FUNC + VOICE (coldfire.py's REC_COMBO_SITE, in the main key handler's VOICE case) */
 static void preview(int on);
 void rec_combo(void)
 {
+    extern int rt_is_plt(u32 t);
+    if (!rec_overlay && (px_on || rt_is_plt(UI_TRACK_B))) {   /* RIFT v0.17: PLATEAU's BUS page */
+        px_on = !px_on;
+        px_track = UI_TRACK_B;
+        smp_overlay_dirty = 1;
+        return;
+    }
     preview(0);
     rec_overlay = !rec_overlay;
     rec_phase = PH_REC;                         /* a recording mid-TRIM keeps what it is */
@@ -854,7 +924,6 @@ static int closes(u32 code)
 
 /* -- v0.22: TRIM, NAME, ASSIGN ------------------------------------------------------------- */
 
-#define K_TRIG1 25                              /* the sixteen [TRIG] keys: 25..40 (digikit's panel map) */
 
 /* the recording to track TRACK: its SAMP, and ONESHOT if it plays no sample (-> 0 done) */
 /* the stock calls a knob turn and MACHINE SEL make (found and called in the emulator):
@@ -882,6 +951,22 @@ static void smr_write_defaults(u32 track)
     }
 }
 
+/* RIFT v0.17: PLATEAU's BUS mask into its three records (rectrig.c plt_mask_of reads them), through
+ * the knob's path: the sound, undo and the frame the DSP reads all have it */
+void plt_set_mask(u32 track, u32 mask)
+{
+    extern int fsc_q_off;
+    u32 owner = UI_OWNER();
+    u32 v[3] = {mask & 63u, mask >> 6 & 63u, mask >> 12 & 15u};
+    fsc_q_off = 1;
+    for (int j = 0; owner && j < 3; j++) {
+        u32 ps = PARAM_SET(owner, plt_mask_rid[j], track);
+        if (ps)
+            SET_VALUE(ps, plt_mask_rid[j], v[j] << 8, track, 0, 0, 1);
+    }
+    fsc_q_off = 0;
+}
+
 static void fsc_write_defaults(const wr_mach_t *M, u32 track)
 {
     extern int fsc_q_off;
@@ -893,6 +978,10 @@ static void fsc_write_defaults(const wr_mach_t *M, u32 track)
             SET_VALUE(ps, M->rid[j], (u32)M->def[j], track, 0, 0, 1);
     }
     fsc_q_off = 0;
+    if (M->type == PLT_TYPE) {                  /* RIFT v0.17: and PLATEAU's BUS, every track but FX and FLEX */
+        extern u32 plt_default_mask(u32 t);
+        plt_set_mask(track, plt_default_mask(track));
+    }
 }
 
 /* RIFT v0.4: TRK + CLEAR has re-initialised TRACK's sound from stock's record defaults
@@ -2044,6 +2133,12 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
             it[0] = IT_DROP;
             return (u32)it;
         }
+        if (px_pop(it)) {                       /* RIFT v0.17: PLATEAU's BUS page (above) */
+            if (it[0] == IT_KEY && (flags & F_PRESS) && !(flags & F_RELEASE) && code < 32)
+                eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
         extern int lig_pop(u8 *it);             /* RIFT v0.12: LIGATURE's PATCH screen (lig.c) */
         if (lig_pop(it)) {
             if (it[0] == IT_KEY && (flags & F_PRESS) && !(flags & F_RELEASE) && code < 32)
@@ -2082,9 +2177,17 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
                 return (u32)it;
             }
         }
-        if (bn_active() && bn_sub && press && code == K_NO && smp_func_held) {   /* v0.51: FUNC + NO: CLEAR BUF n? */
+        if (bn_active() && bn_sub == 1 && press && code == K_NO && smp_func_held) {   /* v0.51: FUNC + NO: CLEAR BUF n? */
             bn_clear_ask = 1;
             bn_yes_at = 0;
+            smp_overlay_dirty = 1;
+            eaten |= 1u << code;
+            it[0] = IT_DROP;
+            return (u32)it;
+        }
+        if (bn_active() && bn_sub == 2 && press && code >= K_TRIG1 && code <= K_TRIG1 + 15) {   /* RIFT v0.17: REC BUS */
+            extern void bus_toggle(u32 t, u32 k);
+            bus_toggle(UI_TRACK_B, (u32)(code - K_TRIG1));
             smp_overlay_dirty = 1;
             eaten |= 1u << code;
             it[0] = IT_DROP;
@@ -2102,7 +2205,7 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
         }
         if (bn_active() && press && (code == K_LEFT || code == K_RIGHT)) {   /* v0.49: REC TRIGS / REC SETUP */
             extern int bn_sub;
-            bn_sub = code == K_RIGHT;
+            bn_sub = code == K_RIGHT ? (bn_sub < 2 ? bn_sub + 1 : 2) : (bn_sub > 0 ? bn_sub - 1 : 0);   /* RIFT v0.17: and REC BUS */
             smp_overlay_dirty = 1;
         }
         if (bn_active() && press && code == 22) {         /* PAGE: the next page of steps */

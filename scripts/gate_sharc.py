@@ -49,8 +49,8 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           ("lstress",),           # RIFT: sixteen LIGATURE voices under the guard
           ("digidrum",),          # RIFT: DIGIDRUM (type 22) bit-exact, two at once, a machine switch, a negative control
           ("dstress",),           # RIFT: sixteen DIGIDRUM voices under the guard
-          ("tholet",),            # RIFT: THOLET (type 23) bit-exact, two at once, a note-off, a machine switch, a negative control
-          ("tstress",),           # RIFT: sixteen THOLET voices under the guard
+          ("plateau",),           # RIFT v0.17: PLATEAU (type 24) bit-exact on the bus, the one instance, a negative control
+          ("pstress",),           # RIFT v0.17: a PLATEAU track beside fifteen FASCIA voices under the guard
           ("smear",),             # RIFT v0.16: SMEAR's stage bit-exact to its program, lanes, an empty slot
           ("mstress",))           # RIFT v0.16: sixteen SMEAR tracks
 # RIFT (2026-11-13): no Machinedrum or Monomachine engine. The runner's parts that test only

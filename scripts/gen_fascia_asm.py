@@ -44,10 +44,9 @@ def main(argv=None) -> int:
     from dnfw.ligature import program as LP    # noqa: PLC0415
     LP.write_ddr_json()                     # RIFT: and LIGATURE (type 21)
     from dnfw.digidrum import program as DP    # noqa: PLC0415
-    DP.write_ddr_json()
-    from dnfw.tholet import program as TP    # noqa: PLC0415
-    TP.write_ddr_json()                     # RIFT: and THOLET (type 23)
-    _ = TP                     # RIFT: and DIGIDRUM (type 22)
+    DP.write_ddr_json()                     # RIFT: and DIGIDRUM (type 22)
+    from dnfw.plateau import program as XP    # noqa: PLC0415
+    XP.write_ddr_json()                     # RIFT v0.17: and PLATEAU (type 24)
     text = build()
     if not a.no_resolve:
         import sharc_resolve_jumps as R  # noqa: PLC0415  (selas)

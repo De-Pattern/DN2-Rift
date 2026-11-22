@@ -191,6 +191,7 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
                                           dsp.SILT_TABLES_DDR,                            # RIFT: SILT's
                                           dsp.LIG_TABLES_DDR,                             # RIFT: LIGATURE's
                                           dsp.DIGIDRUM_TABLES_DDR,                           # RIFT: DIGIDRUM's
+                                          dsp.PLATEAU_TABLES_DDR,                            # RIFT v0.17: PLATEAU's
                                           dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
         assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)
@@ -486,7 +487,7 @@ def test_v037_the_recorders_main_tap_is_one_place():
 
 
 def test_rift_link_tables():
-    """RIFT v0.16: ORGAN's, THOLET's and SMEAR's tables come over the sample link (the DSP image's
+    """RIFT v0.16: ORGAN's and SMEAR's tables (v0.16: THOLET's too) come over the sample link (the DSP image's
     1 MiB): in the pool's table area, below READY, each where its program reads it"""
     from dnfw.sampler import machines as SM
     data = dsp.link_tables()
@@ -496,4 +497,4 @@ def test_rift_link_tables():
     from dnfw.organ import program as OP
     off = dsp.ORGAN_TABLES_DDR - dsp.LINK_TABLES_DDR
     assert data[off:off + len(OP.tables_bytes())] == OP.tables_bytes()
-    assert not any(a == dsp.ORGAN_TABLES_DDR or a == dsp.THOLET_TABLES_DDR for _, a, _ in dsp.ddr_spans())
+    assert not any(a == dsp.ORGAN_TABLES_DDR for _, a, _ in dsp.ddr_spans())

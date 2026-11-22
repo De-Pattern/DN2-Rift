@@ -1976,10 +1976,18 @@ def recorder(p: Prog, L: Layout) -> None:
     p.ld(1, C["rseq"])
 
     def settings():
-        p.ld(4, cmd + 8)                      # source: 0 IN, 1 MAIN, 2 + t a track
+        p.ld(4, cmd + 8)                      # source: 0 IN, 1 MAIN, 2 + t a track, 18 BUS
+        p.lsh(5, 4, -16)                      # RIFT v0.17: BUS's tracks, bits 16..31
+        p.st(SM.BUS_MASK_DM, 5)
+        p.iconst(9, SM.BUS_BLK)               # (its sum, silence until fascia.asm makes one)
+        p.seti(4, 9)
+        p.iconst(5, 0)
+        p.loop_r(15, 64, lambda: p.stpost(4, 5))
+        p.iconst(12, 0xFF)
+        p.iop(4, 4, "AND", 12)
         p.iconst(12, 0)
         p.iop(4, 4, "MAX", 12)
-        p.iconst(12, 17)
+        p.iconst(12, SM.SRC_BUS)
         p.iop(4, 4, "MIN", 12)
         p.st(C["rsrc"], 4)
         p.ld(4, cmd + 12)                     # channel: 0 L+R, 1 L, 2 R (bits 0..1; v0.22: the
@@ -2330,6 +2338,10 @@ def recorder(p: Prog, L: Layout) -> None:
         p.iconst(12, SM.TRK_BUF)
         p.iop(9, 12, "+", 10)
     p.if_(8, "GE", 12, track, kind="i")
+
+    p.ld(8, C["rsrc"])
+    p.iconst(12, SM.SRC_BUS)                  # RIFT v0.17: BUS, the sum fascia.asm made last block
+    p.if_(8, "EQ", 12, lambda: p.iconst(9, SM.BUS_BLK), kind="i")
     p.st(C["a"], 9)
     p.iconst(6, 0)
     p.st(C["x"], 6)
@@ -3495,3 +3507,44 @@ def pvmix_run(L: Layout, mem) -> Prog:
     p = Prog("run", mem=mem)
     pvmix(p, L)
     return p
+
+
+def emit_bus(p: Prog) -> None:
+    """RIFT v0.17: BUS (SM.SRC_BUS): SM.BUS_BLK = the sum of the tracks in SM.BUS_MASK_DM's bits, each
+    its block as TRK<t> reads it (SM.TRK_BUF + TRK_STRIDE t: L 32 floats, R at + 0x80). fascia.asm
+    makes it each block the recorder's source is BUS; the recorder reads it the next block"""
+    p.iconst(9, SM.BUS_BLK)
+    p.seti(4, 9)
+    p.iconst(0, 0)
+    p.loop_r(15, 64, lambda: p.stpost(4, 0))
+    p.iconst(0, 1)
+    p.st(SM.BUS_T_DM, 0)                      # the track's bit
+    p.iconst(0, SM.TRK_BUF)
+    p.st(SM.BUS_SRC_DM, 0)                    # its block
+
+    def one():
+        p.ld(9, SM.BUS_MASK_DM)
+        p.ld(10, SM.BUS_T_DM)
+        p.iop(9, 9, "AND", 10)
+
+        def add():
+            p.ld(9, SM.BUS_SRC_DM)
+            p.seti(1, 9)
+            p.iconst(9, SM.BUS_BLK)
+            p.seti(4, 9)
+
+            def acc():
+                p.ldpost(0, 1)
+                p.ldi(3, 0, 4)
+                p.fop(3, 3, "+", 0)
+                p.stpost(4, 3)
+            p.loop_r(15, 64, acc)
+        p.ifz(9, "NE", add)
+        p.ld(10, SM.BUS_T_DM)
+        p.iop(10, 10, "+", 10)
+        p.st(SM.BUS_T_DM, 10)
+        p.ld(9, SM.BUS_SRC_DM)
+        p.iconst(12, SM.TRK_STRIDE)
+        p.iop(9, 12, "+", 9)
+        p.st(SM.BUS_SRC_DM, 9)
+    p.loop(SM.BUS_CNT_DM, 16, one)
