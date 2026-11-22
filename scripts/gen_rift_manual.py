@@ -240,7 +240,7 @@ THOLET = {
 SMEAR = [
     ("TUNE", "Tune", "Tune, in semitones (as every sample machine's). The note and TUNE set the pitch of all three readers."),
     ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: frozen; +1.00 and -1.00 have wide detents). Negative reads backwards. The vocoder and the grains keep their pitch whatever the speed; PLAY (tape) changes pitch with it."),
-    ("BLND", "Blend", "Crossfades the three readers at constant power: VOC (the phase vocoder) at 0, PLAY (a plain tape-like read) in the middle, GRN (the grains) at 127. Between, two of them mixed."),
+    ("BLND", "Blend", "Crossfades the readers at constant power: PLAY (a plain tape-like read) at 0 and in the middle, GRN (the grains) at 127. (VOC, the phase vocoder, is off since v0.18: its share of BLND plays PLAY.)"),
     ("SAMP", "Sample Slot", "The sample (or FLEX buffer B1..B8) SMEAR plays, as on every sample machine. Taken at the note."),
     ("STRT", "Start", "Where the loop starts in the sample."),
     ("SIZE", "Loop Size", "How long the loop is, from STRT toward the sample's end (squared, as on the Nebulae: fine control at small sizes)."),
@@ -610,7 +610,7 @@ def build() -> str:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
         s.append(p("A granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through three readers of one loop: <b>VOC</b>, a phase vocoder that stretches without changing pitch (SPD 0 freezes the sound in place); <b>PLAY</b>, a plain tape-like read; and <b>GRN</b>, a cloud of grains. BLND moves between them. A note restarts the read at STRT and plays at its pitch, so SMEAR plays chromatically.",
                    "<b>How to approach it:</b> load a sample, BLND 0 (VOC) and turn SPD toward FRZ: a held, smeared texture of that moment; move STRT to scan. BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece. LFO SPD, STRT or BLND for motion.",
-                   "<b>Note:</b> the two vocoders are shared by the whole instrument: the two newest SMEAR notes that use VOC get one each; an older one loses its VOC part. PLAY and GRN work on every track. A vocoder note sounds about 11 ms after its trig (a hop)."))
+                   "<b>Note (v0.18):</b> VOC is off until it is redesigned to fit the DSP's time: on the unit it needed more than the frame allows, and a VOC note silenced the instrument. BLND's VOC end plays PLAY."))
         s.append(p("<span class=\"credit\">Concept: De-Pattern, after the Qu-Bit Nebulae v2 (its granular-looper instrument, MIT).</span>"))
         s.append("<h3>SRC page 1</h3><table class=\"ctl\">" + "".join(
             f"<tr><th><b>{E(a)}</b><br><span class=\"dim\">{E(b)}</span></th><td>{E(c)}</td></tr>" for a, b, c in SMEAR[:8]) + "</table>")
@@ -663,7 +663,9 @@ def build() -> str:
 
 
 VERSIONS = [
-    ("0.18", "GLASS", ["GLASS, a new filter type after the Serge VCFQ, on every machine's FLTR page: rings like glass at high RES, never clips, keeps the low end; its own envelope with ATTACK and DECAY BEND, and an LPG.",
+    ("0.18", "GLASS", ["The silent unit fixed: SMEAR's VOC off (it overran the DSP's frame), the time guard expects a voice's peak cost, and an output guard on every RIFT machine (nothing non-finite or runaway reaches the effects or the master). PLATEAU no longer dropped beside other tracks.",
+                       "MACHINE SEL: PLATEAU in its own section (FX), SMEAR first of the sample machines, their own logos.",
+                       "GLASS, a new filter type after the Serge VCFQ, on every machine's FLTR page: rings like glass at high RES, never clips, keeps the low end; its own envelope with ATTACK and DECAY BEND, and an LPG.",
                        "Includes v0.17."]),
     ("0.17", "PLATEAU", ["PLATEAU, RIFT's first FX machine: a plate reverb on its own track, fed by a BUS of the tracks you choose ([FUNC] + [VOICE] on its track).",
                          "FLEX: SRC BUS records the sum of chosen tracks; REC BUS, a third page of FLEX REC (RIGHT from REC SETUP), picks them with the [TRIG] keys. MUTE SRC mutes every track on the bus.",
