@@ -32,7 +32,7 @@ def test_chunk_place():
     # Waverider's page chunk ends before GLASS's begins
     wr = SPEC["chunk"]
     assert wr["load"] + len(bytes.fromhex(wr["code"])) <= P.LOAD
-    assert LAY["glass_code_end"] <= LAY["glass_list"] < LAY["glass_names"] < LAY["glass_end"]
+    assert LAY["glass_code_end"] <= LAY["glass_list"] < LAY["glass_name_rows"] < LAY["glass_end"]
 
 
 def test_list_has_glass_last():
@@ -53,11 +53,11 @@ def _cstr(va: int) -> str:
 
 def test_names_row_six():
     for t, want in ((6, ("Glass", "GLAS")),):                # v0.27: SHFT and GRAN removed
-        lo, sh, third = struct.unpack(">III", _at(LAY["glass_names"] + 12 * t, 12))
+        lo, sh, third = struct.unpack(">III", _at(LAY["glass_name_rows"] + 12 * t, 12))
         assert (_cstr(lo), _cstr(sh), third) == (*want, 0)
     for bound, base, _op, col in P.NAME_SITES:
         assert _edit(bound)["stock"] == "7205" and _edit(bound)["new"] == "7206"
-        assert _edit(base + 2)["new"] == f"{LAY['glass_names'] + col:08x}"
+        assert _edit(base + 2)["new"] == f"{LAY['glass_name_rows'] + col:08x}"
 
 
 def test_load_keeps_six_and_hooks():

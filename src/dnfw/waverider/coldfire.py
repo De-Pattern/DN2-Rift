@@ -1002,6 +1002,9 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
     # the descriptor, the curve, in PING's former chunk at 0x4670f000)
     from ..glass import coldfire as glass_cf
     gbuilt = glass_cf.compose(content, edit, assemble)
+    clash = sorted(set(gbuilt["layout"]) & set(layout))
+    if clash:                                          # v0.18: a chunk label may not hide a C symbol
+        raise ValueError(f"GLASS's labels clash with the layout: {clash}")
     layout.update(gbuilt["layout"])
     return {"content": bytes(content), "edits": edits, "layout": layout,
             "chunk": {"load": pages.LOAD, "code": chunk},

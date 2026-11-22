@@ -168,12 +168,12 @@ glass_code_end:
 glass_list:
 {chr(10).join(f"    .long {t}" for t in LIST_NEW)}
 glass_list_end:
-{chr(10).join(f'name_long_{t}:{chr(10)}    .asciz  "{NAMES[t][0]}"{chr(10)}name_short_{t}:{chr(10)}    .asciz  "{NAMES[t][1]}"' for t in NEW_FILTERS)}
+{chr(10).join(f'gl_name_long_{t}:{chr(10)}    .asciz  "{NAMES[t][0]}"{chr(10)}gl_name_short_{t}:{chr(10)}    .asciz  "{NAMES[t][1]}"' for t in NEW_FILTERS)}
     .align 2
-glass_names:
+glass_name_rows:
 """
 LABELS = (("glass_slot", "glass_over", "glass_graph", "glass_code_end", "glass_list", "glass_list_end")
-          + tuple(f"name_{c}_{t}" for t in NEW_FILTERS for c in ("long", "short")) + ("glass_names",))
+          + tuple(f"gl_name_{c}_{t}" for t in NEW_FILTERS for c in ("long", "short")) + ("glass_name_rows",))
 
 
 class ComposeError(ValueError):
@@ -206,14 +206,14 @@ def compose(content: bytearray, edit, assemble) -> dict:
     blob = assemble(SOURCE + table, base=LOAD)
     head = blob[:-4 * len(LABELS)]
     layout = dict(zip(LABELS, struct.unpack(f">{len(LABELS)}I", blob[-4 * len(LABELS):])))
-    if layout["glass_names"] != LOAD + len(head):
+    if layout["glass_name_rows"] != LOAD + len(head):
         raise ComposeError("the name table is not at the end of the assembly")
     rows = bytearray(_read(content, NAMES_STOCK_VA, NAME_ROW * 6))
     for r in range(6):
         if _read(content, NAMES_STOCK_VA + NAME_ROW * r + 8, 4) != bytes(4):
             raise ComposeError(f"filter name row {r}: its third column is not 0")
     for t in NEW_FILTERS:
-        rows += _long(layout[f"name_long_{t}"]) + _long(layout[f"name_short_{t}"]) + bytes(4)
+        rows += _long(layout[f"gl_name_long_{t}"]) + _long(layout[f"gl_name_short_{t}"]) + bytes(4)
     code = head + bytes(rows)
     if LOAD + len(code) > END:
         raise ComposeError(f"GLASS's chunk ends past {END:#010x}")
@@ -235,7 +235,7 @@ def compose(content: bytearray, edit, assemble) -> dict:
         _need(content, base, bytes.fromhex(op), "the name accessor's base instruction")
         edit(bound, bytes([0x72, NEW_FILTERS[-1]]),
              f"filter name column {col // 4}: bound 5 -> {NEW_FILTERS[-1]}", bytes.fromhex("7205"))
-        edit(base + 2, _long(layout["glass_names"] + col),
+        edit(base + 2, _long(layout["glass_name_rows"] + col),
              f"filter name column {col // 4}: the seven-row table", _long(NAMES_STOCK_VA + col))
 
     # 3. the stored-sound LOAD keeps filter 6
