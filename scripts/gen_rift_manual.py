@@ -37,6 +37,7 @@ def have(mod: str) -> bool:
 HAS_THOLET = have("dnfw.tholet.machines")
 HAS_PLATEAU = have("dnfw.plateau.machines")      # RIFT v0.17: the first FX machine
 HAS_GLASS = have("dnfw.glass.live")              # RIFT v0.18: the FLTR type GLASS
+HAS_CONTOUR = have("dnfw.contour.machines")      # RIFT v0.19: wave terrain
 
 
 def has_smear() -> bool:
@@ -180,6 +181,24 @@ DIGIDRUM = {
     "AMF": "AM rate: the tremolo's speed; fast rates turn into AM sidebands.",
     "FLTF": "Filter base: the bottom of the band-pass window (high-pass from 0 up).",
     "FLTW": "Filter width: how wide the window is above FLTF (127 open).",
+    "LEV": "Level.",
+}
+CONTOUR = {
+    "TUNE": "Tune, in semitones (bipolar, 64 the note's own pitch).",
+    "RATIO": "Y ratio: the speed of the orbit's Y motion against X, from a table of 16 (1:1 a circle or ellipse, others trace Lissajous figures; the uneven ratios never close and sound rougher).",
+    "SIZX": "Size X: how wide the orbit is across the surface: from a near-sine at 0 to the whole terrain.",
+    "SIZY": "Size Y: how tall the orbit is.",
+    "CNTX": "Centre X: where on the surface the orbit sits, left to right (bipolar).",
+    "CNTY": "Centre Y: where it sits, bottom to top (bipolar).",
+    "ROT": "Rotation: turns the orbit on the surface.",
+    "DRFT": "Drift: the orbit's centre wanders slowly over the surface, so the tone keeps changing on a held note.",
+    "SURF": "Surface: the terrain the orbit reads: SINE, FOLD, CHEB (Chebyshev), FM, RING, EDGE, CHAOS, BITS.",
+    "MORPH": "Morph: bends the surface's shape (each surface its own way).",
+    "WARP": "Warp: distorts the orbit's coordinates before the surface is read.",
+    "FOLD": "Fold: a wavefolder after the surface.",
+    "FM": "FM: the output modulates the orbit's speed (through-zero-ish growl at the top).",
+    "FDBK": "Feedback: the output pushes the orbit's position.",
+    "GRIT": "Grit: sample-and-bit crush.",
     "LEV": "Level.",
 }
 DIGIDRUM_OWN = {
@@ -419,10 +438,13 @@ def build() -> str:
     from dnfw.digidrum import machines as DM
     TM = importlib.import_module("dnfw.tholet.machines") if HAS_THOLET else None
     PM = importlib.import_module("dnfw.plateau.machines") if HAS_PLATEAU else None
+    CM = importlib.import_module("dnfw.contour.machines") if HAS_CONTOUR else None
 
     nav = [("start", "Start here"), ("install", "Install &amp; recovery"), ("ui", "Using RIFT's machines"),
            ("fascia", "FASCIA"), ("organ", "ORGAN"), ("silt", "SILT"), ("ligature", "LIGATURE"),
            ("digidrum", "DIGIDRUM")]
+    if CM:
+        nav.append(("contour", "CONTOUR"))
     if TM:
         nav.append(("tholet", "THOLET"))
     if PM:
@@ -436,7 +458,7 @@ def build() -> str:
     nav += [("versions", "Versions")]
     s = []
     newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM or PM) and (v != "0.16" or HAS_SMEAR)
-                  and (v != "0.17" or PM) and (v != "0.18" or HAS_GLASS))
+                  and (v != "0.17" or PM) and (v != "0.18" or HAS_GLASS) and (v != "0.19" or CM))
     s.append(f"<h1>RIFT</h1><p class=\"dim\">The manual · covers v{E(newest)}</p>")
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
 
@@ -563,6 +585,13 @@ def build() -> str:
         s.append(f"<tr><th><b>{E(t)}</b></th><td>{cells}</td></tr>")
     s.append("</table>")
 
+    if CM:
+        s.append("<h2 id=\"contour\">CONTOUR</h2>")
+        s.append(p("Wave terrain synthesis: a point orbits over a surface, and the height under it is the sound. Page 1 (ORBIT) shapes the path: its size, centre, rotation, the Y:X ratio and a slow drift. Page 2 (LAND) picks the surface and shapes it, then folds, modulates and crushes the result.",
+                   "<b>How to approach it:</b> start on SINE with small SIZX and SIZY: a clean tone. Open the sizes and the orbit crosses more of the hills: brighter. Move CNTX and CNTY to find a spot you like, then change SURF and RATIO. DRFT makes held notes evolve; FM and FDBK make it snarl."))
+        s.append(p("<span class=\"credit\">Concept: De-Pattern, after wave terrain synthesis (our own code).</span>"))
+        s.append(table(CM, CONTOUR))
+
     if TM:
         s.append("<h2 id=\"tholet\">THOLET</h2>")
         s.append(p("A piano that leans toward a Rhodes: one of six real grand-piano hammer transients starts each note, two detuned sets of twelve string partials ring under it, a felt layer softens it after Nils Frahm, EP morphs it toward an electric piano, and a grain cloud (page 2) lets the note break up into grains as it fades.",
@@ -610,7 +639,8 @@ def build() -> str:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
         s.append(p("A granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through three readers of one loop: <b>VOC</b>, a phase vocoder that stretches without changing pitch (SPD 0 freezes the sound in place); <b>PLAY</b>, a plain tape-like read; and <b>GRN</b>, a cloud of grains. BLND moves between them. A note restarts the read at STRT and plays at its pitch, so SMEAR plays chromatically.",
                    "<b>How to approach it:</b> load a sample, BLND 0 (VOC) and turn SPD toward FRZ: a held, smeared texture of that moment; move STRT to scan. BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece. LFO SPD, STRT or BLND for motion.",
-                   "<b>Note (v0.18):</b> VOC is off until it is redesigned to fit the DSP's time: on the unit it needed more than the frame allows, and a VOC note silenced the instrument. BLND's VOC end plays PLAY."))
+                   "<b>Note (v0.18):</b> VOC is off until it is redesigned to fit the DSP's time: on the unit it needed more than the frame allows, and a VOC note silenced the instrument. BLND's VOC end plays PLAY."
+                   + (" <b>The display (v0.19):</b> page 2 draws the sample with the loop (STRT, SIZE) marked, the read point moving through it, and the grain cloud around it: more grains with DENS, wider with SPRY, longer with OVLP." if CM else "")))
         s.append(p("<span class=\"credit\">Concept: De-Pattern, after the Qu-Bit Nebulae v2 (its granular-looper instrument, MIT).</span>"))
         s.append("<h3>SRC page 1</h3><table class=\"ctl\">" + "".join(
             f"<tr><th><b>{E(a)}</b><br><span class=\"dim\">{E(b)}</span></th><td>{E(c)}</td></tr>" for a, b, c in SMEAR[:8]) + "</table>")
@@ -656,13 +686,17 @@ def build() -> str:
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
     for vid, title, items in VERSIONS:
         if (vid == "0.15" and not (TM or PM)) or (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and not PM) \
-                or (vid == "0.18" and not HAS_GLASS):
+                or (vid == "0.18" and not HAS_GLASS) or (vid == "0.19" and not CM):
             continue
         s.append(f"<div class=\"box\" id=\"v{vid}\"><b>v{vid} · {E(title)}</b>" + ul(*items) + "</div>")
     return PAGE_HEAD + "\n".join(s) + "\n</main></body></html>\n"
 
 
 VERSIONS = [
+    ("0.19", "CONTOUR", ["CONTOUR, a new wave terrain synth machine: an orbit over one of eight surfaces, two pages, 16 controls.",
+                         "RIFT's machine pages drawn at the stock size: the icons are larger and the page fills the screen.",
+                         "SMEAR: page 2 shows the sample, the loop, the read point and a grain cloud that grows out of it with DENS, SPRY and OVLP.",
+                         "Includes v0.18."]),
     ("0.18", "GLASS", ["The silent unit fixed: SMEAR's VOC off (it overran the DSP's frame), the time guard expects a voice's peak cost, and an output guard on every RIFT machine (nothing non-finite or runaway reaches the effects or the master). PLATEAU no longer dropped beside other tracks.",
                        "MACHINE SEL: PLATEAU in its own section (FX), SMEAR first of the sample machines, their own logos.",
                        "GLASS, a new filter type after the Serge VCFQ, on every machine's FLTR page: rings like glass at high RES, never clips, keeps the low end; its own envelope with ATTACK and DECAY BEND, and an LPG.",
