@@ -1,5 +1,57 @@
 [
  {
+  "version": "0.17",
+  "name": "PLATEAU",
+  "sha256": "3adfd4eb8044ced0842b83bd7af850eefc1b8c75b77634affe254aea498ef501",
+  "zip": "dnfw-v0.17.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "8d9fd41f6f0d75237e308d94bda32d74f4b9d52443303c8a4a55f6753e34beae",
+  "file": "RIFT_v0.17_PLATEAU_OS1.11.syx"
+ },
+ {
+  "version": "0.16",
+  "name": "SMEAR",
+  "sha256": "27e78d5763c42c49cff63f7831d50b88b6ce8073a0a04bfa800685202c2afdc4",
+  "zip": "dnfw-v0.16.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "bce78c342ff90c98042da836ed1c2c61a78c170612817fdf438506d7b7b4266f",
+  "file": "RIFT_v0.16_SMEAR_OS1.11.syx"
+ },
+ {
+  "version": "0.15",
+  "name": "THOLET",
+  "sha256": "55650a6772453f5e77af099336ca4a0ab49dfef6881c1d3210e80d9393097583",
+  "zip": "dnfw-v0.15.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "5fca4f4bec7ac5e478645c67981ea431969a8c01e501190ef8e241896785410e",
+  "file": "RIFT_v0.15_THOLET_OS1.11.syx"
+ },
+ {
+  "version": "0.14",
+  "name": "MONTUNE",
+  "sha256": "d3b5728922eca19b7f39dd055e235dac0cef9bed2bb913a048ca04347bcb5d3a",
+  "zip": "dnfw-v0.14.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "8c233c11d308e3602bc1744cb7dcde37792e1644e279570e3564f40ee2757127",
+  "file": "RIFT_v0.14_MONTUNE_OS1.11.syx"
+ },
+ {
   "version": "0.13",
   "name": "PARITY",
   "sha256": "195fe44faa3c4abaeb26160a7ae6f844d0fd81abc1f559b9ec409774766fe092",

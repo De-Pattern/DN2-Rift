@@ -28,7 +28,11 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.13** | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
+| **v0.17** | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
+| v0.16 | 2026-11-21 | SMEAR, a Nebulae-style looper (VOC, PLAY and GRN readers of one loop, BLND between them); LIGATURE's eight new blocks (TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA); MACHINE SEL logos for RIFT's machines | `builds/v0.16-SMEAR/` | yes |
+| v0.15 | 2026-11-21 | THOLET, a piano leaning toward a Rhodes with a grain cloud (Error Kit's concept); KEYBOARD HOLD (PTN + KEYBOARD) from the DN2 mk2 mod | `builds/v0.15-THOLET/` | yes |
+| v0.14 | 2026-11-21 | MONTUNE: FLEX takes of MAIN and IN +12 dB on playback, MON on the RECORDER, MICROTUNING (11 factory tunings, USER 1..8, per track, saved with the project) | `builds/v0.14-MONTUNE/` | yes |
+| v0.13 | 2026-11-20 | PARITY with the DN2 mk2 mod: EDIT SLICE POINTS (live edits, played slice selected, zoom to 128 frames, zero-crossing snap), FUNC + E in CREATE SLICE GRID, ALLOCATE SLICE NO keeps RANDOM's locks, FLEX takes of a track +24 dB, a FLEX save never normalises | `builds/v0.13-PARITY/` | yes |
 | v0.12 | 2026-11-20 | LIGATURE's PATCH screen: the wiring on page 1 as a grid with cables, EDIT on YES (block, type, inputs, amounts, output), the BLOCK view, knobs named by block; 128 wirings kept per project | `builds/v0.12-PATCHING/` | yes |
 | v0.11 | 2026-11-19 | Held voices keep the DSP's time: a melody's or a re-struck note's tail is dropped before a held chord (dreamsaremaps) | `builds/v0.11-VOICEKEEP/` | yes |
 | v0.10 | 2026-11-19 | DIGIDRUM, digital drums after the Syntakt's (BD Modern, SD Basic, SD Vintage, CP Vintage, CY Alloy, PC Carbon), TYPE p-lockable per trig, page 2 OVER / EQ / tremolo / base-width filter / LEV | `builds/v0.10-DIGIDRUM/` | yes |
@@ -40,6 +44,179 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.17 · PLATEAU
+
+- **File:** `RIFT_v0.17_PLATEAU_OS1.11.syx` (`builds/v0.17-PLATEAU/`)
+- **sha256:** `3adfd4eb8044ced0842b83bd7af850eefc1b8c75b77634affe254aea498ef501`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `01cbc1c` (this repository)
+
+**Adds**
+
+- **PLATEAU** (type 24, `dnfw.plateau`, `docs/fx-machines.md`): RIFT's first FX machine, a plate reverb after Dattorro's 1997 design (the network Valley's Plateau is built on; Plateau's code is not used).
+  - It is a track: its input is the **BUS**, the chosen tracks' blocks (what TRK1..16 record), summed; its output is the track's voice, mono, through the track's own filter, amp, pan, sends and LEVEL. The sources keep their dry output.
+  - Pages: FX1 PLATE: PRED SIZE DCAY DIFF / DAMP BAND LCUT LEV; FX2 TANK: TLOW MSPD MDEP HOLD / TUND IGN DRV ERLY.
+  - **The BUS page:** FUNC + VOICE on a PLATEAU track (not the RECORDER): sixteen cells, [TRIG n] in or out, the LEDs lit, YES or NO back. The mask rides three of its records (six, six and four bits as knob values), set through the knob's path. A new PLATEAU track starts with every track but FX and FLEX tracks; its own track never.
+  - One instance: its lines (336 KB) in THOLET's former DDR ring; the newest voice to start owns them, an older one goes quiet; a fresh one clears them (21 blocks of silence).
+  - The bus is guarded: a sample not finite or not under 64 is taken as 0.
+- **BUS for FLEX:** SRC BUS records the sum of chosen tracks; REC BUS, FLEX REC's third page (RIGHT from REC SETUP), picks them. MUTE SRC mutes every bus track. The mask rides CHAN's and R.LEN's low bytes; a take's source word carries it (bits 16..31). fascia.asm makes the sum, the recorder reads it the next block.
+- **THOLET removed** completely (type 23 is a gone type: a saved THOLET track loads as FM Tone). Room: the image 12.6 KB, the DSP 8.2 KB; PLATEAU uses 7.8 KB of the DSP's.
+- **DIGIDRUM's logo** is the owner's drum hit.
+- Gate:
+  - runner parts `plateau` (bit-exact in the assembled walk on the bus it read; its own track never summed; the lines' clearing; TUNED, HOLD with DRV; a second track taking the one instance; a negative control) and `pstress` (beside fifteen FASCIA voices under the guard: 0.36 of the frame); `rec` run 3b (BUS);
+  - emulator: `flexcore` (BUS on FLEX; PLATEAU's defaults and mask, its BUS page through the firmware's keys, LEDs, its own track refused, NO and a track change close it), `rectext` (REC BUS and PLATEAU's BUS page pixel for pixel);
+  - unit tests `test_plateau_program` (17, a negative control).
+
+**Known issues**
+
+- PLATEAU's voice is an ordinary voice: on a busy pattern the dynamic allocator can take it. Reserve one for its track in the voice allocation menu.
+- A bus of many loud tracks can clip PLATEAU's input or a FLEX BUS take: turn IGN (or FLEX's GAIN) down.
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet.
+
+**Tests**
+
+1. MACHINE SEL: Plateau after DIGIDRUM. On a free track, an INF trig; two other tracks playing.
+2. FUNC + VOICE on it: the BUS page; every track but its own (struck) and any FLEX track lit. [TRIG] a playing track out and in: the reverb follows.
+3. SIZE, DCAY, DIFF, DAMP; HOLD ON (the tail freezes), OFF (it fades).
+4. TUND ON: play notes on the PLATEAU track: the plate rings at each note.
+5. A second PLATEAU track triggered: it takes over, the first goes quiet.
+6. FLEX: REC SETUP, RIGHT to REC BUS; pick two tracks; SRC BUS; record a take: both tracks in it.
+7. A project with a THOLET track (v0.15/v0.16): it opens as FM Tone.
+8. MACHINE SEL: DIGIDRUM shows the drum hit (DRUM).
+
+## v0.16 · SMEAR
+
+- **File:** `RIFT_v0.16_SMEAR_OS1.11.syx` (`builds/v0.16-SMEAR/`)
+- **sha256:** `27e78d5763c42c49cff63f7831d50b88b6ce8073a0a04bfa800685202c2afdc4`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `7f917f1` (this repository)
+
+**Adds**
+
+- **SMEAR** (type 9, in WERP's place; `dnfw.smear`, `docs/smear.md`): a Nebulae-style looper.
+  - Three readers of one loop:
+    - VOC, a phase vocoder on two lanes shared by the instrument (L2 and DDR);
+    - PLAY, a tape read;
+    - GRN, eight grains (seven windows).
+  - BLND moves between them.
+  - Its own chain stage, `smear.asm`, runs between `smp.asm` and `fascia.asm`. It has a mailbox written by the sample machines' glue, its own cost guard, and L0/L3/L5 kept around it.
+  - Pages:
+    - page 1: TUNE SPD BLND SAMP / STRT SIZE DENS LEV;
+    - page 2: OVLP SPRY PRND WIN (four detents a window).
+  - MACHINE SEL and TRK + CLEAR give it its own start (`smr_default`). SIZE reads LEN's 0..120 record.
+- **The tables over the sample link:**
+  - ORGAN's, THOLET's and SMEAR's tables (48 KB) are sent by the ColdFire at power-on (`K_TABLES`, `TABLE_LOAD`, a READY magic).
+  - Each machine is silent until READY.
+  - This keeps the DSP's upload under 1 MiB (1,043,650 of 1,048,575 unpacked).
+- **LIGATURE: eight new blocks**, ports of WEFT's (`rv_weft.c`): TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA.
+- **MACHINE SEL logos** (owner, 2026-11-21):
+  - The logos: FASCIA, ORGAN, SILT, LIGATURE, DIGIDRUM (label DRUM), FLEX (REC) and the DT2 sample machines (SAMP).
+  - How it is drawn: `csrc/waverider/page.c` `lg_draw` draws over stock's picture in the SRC column, after stock has drawn the screen. It finds MACHINE SEL by its view's vtable, and the machine by stock's own type-under-cursor (`0x4005b162`).
+  - The logo data: `scripts/gen_logos.py`, from `src/dnfw/waverider/logos/*.png`, 46 × 32.
+- **Room for it:**
+  - In RIFT, the Monomachine page code (`md_page.c`) is stubbed. The image has 998 bytes left.
+- Gate:
+  - emulator steps `smear`, `logos` (each machine's picture pixel for pixel; THOLET, a stock machine and the FLTR column stock's) and `ligature`;
+  - runner parts `smear`, `mstress`, the v0.17 blocks in `ligature`;
+  - unit tests `test_smear_*`, `test_logos`, the lig tests;
+  - the decode check now follows smp → smear → fascia.
+
+**Known issues**
+
+- SMEAR's second VOC lane runs from DDR: its speed on the unit is unmeasured (the guard keeps the frame either way).
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet.
+
+**Tests**
+
+1. MACHINE SEL: Smear in WERP's place. Load a sample; BLND 0: the sample stretched.
+2. SPD to FRZ: the sound held; STRT scans.
+3. BLND 127; DENS, OVLP, SPRY; WIN through its seven.
+4. Three SMEAR tracks: all sound; the oldest's VOC gives way.
+5. Power-cycle with ORGAN or THOLET on a track: they sound within a second of the start.
+6. LIGATURE: TICK -> ENV -> VCA on a WAVE: gated in time; DUST, CHAOS, LISSA as modulators.
+7. MACHINE SEL: each logo under the cursor (DRUM, REC, SAMP labels); FM TONE and the FLTR column stock.
+
+## v0.15 · THOLET
+
+- **File:** `RIFT_v0.15_THOLET_OS1.11.syx` (`builds/v0.15-THOLET/`)
+- **sha256:** `55650a6772453f5e77af099336ca4a0ab49dfef6881c1d3210e80d9393097583`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `2f6874e` (this repository)
+
+**Adds**
+
+- **THOLET** (type 23, kind 19; the concept is Error Kit's; `dnfw.tholet`, `docs/tholet.md`):
+  - It renders in FASCIA's walk; MACHINE SEL lists it after DIGIDRUM; it has two LINE pages
+    (SYN1 PIANO: TUNE HAMR TONE FELT / DEC EP STRK LEV; SYN2 CLOUD: GRAN GDEN GSIZ GFM / GSPR REL VSNS BRTH).
+  - Its sound:
+    - a strike: one of six Kawai grand transients (VCSL, CC0), 50 ms at 24 kHz in μ-law;
+    - 2 × 12 string partials as two-pole resonators; FELT adds a felt layer; EP morphs toward a Rhodes tine and adds the pickup's bark;
+    - a grain cloud in a DDR ring (8 expodec grains), swelling into the tail;
+    - REL is the damper at the note-off.
+  - A retune keeps each ringing partial's amplitude and phase. Before this, a TUNE jump of 4 octaves mid-note rang 10× too loud.
+  - Bit-exact: `live.Voice` = the program's run mode (`test_tholet_program`, 24 tests) = the assembled code (runner part `tholet`). Runner part `tstress` runs sixteen voices under the guard.
+  - Its tables are in DDR (`THOLET_TABLES_DDR`, `THOLET_RING_DDR`).
+- **perc.asm moved 16 KB lower** (0x200bc000), so fascia.asm has 140 KB of room (134.7 KB used).
+- **KEYBOARD HOLD**, from the DN2 mk2 mod's v0.64 (dn2mk2-firmware 13a1d0b, 59fdcb4, 1541dab):
+  - PTN + KEYBOARD switches stock's sustain (MIDI CC 64's) on all 16 tracks.
+  - Notes already held stay latched; MIDI notes in and the arp's keys are held too; HOLD off releases them all.
+  - The PTN view shows KB HOLD ON or OFF.
+  - Gate step: `kbhold`.
+- Includes v0.14.
+- Gate: ColdFire step 6f6 `tholet` (MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR); `kbhold`; runner parts `tholet`, `tstress`; unit tests `test_tholet_program`.
+
+**Known issues**
+
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet.
+- The DSP image has 1.3 KB of its 1 MiB upload left (v0.16 moves tables to the ColdFire).
+
+**Tests**
+
+1. MACHINE SEL: THOLET after DIGIDRUM; a note: a piano's strike and strings; HAMR through its six.
+2. FELT, EP, STRK; DEC; page 2: GRAN up, a held note breaks into grains; short trigs: REL damps.
+3. Turn TUNE quickly while a note rings: no jump in level.
+4. PTN + KEYBOARD: KB HOLD ON; a chord played and let go keeps sounding; MIDI notes held too; again: all released.
+
+## v0.14 · MONTUNE
+
+- **File:** `RIFT_v0.14_MONTUNE_OS1.11.syx` (`builds/v0.14-MONTUNE/`)
+- **sha256:** `d3b5728922eca19b7f39dd055e235dac0cef9bed2bb913a048ca04347bcb5d3a`
+- **Gated:** 2026-11-21, `CLEARED TO FLASH`
+- **Source:** `153423e` (this repository)
+
+**Adds**
+
+- **FLEX takes of MAIN and IN, +12 dB on playback** (the owner and Error Kit, 2026-11-20): the
+  recorder marks a FLEX take's buffer half when its source is MAIN or IN (`MAIN_MARK`, bit 15 of
+  the buffer directory's steps word); a voice on a marked half plays it `MAIN_PLAY_DB` (12) louder.
+  The take is stored as recorded, never boosted into the clamp. TRK takes unchanged (TRK_HW_DB 24).
+- **MON on the RECORDER** (the DN2 mk2 mod's v0.59, from dn2mk2-firmware 9682441, aee05a8):
+  knob C; with SRC IN the input is heard while armed or recording (`rec.c`; pvmix and smp
+  regenerated here).
+- **MICROTUNING** (the mod's v0.61, a7fee88, 796f5d6, 8812fba): `tune.c` as is; KB SETUP's H is
+  TUNE; TUNING and EDIT; a record per project at 0x6E0400..0x6E04FF (memory map updated).
+  RIFT's machines read the frame's note word as note + fine / 256, so all of them are retuned;
+  SLICE and GRID never.
+- Gate: runner part `mainmark` (the mark for MAIN and IN only, a track's none; the frames the same
+  either way; playback +12 dB sample for sample; a 0 dB negative control); `recorder`, `rectext`
+  (MON), the runner's `pvmix` (MON's mix); `tune`, `tunerec`; unit tests `test_mon`, `test_tunings`.
+
+**Known issues**
+
+- A MAIN or IN FLEX buffer saved to a sample slot plays 12 dB quieter than the buffer did.
+- ERASE MOD DATA does not clear the tunings yet (as in the mod).
+
+**Tests**
+
+1. FLEX from MAIN at GAIN 0: about the level heard, no distortion; from IN with the input up: the same.
+2. FLEX from a track: unchanged.
+3. RECORDER, SRC IN, C = MON ON: the input heard while armed and recording; MON in the corner.
+4. KB SETUP's H: a tuning on the track; push: TUNING (ROOT, TRK, ALL); a USER tuning's EDIT.
+5. SAVE, LOAD another, LOAD back, power-cycle: the tuning kept.
 
 ## v0.13 · PARITY
 

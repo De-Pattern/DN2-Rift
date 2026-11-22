@@ -452,15 +452,11 @@ def link_tables() -> bytes:
     """RIFT v0.16: the bytes the ColdFire sends to LINK_TABLES_DDR at power-on (dnfw.mods.waverider
     _tables): ORGAN's at +0, SMEAR's voice tables at +0x5000, its quarter sine at +0x7000, its swap
     pairs at +0x8000 (dnfw.waverider.dsp's *_DDR; RIFT v0.17: THOLET's +0x5000 gone, SMEAR's moved down)"""
-    from ..smear import stage as SG, program as SP
-    import struct as _st
-
-    def b(ws):
-        return b"".join(_st.pack("<I", w & 0xFFFFFFFF) for w in ws)
+    from ..smear import ddr as SD               # (the committed words: the build needs no numpy)
     out = bytearray(LINK_TABLES_BYTES)
     for at, data in ((ORGAN_TABLES_DDR, _organ_tables()),
-                     (SMEAR_VTABLES_DDR, b(SP.voice_tables_words())), (SMEAR_QSIN_DDR, b(SG.qsin_words())),
-                     (SMEAR_PAIRS_DDR, b(SG.pairs_words()))):
+                     (SMEAR_VTABLES_DDR, SD.table_bytes("vtables")), (SMEAR_QSIN_DDR, SD.table_bytes("qsin")),
+                     (SMEAR_PAIRS_DDR, SD.table_bytes("pairs"))):
         off = at - LINK_TABLES_DDR
         nxt = min([x - LINK_TABLES_DDR for x in (SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
                                                  SMEAR_PAIRS_DDR) if x > at] + [LINK_TABLES_BYTES])

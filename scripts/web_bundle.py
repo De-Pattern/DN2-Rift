@@ -46,6 +46,7 @@ def isolated_rebuild(zbytes: bytes, version: str) -> str:
         (run / "VERSION").write_text(version + "\n")     # as patcher-worker.js writes it
         prog = (
             "import sys, pathlib\n"
+            "sys.modules['numpy'] = sys.modules['scipy'] = None\n"   # the browser's Python has neither
             "sys.path.insert(0, sys.argv[1] + '/code')\n"
             "import dn2patch\n"
             "dn2patch.WORK = pathlib.Path(sys.argv[1] + '/work')\n"
