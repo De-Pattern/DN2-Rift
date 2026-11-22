@@ -38,6 +38,8 @@ def main(argv=None) -> int:
             text, be, offs = R.resolve(text, dsp.SMEAR_SW, pathlib.Path(tmp))
         print(f"resolved at sw {dsp.SMEAR_SW:#x}: {len(offs)} instructions, {len(be)} bytes")
     OUT.write_text(text, encoding="utf-8", newline="\n")
+    from dnfw.smear import program as _SPw   # noqa: PLC0415
+    _SPw.write_ddr_json()                   # the link's tables, for the numpy-free build (smear/ddr.json)
     n = sum(1 for ln in text.splitlines() if ln.startswith("      ") and not ln.strip().startswith("//"))
     print(f"wrote {OUT.relative_to(ROOT)}: {n} instructions")
     return 0
