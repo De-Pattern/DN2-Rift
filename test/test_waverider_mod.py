@@ -63,6 +63,8 @@ def test_applies_to_both_sections(applied, dn2_111):
     from dnfw.md import rom as md_rom
     from dnfw.perc import program as PPm
     want = 4 if PPm.RIFT else 5 if md_rom.available() else 3   # RIFT: no MD graphics; v0.16: its own tables (ORGAN, SMEAR)
+    from dnfw.mods import waverider as W0
+    want += "glass_chunk" in W0.SPEC                          # RIFT v0.18: GLASS's chunk, in PING's former place
     # v0.37: and the start-up animation: the stamp's code and its frames (ANIZ); v0.39: and
     # the mod's version label over its last frame (ANZL)
     kinds = [kind for kind, _ in chunks]
@@ -444,6 +446,8 @@ def test_v045_ping_is_gone_and_its_sites_are_stock(applied, dn2_111):
              0x400DC3A4, 0x400DC3B6, 0x400DC3CA, 0x400DC3DE,      # the name accessors
              0x400DD2BC,                                          # the LOAD bound
              0x400DC096, 0x400C24B0, 0x4006ECA0)                  # slot_to_id, descriptor, curve
+    if "glass_chunk" in waverider.SPEC:                # RIFT v0.18: GLASS (filter 6) takes these sites back
+        pytest.skip("GLASS edits PING's former sites: test_glass_coldfire holds them")
     for e in waverider.SPEC["edits"]:
         assert not any(e["va"] <= va < e["va"] + len(e["new"]) // 2 for va in sites), hex(e["va"])
     main, _ = platform.split(applied.payloads[3])
