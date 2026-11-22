@@ -173,7 +173,7 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
         from ..ligature import machines as LGx  # RIFT: and LIGATURE (21)
         from ..digidrum import machines as DGx     # RIFT: and DIGIDRUM (22)
         from ..plateau import machines as PLx       # RIFT v0.17: and PLATEAU (24)
-        from ..contour import machines as CTx       # RIFT v0.20: and CONTOUR (25)
+        from ..contour import machines as CTx       # RIFT v0.19: and CONTOUR (25)
         for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE, SLx.TYPE, LGx.TYPE, DGx.TYPE, PLx.TYPE, CTx.TYPE))):
             p.iconst(12, lo)
             if lo == hi:
