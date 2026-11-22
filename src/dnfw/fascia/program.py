@@ -3846,8 +3846,9 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.place(plt)                               # RIFT v0.17: PLATEAU (type 24, dnfw.plateau.program)
     XL_ = XP.Layout(L, _dsp.PLATEAU_TABLES_DDR, _dsp.PLATEAU_DDR)
     xg = []
-    G.around(p, L.C["t"], L.cost, BUFFERS, lambda: xg.append(XP.voice(p, XL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+    G.around(p, L.C["t"], L.cost, BUFFERS, lambda: xg.append(XP.voice(p, XL_)))
+    # (RIFT v0.18: PLATEAU is never stolen: left out of a block, it is tried again the next; stolen,
+    # an INF note's reverb stayed silent for good, the owner's "plateau does nothing")
     p.jump("", nxt)
     p.place(notready)                          # RIFT v0.16: before the link's tables: silence
     p.ld(9, L.C["t"])

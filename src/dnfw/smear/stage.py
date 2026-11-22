@@ -192,6 +192,16 @@ def _track(p: Prog, S: SLayout) -> None:
             p.iop(9, 10, "+", 9)                # x 1.5
             p.iconst(10, G.FLOOR)
             p.iop(9, 9, "MAX", 10)
+            # RIFT v0.18 (the owner's unit: a VOC note, a burst, then silence until a reboot): a voice
+            # holding a VOC lane is expected to cost VOC's measured peak, whatever its last block
+            # cost. Its light blocks (the hop's other jobs) no longer hide the heavy ones, so a VOC
+            # job that does not fit is left out, never run past the frame
+            P._tab(p, 10, V, "VG", "BLND")            # VOC heard (its gain > 0) ...
+
+            def lane_held():                        # ... and a lane held: VOC runs this block
+                p.ld(10, V.LANE)
+                p.ifz(10, "GE", lambda: (p.iconst(10, VOC_PEAK), p.iop(9, 9, "MAX", 10)))
+            p.ifz(10, "GT", lane_held, kind="f")
             p.iop(8, 8, "+", 9)
             p.ld(10, G.LIMIT)
             p.e("COMP(R8, R10);")
@@ -235,6 +245,11 @@ def _track(p: Prog, S: SLayout) -> None:
             p.stpost(4, 0)
         p.loop_r(15, 32, cp)
     p.if_(0, "EQ", 1, on, kind="i")
+
+
+# RIFT v0.18: a VOC lane's worst block on the unit, cycles: instructions + 0.95 x (4 L2 + 10 DDR)
+# accesses, measured in the runner over a hop (scripts/sharc_waverider_m5.py step smrcost holds it)
+VOC_PEAK = 270_000
 
 
 def _zero_out(p: Prog, V) -> None:
