@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..organ.live import F, DT, recip, exp2f, sin_turns, note_hz, floorf
+from ..organ.live import F, DT, recip, sin_turns, note_hz
 
 FS = 48000
 BLOCK = 32
@@ -33,31 +33,26 @@ RATIOS = tuple(F(v) for v in (0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1.0, 1.0025, 1.25, 
 INV127 = F(F(1.0) / F(127.0))
 INV64 = F(F(1.0) / F(64.0))
 HALF = F(0.5)
+QUART = F(0.25)
 DC_R = F(0.995)
-IDLE = F(1.0e-5)
+ID_DRIFT = F(F(0.13) * DT)              # the drift's own slow wander, 0.13 Hz, turns a sample
+THIRD = F(F(1.0) / F(3.0))
+# Every operation below is the DSP program's, in its order (dnfw.contour.program): float32 after each,
+# phases wrapped by frac (fascia's leaf), no floor elsewhere.
 
 
-def knob(k):
-    return F(F(k) * INV127)
-
-
-def bip(k):
-    """-1 .. +1, 64 is 0"""
-    return F(F(F(k) - F(64.0)) * INV64)
-
-
-def tri(u):
-    """a triangle of u in turns: +-1, as a fold"""
-    t = F(u - floorf(u))
-    return F(F(F(4.0) * abs(F(t - HALF))) - F(1.0))
+def frac(x):
+    x = F(x)
+    return F(x - F(np.floor(x)))
 
 
 def surface(s, x, y):
     """the eight surfaces, x and y about -1..1, z about -1..1"""
     if s == 0:                                  # SINE: a sine field
-        return F(sin_turns(F(x * HALF)) * sin_turns(F(F(y * HALF) + F(0.25))))
-    if s == 1:                                  # FOLD: the plane folded along its diagonal
-        return tri(F(F(F(x + y) * F(0.75)) + F(0.25)))
+        return F(sin_turns(F(x * HALF)) * sin_turns(F(F(y * HALF) + QUART)))
+    if s == 1:                                  # FOLD: the plane folded along its diagonal (a triangle)
+        t = frac(F(F(F(x + y) * F(0.75)) + QUART))
+        return F(F(F(4.0) * abs(F(t - HALF))) - F(1.0))
     if s == 2:                                  # CHEB: T3(x) T2(y)
         x2 = F(x * x)
         t3 = F(x * F(F(F(4.0) * x2) - F(3.0)))
@@ -65,33 +60,29 @@ def surface(s, x, y):
         return F(F(t3 * t2) * F(0.8))
     if s == 3:                                  # FM: X carried, Y modulating
         return sin_turns(F(F(x * HALF) + F(F(0.35) * sin_turns(F(y * F(1.5))))))
-    if s == 4:                                  # RING: rings round a point off the centre (a centred circle reads one height)
+    if s == 4:                                  # RING: rings round a point off the centre
         xo = F(x + F(0.35))
         return sin_turns(F(F(F(xo * xo) + F(F(y * y) * F(0.6))) * F(1.5)))
-    if s == 5:                                  # EDGE: a sine squared hard against the ridge
-        a = F(F(sin_turns(F(x * HALF)) * F(4.0)) * sin_turns(F(F(y * F(0.25)) + F(0.25))))
+    if s == 5:                                  # EDGE: a sine pushed hard against its ridge
+        a = F(F(sin_turns(F(x * HALF)) * F(4.0)) * sin_turns(F(F(y * QUART) + QUART)))
         return F(a * recip(F(F(1.0) + abs(a))))
     if s == 6:                                  # CHAOS: a product folded on itself
         return sin_turns(F(F(F(x * y) * F(2.0)) + F(x * F(0.75))))
-    xq = F(floorf(F(F(x * F(4.0)) + HALF)) * F(0.25))   # BITS: the plane in steps
-    yq = F(floorf(F(F(y * F(3.0)) + HALF)) * F(F(1.0) / F(3.0)))
-    return F(sin_turns(F(xq * HALF)) * sin_turns(F(F(yq * HALF) + F(0.25))))
+    tx = F(F(x * F(4.0)) + HALF)                # BITS: the plane in steps
+    xq = F(F(tx - frac(tx)) * QUART)
+    ty = F(F(y * F(3.0)) + HALF)
+    yq = F(F(ty - frac(ty)) * THIRD)
+    return F(sin_turns(F(xq * HALF)) * sin_turns(F(F(yq * HALF) + QUART)))
 
 
 class Voice:
     def __init__(self, sr=FS):
-        self.px = self.py = self.pd = F(0.0)
-        self.z = F(0.0)
-        self.hold = F(0.0)
-        self.gc = F(0.0)
-        self.dcx = self.dcy = F(0.0)
         self.on = False
+        self.px = self.py = self.pd = self.z = self.hold = self.gc = self.dcx = self.dcy = F(0.0)
 
     def note_on(self):
-        self.px = self.py = F(0.0)
-        self.z = self.hold = self.gc = F(0.0)
-        self.dcx = self.dcy = F(0.0)
         self.on = True
+        self.px = self.py = self.z = self.hold = self.gc = self.dcx = self.dcy = F(0.0)
 
     def block(self, k: dict, note: float, trig: bool = False, n: int = BLOCK) -> np.ndarray:
         if trig:
@@ -99,56 +90,52 @@ class Voice:
         out = np.zeros(n, np.float32)
         if not self.on:
             return out
+        q = {c: F(F(k[c]) * INV127) for c in CONTROLS}
         hz = note_hz(F(F(note) + F(F(F(k["TUNE"]) - F(64.0)) * F(0.375))))   # +-24 semitones
         ix = F(hz * DT)
-        ri = min(int(k["RATIO"]) >> 3, 15)
-        iy = F(ix * RATIOS[ri])
-        sx, sy = knob(k["SIZX"]), knob(k["SIZY"])
-        cxx, cyy = bip(k["CNTX"]), bip(k["CNTY"])
-        rot = knob(k["ROT"])                    # turns of a half turn
-        ca = sin_turns(F(F(rot * HALF) + F(0.25)))
-        sa = sin_turns(F(rot * HALF))
-        drft = F(F(knob(k["DRFT"]) * knob(k["DRFT"])) * F(0.6))
-        id_ = F(F(0.13) * DT)                   # the drift's own slow wander (0.13 Hz)
-        m = F(F(k["SURF"]) * F(8.0 / 128.0))
-        s0 = int(m) & 7
-        mo = knob(k["MORPH"])
+        iy = F(ix * RATIOS[min(int(k["RATIO"]) >> 3, 15)])
+        sx, sy = q["SIZX"], q["SIZY"]
+        cx = F(F(F(k["CNTX"]) - F(64.0)) * INV64)
+        cy = F(F(F(k["CNTY"]) - F(64.0)) * INV64)
+        ca = sin_turns(F(F(q["ROT"] * HALF) + QUART))
+        sa = sin_turns(F(q["ROT"] * HALF))
+        drft = F(F(q["DRFT"] * q["DRFT"]) * F(0.6))
+        s0 = int(np.int32(np.trunc(F(F(k["SURF"]) * F(0.0625)))))
         s1 = (s0 + 1) & 7
-        warp = F(knob(k["WARP"]) * F(0.8))
-        fold = F(knob(k["FOLD"]) * F(3.0))
-        fm = F(knob(k["FM"]) * F(1.5))
-        fb = F(knob(k["FDBK"]) * F(0.25))
-        grit = int(k["GRIT"]) >> 3              # hold every 1 + grit samples
-        lev = F(knob(k["LEV"]) * F(0.8))
+        mo = q["MORPH"]
+        warp = F(q["WARP"] * F(0.8))
+        fold = F(q["FOLD"] * F(3.0))
+        fold1 = F(F(1.0) + fold)
+        fm = F(q["FM"] * F(1.5))
+        fb = F(q["FDBK"] * F(0.25))
+        grit = F(int(k["GRIT"]) >> 3)
+        lev = F(q["LEV"] * F(0.8))
         for i in range(n):
-            self.px = F(self.px + F(ix + F(fb * self.z)))
-            self.px = F(self.px - floorf(self.px))
-            self.py = F(self.py + F(iy + F(fb * self.z)))
-            self.py = F(self.py - floorf(self.py))
-            self.pd = F(self.pd + id_)
-            self.pd = F(self.pd - floorf(self.pd))
+            self.px = frac(F(self.px + F(ix + F(fb * self.z))))
+            self.py = frac(F(self.py + F(iy + F(fb * self.z))))
+            self.pd = frac(F(self.pd + ID_DRIFT))
             dr = F(drft * sin_turns(self.pd))
-            uy = sin_turns(F(F(self.py + F(0.25)) + dr))
+            uy = sin_turns(F(F(self.py + QUART) + dr))
             ux = sin_turns(F(F(self.px + F(fm * uy)) + dr))
             x0 = F(sx * ux)
             y0 = F(sy * uy)
-            x = F(F(F(x0 * ca) - F(y0 * sa)) + cxx)
-            y = F(F(F(x0 * sa) + F(y0 * ca)) + cyy)
+            x = F(F(F(x0 * ca) - F(y0 * sa)) + cx)
+            y = F(F(F(x0 * sa) + F(y0 * ca)) + cy)
             x = F(x + F(warp * F(y * y)))
-            za = surface(s0, x, y)
-            zb = surface(s1, x, y)
-            z = F(za + F(mo * F(zb - za)))
+            z = surface(s0, x, y)
+            if mo > F(0.0):
+                zb = surface(s1, x, y)
+                z = F(z + F(mo * F(zb - z)))
             if fold > F(0.0):
-                z = sin_turns(F(F(z * F(F(1.0) + fold)) * F(0.25)))
+                z = sin_turns(F(F(z * fold1) * QUART))
             self.z = z
-            if self.gc <= F(0.0):
-                self.hold = z
-                self.gc = F(grit)
-            else:
+            if self.gc > F(0.0):
                 self.gc = F(self.gc - F(1.0))
-            # DC blocker
-            y_ = F(F(self.hold - self.dcx) + F(DC_R * self.dcy))
+            else:
+                self.hold = z
+                self.gc = grit
+            yy = F(F(self.hold - self.dcx) + F(DC_R * self.dcy))
             self.dcx = self.hold
-            self.dcy = y_
-            out[i] = F(y_ * lev)
+            self.dcy = yy
+            out[i] = F(yy * lev)
         return out

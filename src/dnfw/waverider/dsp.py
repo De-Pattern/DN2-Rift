@@ -193,7 +193,7 @@ LOOKUP16_DM = 0x2DEE04                       # 16 words; 0x2dee00 is the [-1] gu
 from ..mnm import machines as _mnm_types    # noqa: E402
 from ..sampler import machines as _smp_types
 from ..fascia import machines as _fsc_types  # noqa: E402
-MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 7)   # RIFT v0.17: 25, PLATEAU at 24 (23, THOLET's, gone: FM Tone's engine)   # RIFT v0.17: 23 again (THOLET, 23, removed)   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
+MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 8)   # RIFT v0.20: 26, CONTOUR at 25   # RIFT v0.17: 25, PLATEAU at 24 (23, THOLET's, gone: FM Tone's engine)   # RIFT v0.17: 23 again (THOLET, 23, removed)   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
 SMP_ENGINE_SLOT = 5                          # the engine slot the sample machines borrow
 SMP_TYPES = _smp_types.TYPES                 # ONESHOT WERP STRETCH REPITCH GRID SLICE (v0.19); v0.44 BOUNCE (17)
 ENGINES = {5: "PERC", 8: "ONESHOT", 12: "GRID"}   # types with an engine of ours
@@ -207,7 +207,8 @@ from ..silt import machines as _slt_types  # noqa: E402
 from ..ligature import machines as _lig_types  # noqa: E402
 from ..digidrum import machines as _dgd_types  # noqa: E402
 from ..plateau import machines as _plt_types  # noqa: E402  (RIFT v0.17: PLATEAU, type 24)
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, _plt_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
+from ..contour import machines as _ctr_types  # noqa: E402  (RIFT v0.20: CONTOUR, type 25)
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, _plt_types.TYPE, _ctr_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable
@@ -244,6 +245,9 @@ DIGIDRUM_TABLES_DDR = 0x81229000
 # in THOLET's former ring (1 MB at 0x82600000: 0x100 + 83,968 words, cleared by the DSP itself)
 PLATEAU_TABLES_DDR = 0x8122A000
 PLATEAU_DDR = 0x82600000
+# CONTOUR (type 25, dnfw.contour.program; RIFT v0.20, owner 2026-11-22): its knobs' records and RATIO's
+# ratios (after PLATEAU's)
+CONTOUR_TABLES_DDR = 0x8122B000
 # GLASS (RIFT v0.18, the FLTR type 6, dnfw.glass.program): each slot's filter, envelope and vactrol
 # state, 64 bytes a slot (after PLATEAU's lines, in THOLET's former ring)
 GLASS_STATE_DDR = 0x82680000
@@ -427,6 +431,7 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("LIGATURE's patches (dnfw.ligature.program.tables_bytes; RIFT)", LIG_TABLES_DDR, _lig_tables()),
         ("DIGIDRUM's records and anchors (dnfw.digidrum.program.tables_bytes; RIFT)", DIGIDRUM_TABLES_DDR, _dgd_tables()),
         ("PLATEAU's records (dnfw.plateau.program.tables_bytes; RIFT v0.17)", PLATEAU_TABLES_DDR, _plt_tables()),
+        ("CONTOUR's records and ratios (dnfw.contour.program.tables_bytes; RIFT v0.20)", CONTOUR_TABLES_DDR, _ctr_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -474,6 +479,11 @@ def smear_layout():
                       ((SMEAR_LANE0_L2, SMEAR_LANE0_DDR), (SMEAR_LANE1_W, SMEAR_LANE1_DDR)), PP.BUFFERS,
                       pairs=SMEAR_PAIRS_DDR, ready=LINK_READY_DDR, cost=SMEAR_MBOX + 16 * 128,
                       smp_pos=SMP_STATE_DM)   # (the guard's cost words after the mailboxes)
+
+
+def _ctr_tables() -> bytes:
+    from ..contour import ddr
+    return ddr.tables_bytes()
 
 
 def _plt_tables() -> bytes:

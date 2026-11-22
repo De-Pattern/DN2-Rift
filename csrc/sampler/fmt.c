@@ -714,6 +714,12 @@ PLT_F(8) PLT_F(9) PLT_F(10) PLT_F(11) PLT_F(12) PLT_F(13) PLT_F(14) PLT_F(15)
 static void (*const plt_fns[])(int, char *) = {plt_f0, plt_f1, plt_f2, plt_f3, plt_f4, plt_f5, plt_f6, plt_f7,
     plt_f8, plt_f9, plt_f10, plt_f11, plt_f12, plt_f13, plt_f14, plt_f15};
 _Static_assert(sizeof plt_fns / sizeof plt_fns[0] == PLT_N, "one formatter a PLATEAU control");
+#define CTR_F(j) static void ctr_f##j(int v, char *b) { fsc_text(&wr_mach_ctr, j, v, b); }
+CTR_F(0) CTR_F(1) CTR_F(2) CTR_F(3) CTR_F(4) CTR_F(5) CTR_F(6) CTR_F(7)   /* RIFT v0.20: CONTOUR's 16 */
+CTR_F(8) CTR_F(9) CTR_F(10) CTR_F(11) CTR_F(12) CTR_F(13) CTR_F(14) CTR_F(15)
+static void (*const ctr_fns[])(int, char *) = {ctr_f0, ctr_f1, ctr_f2, ctr_f3, ctr_f4, ctr_f5, ctr_f6, ctr_f7,
+    ctr_f8, ctr_f9, ctr_f10, ctr_f11, ctr_f12, ctr_f13, ctr_f14, ctr_f15};
+_Static_assert(sizeof ctr_fns / sizeof ctr_fns[0] == CTR_N, "one formatter a CONTOUR control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -791,6 +797,9 @@ void smp_formats(int kind)
     if (kind == PLT_KIND)                       /* RIFT v0.17: PLATEAU's (FASCIA's records too) */
         for (int j = 0; j < PLT_N; j++)
             RECORD_FMT(plt_rid[j]) = (void *)plt_fns[j];
+    if (kind == CTR_KIND)                       /* RIFT v0.20: CONTOUR's (FASCIA's records too) */
+        for (int j = 0; j < CTR_N; j++)
+            RECORD_FMT(ctr_rid[j]) = (void *)ctr_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.

@@ -142,6 +142,10 @@ LIG_SLIDE = tuple(_lig.SLOTS[c][1] for c in _lig.CONTROLS if not _lig.is_choice(
 from .plateau import machines as _plt    # noqa: E402
 PLT_TYPE = _plt.TYPE
 PLT_SLIDE = tuple(_plt.SLOTS[c][1] for c in _plt.CONTROLS if not _plt.is_choice(c))
+# RIFT v0.20: CONTOUR (type 25): its knobs slide (SURF, a choice, does not)
+from .contour import machines as _ctr    # noqa: E402
+CTR_TYPE = _ctr.TYPE
+CTR_SLIDE = tuple(_ctr.SLOTS[c][1] for c in _ctr.CONTROLS if not _ctr.is_choice(c))
 # RIFT: DIGIDRUM (type 22): its eight knobs slide
 from .digidrum import machines as _dgd    # noqa: E402
 DGD_TYPE = _dgd.TYPE
@@ -217,4 +221,6 @@ def c_header(stock: bytes) -> str:
             f"#define SL_DGD_TYPE {DGD_TYPE}\n"
             f"static const unsigned int sl_dgd[4] = {words(sum(1 << x for x in DGD_SLIDE))};\n"
             f"#define SL_PLT_TYPE {PLT_TYPE}\n"
-            f"static const unsigned int sl_plt[4] = {words(sum(1 << x for x in PLT_SLIDE))};\n#endif\n")
+            f"static const unsigned int sl_plt[4] = {words(sum(1 << x for x in PLT_SLIDE))};\n"
+            f"#define SL_CTR_TYPE {CTR_TYPE}\n"
+            f"static const unsigned int sl_ctr[4] = {words(sum(1 << x for x in CTR_SLIDE))};\n#endif\n")

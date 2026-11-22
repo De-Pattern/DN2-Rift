@@ -80,6 +80,7 @@ from dnfw.organ import program as OGP                           # noqa: E402  (R
 from dnfw.silt import program as SLP                            # noqa: E402  (RIFT: SILT's, in FASCIA's walk)
 from dnfw.ligature import program as LGP                        # noqa: E402  (RIFT: LIGATURE's, in FASCIA's walk)
 from dnfw.digidrum import program as DDP                           # noqa: E402  (RIFT: DIGIDRUM's, in FASCIA's walk)
+from dnfw.contour import program as CTP                            # noqa: E402  (RIFT v0.20: CONTOUR's, in FASCIA's walk)
 from dnfw.plateau import program as PLP                            # noqa: E402  (RIFT v0.17: PLATEAU's, in FASCIA's walk)
 from dnfw.glass import program as GLP                              # noqa: E402  (RIFT v0.18: GLASS, at the walk's end)
 from dnfw.perc.program import RIFT as PP_RIFT                    # noqa: E402
@@ -108,6 +109,7 @@ SL_L = SLP.layout()             # RIFT: SILT (type 20), in FASCIA's walk
 LG_L = LGP.layout()             # RIFT: LIGATURE (type 21), in FASCIA's walk
 DD_L = DDP.layout()             # RIFT: DIGIDRUM (type 22), in FASCIA's walk
 PL_L = PLP.layout()             # RIFT v0.17: PLATEAU (type 24), in FASCIA's walk
+CT_L = CTP.layout()             # RIFT v0.20: CONTOUR (type 25), in FASCIA's walk
 GL_L = GLP.layout()             # RIFT v0.18: GLASS (filter 6), at FASCIA's walk's end
 
 
@@ -372,7 +374,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 lt = FSC_L.lasttype + 4 * t
                 if mem.get(lt) != ty:
                     mem.put(lt, ty)
-                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], PLP.VOICE["magic"]):
+                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], PLP.VOICE["magic"], CTP.VOICE["magic"]):
                         mem.put(fsc_base(t) + 4 * k_, 0)
                 if ty == FSM.TYPE:
                     p_, mem = FSP.run_voice(FSC_L, None, t, mem)
@@ -389,6 +391,9 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 elif ty == DDP.TYPE:                 # RIFT: DIGIDRUM (dnfw.digidrum.program), in the same walk
                     p_, mem = DDP.run_voice(DD_L, None, t, mem)
                     nw = DDP.VOICE_WORDS
+                elif ty == CTP.TYPE:                 # RIFT v0.20: CONTOUR (dnfw.contour.program), in the same walk
+                    p_, mem = CTP.run_voice(CT_L, None, t, mem)
+                    nw = CTP.VOICE_WORDS
                 elif ty == PLP.TYPE:                 # RIFT v0.17: PLATEAU (dnfw.plateau.program), in the same walk;
                     # its input, the tracks' blocks as it reads them (TRK_BUF), kept for live
                     tap["trk"] = [[m2.word(st, SM.TRK_BUF + SM.TRK_STRIDE * k + 4 * i) or 0 for i in range(64)]
@@ -682,7 +687,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,plateau,pstress,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,plateau,pstress,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -835,6 +840,8 @@ def main(argv=None):
                                 lambda: step_digidrum(warm(), sound, machines)),
                                ("dstress", "sixteen DIGIDRUM voices under the guard (RIFT)",
                                 lambda: step_dstress(warm(), sound, machines)),
+                               ("contour", "CONTOUR bit-exact to live.Voice, in FASCIA's walk (RIFT v0.20)",
+                                lambda: step_contour(warm(), sound, machines)),
                                ("plateau", "PLATEAU bit-exact to live.Voice on the bus, in FASCIA's walk (RIFT v0.17)",
                                 lambda: step_plateau(warm(), sound, machines)),
                                ("pstress", "a PLATEAU track beside fifteen FASCIA voices under the guard (RIFT v0.17)",
@@ -4315,6 +4322,132 @@ def step_lstress(init, sound, machines) -> dict:
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 
+def ct_frame(sound, machines, ctr: dict, trig=(), fascias=None) -> bytes:
+    """a frame: CTR = {t: (knobs, note)} on CONTOUR, FASCIAS = {t: (panel, note, vel)} on FASCIA; TRIG the
+    tracks triggered (mask 34)"""
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.contour import bench as CB         # noqa: PLC0415
+    t0 = CTP.TYPE if 0 in ctr else FSM.TYPE
+    f = base_frame(sound, machines, t0=t0, trigger=False)
+    for t, (kn, note) in ctr.items():
+        f.header(FR.MACHINE, t, CTP.TYPE)
+        for w, ride in zip(CB.knobs_words(kn), CB.RIDES):
+            f.param(t, FSM.SLOTS[ride][1], w)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, 127 << 8)
+    for t, (panel, note, vel) in (fascias or {}).items():
+        f.header(FR.MACHINE, t, FSM.TYPE)
+        for c, word in FB.panel_words(panel).items():
+            f.param(t, FSM.SLOTS[c][1], word)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
+    for t in trig:
+        f.trigger(t, masks=(34,))
+    return f.to_bytes()
+
+
+def ct_live(knobs_of, notes: dict, blocks: int, skew=0):
+    """live.Voice: KNOBS_OF(b), NOTES = {block: note}. SKEW (the negative control) moves SIZX in live only"""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.contour import bench as CB, live as CTV   # noqa: PLC0415
+    v = CTV.Voice()
+    out, note = [], 60.0
+    for b in range(blocks):
+        seen = list(CB.knobs_seen(CB.knobs_words(knobs_of(b))))
+        seen[2] = min(127, seen[2] + skew)               # SIZX
+        if b in notes:
+            note = notes[b]
+        out.append(np.asarray(v.block(CB.live_knobs(seen), FB.note_seen(note), b in notes), np.float32))
+    return out
+
+
+def step_contour(init, sound, machines) -> dict:
+    """RIFT v0.20: CONTOUR's assembled code against live.Voice, bit for bit, in FASCIA's walk: the defaults (a
+    note, a retrigger); every surface with MORPH, FOLD, GRIT, FM, FDBK, WARP, DRFT and ROT on; every knob
+    moving; extreme panels; two voices at once; a track switched from FASCIA to CONTOUR; and a negative
+    control (live with SIZX one step off must be told apart)."""
+    import random                                # noqa: PLC0415
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.contour import bench as CB         # noqa: PLC0415
+    res, bad = {}, []
+
+    def judge(name, rr, want, t=0, need_sound=True):
+        ex = fsc_exact(rr)
+        lb, dmax = fsc_vs_live(rr, t, want)
+        got = [np.array(b_, np.uint32).view(np.float32) for b_ in fsc_bits(rr, t) if b_ is not None]
+        pk = float(max((np.max(np.abs(g)) for g in got), default=0.0))
+        ok = bool(rr["ok"] and ex[1:] == (0, 0) and lb == 0 and (pk > 0.001 or not need_sound))
+        res[name] = {"ok": ok, "model_mismatch": ex[1:], "live_blocks_differing": lb, "max_abs_diff": dmax,
+                     "peak": pk, "halt": rr.get("halt")}
+        if not ok:
+            bad.append(name)
+        print(f"    contour {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
+        return lb
+    n = 16
+    dk = CB.panel_knobs()
+    rr = run_blocks(init, lambda b: ct_frame(sound, machines, {0: (dk, 55.0)}, trig=(0,) if b in (1, 10) else ()), n)
+    judge("defaults: a note, a retrigger", rr, ct_live(lambda b: dk, {1: 55.0, 10: 55.0}, n))
+    lb_neg = fsc_vs_live(rr, 0, ct_live(lambda b: dk, {1: 55.0, 10: 55.0}, n, skew=1))[0]
+    res["negative control: SIZX + 1 in live only"] = {"ok": lb_neg > 0, "live_blocks_differing": lb_neg}
+    print(f"    contour negative control: {'ok' if lb_neg > 0 else 'FAIL'} ({lb_neg} blocks told apart)", flush=True)
+    ok_s = True
+    for sf in range(8):
+        ks = CB.panel_knobs(SURF=16 * sf + 3, MORPH=70, FOLD=40, GRIT=20, FM=50, FDBK=40, WARP=60, DRFT=90, ROT=33)
+        rr = run_blocks(init, lambda b, ks=ks: ct_frame(sound, machines, {0: (ks, 50.0)}, trig=(0,) if b == 1 else ()), 6)
+        judge(f"surface {sf}, every land control on", rr, ct_live(lambda b, ks=ks: ks, {1: 50.0}, 6))
+        ok_s = ok_s and res[f"surface {sf}, every land control on"]["ok"]
+
+    def moving(b):
+        return [(dk[j] + 7 * b * (j + 1)) % 128 for j in range(16)]
+    m = 14
+    rr = run_blocks(init, lambda b: ct_frame(sound, machines, {0: (moving(b), 48.0)}, trig=(0,) if b in (1, 8) else ()), m)
+    judge("every knob moving", rr, ct_live(moving, {1: 48.0, 8: 48.0}, m), need_sound=False)
+    ok_x = True
+    for seed in range(3):
+        r0 = random.Random(seed)
+        kx = [r0.choice([0, 127, r0.randrange(128)]) for _ in range(16)]
+        note = (24.0, 72.0, 120.0)[seed]
+        rr = run_blocks(init, lambda b, kx=kx, note=note: ct_frame(sound, machines, {0: (kx, note)}, trig=(0,) if b == 1 else ()), 8)
+        judge(f"extreme panel {seed}", rr, ct_live(lambda b, kx=kx: kx, {1: note}, 8), need_sound=False)
+        ok_x = ok_x and res[f"extreme panel {seed}"]["ok"]
+    k2 = CB.panel_knobs(SURF=70, RATIO=90, SIZX=120, CNTX=20)
+    rr = run_blocks(init, lambda b: ct_frame(sound, machines, {0: (dk, 45.0), 1: (k2, 64.0)},
+                                             trig=(0, 1) if b == 1 else ()), 10)
+    judge("two at once (track 1)", rr, ct_live(lambda b: dk, {1: 45.0}, 10))
+    judge("two at once (track 2)", rr, ct_live(lambda b: k2, {1: 64.0}, 10), t=1)
+    fpanel = fsc_audition()["01_tubular_bell"][0]
+    n_sw = 16
+
+    def sw(b):
+        if b < 5:
+            return ct_frame(sound, machines, {}, trig=(0,) if b == 1 else (), fascias={0: (fpanel, 60, 1.0)})
+        return ct_frame(sound, machines, {0: (dk, 50.0)}, trig=(0,) if b == 6 else ())
+    rr = run_blocks(init, sw, n_sw)
+    want = ct_live(lambda b: dk, {1: 50.0}, n_sw - 5)
+    got = fsc_bits(rr, 0)
+    ex = fsc_exact(rr)
+    exact = len(got) == n_sw and all(got[b] is not None and np.array_equal(np.array(got[b], np.uint32),
+                                                                             want[b - 5].view(np.uint32))
+                                     for b in range(5, n_sw))
+    ok_sw = bool(rr["ok"] and ex[1:] == (0, 0) and exact and np.max(np.abs(want[-1])) > 0.0005)
+    res["FASCIA -> CONTOUR on one track"] = {"ok": ok_sw, "model_mismatch": ex[1:], "ctr_exact": exact}
+    if not ok_sw:
+        bad.append("switch")
+    print(f"    contour FASCIA -> CONTOUR: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    checks = {
+        "the defaults (a note, a retrigger): bit-exact to the model and live": res["defaults: a note, a retrigger"]["ok"],
+        "the comparison tells live with SIZX one step off apart (negative control)":
+            res["negative control: SIZX + 1 in live only"]["ok"],
+        "every surface with every land control on: bit-exact": ok_s,
+        "every knob moving: bit-exact": res["every knob moving"]["ok"],
+        "extreme panels (low, middle, top notes): bit-exact": ok_x,
+        "two at once: both bit-exact": res["two at once (track 1)"]["ok"] and res["two at once (track 2)"]["ok"],
+        "a track switched from FASCIA to CONTOUR: a fresh voice, then bit-exact": ok_sw,
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
+
+
 def dd_frame(sound, machines, res: dict, trig=(), fascias=None) -> bytes:
     """a frame: RES = {t: (knobs, note)} on DIGIDRUM, FASCIAS = {t: (panel, note, vel)} on FASCIA; TRIG the
     tracks triggered (mask 34)"""
@@ -4848,6 +4981,11 @@ def smr_check(rr) -> dict:
             "peak": peak, "finite": fin, "ok": rr["ok"]}
 
 
+def _ctr_heavy():
+    from dnfw.contour import bench as CB         # noqa: PLC0415
+    return CB.panel_knobs(SURF=4 * 16 + 3, MORPH=90, FOLD=60, GRIT=0, FM=80, FDBK=50, WARP=70, DRFT=100, ROT=40)
+
+
 def step_rcost(init, sound, machines) -> dict:
     """RIFT v0.18 (the owner's unit went silent after a SMEAR note: the emulator counts instructions,
     the unit also waits on memory): each machine's worst block on the unit's cost model --
@@ -4884,6 +5022,7 @@ def step_rcost(init, sound, machines) -> dict:
             "SMEAR GRN (BLND 127)": (lambda b: smr_frame(sound, machines, {0: dict(BLND=127, DENS=127, OVLP=127)}, trig=(0,) if b == 1 else ()), 24),
             "PLATEAU": (lambda b: plt_frame(sound, machines, {3: (PB.panel_knobs(DCAY=100), 60.0, 1)}, {}, trig=(3,) if b == 1 else ()), 30),
             "FASCIA (a bell)": (lambda b: plt_frame(sound, machines, {}, {0: (fp, 60, 1.0)}, trig=(0,) if b == 1 else ()), 12),
+            "CONTOUR (every land control on, MORPH into EDGE)": (lambda b: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=(0,) if b == 1 else ()), 8),
         }
         for name, (fb, n) in cases.items():
             r = worst(fb, n)
