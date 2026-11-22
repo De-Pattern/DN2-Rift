@@ -2986,7 +2986,7 @@ def main() -> int:
             from PIL import Image                   # noqa: PLC0415
             lgf = lay["lg_force"]
             ls_ = ["func-src", "wait:20", "png:s0"]
-            for t in (18, 19, 20, 21, 22, 17, 23):
+            for t in (18, 19, 20, 21, 22, 17, 23, *((24, 9) if "plateau" in GL.ORDER else ())):
                 ls_ += [f"poke:{lgf:#x}:{t:08x}", "down", "wait:4", "up", "wait:5", f"png:t{t}"]
             ls_ += [f"poke:{lgf:#x}:ffffffff", "down", "wait:4", "up", "wait:5", "png:back",
                     "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:5", "png:one",
@@ -3023,6 +3023,10 @@ def main() -> int:
                     facts = {f"type {t}: the {n.upper()} logo": same(pic(f"t{t}"), want[n]) for t, n in per.items()}
                     facts["DIGIDRUM's label reads DRUM"] = same(lbl("t22"), word("DRUM"))
                     facts["FLEX: its own logo, and REC"] = same(pic("t17"), want["flex"]) and same(sh["t17"][44:52, 16:33] if "t17" in sh else None, word("REC")[:, :17])
+                    if "plateau" in GL.ORDER:           # RIFT v0.18 (owner): PLATEAU's own logo and FX; SMEAR's own and SAMP
+                        facts["PLATEAU: its own logo, and FX"] = same(pic("t24"), want["plateau"]) and same(
+                            sh["t24"][44:52, 19:30] if "t24" in sh else None, word("FX")[:, :11])
+                        facts["SMEAR: its own logo, and SAMP"] = same(pic("t9"), want["smear"]) and same(lbl("t9"), word("SAMP"))
                     facts["the synth logos keep SYN's label"] = all(same(lbl(f"t{t}"), lbl("s0")) for t in (18, 19, 20, 21))
                     facts["ONESHOT under the cursor: the DT2 logo and SAMP"] = same(pic("one"), want["dt2"]) and same(lbl("one"), word("SAMP"))
                     facts["type 23 (no machine of ours): stock's picture, pixel for pixel"] = same(sh.get("t23"), sh.get("s0"))
