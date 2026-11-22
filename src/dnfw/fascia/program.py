@@ -3667,7 +3667,7 @@ def off(g: FP) -> None:
 def sanitize(p, L: "Layout") -> None:
     """RIFT v0.18 (the owner, 2026-11-22: a SMEAR note gave a burst, then the whole unit went silent
     until a reboot): every slot's block, after every RIFT machine and GLASS and before the stock
-    chain, is checked: a sample that is not finite or not under 64 (its exponent field 133 or more:
+    chain, is checked: a sample that is not finite or not under 64 (its exponent field 133 or more: on a slot our code wrote,
     NaN and infinity have 255) zeroes the slot's whole block, and the slot's last-type word is made
     impossible (-1), so its voice starts afresh at the next block (the life words and every
     machine's magic cleared, as on a machine change). Nothing non-finite reaches the filters, the
@@ -3676,6 +3676,32 @@ def sanitize(p, L: "Layout") -> None:
     p.st(L.order_i, 0)
     top = p.label("san")
     p.place(top)
+    # only a slot our code wrote: a RIFT machine (18..24), SMEAR (9), or GLASS's filter (6); the stock
+    # machines' blocks stay exactly as stock leaves them (the runner's stock part, bit for bit)
+    from ..glass import program as _GLP
+    p.ld(9, L.order_i)
+    PP.raw_type(p, 2)
+    p.ld(9, L.order_i)
+    p.iop(10, 9, "+", 9)
+    PP.half(p, 4, _GLP.FILTER_HDR, 10)
+    p.iconst(3, 0)
+    p.iconst(12, 18)
+    p.if_(2, "GE", 12, lambda: (p.iconst(12, 24), p.if_(2, "LE", 12, lambda: p.iconst(3, 1), kind="i")), kind="i")
+    p.iconst(12, 9)
+    p.if_(2, "EQ", 12, lambda: p.iconst(3, 1), kind="i")
+    p.iconst(12, 6)
+    p.if_(4, "EQ", 12, lambda: p.iconst(3, 1), kind="i")
+    p.ifz(3, "NE", lambda: _sanitize_slot(p, L))
+    p.ld(0, L.order_i)
+    p.iconst(12, 1)
+    p.iop(0, 12, "+", 0)
+    p.st(L.order_i, 0)
+    p.iconst(12, 16)
+    p.e("COMP(R0, R12);")
+    p.jump("LT", top)
+
+
+def _sanitize_slot(p, L: "Layout") -> None:
     p.ld(9, L.order_i)
     p.lsh(12, 9, 2)
     p.iconst(11, BUFFERS)
@@ -3707,13 +3733,6 @@ def sanitize(p, L: "Layout") -> None:
         p.iconst(0, -1)
         p.sti(0, 1, 0)
     p.if_(8, "GE", 14, bad, kind="i")
-    p.ld(0, L.order_i)
-    p.iconst(12, 1)
-    p.iop(0, 12, "+", 0)
-    p.st(L.order_i, 0)
-    p.iconst(12, 16)
-    p.e("COMP(R0, R12);")
-    p.jump("LT", top)
 
 
 def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | None = None) -> str:

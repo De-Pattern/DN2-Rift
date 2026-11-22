@@ -4908,8 +4908,8 @@ def step_sanitize(init, sound, machines) -> dict:
     blocks kept bit for bit (the negative controls); the untouched slots' blocks as they were."""
     from dnfw.fascia import program as FPg     # noqa: PLC0415
     nan, inf = 0x7FC00000, 0x7F800000
-    pokes = {2: nan, 3: inf, 4: 0xFF800000, 5: V.f32_bits(100.0) if hasattr(V, "f32_bits") else 0x42C80000,
-             6: 0xC2800000, 7: 0x3F800000, 8: 0xC27F999A}
+    pokes = {2: nan, 3: inf, 4: 0xFF800000, 5: 0x42C80000, 6: 0xC2800000, 7: 0x3F800000, 8: 0xC27F999A,
+             10: nan}                           # 10: a stock machine's slot: left as stock leaves it
     bad_slots, kept_slots = {2, 3, 4, 5, 6}, {7, 8}
     got, before = {}, {}
     L = FPg.layout() if hasattr(FPg, "layout") else None
@@ -4927,11 +4927,15 @@ def step_sanitize(init, sound, machines) -> dict:
                        for t in range(16)}
         if L is not None:
             got["last"] = {t: m2.word(r.state, L.lasttype + 4 * t) for t in range(16)}
-    rr = run_blocks(init, lambda b: fsc_frame(sound, machines, {}, trig=()), 3,
+    # the poked slots are SMEAR's with an empty slot (the stage writes nothing there, fascia's walk passes
+    # them): our code's slots; the rest stay stock's machines, never touched (the runner's stock part)
+    ours = {t: dict(SAMP=0) for t in bad_slots | kept_slots}
+    rr = run_blocks(init, lambda b: smr_frame(sound, machines, ours, trig=()), 3,
                     extra_hooks={dsp.FSC_SW: at_entry, dsp.PING_SW: at_end})
     bufs = got.get("bufs", {})
     zeroed = {t: all(w == 0 for w in bufs.get(t, [1])) for t in bad_slots}
     kept = {t: bufs.get(t) == before.get(t) for t in kept_slots | (set(range(16)) - bad_slots - kept_slots)}
+    # (slot 10, a stock machine's, keeps its NaN: the pass is ours only; the stock part holds stock's blocks)
     last = got.get("last", {})
     marked = all((last.get(t, 0) & 0xFFFFFFFF) == 0xFFFFFFFF for t in bad_slots) if L is not None else True
     checks = {"every block returns": bool(rr["ok"]),
