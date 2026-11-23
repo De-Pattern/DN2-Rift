@@ -687,7 +687,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,plateau,pstress,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -848,6 +848,8 @@ def main(argv=None):
                                 lambda: step_pstress(warm(), sound, machines)),
                                ("glass", "GLASS (filter 6) bit-exact to live.Voice on FM Tone and FASCIA tracks (RIFT v0.18)",
                                 lambda: step_glass(warm(), sound, machines)),
+                               ("mverb", "the master reverb in the stock core's place, bit-exact to live.Verb (RIFT v0.21)",
+                                lambda: step_mverb(warm, sound, machines)),
                                ("rcost", "each RIFT machine's worst block on the unit's cost model; SMEAR's VOC within its guard's peak (RIFT v0.18)",
                                 lambda: step_rcost(warm(), sound, machines)),
                                ("sanitize", "no block leaves our code not finite or past 64: zeroed, the voice afresh (RIFT v0.18)",
@@ -5038,7 +5040,7 @@ def step_rcost(init, sound, machines) -> dict:
             "SMEAR VOC (BLND 0)": (lambda b: smr_frame(sound, machines, {0: dict(BLND=0)}, trig=(0,) if b == 1 else ()), 50),
             "SMEAR PLAY (BLND 64)": (lambda b: smr_frame(sound, machines, {0: dict(BLND=64)}, trig=(0,) if b == 1 else ()), 24),
             "SMEAR GRN (BLND 127)": (lambda b: smr_frame(sound, machines, {0: dict(BLND=127, DENS=127, OVLP=127)}, trig=(0,) if b == 1 else ()), 24),
-            "PLATEAU": (lambda b: plt_frame(sound, machines, {3: (PB.panel_knobs(DCAY=100), 60.0, 1)}, {}, trig=(3,) if b == 1 else ()), 30),
+            "the master reverb (RIFT v0.21: the stock core's place, noise in)": (lambda b: mv_frame(sound, machines, (0, 0x6000, 0x4000, 0x4000)), 24),
             "FASCIA (a bell)": (lambda b: plt_frame(sound, machines, {}, {0: (fp, 60, 1.0)}, trig=(0,) if b == 1 else ()), 12),
             "CONTOUR (every land control on, MORPH into EDGE)": (lambda b: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=(0,) if b == 1 else ()), 8),
             "CONTOUR 4 steps (the same, FDBK on, note 84)": (lambda b: ct_frame(sound, machines, {0: (_ctr_heavy(), 84.0)}, trig=(0,) if b == 1 else ()), 8),
@@ -5058,6 +5060,80 @@ def step_rcost(init, sound, machines) -> dict:
               all(v["worst_delta"] is not None and base + v["worst_delta"] <= 0.92 * FRAME
                   for k, v in out.items() if not k.startswith("SMEAR VOC"))}
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, **out}}
+
+
+def mv_frame(sound, machines, words) -> bytes:
+    """RIFT v0.21: an idle frame with the reverb's PRE, DEC, FREQ and GAIN words (the FX slot, 2586..)"""
+    from dnfw.mverb import program as MVP       # noqa: PLC0415
+    f = bytearray(fsc_frame(sound, machines, {}, trig=()))
+    for k, w_ in enumerate(words):
+        f[MVP.FRAME_PRE + 2 * k:MVP.FRAME_PRE + 2 * k + 2] = int(w_).to_bytes(2, "little")
+    return bytes(f)
+
+
+def step_mverb(warm, sound, machines) -> dict:
+    """RIFT v0.21 (owner, 2026-11-23: the stock master reverb replaced by the plate): the stock FX function
+    jumps to wr_mv in the stock core's place. Its input (the stock input stage's 32 samples) is noise poked
+    at wr_mv's entry; its 64 outputs, read where the FX function resumes, against live.Verb fed the same,
+    bit for bit, every block: three settings, the controls moving; silence in: silence out (as the stock
+    core gives); a negative control (live with PRE one step off told apart)."""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.mverb import live as MVL, program as MVP   # noqa: PLC0415
+    res, ok_all = {}, True
+
+    def case(name, words_of, x_of, n, need_sound=True, skew=None):
+        got, seen = [], []
+
+        def at_in(r):
+            x = x_of(len(seen))
+            seen.append(x)
+            for i in range(32):
+                m2.poke(r.state, MVP.IN_BUF + 4 * i, int(np.float32(x[i]).view(np.uint32)))
+
+        def at_out(r):
+            got.append((np.array([m2.word(r.state, MVP.OUT_L + 4 * i) for i in range(32)], np.uint32),
+                        np.array([m2.word(r.state, MVP.OUT_R + 4 * i) for i in range(32)], np.uint32)))
+        rr = run_blocks(warm(), lambda b: mv_frame(sound, machines, words_of(b)), n,
+                        extra_hooks={dsp.MVERB_SW: at_in, MVP.RESUME_SW: at_out})
+        v = MVL.Verb()
+        if PP_RIFT and hasattr(dsp, "SMEAR_SW"):    # the warm start's silent blocks (SMEAR's power-on tables)
+            from dnfw.smear import fft as SMF       # noqa: PLC0415
+            for _ in range(SMF.INIT_PARTS):        # ran wr_mv too: its lines' clearing began there
+                v.block((0, 0, 0, 0), np.zeros(32, np.float32))
+        bad, peak = None, 0.0
+        for b, (gl, gr) in enumerate(got):
+            w_ = words_of(b)
+            if skew:
+                w_ = skew(w_)
+            wl, wr = v.block(w_, seen[b] if b < len(seen) else np.zeros(32, np.float32))
+            peak = max(peak, float(np.max(np.abs(wl))))
+            if bad is None and not (np.array_equal(gl, wl.view(np.uint32)) and np.array_equal(gr, wr.view(np.uint32))):
+                bad = b
+        ok = bool(rr["ok"] and len(got) == n and len(seen) == n and bad is None and ((peak > 1e-4) == need_sound))
+        res[name] = {"ok": ok, "blocks": len(got), "calls": len(seen), "first_mismatch": bad, "peak": peak,
+                     "halt": rr.get("halt")}
+        print(f"    mverb {name}: {res[name]}", flush=True)
+        return res[name]
+
+    def noise(seed):
+        rs = np.random.RandomState(seed)
+        return lambda b: (rs.randn(32) * 0.3).astype(np.float32)
+    zero = lambda b: np.zeros(32, np.float32)          # noqa: E731
+    # (each case starts from the warm start: live.Verb is given its silent blocks first)
+    r_sil = case("silence in, the controls at 0: silence out", lambda b: (0, 0, 0, 0), zero, 30, need_sound=False)
+    r1 = case("noise, PRE 0, DEC 0x6000, FREQ and GAIN mid", lambda b: (0, 0x6000, 0x4000, 0x4000), noise(1), 70)
+    r2 = case("noise, everything at 0x7f00 (the longest pre-delay)", lambda b: (0x7F00,) * 4, noise(2), 40, need_sound=False)
+    r3 = case("noise, the controls moving", lambda b: tuple((b * 0x0700 * (j + 1)) % 0x7F00 for j in range(4)) if b < 60 else (0, 0x7000, 0x7000, 0x7000),
+              noise(3), 70)
+    neg = case("negative control: live with PRE one step longer", lambda b: (0, 0x6000, 0x4000, 0x4000), noise(4), 60,
+               skew=lambda w_: (w_[0] + 0x100, w_[1], w_[2], w_[3]))
+    checks = {"silence in, the controls at 0: silence out, every block": r_sil["ok"],
+              "noise through the plate: bit-exact to live.Verb, every block": r1["ok"],
+              "the longest pre-delay: bit-exact": r2["ok"],
+              "the controls moving: bit-exact": r3["ok"],
+              "the comparison tells a wrong program apart (negative control)": neg["first_mismatch"] is not None,
+              "wr_mv runs once a block": all(v_["calls"] == v_["blocks"] for v_ in res.values())}
+    return {"ok": all(checks.values()), "checks": checks, "numbers": res}
 
 
 def step_sanitize(init, sound, machines) -> dict:

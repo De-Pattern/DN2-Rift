@@ -170,9 +170,14 @@ def test_the_five_patches_and_nothing_else_in_the_stock_blocks(stock7, built):
     assert bootstream.read_span(stock7, pv, 18) == dsp.PVMIX_SITE_STOCK
     assert bootstream.read_span(built, pv, 18) == dsp.objects()["pvmix_jump"] + dsp.PVMIX_SITE_STOCK[6:]
     pv_off = bootstream.spans(stock7, pv, 6)[0][0]
+    # RIFT v0.21: the stock reverb core's call becomes JUMP wr_mv (the master reverb; its delay slots stay)
+    mv = dsp.l2_sw_to_load(dsp.MVERB_SITE_SW)
+    assert bootstream.read_span(stock7, mv, 18) == dsp.MVERB_SITE_STOCK
+    assert bootstream.read_span(built, mv, 18) == dsp.objects()["mverb_jump"] + dsp.MVERB_SITE_STOCK[6:]
+    mv_off = bootstream.spans(stock7, mv, 6)[0][0]
     allowed = (set(range(entry_off, entry_off + 8)) | set(range(look_off, look_off + 6))
                | set(range(idle_off, idle_off + 6)) | set(range(call_off, call_off + 6))
-               | set(range(pv_off, pv_off + 6)))
+               | set(range(pv_off, pv_off + 6)) | set(range(mv_off, mv_off + 6)))
     assert diff and set(diff) <= allowed
 
 
@@ -191,7 +196,8 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
                                           dsp.SILT_TABLES_DDR,                            # RIFT: SILT's
                                           dsp.LIG_TABLES_DDR,                             # RIFT: LIGATURE's
                                           dsp.DIGIDRUM_TABLES_DDR,                           # RIFT: DIGIDRUM's
-                                          dsp.PLATEAU_TABLES_DDR, dsp.CONTOUR_TABLES_DDR,   # RIFT v0.17: PLATEAU's; v0.20: CONTOUR's
+                                          *((dsp.PLATEAU_TABLES_DDR,) if __import__("dnfw.plateau.machines", fromlist=["x"]).ON_DSP else ()),
+                                          dsp.CONTOUR_TABLES_DDR,   # RIFT v0.17: PLATEAU's (v0.21: while on the DSP); v0.20: CONTOUR's
                                           dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
         assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)

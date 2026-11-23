@@ -36,6 +36,7 @@ ENTRY_LINE = f"JUMP {dsp.COUNT_SW:#x};"           # the block counter, which goe
 IDLE_LINE = f"JUMP {dsp.IDLE_SW:#x};"
 EMARK_LINE = f"JUMP {dsp.EMARK_SW:#x};"
 LOOKUP_LINE = f"I5 = {dsp.LOOKUP16_DM:#x};"
+MVERB_LINE = f"JUMP {dsp.MVERB_SW:#x};"           # RIFT v0.21: the stock reverb core's call, to the master reverb
 PVMIX_LINE = f"JUMP {dsp.PVMIX_SW:#x};"           # v0.25: the driver's call of 0x1c9d3f, via the preview        # the machine lookup's base (v0.13)
 
 
@@ -86,6 +87,8 @@ def main(argv=None) -> int:
             pvmix = assemble("pvmix", dsp.PVMIX_SW, work)
             fascia = assemble("fascia", dsp.FSC_SW, work)
             smear = assemble("smear", dsp.SMEAR_SW, work)          # RIFT v0.16
+            mverb = assemble("mverb", dsp.MVERB_SW, work)          # RIFT v0.21
+            mjump = one_jump(MVERB_LINE, dsp.MVERB_SITE_SW, work)
             pjump = one_jump(PVMIX_LINE, dsp.PVMIX_SITE_SW, work)
             ejump = one_jump(EMARK_LINE, dsp.CALL_SITE_SW, work)
             lptr = one_jump(LOOKUP_LINE, dsp.LOOKUP_SITE_SW, work)
@@ -101,6 +104,8 @@ def main(argv=None) -> int:
             pvmix = committed("pvmix")
             fascia = committed("fascia")
             smear = committed("smear")
+            mverb = committed("mverb")
+            mjump = old["mverb_jump"]
             pjump = old["pvmix_jump"]
             ejump = old["emark_jump"]
             lptr = old["lookup_ptr"]
@@ -121,7 +126,9 @@ def main(argv=None) -> int:
             "pvmix": {k: v for k, v in pvmix.items() if k != "instruction_offsets"},
             "pvmix_jump": pjump,
             "fascia": {k: v for k, v in fascia.items() if k != "instruction_offsets"},
-            "smear": {k: v for k, v in smear.items() if k != "instruction_offsets"}}
+            "smear": {k: v for k, v in smear.items() if k != "instruction_offsets"},
+            "mverb": {k: v for k, v in mverb.items() if k != "instruction_offsets"},
+            "mverb_jump": mjump}
     dsp.CODE.write_text(json.dumps(spec, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {dsp.CODE.relative_to(ROOT)}: perc {len(perc['object_parcels_be']) // 2} B, ping {len(ping['object_parcels_be']) // 2} B, entry {len(jump['object_parcels_be']) // 2} B")
     return 0

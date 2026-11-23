@@ -188,7 +188,8 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_mon.py", "test/test_tunings.py",
          # RIFT v0.20: the v0.17..v0.19 machines' programs (run mode = live.py) and GLASS's ColdFire side
          "test/test_plateau_program.py", "test/test_glass_program.py", "test/test_glass_coldfire.py",
-         "test/test_contour_program.py"]                                # RIFT v0.14: MON on the RECORDER (the mod's v0.59)                  # RIFT: DIGIDRUM (run mode = live.py)
+         "test/test_contour_program.py",
+         "test/test_mverb_program.py"]                  # RIFT v0.21: the master reverb (run mode = live.py)                                # RIFT v0.14: MON on the RECORDER (the mod's v0.59)                  # RIFT: DIGIDRUM (run mode = live.py)
 HIT = re.compile(r"^\s+([0-9a-f]{8}):", re.M)
 
 # v0.38 (owner, 2026-11-01): the steps by name, for --only and --list, in the order a full run

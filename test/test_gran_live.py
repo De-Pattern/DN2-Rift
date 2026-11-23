@@ -100,3 +100,5 @@ def test_every_generated_asm_is_what_its_generator_writes_now():
         assert norm(built) == norm((SHARC / f"{name}.asm").read_text(encoding="utf-8")), name
     import gen_perc_asm                                 # v0.11: PERC (osc 2 went with Waverider)
     assert norm(gen_perc_asm.build()) == norm((SHARC / "perc.asm").read_text(encoding="utf-8"))
+    import gen_mverb_asm                                # RIFT v0.21: the master reverb
+    assert norm(gen_mverb_asm.build()) == norm((SHARC / "mverb.asm").read_text(encoding="utf-8"))

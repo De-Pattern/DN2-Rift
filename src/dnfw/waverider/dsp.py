@@ -208,7 +208,7 @@ from ..ligature import machines as _lig_types  # noqa: E402
 from ..digidrum import machines as _dgd_types  # noqa: E402
 from ..plateau import machines as _plt_types  # noqa: E402  (RIFT v0.17: PLATEAU, type 24)
 from ..contour import machines as _ctr_types  # noqa: E402  (RIFT v0.20: CONTOUR, type 25)
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, _plt_types.TYPE, _ctr_types.TYPE)   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, *((_plt_types.TYPE,) if _plt_types.ON_DSP else ()), _ctr_types.TYPE)   # RIFT v0.21: PLATEAU only while on the DSP   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable
@@ -261,6 +261,18 @@ SMEAR_L2_LOAD = 0x200B1000
 SMEAR_SW = 0xB80000 + (SMEAR_L2_LOAD - 0x20000000) // 2
 SMEAR_LANE0_L2 = 0x200B7800                  # WF, WB (16 KB) to 0x200bb800
 SMEAR_L2_SPAN = SMEAR_LANE0_L2 - SMEAR_L2_LOAD   # the code's room: 26 KB
+# RIFT v0.21 (owner, 2026-11-23: "replace the stock master reverb with Plateau"): mverb.asm (wr_mv,
+# dnfw.mverb.program) in SMEAR's L2 room, 8 KB after smear.asm's start; its register save area at the
+# room's end; its state and lines in DDR after GLASS's states (THOLET's former ring). The stock reverb's
+# core call (`CALL 0xb82d1a (DB)` and its two delay-slot pushes, 18 bytes at sw 0xb8370c, in the FX
+# function) becomes `JUMP MVERB_SW`; wr_mv jumps back to sw 0xb83715, past the call.
+SMEAR_CODE_ROOM = 0x2000
+MVERB_L2_LOAD = SMEAR_L2_LOAD + SMEAR_CODE_ROOM
+MVERB_SW = 0xB80000 + (MVERB_L2_LOAD - 0x20000000) // 2
+MVERB_SAVE_DM = SMEAR_LANE0_L2 - 0x100          # 29 words
+MVERB_DDR = 0x82690000                          # 0x100 + 67,584 words, to 0x826d2100 (SMEAR's DDR at 0x82700000)
+MVERB_SITE_SW = 0xB8370C
+MVERB_SITE_STOCK = bytes.fromhex("0418b8001a2dfe5f0281d014c09fb8001437")
 SMEAR_VB_L2 = 0x200A0000                     # program.VLayout (9.2 KB)
 SMEAR_SCR_L2 = 0x200A2800                    # the stage's words (64 B)
 SMEAR_MBOX = 0x200A3000                      # 16 mailboxes x 128 B
@@ -340,7 +352,7 @@ def objects() -> dict[str, bytes]:
     return {name: sharc_object.load_bytes(bytes.fromhex(spec[name]["object_parcels_be"]))
             for name in ("perc", "smp", "entry_jump", "idle_load", "idle_jump", "block_count",
                          "entry_mark", "emark_jump", "lookup_ptr", "ping",
-                         "pvmix", "pvmix_jump", "fascia", "smear")}
+                         "pvmix", "pvmix_jump", "fascia", "smear", "mverb", "mverb_jump")}
 
 
 def pvmix_object() -> bytes:
@@ -430,7 +442,8 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
         ("SILT's players' constants (dnfw.silt.program.tables_bytes; RIFT)", SILT_TABLES_DDR, _silt_tables()),
         ("LIGATURE's patches (dnfw.ligature.program.tables_bytes; RIFT)", LIG_TABLES_DDR, _lig_tables()),
         ("DIGIDRUM's records and anchors (dnfw.digidrum.program.tables_bytes; RIFT)", DIGIDRUM_TABLES_DDR, _dgd_tables()),
-        ("PLATEAU's records (dnfw.plateau.program.tables_bytes; RIFT v0.17)", PLATEAU_TABLES_DDR, _plt_tables()),
+        *((("PLATEAU's records (dnfw.plateau.program.tables_bytes; RIFT v0.17)", PLATEAU_TABLES_DDR, _plt_tables()),)
+          if _plt_types.ON_DSP else ()),
         ("CONTOUR's records and ratios (dnfw.contour.program.tables_bytes; RIFT v0.20)", CONTOUR_TABLES_DDR, _ctr_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
@@ -577,7 +590,13 @@ def l2_spans() -> list[tuple[str, int, bytes]]:
     code = obj["smear"]                          # RIFT v0.16: SMEAR's stage
     if SMEAR_L2_SPAN - len(code) < 256:
         raise DspError(f"smear.asm ({len(code)} bytes) leaves fewer than 256 bytes of its L2 room")
+    if SMEAR_CODE_ROOM - len(code) < 256:
+        raise DspError(f"smear.asm ({len(code)} bytes) runs into mverb.asm's room")
     out.append(("smear.asm (wr_smr), in L2 (RIFT v0.16)", SMEAR_L2_LOAD, code + bytes(256)))
+    code = obj["mverb"]                          # RIFT v0.21: the master reverb
+    if MVERB_SAVE_DM - MVERB_L2_LOAD - len(code) < 256:
+        raise DspError(f"mverb.asm ({len(code)} bytes) leaves fewer than 256 bytes of its L2 room")
+    out.append(("mverb.asm (wr_mv), in L2 (RIFT v0.21)", MVERB_L2_LOAD, code + bytes(256)))
     out.append(("SMEAR's stage words, in L2 (zeros: the power-on flag; RIFT v0.16)", SMEAR_SCR_L2, bytes(64)))
     return out
 
@@ -637,7 +656,11 @@ def placements() -> list[dict]:
             {"what": f"patch: the driver's call of 0x1c9d3f at sw {PVMIX_SITE_SW:#x} -> JUMP {PVMIX_SW:#x} "
                      "(the recorder's preview, then the same call)",
              "load_address": f"{sw_to_load(PVMIX_SITE_SW):#010x}", "bytes": len(PVMIX_SITE_STOCK),
-             "stock": PVMIX_SITE_STOCK.hex(), "new": (obj["pvmix_jump"] + PVMIX_SITE_STOCK[6:]).hex()}]
+             "stock": PVMIX_SITE_STOCK.hex(), "new": (obj["pvmix_jump"] + PVMIX_SITE_STOCK[6:]).hex()},
+            {"what": f"patch: the stock reverb core's call at sw {MVERB_SITE_SW:#x} -> JUMP {MVERB_SW:#x} "
+                     "(RIFT v0.21: the master reverb, then on past the call)",
+             "load_address": f"{l2_sw_to_load(MVERB_SITE_SW):#010x}", "bytes": len(MVERB_SITE_STOCK),
+             "stock": MVERB_SITE_STOCK.hex(), "new": (obj["mverb_jump"] + MVERB_SITE_STOCK[6:]).hex()}]
     return out
 
 
@@ -762,6 +785,10 @@ def section7(stock: bytes) -> bytes:
         raise DspError("sw 0x1c9fd2 is not the stock `CJUMP 0x1c9d3f (DB)` and its two pushes")
     if len(obj["pvmix_jump"]) != 6:
         raise DspError("the preview's JUMP is not one 48-bit instruction")
+    if bootstream.read_span(stock, l2_sw_to_load(MVERB_SITE_SW), len(MVERB_SITE_STOCK)) != MVERB_SITE_STOCK:
+        raise DspError("sw 0xb8370c is not the stock reverb core's `CALL 0xb82d1a (DB)` and its two pushes")
+    if len(obj["mverb_jump"]) != 6:
+        raise DspError("the master reverb's JUMP is not one 48-bit instruction")
     if len(obj["emark_jump"]) != len(CALL_SITE_STOCK):
         raise DspError(f"the entry-mark JUMP is {len(obj['emark_jump'])} bytes, not {len(CALL_SITE_STOCK)}")
     lookup = struct.unpack("<8I", bootstream.read_span(stock, dm_to_load(LOOKUP_DM), 32))
@@ -785,6 +812,7 @@ def section7(stock: bytes) -> bytes:
     bootstream.write_span(out, l2_sw_to_load(IDLE_SITE_SW), obj["idle_jump"])
     bootstream.write_span(out, sw_to_load(CALL_SITE_SW), obj["emark_jump"])
     bootstream.write_span(out, sw_to_load(PVMIX_SITE_SW), obj["pvmix_jump"])
+    bootstream.write_span(out, l2_sw_to_load(MVERB_SITE_SW), obj["mverb_jump"])
     result = bytes(out)
     walked = bootstream.walk(result)
     if not walked.complete or walked.stopped_at != len(result):

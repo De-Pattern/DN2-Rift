@@ -455,6 +455,8 @@ def build() -> str:
         nav.append(("smear", "SMEAR"))
     if HAS_GLASS:
         nav.append(("glass", "GLASS filter"))
+    if have("dnfw.mverb.live"):
+        nav.append(("mverb", "Master reverb"))
     nav += [("samples", "Sample machines"), ("flex", "FLEX"), ("recorder", "Recorder"),
             ("tuning", "Microtuning"), ("perf", "Performance")]
     nav += [("versions", "Versions")]
@@ -652,6 +654,14 @@ def build() -> str:
         s.append("<h3>SRC page 2</h3><table class=\"ctl\">" + "".join(
             f"<tr><th><b>{E(a)}</b><br><span class=\"dim\">{E(b)}</span></th><td>{E(c)}</td></tr>" for a, b, c in SMEAR[8:]) + "</table>")
 
+    if have("dnfw.mverb.live"):
+        s.append("<h2 id=\"mverb\">Master reverb</h2>")
+        s.append(p("Since v0.21 the master reverb (the FX block's REVERB page) is a plate: Dattorro's figure-eight tank, the sound of PLATEAU, in stereo. The page and its controls are the stock ones, so sends, routing, LFO destinations and your projects work as before; what they do is:"))
+        s.append(ul("<b>PRE</b> (pre-delay): from none to 0.3 s before the plate.",
+                    "<b>DEC</b> (decay time): from a short room to a long plate.",
+                    "<b>FREQ</b> and <b>GAIN</b> (the feedback shelving): a high shelf inside the tank. FREQ sets its corner (500 Hz to 19 kHz), GAIN how much of the brightness above it survives each pass round the tank: low GAIN, a dark tail that loses its highs fast; full GAIN, a bright one.",
+                    "<b>HPF</b>, <b>LPF</b>, <b>MIX VOL</b> and routing are stock's, unchanged, as are the tracks' reverb sends.",
+                    "After power-on the plate needs a moment (about 12 ms) to clear its memory; it is silent meanwhile."))
     s.append("<h2 id=\"samples\">Sample machines</h2>")
     s.append(p(("ONESHOT, SMEAR (in WERP's place), STRETCH, REPITCH, GRID, SLICE and FLEX" if HAS_SMEAR else "ONESHOT, WERP, STRETCH, REPITCH, GRID, SLICE and FLEX") + ", from the Digitakt II, play samples from the project's sample list and the +Drive library (16,384 samples, in folders)."))
     s.append(ul("<b>SAMP</b> picks a sample; turning past 127 reaches the eight FLEX buffers <b>B1..B8</b> (\"FLEX BUF n\" when one holds a take): any sample machine can play a FLEX take.",
@@ -699,8 +709,10 @@ def build() -> str:
 
 
 VERSIONS = [
-    ("0.21", "DRIP", ["A new start-up logo: the smoke gathers into RIFT in block letters, which then drip and decompose.",
-                      "PLATEAU withdrawn from MACHINE SEL for rework (it glitched with input gain and did not flow with the trigs); a saved PLATEAU track still loads and plays.",
+    ("0.21", "PLATE", ["The master reverb is now a plate (PLATEAU's tank, in stereo): the stock REVERB page and its controls, a new sound behind them.",
+                      "A new start-up logo: the smoke gathers into RIFT in block letters, which then drip and decompose.",
+                      "PLATEAU withdrawn for rework (it glitched with input gain and did not flow with the trigs): out of MACHINE SEL, and a saved PLATEAU track opens as FM Tone.",
+                      "FLEX record levels from the DN2 mk2 mod's v0.71: a take of a track, of MAIN or of IN plays at its source's level at GAIN 0.",
                       "Includes v0.20."]),
     ("0.20", "NXT", ["Slides: SLEN NXT (from the DN2 mk2 mod v0.66): a slide lasts until the track's next trig. It is the default for a slide trig with no SLEN lock (before: 1 step).",
                      "CONTOUR: FDBK rescaled (the old range past about 36 was unusable): the whole knob now spans the usable range, with the subtle low end spread over its first third.",

@@ -3829,9 +3829,11 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.iconst(12, DP.TYPE)
     p.e("COMP(R0, R12);")
     p.jump("EQ", res)
-    p.iconst(12, XP.TYPE)
-    p.e("COMP(R0, R12);")
-    p.jump("EQ", plt)
+    from ..plateau import machines as _XM
+    if _XM.ON_DSP:                             # RIFT v0.21: PLATEAU out of the build (its room for the master reverb)
+        p.iconst(12, XP.TYPE)
+        p.e("COMP(R0, R12);")
+        p.jump("EQ", plt)
     ctr = p.label("ctr")
     p.iconst(12, CP.TYPE)
     p.e("COMP(R0, R12);")
@@ -3868,13 +3870,14 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: rg.append(DP.voice(p, DL_)),
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
     p.jump("", nxt)
-    p.place(plt)                               # RIFT v0.17: PLATEAU (type 24, dnfw.plateau.program)
-    XL_ = XP.Layout(L, _dsp.PLATEAU_TABLES_DDR, _dsp.PLATEAU_DDR)
     xg = []
-    G.around(p, L.C["t"], L.cost, BUFFERS, lambda: xg.append(XP.voice(p, XL_)))
-    # (RIFT v0.18: PLATEAU is never stolen: left out of a block, it is tried again the next; stolen,
-    # an INF note's reverb stayed silent for good, the owner's "plateau does nothing")
-    p.jump("", nxt)
+    if _XM.ON_DSP:
+        p.place(plt)                           # RIFT v0.17: PLATEAU (type 24, dnfw.plateau.program)
+        XL_ = XP.Layout(L, _dsp.PLATEAU_TABLES_DDR, _dsp.PLATEAU_DDR)
+        G.around(p, L.C["t"], L.cost, BUFFERS, lambda: xg.append(XP.voice(p, XL_)))
+        # (RIFT v0.18: PLATEAU is never stolen: left out of a block, it is tried again the next; stolen,
+        # an INF note's reverb stayed silent for good, the owner's "plateau does nothing")
+        p.jump("", nxt)
     p.place(ctr)                               # RIFT v0.20: CONTOUR (type 25, dnfw.contour.program)
     CL_ = CP.Layout(L, _dsp.CONTOUR_TABLES_DDR)
     cg = []
@@ -3914,7 +3917,8 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     sg[0].emit_rts()                           # SILT's (s_render)
     lg[0].emit_rts()                           # LIGATURE's (l_render, the kernels)
     rg[0].emit_rts()                           # DIGIDRUM's (r_render)
-    xg[0].emit_rts()                           # PLATEAU's (p_render, p_ap, p_apf)
+    if xg:
+        xg[0].emit_rts()                       # PLATEAU's (p_render, p_ap, p_apf)
     cg[0].emit_rts()                           # CONTOUR's (c_render, the surfaces)
     gg.emit_rts()                              # GLASS's (g_slot, g_bend)
     p.emit_subs()

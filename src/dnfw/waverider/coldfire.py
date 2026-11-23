@@ -94,7 +94,7 @@ LIST_DN2MK2 = (0, 2, 1, 3, 5, *_mnm.TYPES, *((_fsc.TYPE,) if _fsc.LISTED else ()
 # RIFT (owner, 2026-11-13: "remove md and mm. maybe not a good idea to remove sample machines yet"):
 # the mod's list less PERC and the Monomachine machines; FASCIA after the stock four.
 from ..perc import program as _pp           # noqa: E402
-GONE_TYPES = (5, *_mnm.TYPES, _plt.TYPE - 1) if _pp.RIFT else ()   # RIFT v0.17: and THOLET's 23
+GONE_TYPES = (5, *_mnm.TYPES, _plt.TYPE - 1, *(() if _plt.ON_DSP else (_plt.TYPE,))) if _pp.RIFT else ()   # RIFT v0.17: and THOLET's 23; v0.21: PLATEAU's 24 while off the DSP
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
     (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()), *((_ctr.TYPE,) if _ctr.LISTED else ()), *((_plt.TYPE,) if _plt.LISTED else ()),
      *(9,), *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, 9, _fsc.TYPE)), 4)   # v0.18: SMEAR (9) first of the sample machines (owner)

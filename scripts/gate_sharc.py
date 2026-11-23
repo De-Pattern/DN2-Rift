@@ -50,8 +50,10 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           ("digidrum",),          # RIFT: DIGIDRUM (type 22) bit-exact, two at once, a machine switch, a negative control
           ("dstress",),           # RIFT: sixteen DIGIDRUM voices under the guard
           ("contour",),           # RIFT v0.20: CONTOUR (type 25) bit-exact, every surface, two at once, a switch, a negative control
-          ("plateau",),           # RIFT v0.17: PLATEAU (type 24) bit-exact on the bus, the one instance, a negative control
-          ("pstress",),           # RIFT v0.17: a PLATEAU track beside fifteen FASCIA voices under the guard
+          # (RIFT v0.21: PLATEAU's parts out while it is off the DSP: plateau.machines.ON_DSP)
+          # ("plateau",),           # RIFT v0.17: PLATEAU (type 24) bit-exact on the bus, the one instance, a negative control
+          # ("pstress",),           # RIFT v0.17: a PLATEAU track beside fifteen FASCIA voices under the guard
+          ("mverb",),             # RIFT v0.21: the master reverb in the stock core's place, bit-exact, silence in: silence out
           ("glass",),
           ("sanitize",),
           ("rcost",),             # RIFT v0.18: the unit's cost model (memory stalls too) on each machine          # RIFT v0.18: nothing non-finite or past 64 leaves our code (the owner's silent unit)             # RIFT v0.18: GLASS (filter 6) bit-exact on FM Tone and FASCIA tracks, a negative control
