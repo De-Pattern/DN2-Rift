@@ -490,6 +490,10 @@ def test_one_detent_a_choice_lands_inside_each_choice():
         assert zone(SM.QUANT[2][2], c) == min(6, c * 7 >> 7)
     for v in range(121):
         assert zone(SM.QUANT[3][2], v) == min(4, v // 24)
+    import numpy as np
+    from dnfw.smear import live as SLV            # RIFT v0.22: SMEAR's FRZ, as the DSP reads it (x 127 / 100)
+    for v in range(101):
+        assert zone(SM.QUANT[4][2], v) == int(np.float32(np.float32(v) * np.float32(127.0 / 100)) >= SLV.FRZ_ON)
 
 
 def _rx(h, units, high=True, pg=0):

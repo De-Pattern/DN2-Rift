@@ -309,9 +309,10 @@ class Grn:
 # ================================================================================ the voice
 SR = 48000
 CONTROLS = ("TUNE", "SPD", "BLND", "SAMP", "STRT", "SIZE", "DENS", "OVLP",
-            "SPRY", "PRND", "WIN", "LEV")
+            "SPRY", "PRND", "WIN", "LEV", "FRZ")     # RIFT v0.22: FRZ (owner: "a FREEZE param")
 DEFAULTS = dict(TUNE=64, SPD=80, BLND=0, SAMP=0, STRT=0, SIZE=127, DENS=64, OVLP=64,
-                SPRY=0, PRND=0, WIN=3, LEV=100)
+                SPRY=0, PRND=0, WIN=3, LEV=100, FRZ=0)
+FRZ_ON = 64                                    # RIFT v0.22: FRZ at 64 and over: frozen (its two choices are 0 and 127)
 WIN_NAMES = ("GAUS", "BHAR", "EXPO", "TRI", "RAMP", "SINC", "RECT")
 MIN_LOOP = 64
 
@@ -406,12 +407,17 @@ class Voice:
             self.trig(k)
         T = TABLES
         pitch = f32(tr)
-        spd = f32(T["SPD"][k["SPD"]] * self.rate)
+        spd = f32(T["SPD"][k["SPD"]] * pitch)          # RIFT v0.22 (owner: "get TUNE working"): PLAY as tape, TUNE and the note with it (tr holds the rate)
         si = int(np.floor(spd))
         sf = f32(spd - f32(si))
         lstart, lsize = self.loop(k)
         lend = lstart + lsize
         vg, pg, gg = T["VG"][k["BLND"]], T["PG"][k["BLND"]], T["GG"][k["BLND"]]
+        if k.get("FRZ", 0) >= FRZ_ON:
+            # RIFT v0.22 FREEZE: the read point held where it is (SPD kept for after), and PLAY's share
+            # of BLND given to the grains, so the moment it froze goes on sounding as a grain cloud
+            si, sf = 0, f32(0)
+            gg, pg = f32(gg + pg), f32(0)
         y = np.zeros(32, f32)                         # y = 0, + vg voc, + gg grn, + pg play, x lev
         if vg > 0 and lane is not None:
             y = y + vg * self.voc.block(float(self.pi), float(pitch), (clock + 8 * lane) & 15)

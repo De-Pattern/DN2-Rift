@@ -2319,7 +2319,7 @@ void smp_fb_draw(void *c, int samp)
 static void smr_cloud(void *c, void *view)
 {
     int slot = value(view, SMP_SAMP_ID, 0);
-    int x0 = CELL_X(0) - 1, w = SMP_WAVE_W, cy = 13;
+    int x0 = CELL_X(0) - 1, w = SMP_WAVE_W, cy = 21;   /* RIFT v0.22: ONESHOT's page 2's strip (v0.19..v0.21: 13, under labelled knobs) */
     waveform(c, slot, x0, cy);
     if (slot < 1 || !smp_overview(slot - 1)) {
         ph_was = -1;
@@ -2358,6 +2358,63 @@ static void smr_cloud(void *c, void *view)
     }
 }
 
+/* RIFT v0.22 (owner: SMEAR's page 2 "crammed in with the top row knobs ... change the icons to something
+ * that fit better, closer to what WERP or slice does"): page 2 drawn as ONESHOT's is -- the top row's
+ * four controls as small unlabelled pictures of what they do, the sample's strip under them, the bottom
+ * row's labels -- each picture in its 25 x 17 place at (X, Y):
+ *   OVLP two grains, closer together and more overlapped as it rises;
+ *   SPRY grains scattered round the read point, wider as it rises;
+ *   PRND grains at random pitches, further from the line as it rises;
+ *   WIN  the window itself (live.WIN_NAMES, k * 7 >> 7), from dnfw.smear.model.WINDOWS.  */
+static const u8 smr_wins[7][19] = {
+    {0, 0, 0, 0, 0, 0, 2, 5, 10, 12, 10, 5, 2, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 1, 2, 4, 6, 9, 11, 12, 11, 9, 6, 4, 2, 1, 0, 0, 0},
+    {0, 6, 8, 6, 4, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 1, 3, 4, 5, 7, 8, 9, 11, 12, 11, 9, 8, 7, 5, 4, 3, 1, 0},
+    {0, 1, 1, 2, 3, 4, 4, 5, 6, 6, 7, 8, 9, 9, 10, 11, 11, 11, 0}, {0, 1, 3, 5, 7, 8, 10, 11, 12, 12, 12, 11, 10, 8, 7, 5, 3, 1, 0},
+    {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}};
+static const signed char smr_scat[7] = {-6, 3, -2, 7, -9, 1, 5};    /* where the grains fall, in ninths of the reach */
+
+static void smr_hump(void *c, int x, int y, int w)               /* a grain's envelope, W wide, 10 high */
+{
+    int h2 = (w - 1) * (w - 1);
+    for (int k = 0; k < w; k++) {
+        int d = 2 * k - (w - 1);
+        on(c, x + k, y + 10 - 10 * d * d / (h2 ? h2 : 1));
+    }
+}
+
+static void smr_icon(void *c, void *view, u32 id, int x, int y)
+{
+    int top, v = value(view, id, &top);
+    if (top <= 0) top = 127;
+    hline(c, x + 2, x + 22, y + 1, 0);                              /* the ground line */
+    if (id == SMR_OVLP_ID) {
+        int gap = 10 - v * 9 / top;                                 /* 10 apart .. 1 */
+        int x1 = x + 12 - (gap + 11) / 2;
+        smr_hump(c, x1, y + 2, 11);
+        smr_hump(c, x1 + gap, y + 2, 11);
+    } else if (id == SMR_SPRY_ID) {
+        int reach = 1 + v * 9 / top;
+        vline(c, x + 12, y + 2, y + 14, 1);                          /* the read point */
+        for (int g = 0; g < 7; g++) {
+            int gx = x + 12 + smr_scat[g] * reach / 9;
+            int gy = y + 4 + (g * 5) % 10;
+            on(c, gx, gy); on(c, gx + 1, gy); on(c, gx, gy + 1); on(c, gx + 1, gy + 1);
+        }
+    } else if (id == SMR_PRND_ID) {
+        int reach = v * 6 / top;
+        hline(c, x + 2, x + 22, y + 8, 1);                          /* the note's pitch */
+        for (int g = 0; g < 5; g++) {
+            int gx = x + 3 + 4 * g, gy = y + 8 + smr_scat[g + 1] * reach / 9;
+            hline(c, gx, gx + 2, gy, 0);
+        }
+    } else {                                                        /* WIN */
+        int k = v * 7 >> 7;
+        const u8 *h = smr_wins[k > 6 ? 6 : k];
+        for (int j = 0; j < 19; j++)
+            vline(c, x + 3 + j, y + 2, y + 2 + h[j], 0);
+    }
+}
+
 void smp_page_draw(void *view, void *c, int kind, int wave)
 {
     u32 ids[8];
@@ -2369,13 +2426,42 @@ void smp_page_draw(void *view, void *c, int kind, int wave)
         ids[i] = smp_ids[SMP_IDX(kind)][i];
     smp_box(c);
     if (wave && kind == SMP_WERP_KIND) {        /* RIFT v0.16: SMEAR's page 2, its grains' controls */
-        for (int i = 0; i < 8; i++) {
-            cell_i = i;
-            if (smp_werp2_ids[i])
-                cell(c, view, kind, smp_werp2_ids[i], CELL_X(i & 3), i < 4 ? TOP_Y : BOT_Y, 1, 0);
+        /* RIFT v0.22: ONESHOT's page 2's layout (above smr_icon); v0.16..v0.21 drew labelled knobs with the strip under them */
+        for (int i = 0; i < 4; i++) {
+            u32 id = smp_werp2_ids[i];
+            if (!id)
+                continue;
+            smr_icon(c, view, id, CELL_X(i), TOP_Y + 3);
+            if (shows(i)) {
+                char vb[32];
+                vb[0] = 0;
+                val_text(view, id, vb);
+                vb[6] = 0;
+                LABEL(c, CELL_X(i) + 12, TOP_Y + 3 - 7, "%s", vb);
+            }
+            if (locked(view, id))
+                invert(c, CELL_X(i) - 1, TOP_Y + 3, CELL_X(i) + 24, TOP_Y + 19);
         }
-        cell_i = -1;
         smr_cloud(c, view);                     /* RIFT v0.19: the sample, its loop, the read point and its grains */
+        for (int i = 4; i < 8; i++) {           /* the bottom row: its labels (FRZ: lit while frozen) */
+            u32 id = smp_werp2_ids[i];
+            if (!id)
+                continue;
+            int x = CELL_X(i - 4);
+            if (shows(i)) {
+                char vb[32];
+                vb[0] = 0;
+                val_text(view, id, vb);
+                vb[6] = 0;
+                LABEL(c, x + 12, 0, "%s", vb);
+            } else
+                LABEL(c, x + 12, 0, "%.5s", NAME_SHORT(id));
+            if (id == SMR_FRZ_ID && value(view, id, 0) >= SMR_FRZ_ON) {
+                fill(c, x + 1, 8, x + 23, 9);      /* frozen: a bar over the label */
+            }
+            if (locked(view, id))
+                invert(c, x - 1, 0, x + 24, 6);
+        }
         return;
     }
     if (!wave) {                                /* page 1: the widgets and their labels */

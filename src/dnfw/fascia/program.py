@@ -3907,9 +3907,13 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.jump("LT", top)
     # RIFT v0.18: GLASS, the FLTR type 6: every slot on it filtered in place, every machine's buffer
     # whole (dnfw.glass.program; the stock chain skips its filter stage for it)
+    # RIFT v0.22 (the owner: GLASS "weirdly bitcrushed, like the Monomachine's overload"): our voices'
+    # end is marked before GLASS, so GLASS's time (and the sanitizer's) is measured with the stock's
+    # tail (guard.tail_limit's TAIL) and the voices' limit leaves room for it. v0.18..v0.21 marked it
+    # after: GLASS on several tracks ran after voices that had filled the frame to the limit, past it
+    G.end_mark(p)                              # our voices' time, for the guard's limit
     gg = GLP.walk(p, GLP.Layout(L, _dsp.GLASS_STATE_DDR))
     sanitize(p, L)                             # RIFT v0.18: nothing non-finite or runaway leaves our code
-    G.end_mark(p)                              # our voices' time, for the guard's limit
     p.e(f"JUMP {next_sw:#x};", "the shared tail (ping.asm's wr_ping: restores the registers)")
     p.scr_on = True                            # the routines and leaves run inside a voice only
     g.emit_rts()

@@ -627,6 +627,11 @@ static void f_win(int v, char *buf)
     put(buf, n[k > 6 ? 6 : k], 5);
 }
 
+static void f_frz(int v, char *buf)             /* RIFT v0.22 SMEAR's FRZ: OFF, ON (its raw 0..100, ON from SMR_FRZ_ON) */
+{
+    put(buf, ((v >> 8) & 0xFF) >= SMR_FRZ_ON ? "ON" : "OFF", 4);
+}
+
 static void f_buf(int v, char *buf)             /* v0.49 FLEX's BUF: 01..08, an eighth of the knob each */
 {
     extern unsigned int rt_buf_value(unsigned int v);
@@ -778,6 +783,7 @@ void smp_formats(int kind)
     if (kind == SMP_WERP_KIND) {                /* RIFT v0.16: SMEAR's SPD and WIN */
         RECORD_FMT(254) = (void *)f_spd;
         RECORD_FMT(262) = (void *)f_win;
+        RECORD_FMT(SMR_FRZ_ID) = (void *)f_frz;   /* RIFT v0.22 */
     }
     if (kind == FSC_KIND)                       /* v0.45: FASCIA's, last */
         for (int j = 0; j < FSC_N; j++)

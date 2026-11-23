@@ -144,7 +144,7 @@ def _track(p: Prog, S: SLayout) -> None:
         p.iop(0, 0, "OR", 1)
         p.st(S.SEEN, 0)
         # the inputs
-        for k in range(12):
+        for k in range(len(LV.CONTROLS)):
             p.ldi(0, MB_KN + k, 4)
             p.st(V.KN0 + 4 * k, 0)
         for w, mw in (("TR", MB_TR), ("RATE", MB_RATE), ("TRIG", MB_TRIG), ("SIZE", MB_FRAMES),

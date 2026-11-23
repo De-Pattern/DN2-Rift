@@ -5006,6 +5006,9 @@ def _ctr_heavy():
     return CB.panel_knobs(SURF=4 * 16 + 3, MORPH=90, FOLD=60, GRIT=0, FM=80, FDBK=50, WARP=70, DRFT=100, ROT=40)
 
 
+_GL_HEAVY = {67: 0x4000, 68: 0x7400, 66: 0x3F80, 69: 0x6400, 70: 0x7F00, 71: 0x1800, 72: 0x3000, 73: 0x1000, 74: 0x7000}
+
+
 def step_rcost(init, sound, machines) -> dict:
     """RIFT v0.18 (the owner's unit went silent after a SMEAR note: the emulator counts instructions,
     the unit also waits on memory): each machine's worst block on the unit's cost model --
@@ -5044,6 +5047,8 @@ def step_rcost(init, sound, machines) -> dict:
             "FASCIA (a bell)": (lambda b: plt_frame(sound, machines, {}, {0: (fp, 60, 1.0)}, trig=(0,) if b == 1 else ()), 12),
             "CONTOUR (every land control on, MORPH into EDGE)": (lambda b: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=(0,) if b == 1 else ()), 8),
             "CONTOUR 4 steps (the same, FDBK on, note 84)": (lambda b: ct_frame(sound, machines, {0: (_ctr_heavy(), 84.0)}, trig=(0,) if b == 1 else ()), 8),
+            "15 WaveTone tracks, Multi-Mode": (lambda b: glass_frame(sound, machines, {t: _GL_HEAVY for t in range(1, 16)}, {}, trig=tuple(range(1, 16)) if b == 1 else (), filt=0), 8),
+            "15 WaveTone tracks on GLASS (RES high, ENV, LPG)": (lambda b: glass_frame(sound, machines, {t: _GL_HEAVY for t in range(1, 16)}, {}, trig=tuple(range(1, 16)) if b == 1 else ()), 8),
         }
         for name, (fb, n) in cases.items():
             r = worst(fb, n)
@@ -5194,6 +5199,8 @@ def step_smear(init, sound, machines) -> dict:
         "PLAY and GRN": ({0: dict(BLND=64, SPD=90), 1: dict(BLND=127, DENS=100, OVLP=90)}, {0: (1,), 1: (2,)}),
         "three tracks, two lanes": ({0: dict(BLND=20), 1: dict(BLND=30), 2: dict(BLND=10)}, {0: (1,), 1: (3,), 2: (5, 30)}),
         "an empty slot": ({0: dict(BLND=64, SAMP=0)}, {0: (1,)}),
+        # RIFT v0.22: FRZ (the read point held, PLAY's share to the grains) beside a track playing on
+        "v0.22 FRZ": ({0: dict(BLND=0, SPD=90, FRZ=127, DENS=127, OVLP=100), 1: dict(BLND=20, SPD=100)}, {0: (1,), 1: (2,)}),
     }
     for name, (tracks, trigs) in cases.items():
         rr = run_blocks(init, lambda b, tracks=tracks, trigs=trigs: smr_frame(

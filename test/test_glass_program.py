@@ -108,3 +108,29 @@ def test_emits():
     n = sum(1 for x in p.lines if x.startswith("      ") and not x.strip().startswith("//"))
     print("instructions", n)
     assert 200 < n < 1100
+
+
+@pytest.mark.parametrize("amp,typ,res", [(0.5, 0.0, 0.2), (2.0, 0.25, 0.9), (6.0, 0.75, 1.0), (30.0, 1.0, 0.6)])
+def test_v022_registers_same_bits_as_v018(amp, typ, res):
+    """v0.22: samples_fast (the samples in registers) against v0.18..v0.21's sample() and live, every
+    block bit for bit: quiet, the knee's bend, its top, the morph's both halves"""
+    from dnfw.glass import program as P
+    rng = np.random.default_rng(int(amp * 10))
+
+    def src(k):
+        return (amp * rng.standard_normal(32)).astype(np.float32)
+
+    def rec(k):
+        return B.rec_floats(TYPE=typ, RES=res, FREQ=0.55, DEPTH=0.8, ATK=0.2, DEC=0.5)
+    outs = []
+    for fast in (True, False):
+        P.FAST = fast
+        rng = np.random.default_rng(int(amp * 10))
+        try:
+            a, b, first = B.compare(rec, {1: 60.0, 25: 64.0}, 30, src=src)
+        finally:
+            P.FAST = True
+        assert first is None, (fast, first)
+        outs.append(a)
+    assert np.array_equal(outs[0].view(np.uint32), outs[1].view(np.uint32))
+    assert np.abs(outs[0]).max() > 1e-3

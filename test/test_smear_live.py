@@ -69,3 +69,40 @@ def test_lanes_steal_the_oldest():
     assert ln.take(c) == 0 and ln.held(a) is None and ln.held(c) == 0
     ln.free(b)
     assert ln.take(a) == 1
+
+
+def test_v022_tune_moves_play():
+    """v0.22 (owner: "get TUNE working"): PLAY reads at SPD x tr, so TUNE (and the note) transpose it as
+    tape does: an octave up reads the loop twice as fast"""
+    buf = np.arange(48000, dtype=np.float32) / 48000.0
+    k = dict(L.DEFAULTS, BLND=0)
+    outs = {}
+    for tr in (1.0, 2.0):
+        v = L.Voice(buf)
+        v.block(k, tr=tr, trig=True)
+        y = np.concatenate([v.block(k, tr=tr) for _ in range(10)])
+        outs[tr] = np.diff(y)[5:300].mean()
+    assert abs(outs[2.0] / outs[1.0] - 2.0) < 0.01
+
+
+def test_v022_freeze_holds_the_read_point_and_sounds():
+    """v0.22 FRZ: the read point stops (SPD kept for after), PLAY's share goes to the grains, which go on
+    sounding round the held point; FRZ off: as before"""
+    rng = np.random.default_rng(1)
+    buf = rng.standard_normal(48000).astype(np.float32) * 0.3
+    k = dict(L.DEFAULTS, BLND=0)
+    v = L.Voice(buf)
+    v.block(k, trig=True)
+    for _ in range(4):
+        v.block(k)
+    held = v.pi
+    kf = dict(k, FRZ=127)
+    ys = [v.block(kf) for _ in range(400)]                         # (DENS 64: a grain about every 134 blocks)
+    assert v.pi == held
+    assert np.abs(np.concatenate(ys[200:])).max() > 0.01           # the grains go on
+    v2 = L.Voice(buf)
+    v2.block(dict(k, FRZ=63), trig=True)
+    a = v2.block(dict(k, FRZ=63))
+    v3 = L.Voice(buf)
+    v3.block(k, trig=True)
+    assert np.array_equal(a, v3.block(k))                          # under FRZ_ON: unchanged
