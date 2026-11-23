@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.18** | 2026-11-22 | The silent-unit fix (SMEAR's VOC off, the guard expects a voice's peak, an output guard on every RIFT machine); PLATEAU no longer dropped beside other tracks; GLASS, a VCFQ-style filter on every machine; MACHINE SEL: PLATEAU's own section, SMEAR first of the samples, their logos | `builds/v0.18-GLASS/` | yes |
+| **v0.19** | 2026-11-22 | CONTOUR, a wave-terrain synth (8 surfaces, 2 pages); RIFT's machine pages at stock's size; SMEAR's page 2 shows the sample, its read point and a grain cloud | `builds/v0.19-CONTOUR/` | yes |
+| v0.18 | 2026-11-22 | The silent-unit fix (SMEAR's VOC off, the guard expects a voice's peak, an output guard on every RIFT machine); PLATEAU no longer dropped beside other tracks; GLASS, a VCFQ-style filter on every machine; MACHINE SEL: PLATEAU's own section, SMEAR first of the samples, their logos | `builds/v0.18-GLASS/` | yes |
 | v0.17 | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
 | v0.16 | 2026-11-21 | SMEAR, a Nebulae-style looper (VOC, PLAY and GRN readers of one loop, BLND between them); LIGATURE's eight new blocks (TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA); MACHINE SEL logos for RIFT's machines | `builds/v0.16-SMEAR/` | yes |
 | v0.15 | 2026-11-21 | THOLET, a piano leaning toward a Rhodes with a grain cloud (Error Kit's concept); KEYBOARD HOLD (PTN + KEYBOARD) from the DN2 mk2 mod | `builds/v0.15-THOLET/` | yes |
@@ -45,6 +46,42 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.19 · CONTOUR
+
+- **File:** `RIFT_v0.19_CONTOUR_OS1.11.syx` (`builds/v0.19-CONTOUR/`)
+- **sha256:** `7fa1dcfdd279f88449ca88ed3bb73762c9e6a1294173070f1db20e88512d3aa3`
+- **Gated:** 2026-11-22, `CLEARED TO FLASH`
+- **Source:** `8782096` (this repository)
+
+**Adds**
+
+- **CONTOUR** (type 25, `dnfw.contour`): a wave-terrain synth (owner, 2026-11-22: "option b", our own engine after TERRAIN for the Digitone II; none of its code is used).
+  - An orbit (X, Y phases, RATIO from a table of 16; SIZX, SIZY, CNTX, CNTY, ROT; DRFT a slow wander of the centre) reads one of eight surfaces (SINE, FOLD, CHEB, FM, RING, EDGE, CHAOS, BITS), MORPH into the next; WARP, FOLD, FM (into the orbit's speed), FDBK, GRIT, LEV. Two pages (SYN1 ORBIT, SYN2 LAND), 16 controls.
+  - DSP: in FASCIA's walk, stealable by the frame guard; its records ride ORGAN's; tables in DDR (0x8122B000); bit-exact to `contour.live.Voice` (25 unit tests, a negative control). About 24k cycles a block on the unit's cost model (rcost).
+  - ColdFire: MACHINE SEL after DIGIDRUM in the synths, two LINE pages, formatters, slides; the output guard covers it (18..25); the DSP's age walk counts it as ours.
+- **Machine pages at stock's size**: RIFT's 17x12 icons drawn at 22x16, the labels in stock's font, the rows at stock's positions (owner: the pages left a gap at the bottom).
+- **SMEAR's page 2 display**: the sample's waveform, STRT/SIZE loop markers, the DSP's read point (SMEAR now writes it to the sampler voice's position, so the idle packet's playhead is SMEAR's own), and a grain cloud drawn from DENS, SPRY and OVLP.
+- SMEAR's VOC code is no longer emitted while VOC is off (smear.asm 998 instructions); DSP image 1,042,588 of 1,048,575 bytes.
+- Gate: runner part `contour` (every surface with every land control, two at once, FASCIA -> CONTOUR, a negative control); `rcost` includes CONTOUR's heaviest settings; emulator step `contour`.
+
+**Known issues**
+
+- CONTOUR has no MACHINE SEL logo yet.
+- The page icons are the old ones scaled up until the redrawn set.
+- SMEAR's grain cloud is drawn from its knobs, not from the DSP's grains.
+- SMEAR's VOC is still off.
+- PLATEAU's voice can be taken by the voice allocator on a busy pattern (reserve one).
+
+**Tests**
+
+1. MACHINE SEL: Contour after Digidrum. Notes from the keys; SURF through its eight surfaces; MORPH.
+2. SIZX and SIZY small to large; CNTX, CNTY off centre; ROT; RATIO through its range; DRFT on a held note.
+3. FM, FDBK, FOLD and GRIT up together: stable, nothing else goes silent.
+4. Four or five CONTOUR tracks with FASCIA and ORGAN playing: no dropouts.
+5. Every RIFT machine's pages: bigger icons, stock's font, nothing overlapping, no gap at the bottom.
+6. SMEAR with a sample, page 2: the waveform, the read point moving, the cloud following DENS, SPRY and OVLP.
+7. Save a project with a CONTOUR track, power-cycle, load: still Contour, same sound.
 
 ## v0.18 · GLASS
 
