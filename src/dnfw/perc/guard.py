@@ -288,7 +288,7 @@ def perc_limit(p, smp_types, smp_state: int, smp_stride: int, on_word: int, trig
 
 def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = None,
            rest_blocks: int = 0, strikes: int | None = None, steal_at: int = 1,
-           limit: int = LIMIT, struck: int | None = None, stop=None) -> None:
+           limit: int = LIMIT, struck: int | None = None, stop=None, expect=None) -> None:
     """VOICE() if it fits, else the slot's buffer zeroed and the skip counted. T_WORD:
     the scratch word holding the slot; COST: the slots' cost words; BUFFERS: the track
     buffers' pointers (0x254a60). v0.36: RESTS (the slots' rest counters) given, a voice
@@ -321,6 +321,8 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.iop(9, 9, "+", 10)                       # x 1.5
     p.iconst(10, FLOOR)
     p.iop(9, 9, "MAX", 10)
+    if expect is not None:
+        expect(p)                              # RIFT v0.20: may raise R9 (keeps R8)
     p.iop(8, 8, "+", 9)
     p.ld(10, limit)
     p.e("COMP(R8, R10);")

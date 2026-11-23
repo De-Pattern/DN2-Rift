@@ -197,7 +197,7 @@ CONTOUR = {
     "WARP": "Warp: distorts the orbit's coordinates before the surface is read.",
     "FOLD": "Fold: a wavefolder after the surface.",
     "FM": "FM: the output modulates the orbit's speed (through-zero-ish growl at the top).",
-    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Curved since v0.20: the low end is finely spread, and the top stays usable.",
+    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Curved since v0.20: the low end is finely spread, and the top stays usable. Above B3 it follows the pitch, so high notes keep the low notes' character and stay in key.",
     "GRIT": "Grit: sample-and-bit crush.",
     "LEV": "Level.",
 }
@@ -696,6 +696,7 @@ def build() -> str:
 VERSIONS = [
     ("0.20", "NXT", ["Slides: SLEN NXT (from the DN2 mk2 mod v0.66): a slide lasts until the track's next trig. It is the default for a slide trig with no SLEN lock (before: 1 step).",
                      "CONTOUR: FDBK rescaled (the old range past about 36 was unusable): the whole knob now spans the usable range, with the subtle low end spread over its first third.",
+                     "CONTOUR: FDBK and FM stay in key on high notes. Up to B3 every note sounds exactly as before; above it, a voice with feedback keeps B3's behaviour transposed (the feedback follows the pitch, and the orbit takes 2 or 4 steps a sample). A high CONTOUR note with FDBK up costs the DSP more, up to about four times.",
                      "Includes v0.19."]),
     ("0.19", "CONTOUR", ["CONTOUR, a new wave terrain synth machine: an orbit over one of eight surfaces, two pages, 16 controls.",
                          "RIFT's machine pages drawn at the stock size: the icons are larger and the page fills the screen.",

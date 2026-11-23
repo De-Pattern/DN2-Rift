@@ -37,6 +37,13 @@ QUART = F(0.25)
 DC_R = F(0.995)
 ID_DRIFT = F(F(0.13) * DT)              # the drift's own slow wander, 0.13 Hz, turns a sample
 THIRD = F(F(1.0) / F(3.0))
+# v0.20 (owner, 2026-11-23: FDBK and FM out of key from about C4 up): above IXREF (B3+, 247.5 Hz) a voice
+# with feedback keeps B3's behaviour transposed: the feedback grows with the pitch (its deviation a fixed
+# share of the note, not fixed Hz) and the orbit takes 2 (to about B4) or 4 steps a sample. At or below
+# IXREF, or with FDBK 0, every sample is as before.
+IXREF = F(F(247.5) * DT)
+INV_IXREF = F(F(1.0) / IXREF)
+IXREF2 = F(IXREF * F(2.0))
 # Every operation below is the DSP program's, in its order (dnfw.contour.program): float32 after each,
 # phases wrapped by frac (fascia's leaf), no floor elsewhere.
 
@@ -113,25 +120,34 @@ class Voice:
         fb = F(q["FDBK"] * F(F(q["FDBK"] * F(0.0525)) + F(0.0175)))
         grit = F(int(k["GRIT"]) >> 3)
         lev = F(q["LEV"] * F(0.8))
+        nsub, hn = 1, F(1.0)
+        if fb > F(0.0) and ix > IXREF:
+            fb = F(fb * F(ix * INV_IXREF))
+            nsub, hn = (2, F(0.5)) if not ix > IXREF2 else (4, F(0.25))
+        if nsub == 1:
+            ixs, iys, fbs, ids = ix, iy, fb, ID_DRIFT
+        else:
+            ixs, iys, fbs, ids = F(ix * hn), F(iy * hn), F(fb * hn), F(ID_DRIFT * hn)
         for i in range(n):
-            self.px = frac(F(self.px + F(ix + F(fb * self.z))))
-            self.py = frac(F(self.py + F(iy + F(fb * self.z))))
-            self.pd = frac(F(self.pd + ID_DRIFT))
-            dr = F(drft * sin_turns(self.pd))
-            uy = sin_turns(F(F(self.py + QUART) + dr))
-            ux = sin_turns(F(F(self.px + F(fm * uy)) + dr))
-            x0 = F(sx * ux)
-            y0 = F(sy * uy)
-            x = F(F(F(x0 * ca) - F(y0 * sa)) + cx)
-            y = F(F(F(x0 * sa) + F(y0 * ca)) + cy)
-            x = F(x + F(warp * F(y * y)))
-            z = surface(s0, x, y)
-            if mo > F(0.0):
-                zb = surface(s1, x, y)
-                z = F(z + F(mo * F(zb - z)))
-            if fold > F(0.0):
-                z = sin_turns(F(F(z * fold1) * QUART))
-            self.z = z
+            for _s in range(nsub):
+                self.px = frac(F(self.px + F(ixs + F(fbs * self.z))))
+                self.py = frac(F(self.py + F(iys + F(fbs * self.z))))
+                self.pd = frac(F(self.pd + ids))
+                dr = F(drft * sin_turns(self.pd))
+                uy = sin_turns(F(F(self.py + QUART) + dr))
+                ux = sin_turns(F(F(self.px + F(fm * uy)) + dr))
+                x0 = F(sx * ux)
+                y0 = F(sy * uy)
+                x = F(F(F(x0 * ca) - F(y0 * sa)) + cx)
+                y = F(F(F(x0 * sa) + F(y0 * ca)) + cy)
+                x = F(x + F(warp * F(y * y)))
+                z = surface(s0, x, y)
+                if mo > F(0.0):
+                    zb = surface(s1, x, y)
+                    z = F(z + F(mo * F(zb - z)))
+                if fold > F(0.0):
+                    z = sin_turns(F(F(z * fold1) * QUART))
+                self.z = z
             if self.gc > F(0.0):
                 self.gc = F(self.gc - F(1.0))
             else:

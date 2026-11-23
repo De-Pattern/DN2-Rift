@@ -3879,7 +3879,8 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     CL_ = CP.Layout(L, _dsp.CONTOUR_TABLES_DDR)
     cg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: cg.append(CP.voice(p, CL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2,
+             expect=CP.guard_expect(L.C["t"]))
     p.jump("", nxt)
     p.place(notready)                          # RIFT v0.16: before the link's tables: silence
     p.ld(9, L.C["t"])
