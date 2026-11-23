@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.20** | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
+| **v0.21** | 2026-11-23 | The master reverb is a plate (Dattorro's tank in stereo behind the stock REVERB page); the new start-up logo (RIFT in block letters that drip and decompose); PLATEAU withdrawn for rework; FLEX levels from the DN2 mk2 mod's v0.71 | `builds/v0.21-PLATE/` | yes |
+| v0.20 | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
 | v0.19 | 2026-11-22 | CONTOUR, a wave-terrain synth (8 surfaces, 2 pages); RIFT's machine pages at stock's size; SMEAR's page 2 shows the sample, its read point and a grain cloud | `builds/v0.19-CONTOUR/` | yes |
 | v0.18 | 2026-11-22 | The silent-unit fix (SMEAR's VOC off, the guard expects a voice's peak, an output guard on every RIFT machine); PLATEAU no longer dropped beside other tracks; GLASS, a VCFQ-style filter on every machine; MACHINE SEL: PLATEAU's own section, SMEAR first of the samples, their logos | `builds/v0.18-GLASS/` | yes |
 | v0.17 | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
@@ -47,6 +48,38 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.21 · PLATE
+
+- **File:** `RIFT_v0.21_PLATE_OS1.11.syx` (`builds/v0.21-PLATE/`)
+- **sha256:** `fb49af0aad953c1b778e67c7f29ac0652e6c6fc1508b892f675a651ae773c7bc`
+- **Gated:** 2026-11-23, `CLEARED TO FLASH`
+- **Source:** `72382c7` (this repository)
+
+**Changes**
+
+- **The master reverb is a plate** (owner, 2026-11-23: "replace the stock master reverb with Plateau", the UI left as it is): Dattorro's tank (PLATEAU's, `dnfw.mverb`) in stereo (Table 2's first seven taps the left, the last seven the right) in the stock reverb core's place. The stock FX function's call of the core (sw 0xb8370c, `CALL 0xb82d1a (DB)`) becomes `JUMP wr_mv` (mverb.asm, in L2 after smear.asm); wr_mv reads the stock input stage's 32 samples (after the sends, HPF and LPF) and writes the 64 the stock mix stage takes (MIX VOL, routing), then resumes past the call. Its controls are the frame's reverb words (the FX slot at 2554: PRE 2586, DEC 2588, FREQ 2590, GAIN 2592): PRE the pre-delay (0..0.3 s), DEC the tank's decay, FREQ and GAIN a high shelf in the tank's loop. Its state and lines in DDR (0x82690000, 270 KB), cleared by itself after power-on (17 silent blocks).
+
+- **A new start-up logo** (owner, 2026-11-23, after the GRAINS block-letter reference): the smoke gathers into RIFT in block letters (solid blocks, a one-pixel seam, a thin shadow line), then over the last 0.7 s the letters drip (one-pixel trickles from their lower edges) and decompose (the top first, in clumps, a little grit falling). 80 frames as before; the logo forms 3 % sooner. `tools/anim/rift_anim3d.py --json` writes `bootanim_rift.json`.
+- **Rounder skeletons and real drums** (owner): a rounded cranium with brow, cheekbones, muzzle, teeth and a tapering jaw; round joints; djembe goblets; a steel pan's dish on a tripod. Pre-rendered: no run-time cost (6 bytes more).
+- **PLATEAU withdrawn** (owner: "plateau is awful ... pull it, save it for later work"): out of MACHINE SEL (`plateau.machines.LISTED`) and its DSP program out of the build (`ON_DSP`: its 9 KB of the DSP's 1 MiB upload are the master reverb's room); a saved PLATEAU track opens as FM Tone. The source stays for its rework.
+
+- **FLEX levels from the DN2 mk2 mod's v0.71** (owner: "the one we need finally"; NiKo's measurements on the mod's v0.67, a slate tone at -24 dBFS over USB): a take of a track `TRK_HW_DB` 6 (was 24), MAIN and IN takes played `MAIN_PLAY_DB` 4 louder (was 12). Takes recorded on earlier versions keep their level (a track's take 18 dB hot: GAIN -18 brings one back).
+
+- Gate: runner part `mverb` (the stock FX path, bit-exact to `live.Verb` with noise in, the controls moving, the longest pre-delay; silence in, silence out; a negative control); rcost's master-reverb case; unit tests `test_mverb_program`.
+
+**Known issues**
+
+- As v0.20: CONTOUR has no MACHINE SEL logo; the page icons are the old ones scaled up; SMEAR's VOC is off.
+- GLASS on several busy tracks can run the DSP past its frame (a crushed, crackly sound): fixed in v0.22. SMEAR's TUNE does nothing at BLND 0: fixed in v0.22.
+
+**Tests**
+
+0. The master reverb: a track's reverb send up, DEC, PRE, FREQ and GAIN round their ranges: a plate; sends at 0: nothing from the reverb. MIX VOL, HPF and LPF as before.
+1. Power on: the campfire, the camera to the sky, the smoke forming RIFT in block letters, then dripping and crumbling; "RIFT 0.21" bottom right.
+2. MACHINE SEL: no PLATEAU, no empty FX section; SMEAR first of the sample machines.
+3. A project saved with a PLATEAU track: that track opens as FM Tone.
+4. FLEX: record a track at GAIN 0: the take plays at the track's own level. Record MAIN and IN: their takes play at their sources' level.
 
 ## v0.20 · NXT
 
