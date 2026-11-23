@@ -39,6 +39,33 @@ def cyl(cx, cy, cz, r, h, n=10):
     return out
 
 
+def revolve(profile, cx, cz, n=12):
+    """v0.21: a surface of revolution about the vertical through (cx, cz): PROFILE [(r, y)], bottom to top"""
+    out = []
+    for k in range(n):
+        a0, a1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
+        for (r0, y0), (r1, y1) in zip(profile, profile[1:]):
+            p00 = (cx + r0 * math.cos(a0), y0, cz + r0 * math.sin(a0))
+            p01 = (cx + r0 * math.cos(a1), y0, cz + r0 * math.sin(a1))
+            p10 = (cx + r1 * math.cos(a0), y1, cz + r1 * math.sin(a0))
+            p11 = (cx + r1 * math.cos(a1), y1, cz + r1 * math.sin(a1))
+            out += [(p00, p01, p11), (p00, p11, p10)]
+    return out
+
+
+def ellipsoid(cx, cy, cz, rx, ry, rz, nu=10, nv=7):
+    """v0.21: a low-poly ellipsoid (rounded skulls and joints)"""
+    def pt(i, j):
+        u, v = 2 * math.pi * i / nu, math.pi * j / nv - math.pi / 2
+        return (cx + rx * math.cos(v) * math.cos(u), cy + ry * math.sin(v), cz + rz * math.cos(v) * math.sin(u))
+    out = []
+    for i in range(nu):
+        for j in range(nv):
+            a, b, c, d = pt(i, j), pt(i + 1, j), pt(i + 1, j + 1), pt(i, j + 1)
+            out += [(a, b, c), (a, c, d)]
+    return out
+
+
 def rot_y(tris, a, ox, oz):
     c, s = math.cos(a), math.sin(a)
     out = []
@@ -91,20 +118,27 @@ def robot(t, phase, kind):
     # clavicles and shoulder balls
     for s in (-1, 1):
         tris += limb((0.02 * s, 1.5, -0.04), (0.3 * s, 1.52, 0), 0.02)
-        tris += box(0.33 * s, 1.5, 0, 0.045, 0.045, 0.045)
+        tris += ellipsoid(0.33 * s, 1.5, 0, 0.05, 0.05, 0.05, 6, 4)
     # neck, skull: cranium, brow, cheekbones, jaw apart from it; the eyes in the sockets
     tris += limb((0, 1.52, 0), (0, 1.62, -0.02 + lean), 0.025)
-    tris += box(0, 1.79, 0.0 + lean, 0.11, 0.09, 0.12)
-    tris += box(0, 1.72, -0.11 + lean, 0.11, 0.015, 0.02)
+    # v0.21 (owner: more realistic heads): a rounded cranium, longer front to back; a brow ridge;
+    # cheekbones; a narrower muzzle with a tooth line; a jaw that tapers to the chin
+    tris += ellipsoid(0, 1.8, 0.01 + lean, 0.115, 0.105, 0.135, 10, 7)
+    tris += limb((-0.1, 1.735, -0.1 + lean), (0.1, 1.735, -0.1 + lean), 0.017)
     for s in (-1, 1):
-        tris += box(0.085 * s, 1.67, -0.08 + lean, 0.03, 0.025, 0.05)
-    tris += box(0, 1.6 - 0.02 * abs(math.sin(phase * 3)), -0.07 + lean, 0.075, 0.022, 0.07)
+        tris += limb((0.1 * s, 1.68, -0.06 + lean), (0.06 * s, 1.67, -0.12 + lean), 0.016)
+    tris += box(0, 1.655, -0.105 + lean, 0.06, 0.03, 0.04)
+    tris += box(0, 1.63, -0.14 + lean, 0.05, 0.006, 0.006)
+    jaw = 1.59 - 0.02 * abs(math.sin(phase * 3))
+    for s in (-1, 1):
+        tris += limb((0.08 * s, jaw + 0.05, -0.02 + lean), (0.045 * s, jaw, -0.12 + lean), 0.014)
+    tris += limb((-0.045, jaw, -0.125 + lean), (0.045, jaw, -0.125 + lean), 0.016)
     eyes = [(-0.05, 1.7, -0.14 + lean), (0.05, 1.7, -0.14 + lean)]
     # legs, seated: thigh, knee joint, shin, ankle, foot
     for s in (-1, 1):
         kn = (0.15 * s, 0.7, -0.45)
         tris += limb((0.13 * s, 0.74, 0), kn, 0.03)
-        tris += box(kn[0], kn[1], kn[2], 0.045, 0.045, 0.045)
+        tris += ellipsoid(kn[0], kn[1], kn[2], 0.05, 0.05, 0.05, 6, 4)
         tris += limb(kn, (0.17 * s, 0.07, -0.5), 0.026)
         tris += box(0.17 * s, 0.04, -0.6, 0.05, 0.025, 0.1)
     # arms: upper arm, elbow joint, forearm (two bones), wrist, three fingers; strike the drum
@@ -114,7 +148,7 @@ def robot(t, phase, kind):
         hand = (0.16 * s, 0.98 + 0.32 * hit, -0.7 + 0.08 * hit)
         el = ((sh[0] + hand[0]) / 2 + 0.13 * s, (sh[1] + hand[1]) / 2 - 0.05, -0.32)
         tris += limb(sh, el, 0.026)
-        tris += box(el[0], el[1], el[2], 0.035, 0.035, 0.035)
+        tris += ellipsoid(el[0], el[1], el[2], 0.04, 0.04, 0.04, 6, 4)
         for o in (-0.02, 0.02):
             tris += limb((el[0] + o, el[1], el[2]), (hand[0] + o, hand[1] + 0.02, hand[2] + 0.06), 0.012)
         tris += box(hand[0], hand[1] + 0.02, hand[2] + 0.04, 0.035, 0.02, 0.03)
@@ -122,12 +156,16 @@ def robot(t, phase, kind):
             tris += limb((hand[0] + 0.022 * f, hand[1] + 0.01, hand[2]),
                          (hand[0] + 0.03 * f, hand[1] - 0.03, hand[2] - 0.08), 0.008)
     # the drum: two hand drums (djembe) or a steel pan on a stand
+    # v0.21 (owner: more realistic drums): a steel pan's shallow dish and skirt on a tripod; a djembe's
+    # goblet (bowl, waist, flared foot) with a rim
     if kind == "pan":
-        tris += cyl(0, 0.92, -0.75, 0.32, 0.08, 12)
-        tris += limb((0, 0.1, -0.75), (0, 0.92, -0.75), 0.03)
+        tris += revolve([(0.30, 0.80), (0.33, 0.92), (0.30, 0.94), (0.18, 0.90), (0.02, 0.88)], 0, -0.75, 14)
+        for k in range(3):
+            a = 2 * math.pi * k / 3
+            tris += limb((0.22 * math.cos(a), 0.0, -0.75 + 0.22 * math.sin(a)), (0.08 * math.cos(a), 0.82, -0.75 + 0.08 * math.sin(a)), 0.014)
     else:
-        tris += cyl(0, 0.45, -0.75, 0.16, 0.5, 9)
-        tris += cyl(0, 0.05, -0.75, 0.09, 0.4, 7)
+        tris += revolve([(0.13, 0.0), (0.11, 0.08), (0.06, 0.32), (0.07, 0.42), (0.15, 0.62), (0.17, 0.86),
+                         (0.18, 0.9), (0.16, 0.92), (0.0, 0.91)], 0, -0.75, 12)
     # the log seat
     tris += limb((-0.45, 0.35, 0.05), (0.45, 0.35, 0.05), 0.16)
     return tris, eyes
