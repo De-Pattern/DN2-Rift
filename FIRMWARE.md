@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.19** | 2026-11-22 | CONTOUR, a wave-terrain synth (8 surfaces, 2 pages); RIFT's machine pages at stock's size; SMEAR's page 2 shows the sample, its read point and a grain cloud | `builds/v0.19-CONTOUR/` | yes |
+| **v0.20** | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
+| v0.19 | 2026-11-22 | CONTOUR, a wave-terrain synth (8 surfaces, 2 pages); RIFT's machine pages at stock's size; SMEAR's page 2 shows the sample, its read point and a grain cloud | `builds/v0.19-CONTOUR/` | yes |
 | v0.18 | 2026-11-22 | The silent-unit fix (SMEAR's VOC off, the guard expects a voice's peak, an output guard on every RIFT machine); PLATEAU no longer dropped beside other tracks; GLASS, a VCFQ-style filter on every machine; MACHINE SEL: PLATEAU's own section, SMEAR first of the samples, their logos | `builds/v0.18-GLASS/` | yes |
 | v0.17 | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
 | v0.16 | 2026-11-21 | SMEAR, a Nebulae-style looper (VOC, PLAY and GRN readers of one loop, BLND between them); LIGATURE's eight new blocks (TICK, ENV, VCA, CDIV, DUST, CHAOS, CRUSH, LISSA); MACHINE SEL logos for RIFT's machines | `builds/v0.16-SMEAR/` | yes |
@@ -46,6 +47,37 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.20 · NXT
+
+- **File:** `RIFT_v0.20_NXT_OS1.11.syx` (`builds/v0.20-NXT/`)
+- **sha256:** `201ad11135fcc2b5ad56303449d6768152b31a0ebff92c8a6ce4e8aedfa3f4f8`
+- **Gated:** 2026-11-23, `CLEARED TO FLASH`
+- **Source:** `0a3ed43` (this repository)
+
+**Adds**
+
+- **SLEN NXT** (owner, 2026-11-22: "the slide trig update from dn2mk2 fw"; the DN2 mk2 mod's v0.66, ad2e1c5 + 1b0fd3e, the Analog Four's rule: "the slide is completed when the next trig is reached"): a slide lasts until the track's next trig (a note or a lock trig), round the track's own length; with no other trig, the whole length (up to 128 steps). NXT is SLEN's first choice and what a slide trig with no SLEN lock does (v0.19 and before: 1 step); the fixed lengths 1/8 .. 64 are unchanged. Stored as lock value 15 when locked explicitly (older firmware plays it as 1 step).
+- **CONTOUR FDBK rescaled** (owner, 2026-11-23: "too extreme beyond about 38 ... amazing before that, especially in the first 5 or so value steps"): fb = u (0.0175 + 0.0525 u), 0.07 at 127 (was 0.25 u): the old usable 0..36 over the whole knob, the old first 5 steps over about the first 36.
+- **CONTOUR in key on high notes** (owner: FDBK and FM "not in key" from about C4; "if it's between the two, keep the exact effect feedback has now"): FDBK pushes the orbit by a fixed amount in Hz, so above about B3 it pulls or locks the pitch off the note. At or below B3 (247.5 Hz), or with FDBK 0, every sample is as v0.19's (a unit test holds it). Above it, the feedback follows the pitch (a fixed share of the note) and the orbit takes 2 steps a sample (to about B4) or 4 (above): each note B3's behaviour transposed, in key. The guard expects CONTOUR's 4-step peak (CTR_PEAK, 110k cycles; rcost holds the worst block to it) whenever a slot's FDBK is up, so a jump to a high note never overruns the frame.
+- Gate: runner contour part (feedback on high notes, 2 and 4 steps, notes moving: bit-exact), rcost (CONTOUR 4 steps within CTR_PEAK); unit tests (high notes bit-exact; nothing changes at or below B3 or without feedback).
+- Gate: emu_slides' NXT checks (stock's track objects for all 16 tracks, stock's own step test, 8 cases exact per frame against the model: the next trig, round the length, no other trig, the next step, past 16 steps, an explicit SLEN, an explicit NXT, per-track length), run last, after FASCIA's, so every earlier slide check is frame for frame as before.
+
+**Known issues**
+
+- As v0.19: CONTOUR has no MACHINE SEL logo; the page icons are the old ones scaled up; SMEAR's VOC is off; PLATEAU's voice can be taken on a busy pattern.
+- A slide trig in a project saved on v0.19 or earlier with no SLEN lock now lasts until the next trig, not 1 step: lock SLEN 1 to keep the old timing.
+
+**Tests**
+
+1. A FREQ (or any RIFT machine control) p-lock with SLD on, no SLEN lock, trigs on steps 1 and 5: the glide takes the four steps to step 5.
+2. Only one trig on the track: the slide takes the whole pattern length.
+3. SLEN set to 1: one step, as before. SLEN's first choice reads NXT.
+4. A track with its own length (per-track mode): NXT wraps round that length.
+5. Save, power-cycle, load: SLEN locks and NXT kept.
+6. CONTOUR: FDBK from 0 up: a fine low end, usable all the way to 127.
+7. CONTOUR with FDBK and FM up: play from C2 to C6: every note in key; up to B3 exactly as v0.19.
+8. Four CONTOUR tracks with FDBK up playing high notes beside FASCIA: no dropouts.
 
 ## v0.19 · CONTOUR
 
