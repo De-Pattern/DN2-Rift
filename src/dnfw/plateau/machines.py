@@ -16,7 +16,7 @@ from ..organ import machines as OM
 TYPE = 24                                  # RIFT v0.17 (23, THOLET's, is a gone type: it loads as FM Tone)
 KIND = TYPE - 4
 LONG, SHORT = "Plateau", "PLT"
-LISTED = True
+LISTED = False                              # v0.21 (owner, 2026-11-23: "plateau is awful ... pull it, save it for later"): out of MACHINE SEL; a saved PLATEAU track still loads and plays
 
 PAGES = {"FX1 PLATE": ("PRED", "SIZE", "DCAY", "DIFF", "DAMP", "BAND", "LCUT", "LEV"),
          "FX2 TANK": ("TLOW", "MSPD", "MDEP", "HOLD", "TUND", "IGN", "DRV", "ERLY")}

@@ -438,6 +438,8 @@ def build() -> str:
     from dnfw.digidrum import machines as DM
     TM = importlib.import_module("dnfw.tholet.machines") if HAS_THOLET else None
     PM = importlib.import_module("dnfw.plateau.machines") if HAS_PLATEAU else None
+    if PM is not None and not getattr(PM, "LISTED", True):   # v0.21: PLATEAU withdrawn from MACHINE SEL
+        PM = None
     CM = importlib.import_module("dnfw.contour.machines") if HAS_CONTOUR else None
 
     nav = [("start", "Start here"), ("install", "Install &amp; recovery"), ("ui", "Using RIFT's machines"),
@@ -457,8 +459,8 @@ def build() -> str:
             ("tuning", "Microtuning"), ("perf", "Performance")]
     nav += [("versions", "Versions")]
     s = []
-    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM or PM) and (v != "0.16" or HAS_SMEAR)
-                  and (v != "0.17" or PM) and (v != "0.18" or HAS_GLASS) and (v != "0.19" or CM))
+    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM or HAS_PLATEAU) and (v != "0.16" or HAS_SMEAR)
+                  and (v != "0.17" or HAS_PLATEAU) and (v != "0.18" or HAS_GLASS) and (v != "0.19" or CM))
     s.append(f"<h1>RIFT</h1><p class=\"dim\">The manual · covers v{E(newest)}</p>")
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
 
@@ -686,7 +688,7 @@ def build() -> str:
 
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
     for vid, title, items in VERSIONS:
-        if (vid == "0.15" and not (TM or PM)) or (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and not PM) \
+        if (vid == "0.15" and not (TM or HAS_PLATEAU)) or (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and not HAS_PLATEAU) \
                 or (vid == "0.18" and not HAS_GLASS) or (vid == "0.19" and not CM):
             continue
         s.append(f"<div class=\"box\" id=\"v{vid}\"><b>v{vid} · {E(title)}</b>" + ul(*items) + "</div>")
@@ -694,6 +696,9 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.21", "DRIP", ["A new start-up logo: the smoke gathers into RIFT in block letters, which then drip and decompose.",
+                      "PLATEAU withdrawn from MACHINE SEL for rework (it glitched with input gain and did not flow with the trigs); a saved PLATEAU track still loads and plays.",
+                      "Includes v0.20."]),
     ("0.20", "NXT", ["Slides: SLEN NXT (from the DN2 mk2 mod v0.66): a slide lasts until the track's next trig. It is the default for a slide trig with no SLEN lock (before: 1 step).",
                      "CONTOUR: FDBK rescaled (the old range past about 36 was unusable): the whole knob now spans the usable range, with the subtle low end spread over its first third.",
                      "CONTOUR: FDBK and FM stay in key on high notes. Up to B3 every note sounds exactly as before; above it, a voice with feedback keeps B3's behaviour transposed (the feedback follows the pitch, and the orbit takes 2 or 4 steps a sample). A high CONTOUR note with FDBK up costs the DSP more, up to about four times.",

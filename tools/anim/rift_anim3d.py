@@ -217,24 +217,44 @@ RAD = 1.9
 STARS = [(R.uniform(0, 2 * math.pi), R.uniform(0.15, 1.45), R.random()) for _ in range(140)]
 
 
-def logo_targets():
-    """RIFT as points in the sky (screen space when the camera looks up), from a blocky font"""
-    im = Image.new("1", (W, H), 0)
-    d = ImageDraw.Draw(im)
-    y0, h = 14, 16
-    d.rectangle((16, y0, 33, y0 + 4), fill=1); d.rectangle((16, y0, 21, y0 + h), fill=1)
-    d.rectangle((28, y0, 33, y0 + 8), fill=1); d.rectangle((16, y0 + 7, 32, y0 + 10), fill=1)
-    d.polygon([(23, y0 + 10), (29, y0 + 10), (35, y0 + h), (29, y0 + h)], fill=1)
-    d.rectangle((41, y0, 60, y0 + 4), fill=1); d.rectangle((48, y0, 53, y0 + h), fill=1); d.rectangle((41, y0 + h - 4, 60, y0 + h), fill=1)
-    d.rectangle((67, y0, 87, y0 + 4), fill=1); d.rectangle((67, y0, 72, y0 + h), fill=1); d.rectangle((67, y0 + 7, 84, y0 + 10), fill=1)
-    d.rectangle((92, y0, 115, y0 + 4), fill=1); d.rectangle((101, y0, 106, y0 + h), fill=1)
-    for (x, y, sx, sy) in ((7, 8, 1, 1), (120, 8, -1, 1), (7, 37, 1, -1), (120, 37, -1, -1)):
-        d.line((x, y, x + 4 * sx, y), fill=1); d.line((x, y, x, y + 4 * sy), fill=1)
-    pts = [(18, 42), (26, 42), (26, 40), (36, 40), (36, 43), (46, 43), (46, 45), (54, 45), (54, 42), (64, 42),
-           (64, 40), (72, 40), (72, 43), (82, 43), (82, 45), (90, 45), (90, 42), (102, 42)]
-    d.line(pts, fill=1)
-    a = np.array(im)
-    return [(x, y) for y in range(H) for x in range(W) if a[y, x]], a
+# v0.21 (owner, 2026-11-23): RIFT in the 'ANSI Shadow' block style (the owner's GRAINS reference):
+# solid blocks with a one-pixel seam under each row, a thin shadow line (box-drawing characters)
+ART = [
+    "██████╗ ██╗███████╗████████╗",
+    "██╔══██╗██║██╔════╝╚══██╔══╝",
+    "██████╔╝██║█████╗     ██║   ",
+    "██╔══██╗██║██╔══╝     ██║   ",
+    "██║  ██║██║██║        ██║   ",
+    "╚═╝  ╚═╝╚═╝╚═╝        ╚═╝   ",
+]
+CW, CH = 4, 6                                   # a character cell, pixels
+
+
+def _cell(ch):
+    c = np.zeros((CH, CW), np.uint8)
+    if ch == "█":
+        c[0:CH - 1, 0:CW] = 1
+        return c
+    mx, my = 1, 2                               # the shadow's line: x 1, y 2 in the cell
+    if ch in "═╔╗╚╝":
+        x0 = mx if ch in "╔╚" else 0
+        x1 = mx if ch in "╗╝" else CW - 1
+        c[my, x0:x1 + 1] = 1
+    if ch in "║╔╗╚╝":
+        y0 = my if ch in "╔╗" else 0
+        y1 = my if ch in "╚╝" else CH - 1
+        c[y0:y1 + 1, mx] = 1
+    return c
+
+
+def logo_targets(y0=12):
+    """RIFT as points in the sky (screen space when the camera looks up)"""
+    a = np.zeros((H, W), np.uint8)
+    x0 = (W - len(ART[0]) * CW) // 2
+    for r, line in enumerate(ART):
+        for k, ch in enumerate(line):
+            a[y0 + r * CH:y0 + (r + 1) * CH, x0 + k * CW:x0 + (k + 1) * CW] |= _cell(ch)
+    return [(x, y) for y in range(H) for x in range(W) if a[y, x]], a.astype(bool)
 
 
 LOGO_PTS, LOGO = logo_targets()
@@ -325,12 +345,80 @@ def frame(t, n_total):
     return img
 
 
+N, NF = 80, 70                                  # v0.21: formed by frame 70, then 10 frames of drip
+
+
+def drip_frames(n):
+    """v0.21 (owner: "drip and decompose after it's fully formed ... not goofy, no big ball-like
+    droplets"): thin one-pixel trickles from the letters' lower edges; the top crumbles first, in
+    clumps; a little grit falls"""
+    from scipy.ndimage import uniform_filter
+    L = LOGO
+    rs = np.random.RandomState(23)
+    noise = rs.rand(H, W)
+    sm = uniform_filter(noise, 3) + 0.35 * noise
+    noise = sm.argsort(axis=None).argsort().reshape(H, W) / (H * W * 1.0)
+    ys, _xs = np.nonzero(L)
+    top, bot = ys.min(), ys.max()
+    edge = L & ~np.vstack([L[1:], np.zeros((1, W), bool)])
+    r2 = random.Random(5)
+    drips = [(y, x, r2.randint(3, 12), r2.random()) for y, x in zip(*np.nonzero(edge)) if r2.random() < 0.22]
+    dead_at, out = {}, []
+    for j in range(n):
+        p = (j + 1) / n
+        base = frame(1.0, N).astype(bool) & ~L
+        hy = (np.arange(H)[:, None] - top) / max(1, bot - top)
+        pe = max(0.0, (p - 0.3) / 0.7) ** 1.3 * 0.75
+        keep = L & (noise > pe * (0.55 + 0.45 * (1 - hy)) * 1.15)
+        img = base | keep
+        for y, x in zip(*np.nonzero(L & ~keep)):
+            k = dead_at.setdefault((y, x), j)
+            if noise[y, x] * 7 % 1 < 0.14:
+                yy = y + int(2 + 2.2 * (j - k) ** 1.4)
+                if yy < H:
+                    img[yy, x] = True
+        for (y, x, ln, ph) in drips:
+            if not keep[y, x] and p > 0.6:
+                continue
+            m = int(ln * min(1.0, p * 1.2 + ph * 0.15))
+            for d in range(1, m + 1):
+                if y + d < H and (d % 4 != 3 or ph < 0.5):
+                    img[y + d, x] = True
+        out.append(img.astype(np.uint8))
+    return out
+
+
+def all_frames():
+    frames = [frame(0.90 * i / (NF - 1) + (0.10 if i == NF - 1 else 0.0), N) for i in range(NF)]
+    frames += drip_frames(N - NF)
+    frames[-1][55:, 93:] = 0                    # the version label's corner, clear (bootanim)
+    return frames
+
+
+def write_json(frames, path="src/dnfw/bootanim_rift.json"):
+    """the frames as dnfw.bootanim reads them: page-major, a byte a column of 8 pixels, bit 0 the top"""
+    import base64
+    import json
+    raw = bytearray()
+    for f in frames:
+        for page in range(8):
+            for x in range(W):
+                raw.append(sum(1 << b for b in range(8) if f[page * 8 + b, x]))
+    doc = json.loads(open(path).read())
+    doc["data_base64"] = base64.b64encode(bytes(raw)).decode()
+    doc["source"] = "tools/anim/rift_anim3d.py"
+    doc["about"] = ("RIFT's start-up animation (owner, 2026-11-17; v0.21 2026-11-23): three endoskeletons drum "
+                    "around a campfire, the camera tilts to the stars, the smoke gathers into RIFT in block "
+                    "letters, which then drip and decompose. Rendered by tools/anim/rift_anim3d.py (a small 3D "
+                    "renderer, Bayer-dithered to one bit); 80 frames, 128 x 64.")
+    open(path, "w").write(json.dumps(doc))
+
+
 def main():
-    N = 80
-    frames = []
-    for i in range(N):
-        frames.append(frame(i / (N - 1), N))
-    frames[-1][55:, 93:] = 0                                # the version label's corner, clear (bootanim)
+    import sys
+    frames = all_frames()
+    if "--json" in sys.argv:
+        write_json(frames)
     durs = [70] * (N - 1) + [900]
     big = [Image.fromarray(f * 255).resize((W * 4, H * 4), Image.NEAREST) for f in frames]
     big[0].save("out/anim/rift_intro_3d.gif", save_all=True, append_images=big[1:], duration=durs, loop=0)
