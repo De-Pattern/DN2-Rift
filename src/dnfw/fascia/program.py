@@ -3686,7 +3686,7 @@ def sanitize(p, L: "Layout") -> None:
     PP.half(p, 4, _GLP.FILTER_HDR, 10)
     p.iconst(3, 0)
     p.iconst(12, 18)
-    p.if_(2, "GE", 12, lambda: (p.iconst(12, 24), p.if_(2, "LE", 12, lambda: p.iconst(3, 1), kind="i")), kind="i")
+    p.if_(2, "GE", 12, lambda: (p.iconst(12, 25), p.if_(2, "LE", 12, lambda: p.iconst(3, 1), kind="i")), kind="i")   # (v0.20: to CONTOUR's 25)
     p.iconst(12, 9)
     p.if_(2, "EQ", 12, lambda: p.iconst(3, 1), kind="i")
     p.iconst(12, 6)
@@ -3744,6 +3744,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     from ..ligature import program as LP
     from ..digidrum import program as DP
     from ..plateau import program as XP
+    from ..contour import program as CP
     from ..glass import program as GLP
     from ..waverider import dsp as _dsp
     if organ_tables is None:
@@ -3806,6 +3807,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.sti(LP.VOICE["magic"], 2, 0)             # RIFT: and LIGATURE's (a fresh voice at its next block)
     p.sti(DP.VOICE["magic"], 2, 0)             # RIFT: and DIGIDRUM's
     p.sti(XP.VOICE["magic"], 2, 0)             # RIFT v0.17: and PLATEAU's (a fresh instance clears its lines)
+    p.sti(CP.VOICE["magic"], 2, 0)             # RIFT v0.20: and CONTOUR's
     p.place(changed)
     PP.raw_type(p, 2)
     p.ipass(0, 2)
@@ -3830,6 +3832,10 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.iconst(12, XP.TYPE)
     p.e("COMP(R0, R12);")
     p.jump("EQ", plt)
+    ctr = p.label("ctr")
+    p.iconst(12, CP.TYPE)
+    p.e("COMP(R0, R12);")
+    p.jump("EQ", ctr)
     p.iconst(12, TYPE)
     p.e("COMP(R0, R12);")
     p.jump("NE", other)
@@ -3869,6 +3875,12 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     # (RIFT v0.18: PLATEAU is never stolen: left out of a block, it is tried again the next; stolen,
     # an INF note's reverb stayed silent for good, the owner's "plateau does nothing")
     p.jump("", nxt)
+    p.place(ctr)                               # RIFT v0.20: CONTOUR (type 25, dnfw.contour.program)
+    CL_ = CP.Layout(L, _dsp.CONTOUR_TABLES_DDR)
+    cg = []
+    G.around(p, L.C["t"], L.cost, BUFFERS, lambda: cg.append(CP.voice(p, CL_)),
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+    p.jump("", nxt)
     p.place(notready)                          # RIFT v0.16: before the link's tables: silence
     p.ld(9, L.C["t"])
     p.lsh(12, 9, 2)
@@ -3902,6 +3914,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     lg[0].emit_rts()                           # LIGATURE's (l_render, the kernels)
     rg[0].emit_rts()                           # DIGIDRUM's (r_render)
     xg[0].emit_rts()                           # PLATEAU's (p_render, p_ap, p_apf)
+    cg[0].emit_rts()                           # CONTOUR's (c_render, the surfaces)
     gg.emit_rts()                              # GLASS's (g_slot, g_bend)
     p.emit_subs()
     p.scr_on = False

@@ -134,7 +134,7 @@ def test_the_list_offers_our_machines_then_the_sample_machines_before_midi(appli
     from dnfw.digidrum import machines as RSM
     if PP.RIFT:   # RIFT (owner, 2026-11-13): no PERC or Monomachine machine; FASCIA after the stock four
         from dnfw.plateau import machines as PLM
-        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), *([24] if PLM.LISTED else []), 9, 8, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.18: SMEAR (9) first of the sample machines; v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
+        assert types == [0, 2, 1, 3, 18, 19, 20, *([21] if LGM.LISTED else []), *([22] if RSM.LISTED else []), 25, *([24] if PLM.LISTED else []), 9, 8, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]   # RIFT v0.18: SMEAR (9) first of the sample machines; v0.4: ORGAN after FASCIA; v0.6: SILT after ORGAN; v0.7: LIGATURE after SILT
         assert not set(types) & {5, *MM.TYPES}
     else:
         assert types == [0, 2, 1, 3, 5, *MM.TYPES, *([18] if FM.LISTED else []), 8, 9, 10, 11, 13, 12, *([17] if SMB.BOUNCE_LISTED else []), 4]
@@ -179,11 +179,11 @@ def test_the_group_function_gives_the_sample_machines_their_own_section(applied)
         target = struct.unpack(">I", code[2:6])[0]
         assert target == waverider.SPEC["layout"]["group_fn"]
         code = _chunked(target, 64)
-    got = {t: _run_group(code, t) for t in (-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 16, 22, 23, 24, 100)}
+    got = {t: _run_group(code, t) for t in (-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 16, 22, 23, 24, 25, 100)}
     want = {-1: 0, 0: 1, 1: 1, 2: 1, 3: 1, 4: 2, 5: 3, 6: 3, 7: 3, 8: 4, 9: 4, 12: 4,
-            13: 4, 14: 3, 16: 3, 22: 3, 23: 3, 24: 3, 100: 3}   # v0.19: 13 SLICE; v0.26: 14.. ours (3)
+            13: 4, 14: 3, 16: 3, 22: 3, 23: 3, 24: 3, 25: 3, 100: 3}   # v0.19: 13 SLICE; v0.26: 14.. ours (3)
     if "group_fn" in waverider.SPEC["layout"]:
-        want.update({24: CF.FX_GROUP, 100: CF.FX_GROUP})        # RIFT v0.18: PLATEAU (24..) a section of its own
+        want.update({24: CF.FX_GROUP})        # RIFT v0.18: PLATEAU (24) a section of its own (v0.20: CONTOUR's 25 a synth)
     assert got == want
 
 

@@ -49,7 +49,7 @@ class SLayout:
 
     def __init__(self, scr: int, mbox: int, state: int, vbase: int, tables: int, vtables: int,
                  qsin: int, lanes: tuple, buffers: int, clears: tuple = (), pairs: int | None = None,
-                 ready: int | None = None, cost: int | None = None):
+                 ready: int | None = None, cost: int | None = None, smp_pos: int | None = None):
         self.INIT, self.CLOCK, self.T, self.SEEN, self.LOWN0, self.LOWN1, self.LAGE0, self.LAGE1, self.CNT = (
             scr + 4 * k for k in range(9))
         self.ISTEP = scr + 36                   # the power-on work's next part (while INIT is INIT_BUSY)
@@ -62,6 +62,7 @@ class SLayout:
         self.V = P.VLayout(vbase, tables, vtables, lanes, fft=fft)
         self.READY = ready                      # RIFT v0.16: the tables are in once this word is TABLE_MAGIC
         self.COST = cost                        # 16 words: each track's last cost (the guard), or None
+        self.SMP_POS = smp_pos                  # RIFT v0.19: the sample voices' states (their "pos" gets the read point), or None
         self.tables = tables
         self.clears = clears                    # (address, bytes): zeroed at power-on (FASCIA's voices)
 
@@ -244,6 +245,18 @@ def _track(p: Prog, S: SLayout) -> None:
             p.ldpost(0, 1)
             p.stpost(4, 0)
         p.loop_r(15, 32, cp)
+        # RIFT v0.19 (owner: a granular display on SMEAR's page): the read point to the sample
+        # machines' voice state's "pos" (what the idle packet sends the ColdFire as the playhead),
+        # so the page draws SMEAR's own playhead and its grain cloud around it
+        if S.SMP_POS is not None:
+            from ..sampler import program as _SPg
+            p.ld(9, S.T)
+            p.lsh(9, 9, 7)                          # 128 bytes a voice
+            p.iconst(12, S.SMP_POS + 4 * _SPg.V["pos"])
+            p.iop(9, 12, "+", 9)
+            p.seti(1, 9)
+            p.ld(0, V.PI)
+            p.sti(0, 1, 0)
     p.if_(0, "EQ", 1, on, kind="i")
 
 
@@ -282,6 +295,9 @@ def stage(p: Prog, S: SLayout) -> None:
             p.iconst(1, INIT_BUSY)
             p.if_(0, "NE", 1, lambda: (p.iconst(2, 0), p.st(S.ISTEP, 2), p.iconst(2, INIT_BUSY),
                                        p.st(S.INIT, 2)), kind="i")
+            if not LV.VOC_ON:                   # RIFT v0.20: VOC off: no transform tables to compute
+                last()
+                return
             for k in range(FT.INIT_PARTS - 1):
                 p.ld(0, S.ISTEP)
                 p.iconst(1, k)
@@ -294,7 +310,8 @@ def stage(p: Prog, S: SLayout) -> None:
             p.if_(0, "EQ", 1, last, kind="i")
 
         def last():
-            FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN, part=FT.INIT_PARTS - 1)
+            if LV.VOC_ON:
+                FT.emit_init(p, S.QSIN, S.V.L.FFT, S.V.L.WIN, part=FT.INIT_PARTS - 1)
             for at, n in S.clears:
                 p.iconst(0, 0)
                 p.iconst(9, at)

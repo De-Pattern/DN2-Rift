@@ -191,7 +191,7 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
                                           dsp.SILT_TABLES_DDR,                            # RIFT: SILT's
                                           dsp.LIG_TABLES_DDR,                             # RIFT: LIGATURE's
                                           dsp.DIGIDRUM_TABLES_DDR,                           # RIFT: DIGIDRUM's
-                                          dsp.PLATEAU_TABLES_DDR,                            # RIFT v0.17: PLATEAU's
+                                          dsp.PLATEAU_TABLES_DDR, dsp.CONTOUR_TABLES_DDR,   # RIFT v0.17: PLATEAU's; v0.20: CONTOUR's
                                           dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
         assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)

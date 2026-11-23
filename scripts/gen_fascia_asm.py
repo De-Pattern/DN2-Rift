@@ -47,6 +47,8 @@ def main(argv=None) -> int:
     DP.write_ddr_json()                     # RIFT: and DIGIDRUM (type 22)
     from dnfw.plateau import program as XP    # noqa: PLC0415
     XP.write_ddr_json()                     # RIFT v0.17: and PLATEAU (type 24)
+    from dnfw.contour import program as CP    # noqa: PLC0415
+    CP.write_ddr_json()                     # RIFT v0.20: and CONTOUR (type 25)
     text = build()
     if not a.no_resolve:
         import sharc_resolve_jumps as R  # noqa: PLC0415  (selas)
