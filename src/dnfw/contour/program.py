@@ -320,7 +320,7 @@ class CG(OP.OG):
         self.set(c("fold"), q("FOLD") * k(3.0))
         self.set(c("fold1"), k(1.0) + c("fold"))
         self.set(c("fm"), q("FM") * k(1.5))
-        self.set(c("fb"), q("FDBK") * k(0.25))
+        self.set(c("fb"), q("FDBK") * (q("FDBK") * k(0.0525) + k(0.0175)))   # v0.20: live.py's curve
         self.ld(0, e("GRIT"))
         p.trunc(0, 0)
         p.lsh(0, 0, -3)

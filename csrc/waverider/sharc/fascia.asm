@@ -2039,7 +2039,7 @@ wr_fs_else_126.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbe0327;                        // return address - 1: wr_fs_ret_127. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_127.;
 wr_fs_ret_127.:
       R1 = 0x43dc0000;                  // 440.0
@@ -2137,7 +2137,7 @@ wr_fs_else_129.:
       R0 = DM(52, I5);                  // 1.0
       DM(8, I2) = R0;
       I12 = 0xbe03e5;                        // return address - 1: wr_fs_ret_130. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_130.;
 wr_fs_ret_130.:
       R1 = DM(54, I5);                  // 0.5
@@ -2147,7 +2147,7 @@ wr_fs_ret_130.:
       F0 = F1 * F0;
       DM(23, I2) = R0;
       I12 = 0xbe03f6;                        // return address - 1: wr_fs_ret_131. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_131.;
 wr_fs_ret_131.:
       R1 = DM(214, I5);
@@ -2156,7 +2156,7 @@ wr_fs_ret_131.:
       F0 = F1 * F0;
       DM(31, I2) = R0;
       I12 = 0xbe0406;                        // return address - 1: wr_fs_ret_132. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_132.;
 wr_fs_ret_132.:
       R1 = DM(54, I5);                  // 0.5
@@ -2164,7 +2164,7 @@ wr_fs_ret_132.:
       F0 = F0 + F1;
       DM(15, I2) = R0;
       I12 = 0xbe0412;                        // return address - 1: wr_fs_ret_133. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_133.;
 wr_fs_ret_133.:
       R1 = DM(54, I5);                  // 0.5
@@ -2174,7 +2174,7 @@ wr_fs_ret_133.:
       F0 = F1 * F0;
       DM(24, I2) = R0;
       I12 = 0xbe0423;                        // return address - 1: wr_fs_ret_134. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_134.;
 wr_fs_ret_134.:
       R1 = DM(214, I5);
@@ -2183,7 +2183,7 @@ wr_fs_ret_134.:
       F0 = F1 * F0;
       DM(32, I2) = R0;
       I12 = 0xbe0433;                        // return address - 1: wr_fs_ret_135. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_135.;
 wr_fs_ret_135.:
       R1 = DM(54, I5);                  // 0.5
@@ -2191,7 +2191,7 @@ wr_fs_ret_135.:
       F0 = F0 + F1;
       DM(16, I2) = R0;
       I12 = 0xbe043f;                        // return address - 1: wr_fs_ret_136. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_136.;
 wr_fs_ret_136.:
       R1 = DM(54, I5);                  // 0.5
@@ -2201,7 +2201,7 @@ wr_fs_ret_136.:
       F0 = F1 * F0;
       DM(25, I2) = R0;
       I12 = 0xbe0450;                        // return address - 1: wr_fs_ret_137. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_137.;
 wr_fs_ret_137.:
       R1 = DM(214, I5);
@@ -2210,7 +2210,7 @@ wr_fs_ret_137.:
       F0 = F1 * F0;
       DM(33, I2) = R0;
       I12 = 0xbe0460;                        // return address - 1: wr_fs_ret_138. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_138.;
 wr_fs_ret_138.:
       R1 = DM(54, I5);                  // 0.5
@@ -2218,7 +2218,7 @@ wr_fs_ret_138.:
       F0 = F0 + F1;
       DM(17, I2) = R0;
       I12 = 0xbe046c;                        // return address - 1: wr_fs_ret_139. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_139.;
 wr_fs_ret_139.:
       R1 = DM(54, I5);                  // 0.5
@@ -2228,7 +2228,7 @@ wr_fs_ret_139.:
       F0 = F1 * F0;
       DM(26, I2) = R0;
       I12 = 0xbe047d;                        // return address - 1: wr_fs_ret_140. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_140.;
 wr_fs_ret_140.:
       R1 = DM(214, I5);
@@ -2237,7 +2237,7 @@ wr_fs_ret_140.:
       F0 = F1 * F0;
       DM(34, I2) = R0;
       I12 = 0xbe048d;                        // return address - 1: wr_fs_ret_141. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_141.;
 wr_fs_ret_141.:
       R1 = DM(54, I5);                  // 0.5
@@ -2245,7 +2245,7 @@ wr_fs_ret_141.:
       F0 = F0 + F1;
       DM(18, I2) = R0;
       I12 = 0xbe0499;                        // return address - 1: wr_fs_ret_142. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_142.;
 wr_fs_ret_142.:
       R1 = DM(54, I5);                  // 0.5
@@ -2255,7 +2255,7 @@ wr_fs_ret_142.:
       F0 = F1 * F0;
       DM(27, I2) = R0;
       I12 = 0xbe04aa;                        // return address - 1: wr_fs_ret_143. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_143.;
 wr_fs_ret_143.:
       R1 = DM(214, I5);
@@ -2264,7 +2264,7 @@ wr_fs_ret_143.:
       F0 = F1 * F0;
       DM(35, I2) = R0;
       I12 = 0xbe04ba;                        // return address - 1: wr_fs_ret_144. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_144.;
 wr_fs_ret_144.:
       R1 = DM(54, I5);                  // 0.5
@@ -2272,7 +2272,7 @@ wr_fs_ret_144.:
       F0 = F0 + F1;
       DM(19, I2) = R0;
       I12 = 0xbe04c6;                        // return address - 1: wr_fs_ret_145. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_145.;
 wr_fs_ret_145.:
       R1 = DM(54, I5);                  // 0.5
@@ -2282,7 +2282,7 @@ wr_fs_ret_145.:
       F0 = F1 * F0;
       DM(28, I2) = R0;
       I12 = 0xbe04d7;                        // return address - 1: wr_fs_ret_146. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_146.;
 wr_fs_ret_146.:
       R1 = DM(214, I5);
@@ -2291,7 +2291,7 @@ wr_fs_ret_146.:
       F0 = F1 * F0;
       DM(36, I2) = R0;
       I12 = 0xbe04e7;                        // return address - 1: wr_fs_ret_147. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_147.;
 wr_fs_ret_147.:
       R1 = DM(54, I5);                  // 0.5
@@ -2299,7 +2299,7 @@ wr_fs_ret_147.:
       F0 = F0 + F1;
       DM(20, I2) = R0;
       I12 = 0xbe04f3;                        // return address - 1: wr_fs_ret_148. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_148.;
 wr_fs_ret_148.:
       R1 = DM(54, I5);                  // 0.5
@@ -2309,7 +2309,7 @@ wr_fs_ret_148.:
       F0 = F1 * F0;
       DM(29, I2) = R0;
       I12 = 0xbe0504;                        // return address - 1: wr_fs_ret_149. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_149.;
 wr_fs_ret_149.:
       R1 = DM(214, I5);
@@ -2318,7 +2318,7 @@ wr_fs_ret_149.:
       F0 = F1 * F0;
       DM(37, I2) = R0;
       I12 = 0xbe0514;                        // return address - 1: wr_fs_ret_150. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_150.;
 wr_fs_ret_150.:
       R1 = DM(54, I5);                  // 0.5
@@ -2326,7 +2326,7 @@ wr_fs_ret_150.:
       F0 = F0 + F1;
       DM(21, I2) = R0;
       I12 = 0xbe0520;                        // return address - 1: wr_fs_ret_151. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_151.;
 wr_fs_ret_151.:
       R1 = DM(54, I5);                  // 0.5
@@ -2336,7 +2336,7 @@ wr_fs_ret_151.:
       F0 = F1 * F0;
       DM(30, I2) = R0;
       I12 = 0xbe0531;                        // return address - 1: wr_fs_ret_152. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_152.;
 wr_fs_ret_152.:
       R1 = DM(214, I5);
@@ -2345,7 +2345,7 @@ wr_fs_ret_152.:
       F0 = F1 * F0;
       DM(38, I2) = R0;
       I12 = 0xbe0541;                        // return address - 1: wr_fs_ret_153. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_153.;
 wr_fs_ret_153.:
       R1 = DM(54, I5);                  // 0.5
@@ -3270,7 +3270,7 @@ wr_fs_else_217.:
       R1 = 0x41100000;                  // 9.0
       F0 = F0 * F1;
       I12 = 0xbe0bea;                        // return address - 1: wr_fs_ret_218. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_218.;
 wr_fs_ret_218.:
       R1 = 0x3d4ccccd;                  // 0.05000000074505806
@@ -3346,7 +3346,7 @@ wr_fs_fi_222.:
       R1 = 0x41100000;                  // 9.0
       F0 = F0 * F1;
       I12 = 0xbe0c5c;                        // return address - 1: wr_fs_ret_226. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_226.;
 wr_fs_ret_226.:
       R1 = 0x3d4ccccd;                  // 0.05000000074505806
@@ -4583,7 +4583,7 @@ wr_fs_else_305.:
       R9 = DM(123, I5);
       DM(-22, I5) = R9;
       I12 = 0xbe153d;                        // return address - 1: wr_fs_rret_307. - 1
-      JUMP 0xbf07a6;                         // -> wr_fs_rt_g_slot.
+      JUMP 0xbf07b2;                         // -> wr_fs_rt_g_slot.
 .GLOBAL wr_fs_rret_307.;
 wr_fs_rret_307.:
 .GLOBAL wr_fs_else_306.;
@@ -4865,7 +4865,7 @@ wr_fs_fi_329.:
       F0 = F0 * F1;
       DM(9, I2) = R0;
       I12 = 0xbe1717;                        // return address - 1: wr_fs_ret_333. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_333.;
 wr_fs_ret_333.:
       DM(9, I2) = R0;
@@ -4877,7 +4877,7 @@ wr_fs_ret_333.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbe172d;                        // return address - 1: wr_fs_ret_334. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_334.;
 wr_fs_ret_334.:
       DM(96, I5) = R0;
@@ -4891,14 +4891,14 @@ wr_fs_ret_334.:
       R1 = -0x4583deeb;                 // -0.0009617966716177762
       F0 = F1 * F0;
       I12 = 0xbe1749;                        // return address - 1: wr_fs_ret_335. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_335.;
 wr_fs_ret_335.:
       R1 = DM(10, I2);
       F0 = F1 * F0;
       DM(10, I2) = R0;
       I12 = 0xbe1755;                        // return address - 1: wr_fs_ret_336. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_336.;
 wr_fs_ret_336.:
       DM(10, I2) = R0;
@@ -4947,7 +4947,7 @@ wr_fs_loop_340.:
       R1 = DM(59, I5);                  // 2.0
       F0 = F0 * F1;
       I12 = 0xbe17ab;                        // return address - 1: wr_fs_ret_341. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_341.;
 wr_fs_ret_341.:
       R1 = DM(26, I5);
@@ -5075,14 +5075,14 @@ wr_fs_else_351.:
       R1 = -0x4583deeb;                 // -0.0009617966716177762
       F0 = F1 * F0;
       I12 = 0xbe1873;                        // return address - 1: wr_fs_ret_352. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_352.;
 wr_fs_ret_352.:
       R1 = DM(11, I2);
       F0 = F1 * F0;
       DM(11, I2) = R0;
       I12 = 0xbe187f;                        // return address - 1: wr_fs_ret_353. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_353.;
 wr_fs_ret_353.:
       DM(11, I2) = R0;
@@ -5200,7 +5200,7 @@ wr_fs_fi_363.:
 .GLOBAL wr_fs_loop_366.;
 wr_fs_loop_366.:
       I12 = 0xbe1945;                        // return address - 1: wr_fs_ret_367. - 1
-      JUMP 0xbf0f5a;                         // -> wr_fs_sub_vgauss.
+      JUMP 0xbf0f66;                         // -> wr_fs_sub_vgauss.
 .GLOBAL wr_fs_ret_367.;
 wr_fs_ret_367.:
       DM(-54, I5) = R0;
@@ -5284,7 +5284,7 @@ wr_fs_loop_371.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbe19cf;                        // return address - 1: wr_fs_ret_373. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_373.;
 wr_fs_ret_373.:
       DM(32, I5) = R0;
@@ -5461,7 +5461,7 @@ wr_fs_else_384.:
       R1 = DM(91, I2);
       F0 = F0 * F1;
       I12 = 0xbe1aed;                        // return address - 1: wr_fs_ret_391. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_391.;
 wr_fs_ret_391.:
       R1 = DM(32, I5);
@@ -5789,13 +5789,13 @@ wr_fs_else_405.:
       IF EQ JUMP 0xbe1d5c;                   // -> wr_fs_else_409.
       R0 = DM(615, I2);
       I12 = 0xbe1d28;                        // return address - 1: wr_fs_ret_410. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_410.;
 wr_fs_ret_410.:
       DM(615, I2) = R0;
       R0 = DM(616, I2);
       I12 = 0xbe1d34;                        // return address - 1: wr_fs_ret_411. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_411.;
 wr_fs_ret_411.:
       DM(616, I2) = R0;
@@ -5805,7 +5805,7 @@ wr_fs_ret_411.:
       IF NE JUMP 0xbe1d50;                   // -> wr_fs_else_412.
       R0 = DM(618, I2);
       I12 = 0xbe1d49;                        // return address - 1: wr_fs_ret_413. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_413.;
 wr_fs_ret_413.:
       DM(618, I2) = R0;
@@ -5814,7 +5814,7 @@ wr_fs_ret_413.:
 wr_fs_else_412.:
       R0 = DM(619, I2);
       I12 = 0xbe1d58;                        // return address - 1: wr_fs_ret_415. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_415.;
 wr_fs_ret_415.:
       DM(619, I2) = R0;
@@ -5827,13 +5827,13 @@ wr_fs_else_409.:
       IF EQ JUMP 0xbe1d9f;                   // -> wr_fs_else_416.
       R0 = DM(729, I2);
       I12 = 0xbe1d6b;                        // return address - 1: wr_fs_ret_417. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_417.;
 wr_fs_ret_417.:
       DM(729, I2) = R0;
       R0 = DM(730, I2);
       I12 = 0xbe1d77;                        // return address - 1: wr_fs_ret_418. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_418.;
 wr_fs_ret_418.:
       DM(730, I2) = R0;
@@ -5843,7 +5843,7 @@ wr_fs_ret_418.:
       IF NE JUMP 0xbe1d93;                   // -> wr_fs_else_419.
       R0 = DM(732, I2);
       I12 = 0xbe1d8c;                        // return address - 1: wr_fs_ret_420. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_420.;
 wr_fs_ret_420.:
       DM(732, I2) = R0;
@@ -5852,7 +5852,7 @@ wr_fs_ret_420.:
 wr_fs_else_419.:
       R0 = DM(733, I2);
       I12 = 0xbe1d9b;                        // return address - 1: wr_fs_ret_422. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_422.;
 wr_fs_ret_422.:
       DM(733, I2) = R0;
@@ -6265,7 +6265,7 @@ wr_fs_loop_446.:
       R0 = DM(-27, I5);
       DM(15, I2) = R0;
       I12 = 0xbe205c;                        // return address - 1: wr_fs_ret_447. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_447.;
 wr_fs_ret_447.:
       DM(15, I2) = R0;
@@ -6305,7 +6305,7 @@ wr_fs_fi_450.:
       IF LE JUMP 0xbe20bf;                   // -> wr_fs_else_451.
       R0 = DM(16, I2);
       I12 = 0xbe209d;                        // return address - 1: wr_fs_ret_452. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_452.;
 wr_fs_ret_452.:
       R1 = 0x3f333333;                  // 0.699999988079071
@@ -6458,7 +6458,7 @@ wr_fs_rt_bctl.:
       R1 = 0x410a4d3c;                  // 8.643856048583984
       F0 = F0 * F1;
       I12 = 0xbe219d;                        // return address - 1: wr_fs_ret_463. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_463.;
 wr_fs_ret_463.:
       R1 = 0x42055555;                  // 33.33333206176758
@@ -6552,7 +6552,7 @@ wr_fs_ret_463.:
       F0 = F0 * F1;
       DM(-63, I5) = R0;
       I12 = 0xbe2258;                        // return address - 1: wr_fs_ret_464. - 1
-      JUMP 0xbf0fc0;                         // -> wr_fs_sub_cosp.
+      JUMP 0xbf0fcc;                         // -> wr_fs_sub_cosp.
 .GLOBAL wr_fs_ret_464.;
 wr_fs_ret_464.:
       R1 = R1 - R1;                     // 0.0
@@ -6560,7 +6560,7 @@ wr_fs_ret_464.:
       DM(10, I5) = R0;
       R0 = DM(-63, I5);
       I12 = 0xbe2265;                        // return address - 1: wr_fs_ret_465. - 1
-      JUMP 0xbf0fe3;                         // -> wr_fs_sub_sinp.
+      JUMP 0xbf0fef;                         // -> wr_fs_sub_sinp.
 .GLOBAL wr_fs_ret_465.;
 wr_fs_ret_465.:
       DM(11, I5) = R0;
@@ -6572,7 +6572,7 @@ wr_fs_ret_465.:
       R1 = 0x410f73da;                  // 8.965784072875977
       F0 = F0 * F1;
       I12 = 0xbe227a;                        // return address - 1: wr_fs_ret_466. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_466.;
 wr_fs_ret_466.:
       R1 = 0x3b83126f;                  // 0.004000000189989805
@@ -6600,7 +6600,7 @@ wr_fs_ret_466.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe22ae;                        // return address - 1: wr_fs_ret_468. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_468.;
 wr_fs_ret_468.:
       F1 = PASS F0;
@@ -6658,7 +6658,7 @@ wr_fs_rt_f0.:
       F0 = F0 * F1;
       DM(-57, I5) = R0;
       I12 = 0xbe2315;                        // return address - 1: wr_fs_ret_470. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_470.;
 wr_fs_ret_470.:
       R1 = 0x43dc0000;                  // 440.0
@@ -6790,7 +6790,7 @@ wr_fs_loop_474.:
       R0 = R0 OR R1;
       DM(-31, I5) = R0;
       I12 = 0xbe240d;                        // return address - 1: wr_fs_ret_475. - 1
-      JUMP 0xbf102c;                         // -> wr_fs_sub_vbi.
+      JUMP 0xbf1038;                         // -> wr_fs_sub_vbi.
 .GLOBAL wr_fs_ret_475.;
 wr_fs_ret_475.:
       DM(-63, I5) = R0;
@@ -6874,7 +6874,7 @@ wr_fs_loop_477.:
       R0 = R0 OR R1;
       DM(-31, I5) = R0;
       I12 = 0xbe24ac;                        // return address - 1: wr_fs_ret_478. - 1
-      JUMP 0xbf0f5a;                         // -> wr_fs_sub_vgauss.
+      JUMP 0xbf0f66;                         // -> wr_fs_sub_vgauss.
 .GLOBAL wr_fs_ret_478.;
 wr_fs_ret_478.:
       DM(-63, I5) = R0;
@@ -6888,7 +6888,7 @@ wr_fs_ret_478.:
       R1 = DM(-57, I5);
       F0 = F0 * F1;
       I12 = 0xbe24c6;                        // return address - 1: wr_fs_ret_479. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_479.;
 wr_fs_ret_479.:
       DM(1, I3) = R0;
@@ -6985,7 +6985,7 @@ wr_fs_loop_485.:
       R0 = R0 OR R1;
       DM(-31, I5) = R0;
       I12 = 0xbe2572;                        // return address - 1: wr_fs_ret_486. - 1
-      JUMP 0xbf104f;                         // -> wr_fs_sub_vu01.
+      JUMP 0xbf105b;                         // -> wr_fs_sub_vu01.
 .GLOBAL wr_fs_ret_486.;
 wr_fs_ret_486.:
       DM(-63, I5) = R0;
@@ -6997,7 +6997,7 @@ wr_fs_ret_486.:
       R0 = DM(0, I1);
       DM(-57, I5) = R0;
       I12 = 0xbe258a;                        // return address - 1: wr_fs_ret_487. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_487.;
 wr_fs_ret_487.:
       DM(-57, I5) = R0;
@@ -7056,7 +7056,7 @@ wr_fs_loop_488.:
       R0 = R0 OR R1;
       DM(-31, I5) = R0;
       I12 = 0xbe25f8;                        // return address - 1: wr_fs_ret_489. - 1
-      JUMP 0xbf104f;                         // -> wr_fs_sub_vu01.
+      JUMP 0xbf105b;                         // -> wr_fs_sub_vu01.
 .GLOBAL wr_fs_ret_489.;
 wr_fs_ret_489.:
       DM(-63, I5) = R0;
@@ -7139,7 +7139,7 @@ wr_fs_loop_490.:
       F0 = F0 * F1;
       DM(-23, I5) = R0;
       I12 = 0xbe2690;                        // return address - 1: wr_fs_ret_491. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_491.;
 wr_fs_ret_491.:
       DM(-13, I5) = R0;
@@ -7179,7 +7179,7 @@ wr_fs_else_492.:
       R1 = DM(3, I0);
       F0 = F0 * F1;
       I12 = 0xbe26d8;                        // return address - 1: wr_fs_ret_494. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_494.;
 wr_fs_ret_494.:
       DM(-26, I5) = R0;
@@ -7191,13 +7191,13 @@ wr_fs_fi_493.:
       R1 = DM(-26, I5);
       F0 = F1 * F0;
       I12 = 0xbe26e9;                        // return address - 1: wr_fs_ret_495. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_495.;
 wr_fs_ret_495.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe26f2;                        // return address - 1: wr_fs_ret_496. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_496.;
 wr_fs_ret_496.:
       R1 = DM(55, I5);                  // the pool
@@ -7209,7 +7209,7 @@ wr_fs_ret_496.:
       R1 = DM(-23, I5);
       F0 = F1 * F0;
       I12 = 0xbe2707;                        // return address - 1: wr_fs_ret_497. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_497.;
 wr_fs_ret_497.:
       R1 = DM(-26, I5);
@@ -7222,7 +7222,7 @@ wr_fs_ret_497.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe271d;                        // return address - 1: wr_fs_ret_498. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_498.;
 wr_fs_ret_498.:
       F1 = PASS F0;
@@ -7478,7 +7478,7 @@ wr_fs_else_512.:
       R1 = 0x41349a78;                  // 11.287712097167969
       F0 = F0 * F1;
       I12 = 0xbe28d8;                        // return address - 1: wr_fs_ret_514. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_514.;
 wr_fs_ret_514.:
       R1 = 0x3951b717;                  // 0.00019999999494757503
@@ -7528,7 +7528,7 @@ wr_fs_rret_516.:
       F1 = FLOAT R1 BY R12;
       F0 = F0 * F1;
       I12 = 0xbe2930;                        // return address - 1: wr_fs_ret_518. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_518.;
 wr_fs_ret_518.:
       R1 = 0x40c00000;                  // 6.0
@@ -7580,7 +7580,7 @@ wr_fs_else_515.:
       COMP(R0, R1);
       IF NE JUMP 0xbe2996;                   // -> wr_fs_else_520.
       I12 = 0xbe2989;                        // return address - 1: wr_fs_ret_521. - 1
-      JUMP 0xbf104f;                         // -> wr_fs_sub_vu01.
+      JUMP 0xbf105b;                         // -> wr_fs_sub_vu01.
 .GLOBAL wr_fs_ret_521.;
 wr_fs_ret_521.:
       DM(-63, I5) = R0;
@@ -7647,7 +7647,7 @@ wr_fs_rt_clk_init.:
       R12 = R12 - R12;                  // 0
       F0 = FLOAT R0 BY R12;
       I12 = 0xbe2a11;                        // return address - 1: wr_fs_ret_523. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_523.;
 wr_fs_ret_523.:
       DM(821, I2) = R0;
@@ -7680,13 +7680,13 @@ wr_fs_else_522.:
       R1 = 0x39d1b717;                  // 0.00039999998989515007
       F0 = F1 + F0;
       I12 = 0xbe2a54;                        // return address - 1: wr_fs_ret_526. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_526.;
 wr_fs_ret_526.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe2a5e;                        // return address - 1: wr_fs_ret_527. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_527.;
 wr_fs_ret_527.:
       DM(824, I2) = R0;
@@ -7705,13 +7705,13 @@ wr_fs_else_525.:
       R1 = 0x3a51b717;                  // 0.0007999999797903001
       F0 = F1 + F0;
       I12 = 0xbe2a83;                        // return address - 1: wr_fs_ret_530. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_530.;
 wr_fs_ret_530.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe2a8d;                        // return address - 1: wr_fs_ret_531. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_531.;
 wr_fs_ret_531.:
       DM(824, I2) = R0;
@@ -7726,13 +7726,13 @@ wr_fs_else_529.:
       R1 = 0x3c449ba6;                  // 0.012000000104308128
       F0 = F1 + F0;
       I12 = 0xbe2aa9;                        // return address - 1: wr_fs_ret_533. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_533.;
 wr_fs_ret_533.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe2ab3;                        // return address - 1: wr_fs_ret_534. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_534.;
 wr_fs_ret_534.:
       DM(824, I2) = R0;
@@ -7918,13 +7918,13 @@ wr_fs_else_546.:
       R1 = 0x3eaaaaab;                  // 0.3333333432674408
       F0 = F0 * F1;
       I12 = 0xbe2bf6;                        // return address - 1: wr_fs_ret_548. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_548.;
 wr_fs_ret_548.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe2c00;                        // return address - 1: wr_fs_ret_549. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_549.;
 wr_fs_ret_549.:
       DM(-14, I5) = R0;
@@ -7943,7 +7943,7 @@ wr_fs_else_547.:
       R1 = 0x40f49a78;                  // 7.643856048583984
       F0 = F0 * F1;
       I12 = 0xbe2c1e;                        // return address - 1: wr_fs_ret_551. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_551.;
 wr_fs_ret_551.:
       R1 = 0x41a00000;                  // 20.0
@@ -7961,7 +7961,7 @@ wr_fs_else_550.:
       R1 = 0x409d053f;                  // 4.906890392303467
       F0 = F0 * F1;
       I12 = 0xbe2c3e;                        // return address - 1: wr_fs_ret_553. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_553.;
 wr_fs_ret_553.:
       R1 = 0x43c80000;                  // 400.0
@@ -7970,7 +7970,7 @@ wr_fs_ret_553.:
       R1 = -0x46b9fa69;                 // -0.0001888483384391293
       F0 = F0 * F1;
       I12 = 0xbe2c4f;                        // return address - 1: wr_fs_ret_554. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_554.;
 wr_fs_ret_554.:
       DM(-27, I5) = R0;
@@ -8068,7 +8068,7 @@ wr_fs_else_561.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe2cf0;                        // return address - 1: wr_fs_ret_563. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_563.;
 wr_fs_ret_563.:
       R1 = 0x3e19999a;                  // 0.15000000596046448
@@ -8080,7 +8080,7 @@ wr_fs_ret_563.:
       R1 = DM(-27, I5);
       F0 = F0 + F1;
       I12 = 0xbe2d06;                        // return address - 1: wr_fs_ret_564. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_564.;
 wr_fs_ret_564.:
       DM(29, I3) = R0;
@@ -8091,7 +8091,7 @@ wr_fs_ret_564.:
       R0 = R0 - R0;                     // 0.0
       DM(-58, I5) = R0;
       I12 = 0xbe2d18;                        // return address - 1: wr_fs_ret_566. - 1
-      JUMP 0xbf104f;                         // -> wr_fs_sub_vu01.
+      JUMP 0xbf105b;                         // -> wr_fs_sub_vu01.
 .GLOBAL wr_fs_ret_566.;
 wr_fs_ret_566.:
       DM(-53, I5) = R0;
@@ -8099,7 +8099,7 @@ wr_fs_ret_566.:
       COMP(F0, F1);
       IF GE JUMP 0xbe2d29;                   // -> wr_fs_else_567.
       I12 = 0xbe2d26;                        // return address - 1: wr_fs_ret_568. - 1
-      JUMP 0xbf102c;                         // -> wr_fs_sub_vbi.
+      JUMP 0xbf1038;                         // -> wr_fs_sub_vbi.
 .GLOBAL wr_fs_ret_568.;
 wr_fs_ret_568.:
       DM(-58, I5) = R0;
@@ -8139,7 +8139,7 @@ wr_fs_fi_569.:
 .GLOBAL wr_fs_else_562.;
 wr_fs_else_562.:
       I12 = 0xbe2d62;                        // return address - 1: wr_fs_ret_571. - 1
-      JUMP 0xbf0f5a;                         // -> wr_fs_sub_vgauss.
+      JUMP 0xbf0f66;                         // -> wr_fs_sub_vgauss.
 .GLOBAL wr_fs_ret_571.;
 wr_fs_ret_571.:
       DM(-58, I5) = R0;
@@ -8562,7 +8562,7 @@ wr_fs_vloop_596.:
       R12 = DM(-62, I5);
       I4 = R12;
       I12 = 0xbe3015;                        // return address - 1: wr_fs_ret_597. - 1
-      JUMP 0xbf102c;                         // -> wr_fs_sub_vbi.
+      JUMP 0xbf1038;                         // -> wr_fs_sub_vbi.
 .GLOBAL wr_fs_ret_597.;
 wr_fs_ret_597.:
       R1 = DM(5, I0);
@@ -8585,7 +8585,7 @@ wr_fs_ret_597.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe303d;                        // return address - 1: wr_fs_ret_598. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_598.;
 wr_fs_ret_598.:
       F1 = PASS F0;
@@ -8623,13 +8623,13 @@ wr_fs_else_599.:
       F0 = F0 * F1;
       DM(-31, I5) = R0;
       I12 = 0xbe3080;                        // return address - 1: wr_fs_ret_601. - 1
-      JUMP 0xbf0fe3;                         // -> wr_fs_sub_sinp.
+      JUMP 0xbf0fef;                         // -> wr_fs_sub_sinp.
 .GLOBAL wr_fs_ret_601.;
 wr_fs_ret_601.:
       DM(-37, I5) = R0;
       R0 = DM(-31, I5);
       I12 = 0xbe308a;                        // return address - 1: wr_fs_ret_602. - 1
-      JUMP 0xbf0fc0;                         // -> wr_fs_sub_cosp.
+      JUMP 0xbf0fcc;                         // -> wr_fs_sub_cosp.
 .GLOBAL wr_fs_ret_602.;
 wr_fs_ret_602.:
       R1 = DM(59, I5);                  // 2.0
@@ -8679,7 +8679,7 @@ wr_fs_else_603.:
       R1 = -0x46e91908;                 // -0.00014391157310456038
       F0 = F0 * F1;
       I12 = 0xbe30e0;                        // return address - 1: wr_fs_ret_604. - 1
-      JUMP 0xbf10b9;                         // -> wr_fs_sub_expm1.
+      JUMP 0xbf10c5;                         // -> wr_fs_sub_expm1.
 .GLOBAL wr_fs_ret_604.;
 wr_fs_ret_604.:
       R1 = -0x40800000;                 // -1.0
@@ -8722,7 +8722,7 @@ wr_fs_ret_604.:
       R1 = 0x358637bd;                  // 9.999999974752427e-07
       F0 = MAX(F0, F1);
       I12 = 0xbe312d;                        // return address - 1: wr_fs_ret_606. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_606.;
 wr_fs_ret_606.:
       R1 = DM(-23, I5);
@@ -8755,7 +8755,7 @@ wr_fs_else_607.:
       R1 = DM(3, I0);
       F0 = F0 * F1;
       I12 = 0xbe3163;                        // return address - 1: wr_fs_ret_609. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_609.;
 wr_fs_ret_609.:
       DM(-34, I5) = R0;
@@ -8765,13 +8765,13 @@ wr_fs_fi_608.:
       R1 = DM(-10, I5);
       F0 = F0 * F1;
       I12 = 0xbe3170;                        // return address - 1: wr_fs_ret_610. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_610.;
 wr_fs_ret_610.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe3179;                        // return address - 1: wr_fs_ret_611. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_611.;
 wr_fs_ret_611.:
       R1 = DM(55, I5);                  // the pool
@@ -8781,7 +8781,7 @@ wr_fs_ret_611.:
       R1 = DM(25, I5);
       F0 = F0 * F1;
       I12 = 0xbe3189;                        // return address - 1: wr_fs_ret_612. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_612.;
 wr_fs_ret_612.:
       R1 = DM(-34, I5);
@@ -8803,7 +8803,7 @@ wr_fs_ret_612.:
       R1 = DM(13, I5);
       F0 = F0 * F1;
       I12 = 0xbe31af;                        // return address - 1: wr_fs_ret_614. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_614.;
 wr_fs_ret_614.:
       DM(9, I3) = R0;
@@ -8834,7 +8834,7 @@ wr_fs_else_613.:
       R1 = 0x358637bd;                  // 9.999999974752427e-07
       F0 = MAX(F0, F1);
       I12 = 0xbe31e7;                        // return address - 1: wr_fs_ret_615. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_615.;
 wr_fs_ret_615.:
       R1 = DM(54, I5);                  // 0.5
@@ -8850,7 +8850,7 @@ wr_fs_ret_615.:
       DM(9, I0) = R0;
       R0 = DM(5, I5);
       I12 = 0xbe3204;                        // return address - 1: wr_fs_ret_617. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_617.;
 wr_fs_ret_617.:
       R1 = DM(8, I0);
@@ -9097,7 +9097,7 @@ wr_fs_loop_630.:
       F0 = MIN(F0, F1);
       DM(-57, I5) = R0;
       I12 = 0xbe33b0;                        // return address - 1: wr_fs_ret_634. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_634.;
 wr_fs_ret_634.:
       R1 = DM(62, I5);                  // 0.25
@@ -9185,7 +9185,7 @@ wr_fs_else_636.:
       F0 = MIN(F0, F1);
       DM(-57, I5) = R0;
       I12 = 0xbe3449;                        // return address - 1: wr_fs_ret_640. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_640.;
 wr_fs_ret_640.:
       R1 = DM(62, I5);                  // 0.25
@@ -9408,7 +9408,7 @@ wr_fs_loop_653.:
       F0 = MAX(F0, F1);
       DM(6, I0) = R0;
       I12 = 0xbe35a8;                        // return address - 1: wr_fs_ret_654. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_654.;
 wr_fs_ret_654.:
       R1 = DM(-40, I5);
@@ -9745,7 +9745,7 @@ wr_fs_loop_676.:
       F0 = MAX(F0, F1);
       DM(6, I0) = R0;
       I12 = 0xbe37a4;                        // return address - 1: wr_fs_ret_677. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_677.;
 wr_fs_ret_677.:
       R1 = DM(-40, I5);
@@ -9806,7 +9806,7 @@ wr_fs_loop_679.:
       R1 = 0x42800000;                  // 64.0
       F0 = F0 + F1;
       I12 = 0xbe380c;                        // return address - 1: wr_fs_ret_684. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_684.;
 wr_fs_ret_684.:
       R1 = DM(54, I5);                  // 0.5
@@ -9835,7 +9835,7 @@ wr_fs_else_682.:
       R1 = 0x42800000;                  // 64.0
       F0 = F0 + F1;
       I12 = 0xbe3838;                        // return address - 1: wr_fs_ret_687. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_687.;
 wr_fs_ret_687.:
       R1 = DM(54, I5);                  // 0.5
@@ -9863,7 +9863,7 @@ wr_fs_else_681.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe3860;                        // return address - 1: wr_fs_ret_690. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_690.;
 wr_fs_ret_690.:
       R1 = DM(13, I3);
@@ -9873,7 +9873,7 @@ wr_fs_ret_690.:
       R1 = DM(7, I3);
       F0 = F0 + F1;
       I12 = 0xbe3870;                        // return address - 1: wr_fs_ret_691. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_691.;
 wr_fs_ret_691.:
       DM(12, I3) = R0;
@@ -9889,7 +9889,7 @@ wr_fs_else_689.:
       COMP(R0, R1);
       IF NE JUMP 0xbe38a6;                   // -> wr_fs_else_693.
       I12 = 0xbe388a;                        // return address - 1: wr_fs_ret_694. - 1
-      JUMP 0xbf0f5a;                         // -> wr_fs_sub_vgauss.
+      JUMP 0xbf0f66;                         // -> wr_fs_sub_vgauss.
 .GLOBAL wr_fs_ret_694.;
 wr_fs_ret_694.:
       DM(-63, I5) = R0;
@@ -9919,7 +9919,7 @@ wr_fs_else_693.:
       R1 = DM(12, I3);
       F0 = F1 + F0;
       I12 = 0xbe38bd;                        // return address - 1: wr_fs_ret_696. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_696.;
 wr_fs_ret_696.:
       DM(12, I3) = R0;
@@ -9931,7 +9931,7 @@ wr_fs_ret_696.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe38d1;                        // return address - 1: wr_fs_ret_697. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_697.;
 wr_fs_ret_697.:
       R1 = DM(13, I3);
@@ -9999,7 +9999,7 @@ wr_fs_else_699.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe3939;                        // return address - 1: wr_fs_ret_700. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_700.;
 wr_fs_ret_700.:
       DM(98, I5) = R0;
@@ -10116,7 +10116,7 @@ wr_fs_else_714.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe39f1;                        // return address - 1: wr_fs_ret_716. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_716.;
 wr_fs_ret_716.:
       DM(-58, I5) = R0;
@@ -10124,7 +10124,7 @@ wr_fs_ret_716.:
       R1 = DM(-54, I5);
       F0 = F0 + F1;
       I12 = 0xbe39fe;                        // return address - 1: wr_fs_ret_717. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_717.;
 wr_fs_ret_717.:
       DM(17, I2) = R0;
@@ -10134,14 +10134,14 @@ wr_fs_fi_715.:
       R1 = 0x41000000;                  // 8.0
       F0 = F0 * F1;
       I12 = 0xbe3a0d;                        // return address - 1: wr_fs_ret_718. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_718.;
 wr_fs_ret_718.:
       R1 = DM(-58, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe3a19;                        // return address - 1: wr_fs_ret_719. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_719.;
 wr_fs_ret_719.:
       F1 = PASS F0;
@@ -10218,7 +10218,7 @@ wr_fs_else_725.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe3a93;                        // return address - 1: wr_fs_ret_727. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_727.;
 wr_fs_ret_727.:
       DM(-58, I5) = R0;
@@ -10226,7 +10226,7 @@ wr_fs_ret_727.:
       R1 = DM(-54, I5);
       F0 = F0 + F1;
       I12 = 0xbe3aa0;                        // return address - 1: wr_fs_ret_728. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_728.;
 wr_fs_ret_728.:
       DM(17, I2) = R0;
@@ -10236,14 +10236,14 @@ wr_fs_fi_726.:
       R1 = 0x41000000;                  // 8.0
       F0 = F0 * F1;
       I12 = 0xbe3aaf;                        // return address - 1: wr_fs_ret_729. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_729.;
 wr_fs_ret_729.:
       R1 = DM(-58, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe3abb;                        // return address - 1: wr_fs_ret_730. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_730.;
 wr_fs_ret_730.:
       F1 = PASS F0;
@@ -10306,7 +10306,7 @@ wr_fs_rret_733.:
       R1 = 0x410a4d3c;                  // 8.643856048583984
       F0 = F0 * F1;
       I12 = 0xbe3b23;                        // return address - 1: wr_fs_ret_735. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_735.;
 wr_fs_ret_735.:
       R1 = 0x40a00000;                  // 5.0
@@ -10972,7 +10972,7 @@ wr_fs_loop_825.:
       R0 = DM(-63, I5);
       DM(12, I2) = R0;
       I12 = 0xbe3f1d;                        // return address - 1: wr_fs_ret_826. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_826.;
 wr_fs_ret_826.:
       DM(12, I2) = R0;
@@ -11100,7 +11100,7 @@ wr_fs_loop_839.:
       R1 = 0x3fc00000;                  // 1.5
       F0 = F0 * F1;
       I12 = 0xbe3fe3;                        // return address - 1: wr_fs_ret_840. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_840.;
 wr_fs_ret_840.:
       R1 = 0x3f2aaaab;                  // 0.6666666865348816
@@ -11252,7 +11252,7 @@ wr_fs_else_844.:
       R1 = -0x3f35b2c4;                 // -6.321928024291992
       F0 = F0 * F1;
       I12 = 0xbe40ed;                        // return address - 1: wr_fs_ret_845. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_845.;
 wr_fs_ret_845.:
       R1 = 0x3b83126f;                  // 0.004000000189989805
@@ -11267,7 +11267,7 @@ wr_fs_ret_845.:
       R12 = R12 - R12;                  // 0
       F0 = FLOAT R0 BY R12;
       I12 = 0xbe4109;                        // return address - 1: wr_fs_ret_846. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_846.;
 wr_fs_ret_846.:
       DM(4, I0) = R0;
@@ -11362,7 +11362,7 @@ wr_fs_else_847.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe41b8;                        // return address - 1: wr_fs_ret_852. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_852.;
 wr_fs_ret_852.:
       F1 = PASS F0;
@@ -11377,7 +11377,7 @@ wr_fs_fi_853.:
       R1 = DM(-58, I5);
       F0 = F1 + F0;
       I12 = 0xbe41cb;                        // return address - 1: wr_fs_ret_854. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_854.;
 wr_fs_ret_854.:
       R1 = DM(59, I5);                  // 2.0
@@ -11429,7 +11429,7 @@ wr_fs_else_855.:
       R1 = 0x42800000;                  // 64.0
       F0 = F0 + F1;
       I12 = 0xbe421a;                        // return address - 1: wr_fs_ret_859. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_859.;
 wr_fs_ret_859.:
       R1 = DM(52, I5);                  // 1.0
@@ -11444,7 +11444,7 @@ wr_fs_else_858.:
       COMP(F0, F1);
       IF EQ JUMP 0xbe424a;                   // -> wr_fs_else_860.
       I12 = 0xbe4230;                        // return address - 1: wr_fs_ret_861. - 1
-      JUMP 0xbf10db;                         // -> wr_fs_sub_ggauss.
+      JUMP 0xbf10e7;                         // -> wr_fs_sub_ggauss.
 .GLOBAL wr_fs_ret_861.;
 wr_fs_ret_861.:
       DM(-55, I5) = R0;
@@ -11458,7 +11458,7 @@ wr_fs_ret_861.:
       F0 = F0 * F1;
       DM(5, I0) = R0;
       I12 = 0xbe4247;                        // return address - 1: wr_fs_ret_862. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_862.;
 wr_fs_ret_862.:
       DM(5, I0) = R0;
@@ -11474,7 +11474,7 @@ wr_fs_else_857.:
       R0 = R0 - R0;                     // 0.0
       DM(-55, I5) = R0;
       I12 = 0xbe425d;                        // return address - 1: wr_fs_ret_865. - 1
-      JUMP 0xbf1123;                         // -> wr_fs_sub_gu01.
+      JUMP 0xbf112f;                         // -> wr_fs_sub_gu01.
 .GLOBAL wr_fs_ret_865.;
 wr_fs_ret_865.:
       DM(-42, I5) = R0;
@@ -11484,7 +11484,7 @@ wr_fs_ret_865.:
       COMP(F0, F1);
       IF GE JUMP 0xbe4276;                   // -> wr_fs_else_866.
       I12 = 0xbe426e;                        // return address - 1: wr_fs_ret_867. - 1
-      JUMP 0xbf1149;                         // -> wr_fs_sub_gbi.
+      JUMP 0xbf1155;                         // -> wr_fs_sub_gbi.
 .GLOBAL wr_fs_ret_867.;
 wr_fs_ret_867.:
       DM(-55, I5) = R0;
@@ -11498,7 +11498,7 @@ wr_fs_else_866.:
       F0 = F0 * F1;
       DM(5, I0) = R0;
       I12 = 0xbe4282;                        // return address - 1: wr_fs_ret_868. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_868.;
 wr_fs_ret_868.:
       DM(5, I0) = R0;
@@ -11511,7 +11511,7 @@ wr_fs_ret_868.:
       F0 = F1 + F0;
       DM(20, I0) = R0;
       I12 = 0xbe4298;                        // return address - 1: wr_fs_ret_869. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_869.;
 wr_fs_ret_869.:
       DM(20, I0) = R0;
@@ -11524,7 +11524,7 @@ wr_fs_ret_869.:
       F0 = F1 + F0;
       DM(21, I0) = R0;
       I12 = 0xbe42ae;                        // return address - 1: wr_fs_ret_870. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_870.;
 wr_fs_ret_870.:
       DM(21, I0) = R0;
@@ -11537,7 +11537,7 @@ wr_fs_ret_870.:
       F0 = F1 + F0;
       DM(22, I0) = R0;
       I12 = 0xbe42c4;                        // return address - 1: wr_fs_ret_871. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_871.;
 wr_fs_ret_871.:
       DM(22, I0) = R0;
@@ -11550,7 +11550,7 @@ wr_fs_ret_871.:
       F0 = F1 + F0;
       DM(23, I0) = R0;
       I12 = 0xbe42da;                        // return address - 1: wr_fs_ret_872. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_872.;
 wr_fs_ret_872.:
       DM(23, I0) = R0;
@@ -11576,14 +11576,14 @@ wr_fs_else_864.:
       R1 = DM(6, I0);
       F0 = F1 + F0;
       I12 = 0xbe4306;                        // return address - 1: wr_fs_ret_875. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_875.;
 wr_fs_ret_875.:
       DM(6, I0) = R0;
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe4311;                        // return address - 1: wr_fs_ret_876. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_876.;
 wr_fs_ret_876.:
       R1 = DM(8, I0);
@@ -11594,7 +11594,7 @@ wr_fs_ret_876.:
       F0 = F0 * F1;
       DM(8, I0) = R0;
       I12 = 0xbe4323;                        // return address - 1: wr_fs_ret_877. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_877.;
 wr_fs_ret_877.:
       DM(8, I0) = R0;
@@ -11609,7 +11609,7 @@ wr_fs_else_874.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe433b;                        // return address - 1: wr_fs_ret_880. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_880.;
 wr_fs_ret_880.:
       DM(-55, I5) = R0;
@@ -11617,7 +11617,7 @@ wr_fs_ret_880.:
       R1 = DM(15, I0);
       F0 = F0 + F1;
       I12 = 0xbe4348;                        // return address - 1: wr_fs_ret_881. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_881.;
 wr_fs_ret_881.:
       DM(10, I0) = R0;
@@ -11635,14 +11635,14 @@ wr_fs_ret_881.:
       R1 = DM(-53, I5);
       F0 = F0 + F1;
       I12 = 0xbe4366;                        // return address - 1: wr_fs_ret_882. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_882.;
 wr_fs_ret_882.:
       DM(11, I0) = R0;
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe4371;                        // return address - 1: wr_fs_ret_883. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_883.;
 wr_fs_ret_883.:
       R1 = DM(13, I0);
@@ -11653,7 +11653,7 @@ wr_fs_ret_883.:
       F0 = F0 * F1;
       DM(12, I0) = R0;
       I12 = 0xbe4383;                        // return address - 1: wr_fs_ret_884. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_884.;
 wr_fs_ret_884.:
       DM(12, I0) = R0;
@@ -11662,7 +11662,7 @@ wr_fs_ret_884.:
       F0 = F0 * F1;
       DM(13, I0) = R0;
       I12 = 0xbe4392;                        // return address - 1: wr_fs_ret_885. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_885.;
 wr_fs_ret_885.:
       DM(13, I0) = R0;
@@ -11700,7 +11700,7 @@ wr_fs_fi_863.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe43ca;                        // return address - 1: wr_fs_ret_887. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_887.;
 wr_fs_ret_887.:
       DM(-55, I5) = R0;
@@ -11708,7 +11708,7 @@ wr_fs_ret_887.:
       R1 = DM(15, I0);
       F0 = F0 + F1;
       I12 = 0xbe43d7;                        // return address - 1: wr_fs_ret_888. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_888.;
 wr_fs_ret_888.:
       DM(10, I0) = R0;
@@ -11726,14 +11726,14 @@ wr_fs_ret_888.:
       R1 = DM(-53, I5);
       F0 = F0 + F1;
       I12 = 0xbe43f5;                        // return address - 1: wr_fs_ret_889. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_889.;
 wr_fs_ret_889.:
       DM(11, I0) = R0;
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe4400;                        // return address - 1: wr_fs_ret_890. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_890.;
 wr_fs_ret_890.:
       R1 = DM(13, I0);
@@ -11744,7 +11744,7 @@ wr_fs_ret_890.:
       F0 = F0 * F1;
       DM(12, I0) = R0;
       I12 = 0xbe4412;                        // return address - 1: wr_fs_ret_891. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_891.;
 wr_fs_ret_891.:
       DM(12, I0) = R0;
@@ -11753,7 +11753,7 @@ wr_fs_ret_891.:
       F0 = F0 * F1;
       DM(13, I0) = R0;
       I12 = 0xbe4421;                        // return address - 1: wr_fs_ret_892. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_892.;
 wr_fs_ret_892.:
       DM(13, I0) = R0;
@@ -12101,7 +12101,7 @@ wr_fs_loop_906.:
       R1 = 0x42800000;                  // 64.0
       F0 = F0 + F1;
       I12 = 0xbe4681;                        // return address - 1: wr_fs_ret_907. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_907.;
 wr_fs_ret_907.:
       R1 = DM(-54, I5);
@@ -12112,7 +12112,7 @@ wr_fs_ret_907.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe4694;                        // return address - 1: wr_fs_ret_908. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_908.;
 wr_fs_ret_908.:
       F1 = PASS F0;
@@ -12125,7 +12125,7 @@ wr_fs_ret_908.:
       R1 = DM(-49, I5);
       F0 = F0 + F1;
       I12 = 0xbe46aa;                        // return address - 1: wr_fs_ret_909. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_909.;
 wr_fs_ret_909.:
       DM(2, I3) = R0;
@@ -12137,97 +12137,97 @@ wr_fs_ret_909.:
       IF NE JUMP 0xbe4563;                   // -> wr_fs_loop_906.
       R0 = DM(4, I3);
       I12 = 0xbe46bf;                        // return address - 1: wr_fs_ret_910. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_910.;
 wr_fs_ret_910.:
       DM(4, I3) = R0;
       R0 = DM(5, I3);
       I12 = 0xbe46c9;                        // return address - 1: wr_fs_ret_911. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_911.;
 wr_fs_ret_911.:
       DM(5, I3) = R0;
       R0 = DM(6, I3);
       I12 = 0xbe46d3;                        // return address - 1: wr_fs_ret_912. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_912.;
 wr_fs_ret_912.:
       DM(6, I3) = R0;
       R0 = DM(7, I3);
       I12 = 0xbe46dd;                        // return address - 1: wr_fs_ret_913. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_913.;
 wr_fs_ret_913.:
       DM(7, I3) = R0;
       R0 = DM(8, I3);
       I12 = 0xbe46e7;                        // return address - 1: wr_fs_ret_914. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_914.;
 wr_fs_ret_914.:
       DM(8, I3) = R0;
       R0 = DM(9, I3);
       I12 = 0xbe46f1;                        // return address - 1: wr_fs_ret_915. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_915.;
 wr_fs_ret_915.:
       DM(9, I3) = R0;
       R0 = DM(10, I3);
       I12 = 0xbe46fb;                        // return address - 1: wr_fs_ret_916. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_916.;
 wr_fs_ret_916.:
       DM(10, I3) = R0;
       R0 = DM(11, I3);
       I12 = 0xbe4705;                        // return address - 1: wr_fs_ret_917. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_917.;
 wr_fs_ret_917.:
       DM(11, I3) = R0;
       R0 = DM(12, I3);
       I12 = 0xbe470f;                        // return address - 1: wr_fs_ret_918. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_918.;
 wr_fs_ret_918.:
       DM(12, I3) = R0;
       R0 = DM(13, I3);
       I12 = 0xbe4719;                        // return address - 1: wr_fs_ret_919. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_919.;
 wr_fs_ret_919.:
       DM(13, I3) = R0;
       R0 = DM(14, I3);
       I12 = 0xbe4723;                        // return address - 1: wr_fs_ret_920. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_920.;
 wr_fs_ret_920.:
       DM(14, I3) = R0;
       R0 = DM(15, I3);
       I12 = 0xbe472d;                        // return address - 1: wr_fs_ret_921. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_921.;
 wr_fs_ret_921.:
       DM(15, I3) = R0;
       R0 = DM(16, I3);
       I12 = 0xbe4737;                        // return address - 1: wr_fs_ret_922. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_922.;
 wr_fs_ret_922.:
       DM(16, I3) = R0;
       R0 = DM(17, I3);
       I12 = 0xbe4741;                        // return address - 1: wr_fs_ret_923. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_923.;
 wr_fs_ret_923.:
       DM(17, I3) = R0;
       R0 = DM(18, I3);
       I12 = 0xbe474b;                        // return address - 1: wr_fs_ret_924. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_924.;
 wr_fs_ret_924.:
       DM(18, I3) = R0;
       R0 = DM(19, I3);
       I12 = 0xbe4755;                        // return address - 1: wr_fs_ret_925. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_925.;
 wr_fs_ret_925.:
       DM(19, I3) = R0;
@@ -12480,25 +12480,25 @@ wr_fs_fi_937.:
       IF NE JUMP 0xbe488d;                   // -> wr_fs_loop_933.
       R0 = DM(5, I3);
       I12 = 0xbe4919;                        // return address - 1: wr_fs_ret_938. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_938.;
 wr_fs_ret_938.:
       DM(5, I3) = R0;
       R0 = DM(6, I3);
       I12 = 0xbe4923;                        // return address - 1: wr_fs_ret_939. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_939.;
 wr_fs_ret_939.:
       DM(6, I3) = R0;
       R0 = DM(10, I3);
       I12 = 0xbe492d;                        // return address - 1: wr_fs_ret_940. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_940.;
 wr_fs_ret_940.:
       DM(10, I3) = R0;
       R0 = DM(11, I3);
       I12 = 0xbe4937;                        // return address - 1: wr_fs_ret_941. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_941.;
 wr_fs_ret_941.:
       DM(11, I3) = R0;
@@ -12635,7 +12635,7 @@ wr_fs_loop_949.:
       R1 = DM(-55, I5);
       F0 = F0 * F1;
       I12 = 0xbe4a35;                        // return address - 1: wr_fs_ret_950. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_950.;
 wr_fs_ret_950.:
       R1 = DM(-42, I5);
@@ -12768,7 +12768,7 @@ wr_fs_loop_957.:
       R1 = DM(-55, I5);
       F0 = F0 * F1;
       I12 = 0xbe4b2c;                        // return address - 1: wr_fs_ret_958. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_958.;
 wr_fs_ret_958.:
       R1 = DM(-42, I5);
@@ -12901,7 +12901,7 @@ wr_fs_loop_965.:
       R1 = DM(-55, I5);
       F0 = F0 * F1;
       I12 = 0xbe4c23;                        // return address - 1: wr_fs_ret_966. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_966.;
 wr_fs_ret_966.:
       R1 = DM(-42, I5);
@@ -13099,7 +13099,7 @@ wr_fs_fi_979.:
       R1 = 0x358637bd;                  // 9.999999974752427e-07
       F0 = F0 + F1;
       I12 = 0xbe4d85;                        // return address - 1: wr_fs_ret_980. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_980.;
 wr_fs_ret_980.:
       R1 = DM(10, I3);
@@ -13178,7 +13178,7 @@ wr_fs_loop_983.:
       IF LE JUMP 0xbe4e38;                   // -> wr_fs_else_984.
       R0 = DM(1, I0);
       I12 = 0xbe4e14;                        // return address - 1: wr_fs_ret_985. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_985.;
 wr_fs_ret_985.:
       R1 = DM(0, I0);
@@ -13191,7 +13191,7 @@ wr_fs_ret_985.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe4e2c;                        // return address - 1: wr_fs_ret_987. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_987.;
 wr_fs_ret_987.:
       F1 = PASS F0;
@@ -13297,25 +13297,25 @@ wr_fs_fi_995.:
       IF NE JUMP 0xbe4e7b;                   // -> wr_fs_loop_993.
       R0 = DM(9, I0);
       I12 = 0xbe4ed4;                        // return address - 1: wr_fs_ret_996. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_996.;
 wr_fs_ret_996.:
       DM(9, I0) = R0;
       R0 = DM(10, I0);
       I12 = 0xbe4ede;                        // return address - 1: wr_fs_ret_997. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_997.;
 wr_fs_ret_997.:
       DM(10, I0) = R0;
       R0 = DM(14, I0);
       I12 = 0xbe4ee8;                        // return address - 1: wr_fs_ret_998. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_998.;
 wr_fs_ret_998.:
       DM(14, I0) = R0;
       R0 = DM(15, I0);
       I12 = 0xbe4ef2;                        // return address - 1: wr_fs_ret_999. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_999.;
 wr_fs_ret_999.:
       DM(15, I0) = R0;
@@ -13331,37 +13331,37 @@ wr_fs_loop_1000.:
       I3 = R12;
       R0 = DM(0, I3);
       I12 = 0xbe4f0c;                        // return address - 1: wr_fs_ret_1001. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_1001.;
 wr_fs_ret_1001.:
       DM(0, I3) = R0;
       R0 = DM(1, I3);
       I12 = 0xbe4f16;                        // return address - 1: wr_fs_ret_1002. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_1002.;
 wr_fs_ret_1002.:
       DM(1, I3) = R0;
       R0 = DM(5, I3);
       I12 = 0xbe4f20;                        // return address - 1: wr_fs_ret_1003. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_1003.;
 wr_fs_ret_1003.:
       DM(5, I3) = R0;
       R0 = DM(6, I3);
       I12 = 0xbe4f2a;                        // return address - 1: wr_fs_ret_1004. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_1004.;
 wr_fs_ret_1004.:
       DM(6, I3) = R0;
       R0 = DM(10, I3);
       I12 = 0xbe4f34;                        // return address - 1: wr_fs_ret_1005. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_1005.;
 wr_fs_ret_1005.:
       DM(10, I3) = R0;
       R0 = DM(11, I3);
       I12 = 0xbe4f3e;                        // return address - 1: wr_fs_ret_1006. - 1
-      JUMP 0xbf0eae;                         // -> wr_fs_sub_fl.
+      JUMP 0xbf0eba;                         // -> wr_fs_sub_fl.
 .GLOBAL wr_fs_ret_1006.;
 wr_fs_ret_1006.:
       DM(11, I3) = R0;
@@ -13408,13 +13408,13 @@ wr_fs_loop_1007.:
       R1 = DM(-57, I5);
       F0 = F0 * F1;
       I12 = 0xbe4f92;                        // return address - 1: wr_fs_ret_1008. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_1008.;
 wr_fs_ret_1008.:
       R1 = DM(58, I5);                  // 256.0
       F0 = F0 * F1;
       I12 = 0xbe4f9b;                        // return address - 1: wr_fs_ret_1009. - 1
-      JUMP 0xbf108b;                         // -> wr_fs_sub_tab.
+      JUMP 0xbf1097;                         // -> wr_fs_sub_tab.
 .GLOBAL wr_fs_ret_1009.;
 wr_fs_ret_1009.:
       R1 = DM(-54, I5);
@@ -13445,17 +13445,17 @@ wr_fs_rt_char.:
       DM(-57, I5) = R0;
       R0 = DM(-63, I5);
       I12 = 0xbe4fd3;                        // return address - 1: wr_fs_ret_1010. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_1010.;
 wr_fs_ret_1010.:
       I12 = 0xbe4fd9;                        // return address - 1: wr_fs_ret_1011. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1011.;
 wr_fs_ret_1011.:
       DM(-54, I5) = R0;
       R0 = DM(-57, I5);
       I12 = 0xbe4fe3;                        // return address - 1: wr_fs_ret_1012. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_1012.;
 wr_fs_ret_1012.:
       DM(-58, I5) = R0;
@@ -13471,7 +13471,7 @@ wr_fs_loop_1013.:
       R1 = DM(-57, I5);
       F0 = F0 + F1;
       I12 = 0xbe4ffb;                        // return address - 1: wr_fs_ret_1014. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_1014.;
 wr_fs_ret_1014.:
       R1 = DM(-54, I5);
@@ -13513,13 +13513,13 @@ wr_fs_rt_gsetup.:
       DM(16, I0) = R0;
       R0 = DM(-58, I5);
       I12 = 0xbe5046;                        // return address - 1: wr_fs_ret_1016. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1016.;
 wr_fs_ret_1016.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe5050;                        // return address - 1: wr_fs_ret_1017. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1017.;
 wr_fs_ret_1017.:
       DM(17, I0) = R0;
@@ -13529,13 +13529,13 @@ wr_fs_ret_1017.:
       R1 = 0x3ba3d70a;                  // 0.004999999888241291
       F0 = F0 + F1;
       I12 = 0xbe5062;                        // return address - 1: wr_fs_ret_1018. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1018.;
 wr_fs_ret_1018.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe506c;                        // return address - 1: wr_fs_ret_1019. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1019.;
 wr_fs_ret_1019.:
       DM(18, I0) = R0;
@@ -13548,13 +13548,13 @@ wr_fs_else_1015.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 * F1;
       I12 = 0xbe507f;                        // return address - 1: wr_fs_ret_1021. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1021.;
 wr_fs_ret_1021.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe5089;                        // return address - 1: wr_fs_ret_1022. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1022.;
 wr_fs_ret_1022.:
       DM(24, I0) = R0;
@@ -13578,7 +13578,7 @@ wr_fs_else_1020.:
       R1 = 0x4113a93e;                  // 9.228818893432617
       F0 = F0 * F1;
       I12 = 0xbe50b2;                        // return address - 1: wr_fs_ret_1025. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1025.;
 wr_fs_ret_1025.:
       R1 = 0x40a00000;                  // 5.0
@@ -13593,13 +13593,13 @@ wr_fs_ret_1025.:
       DM(26, I0) = R0;
       R0 = DM(33, I0);
       I12 = 0xbe50cc;                        // return address - 1: wr_fs_ret_1026. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1026.;
 wr_fs_ret_1026.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe50d6;                        // return address - 1: wr_fs_ret_1027. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1027.;
 wr_fs_ret_1027.:
       DM(27, I0) = R0;
@@ -13609,7 +13609,7 @@ wr_fs_ret_1027.:
       R1 = DM(52, I5);                  // 1.0
       F0 = MAX(F0, F1);
       I12 = 0xbe50e7;                        // return address - 1: wr_fs_ret_1028. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_1028.;
 wr_fs_ret_1028.:
       R1 = DM(59, I5);                  // 2.0
@@ -13636,7 +13636,7 @@ wr_fs_else_1024.:
       R1 = DM(7, I0);
       F0 = F0 * F1;
       I12 = 0xbe5115;                        // return address - 1: wr_fs_ret_1031. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1031.;
 wr_fs_ret_1031.:
       R1 = DM(-58, I5);
@@ -13650,7 +13650,7 @@ wr_fs_ret_1031.:
       R1 = DM(7, I0);
       F0 = F0 * F1;
       I12 = 0xbe512e;                        // return address - 1: wr_fs_ret_1032. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1032.;
 wr_fs_ret_1032.:
       R1 = DM(-58, I5);
@@ -13665,13 +13665,13 @@ wr_fs_ret_1032.:
       R1 = 0x3e99999a;                  // 0.30000001192092896
       F0 = F0 * F1;
       I12 = 0xbe5149;                        // return address - 1: wr_fs_ret_1033. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1033.;
 wr_fs_ret_1033.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe5153;                        // return address - 1: wr_fs_ret_1034. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1034.;
 wr_fs_ret_1034.:
       DM(31, I0) = R0;
@@ -13702,13 +13702,13 @@ wr_fs_else_1030.:
       DM(16, I0) = R0;
       R0 = DM(-58, I5);
       I12 = 0xbe518a;                        // return address - 1: wr_fs_ret_1037. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1037.;
 wr_fs_ret_1037.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe5194;                        // return address - 1: wr_fs_ret_1038. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1038.;
 wr_fs_ret_1038.:
       DM(17, I0) = R0;
@@ -13718,13 +13718,13 @@ wr_fs_ret_1038.:
       R1 = 0x3ba3d70a;                  // 0.004999999888241291
       F0 = F0 + F1;
       I12 = 0xbe51a6;                        // return address - 1: wr_fs_ret_1039. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1039.;
 wr_fs_ret_1039.:
       R1 = DM(61, I5);                  // -3.0056145988055505e-05
       F0 = F1 * F0;
       I12 = 0xbe51b0;                        // return address - 1: wr_fs_ret_1040. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1040.;
 wr_fs_ret_1040.:
       DM(18, I0) = R0;
@@ -13748,14 +13748,14 @@ wr_fs_rt_svf_set.:
       F0 = F0 * F1;
       DM(-63, I5) = R0;
       I12 = 0xbe51cd;                        // return address - 1: wr_fs_ret_1041. - 1
-      JUMP 0xbf0fe3;                         // -> wr_fs_sub_sinp.
+      JUMP 0xbf0fef;                         // -> wr_fs_sub_sinp.
 .GLOBAL wr_fs_ret_1041.;
 wr_fs_ret_1041.:
       R1 = DM(-63, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe51d9;                        // return address - 1: wr_fs_ret_1042. - 1
-      JUMP 0xbf0fc0;                         // -> wr_fs_sub_cosp.
+      JUMP 0xbf0fcc;                         // -> wr_fs_sub_cosp.
 .GLOBAL wr_fs_ret_1042.;
 wr_fs_ret_1042.:
       F1 = PASS F0;
@@ -13763,7 +13763,7 @@ wr_fs_ret_1042.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe51e7;                        // return address - 1: wr_fs_ret_1043. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1043.;
 wr_fs_ret_1043.:
       F1 = PASS F0;
@@ -13777,7 +13777,7 @@ wr_fs_ret_1043.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe51ff;                        // return address - 1: wr_fs_ret_1044. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1044.;
 wr_fs_ret_1044.:
       DM(-54, I5) = R0;
@@ -13828,7 +13828,7 @@ wr_fs_rt_o_render.:
       R1 = 0x3cfb90bb;                  // 0.030708661302924156
       F0 = F0 * F1;
       I12 = 0xbe525d;                        // return address - 1: wr_fs_ret_1045. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1045.;
 wr_fs_ret_1045.:
       R1 = 0x3c23d70a;                  // 0.009999999776482582
@@ -13853,7 +13853,7 @@ wr_fs_ret_1045.:
       R1 = 0x3c4e69a0;                  // 0.012598425149917603
       F0 = F0 * F1;
       I12 = 0xbe5295;                        // return address - 1: wr_fs_ret_1046. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1046.;
 wr_fs_ret_1046.:
       R1 = 0x40400000;                  // 3.0
@@ -13868,7 +13868,7 @@ wr_fs_ret_1046.:
       DM(190, I5) = R0;
       DM(112, I5) = R0;
       I12 = 0xbe52b7;                        // return address - 1: wr_fs_ret_1047. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_1047.;
 wr_fs_ret_1047.:
       R1 = DM(11, I2);
@@ -13911,7 +13911,7 @@ wr_fs_else_1048.:
       F0 = F0 - F14;
       DM(12, I2) = R0;
       I12 = 0xbe5303;                        // return address - 1: wr_fs_ret_1049. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_1049.;
 wr_fs_ret_1049.:
       R1 = DM(186, I5);
@@ -13979,7 +13979,7 @@ wr_fs_fi_1053.:
       R1 = 0x3ce4fd2d;                  // 0.027952754870057106
       F0 = F0 * F1;
       I12 = 0xbe5376;                        // return address - 1: wr_fs_ret_1057. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1057.;
 wr_fs_ret_1057.:
       R1 = 0x3f19999a;                  // 0.6000000238418579
@@ -14028,7 +14028,7 @@ wr_fs_else_1060.:
       F0 = F0 - F14;
       DM(45, I2) = R0;
       I12 = 0xbe53ca;                        // return address - 1: wr_fs_ret_1061. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_1061.;
 wr_fs_ret_1061.:
       DM(49, I2) = R0;
@@ -14036,7 +14036,7 @@ wr_fs_ret_1061.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbe53d7;                        // return address - 1: wr_fs_ret_1062. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_1062.;
 wr_fs_ret_1062.:
       R1 = DM(220, I5);
@@ -14121,7 +14121,7 @@ wr_fs_else_1068.:
       R1 = 0x3d2aef79;                  // 0.04173228517174721
       F0 = F0 * F1;
       I12 = 0xbe546f;                        // return address - 1: wr_fs_ret_1070. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1070.;
 wr_fs_ret_1070.:
       R1 = 0x3fc00000;                  // 1.5
@@ -14141,7 +14141,7 @@ wr_fs_ret_1070.:
 wr_fs_else_1071.:
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe5494;                        // return address - 1: wr_fs_ret_1072. - 1
-      JUMP 0xbf11bd;                         // -> wr_fs_sub_ojb.
+      JUMP 0xbf11c9;                         // -> wr_fs_sub_ojb.
 .GLOBAL wr_fs_ret_1072.;
 wr_fs_ret_1072.:
       R1 = DM(54, I2);
@@ -14160,11 +14160,11 @@ wr_fs_ret_1072.:
       DM(55, I2) = R0;
       R0 = DM(227, I5);
       I12 = 0xbe54b7;                        // return address - 1: wr_fs_ret_1073. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1073.;
 wr_fs_ret_1073.:
       I12 = 0xbe54bd;                        // return address - 1: wr_fs_ret_1074. - 1
-      JUMP 0xbf11e0;                         // -> wr_fs_sub_o_sqrt.
+      JUMP 0xbf11ec;                         // -> wr_fs_sub_o_sqrt.
 .GLOBAL wr_fs_ret_1074.;
 wr_fs_ret_1074.:
       R1 = DM(55, I2);
@@ -14557,11 +14557,11 @@ wr_fs_rret_1103.:
       IF LE JUMP 0xbe57bf;                   // -> wr_fs_else_1104.
       R0 = DM(189, I5);
       I12 = 0xbe57ad;                        // return address - 1: wr_fs_ret_1105. - 1
-      JUMP 0xbf11e0;                         // -> wr_fs_sub_o_sqrt.
+      JUMP 0xbf11ec;                         // -> wr_fs_sub_o_sqrt.
 .GLOBAL wr_fs_ret_1105.;
 wr_fs_ret_1105.:
       I12 = 0xbe57b3;                        // return address - 1: wr_fs_ret_1106. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1106.;
 wr_fs_ret_1106.:
       R1 = 0x3f0ccccd;                  // 0.550000011920929
@@ -14648,7 +14648,7 @@ wr_fs_fi_1113.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe5857;                        // return address - 1: wr_fs_ret_1116. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1116.;
 wr_fs_ret_1116.:
       DM(211, I5) = R0;
@@ -14675,14 +14675,14 @@ wr_fs_fi_1119.:
 wr_fs_else_1117.:
       R0 = DM(205, I5);
       I12 = 0xbe5887;                        // return address - 1: wr_fs_ret_1120. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1120.;
 wr_fs_ret_1120.:
       R1 = DM(211, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe5894;                        // return address - 1: wr_fs_ret_1121. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1121.;
 wr_fs_ret_1121.:
       F1 = PASS F0;
@@ -14696,7 +14696,7 @@ wr_fs_ret_1121.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe58af;                        // return address - 1: wr_fs_ret_1122. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1122.;
 wr_fs_ret_1122.:
       DM(207, I5) = R0;
@@ -14716,7 +14716,7 @@ wr_fs_ret_1122.:
       R12 = R12 - R12;                  // 0
       F0 = FLOAT R0 BY R12;
       I12 = 0xbe58dc;                        // return address - 1: wr_fs_ret_1124. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1124.;
 wr_fs_ret_1124.:
       R1 = DM(190, I5);
@@ -14768,14 +14768,14 @@ wr_fs_else_1127.:
       R1 = 0x3d27b5d2;                  // 0.04094488173723221
       F0 = F0 * F1;
       I12 = 0xbe5943;                        // return address - 1: wr_fs_ret_1128. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1128.;
 wr_fs_ret_1128.:
       R1 = 0x3d23d70a;                  // 0.03999999910593033
       F0 = F1 * F0;
       DM(231, I5) = R0;
       I12 = 0xbe5951;                        // return address - 1: wr_fs_ret_1129. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1129.;
 wr_fs_ret_1129.:
       R1 = -0x48513cc2;                 // -2.0833333110203966e-05
@@ -14783,7 +14783,7 @@ wr_fs_ret_1129.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe5960;                        // return address - 1: wr_fs_ret_1130. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1130.;
 wr_fs_ret_1130.:
       DM(232, I5) = R0;
@@ -14852,7 +14852,7 @@ wr_fs_else_1136.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbe59d5;                        // return address - 1: wr_fs_ret_1137. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1137.;
 wr_fs_ret_1137.:
       DM(256, I5) = R0;
@@ -14995,14 +14995,14 @@ wr_fs_else_1141.:
       R1 = 0x3d581693;                  // 0.05275590345263481
       F0 = F0 * F1;
       I12 = 0xbe5af5;                        // return address - 1: wr_fs_ret_1143. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1143.;
 wr_fs_ret_1143.:
       R1 = 0x3cf5c28f;                  // 0.029999999329447746
       F0 = F1 * F0;
       DM(243, I5) = R0;
       I12 = 0xbe5b03;                        // return address - 1: wr_fs_ret_1144. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1144.;
 wr_fs_ret_1144.:
       R1 = DM(254, I5);
@@ -15012,7 +15012,7 @@ wr_fs_ret_1144.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe5b16;                        // return address - 1: wr_fs_ret_1145. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1145.;
 wr_fs_ret_1145.:
       R1 = DM(52, I5);                  // 1.0
@@ -15170,7 +15170,7 @@ wr_fs_fi_1158.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe5c36;                        // return address - 1: wr_fs_ret_1161. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1161.;
 wr_fs_ret_1161.:
       DM(211, I5) = R0;
@@ -15197,14 +15197,14 @@ wr_fs_fi_1164.:
 wr_fs_else_1162.:
       R0 = DM(205, I5);
       I12 = 0xbe5c66;                        // return address - 1: wr_fs_ret_1165. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1165.;
 wr_fs_ret_1165.:
       R1 = DM(211, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe5c73;                        // return address - 1: wr_fs_ret_1166. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1166.;
 wr_fs_ret_1166.:
       F1 = PASS F0;
@@ -15218,7 +15218,7 @@ wr_fs_ret_1166.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe5c8e;                        // return address - 1: wr_fs_ret_1167. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1167.;
 wr_fs_ret_1167.:
       DM(246, I5) = R0;
@@ -15252,7 +15252,7 @@ wr_fs_else_1152.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe5ccf;                        // return address - 1: wr_fs_ret_1169. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1169.;
 wr_fs_ret_1169.:
       DM(250, I5) = R0;
@@ -15278,7 +15278,7 @@ wr_fs_loop_1170.:
       R12 = DM(116, I5);
       I4 = R12;
       I12 = 0xbe5d03;                        // return address - 1: wr_fs_ret_1171. - 1
-      JUMP 0xbf0e8b;                         // -> wr_fs_sub_obi.
+      JUMP 0xbf0e97;                         // -> wr_fs_sub_obi.
 .GLOBAL wr_fs_ret_1171.;
 wr_fs_ret_1171.:
       DM(205, I5) = R0;
@@ -15355,7 +15355,7 @@ wr_fs_ret_1171.:
       IF EQ JUMP 0xbe5ddd;                   // -> wr_fs_else_1173.
       R0 = DM(42, I2);
       I12 = 0xbe5d9c;                        // return address - 1: wr_fs_ret_1174. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_1174.;
 wr_fs_ret_1174.:
       R1 = DM(41, I2);
@@ -15402,7 +15402,7 @@ wr_fs_else_1173.:
       IF EQ JUMP 0xbe5e0d;                   // -> wr_fs_else_1177.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe5dea;                        // return address - 1: wr_fs_ret_1178. - 1
-      JUMP 0xbf12c3;                         // -> wr_fs_sub_okb.
+      JUMP 0xbf12cf;                         // -> wr_fs_sub_okb.
 .GLOBAL wr_fs_ret_1178.;
 wr_fs_ret_1178.:
       DM(253, I5) = R0;
@@ -15596,7 +15596,7 @@ wr_fs_else_1186.:
       IF EQ JUMP 0xbe5f86;                   // -> wr_fs_else_1187.
       R0 = DM(57, I2);
       I12 = 0xbe5f52;                        // return address - 1: wr_fs_ret_1188. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_1188.;
 wr_fs_ret_1188.:
       R1 = DM(61, I2);
@@ -15654,7 +15654,7 @@ wr_fs_else_1190.:
       IF EQ JUMP 0xbe6010;                   // -> wr_fs_else_1191.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe5fbb;                        // return address - 1: wr_fs_ret_1192. - 1
-      JUMP 0xbf11bd;                         // -> wr_fs_sub_ojb.
+      JUMP 0xbf11c9;                         // -> wr_fs_sub_ojb.
 .GLOBAL wr_fs_ret_1192.;
 wr_fs_ret_1192.:
       DM(253, I5) = R0;
@@ -15825,7 +15825,7 @@ wr_fs_rt_o_rank.:
 wr_fs_else_1200.:
       R0 = DM(206, I5);
       I12 = 0xbe6107;                        // return address - 1: wr_fs_ret_1202. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1202.;
 wr_fs_ret_1202.:
       R1 = DM(194, I5);
@@ -15835,7 +15835,7 @@ wr_fs_ret_1202.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe611a;                        // return address - 1: wr_fs_ret_1203. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1203.;
 wr_fs_ret_1203.:
       R1 = DM(52, I5);                  // 1.0
@@ -15866,7 +15866,7 @@ wr_fs_fi_1201.:
       R1 = 0x3a5a740e;                  // 0.0008333333535119891
       F0 = F0 * F1;
       I12 = 0xbe6154;                        // return address - 1: wr_fs_ret_1204. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1204.;
 wr_fs_ret_1204.:
       R1 = DM(4, I2);
@@ -15899,7 +15899,7 @@ wr_fs_ret_1204.:
       DM(201, I5) = R0;
       R0 = DM(197, I5);
       I12 = 0xbe619a;                        // return address - 1: wr_fs_ret_1206. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1206.;
 wr_fs_ret_1206.:
       R1 = 0x46a8c000;                  // 21600.0
@@ -16122,7 +16122,7 @@ wr_fs_rt_s_strike.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbe631a;                        // return address - 1: wr_fs_ret_1221. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1221.;
 wr_fs_ret_1221.:
       R1 = 0x43dc0000;                  // 440.0
@@ -16183,7 +16183,7 @@ wr_fs_vloop_1222.:
       I4 = R12;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe63a2;                        // return address - 1: wr_fs_ret_1223. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1223.;
 wr_fs_ret_1223.:
       DM(388, I5) = R0;
@@ -16244,13 +16244,13 @@ wr_fs_else_1228.:
 wr_fs_else_1230.:
       R0 = DM(329, I5);
       I12 = 0xbe641d;                        // return address - 1: wr_fs_ret_1232. - 1
-      JUMP 0xbf1309;                         // -> wr_fs_sub_s_log2.
+      JUMP 0xbf1315;                         // -> wr_fs_sub_s_log2.
 .GLOBAL wr_fs_ret_1232.;
 wr_fs_ret_1232.:
       R1 = 0x3f333333;                  // 0.699999988079071
       F0 = F1 * F0;
       I12 = 0xbe6428;                        // return address - 1: wr_fs_ret_1233. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1233.;
 wr_fs_ret_1233.:
       DM(159, I5) = R0;
@@ -16364,7 +16364,7 @@ wr_fs_fi_1237.:
       R0 = R0 - R0;                     // 0.0
       DM(140, I3) = R0;
       I12 = 0xbe64ef;                        // return address - 1: wr_fs_ret_1242. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1242.;
 wr_fs_ret_1242.:
       R1 = DM(54, I5);                  // 0.5
@@ -16477,7 +16477,7 @@ wr_fs_fi_1244.:
       R0 = R0 - R0;                     // 0.0
       DM(36, I2) = R0;
       I12 = 0xbe65b5;                        // return address - 1: wr_fs_ret_1253. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1253.;
 wr_fs_ret_1253.:
       R1 = DM(420, I5);
@@ -16548,7 +16548,7 @@ wr_fs_fi_1261.:
 wr_fs_fi_1259.:
       R0 = 0x42f00000;                  // 120.0
       I12 = 0xbe663d;                        // return address - 1: wr_fs_ret_1262. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1262.;
 wr_fs_ret_1262.:
       R1 = 0x42700000;                  // 60.0
@@ -16608,7 +16608,7 @@ wr_fs_vloop_1264.:
       IF NE JUMP 0xbe66dd;                   // -> wr_fs_else_1265.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe66b5;                        // return address - 1: wr_fs_ret_1266. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1266.;
 wr_fs_ret_1266.:
       R1 = DM(420, I5);
@@ -17145,7 +17145,7 @@ wr_fs_fi_1314.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
       F0 = F1 + F0;
       I12 = 0xbe6acc;                        // return address - 1: wr_fs_ret_1315. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1315.;
 wr_fs_ret_1315.:
       R1 = DM(382, I5);
@@ -17178,7 +17178,7 @@ wr_fs_else_1312.:
       R1 = 0x3e99999a;                  // 0.30000001192092896
       F0 = F1 + F0;
       I12 = 0xbe6b0d;                        // return address - 1: wr_fs_ret_1319. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1319.;
 wr_fs_ret_1319.:
       R1 = DM(382, I5);
@@ -17233,7 +17233,7 @@ wr_fs_else_1318.:
       R1 = DM(54, I5);                  // 0.5
       F0 = F1 + F0;
       I12 = 0xbe6b7c;                        // return address - 1: wr_fs_ret_1325. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1325.;
 wr_fs_ret_1325.:
       R1 = DM(382, I5);
@@ -17288,7 +17288,7 @@ wr_fs_rret_1328.:
       R1 = DM(37, I2);
       F0 = F0 * F1;
       I12 = 0xbe6be7;                        // return address - 1: wr_fs_ret_1330. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1330.;
 wr_fs_ret_1330.:
       R1 = DM(54, I5);                  // 0.5
@@ -17336,7 +17336,7 @@ wr_fs_else_1324.:
       IF GE JUMP 0xbe6c84;                   // -> wr_fs_else_1333.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6c43;                        // return address - 1: wr_fs_ret_1334. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1334.;
 wr_fs_ret_1334.:
       R1 = DM(54, I5);                  // 0.5
@@ -17355,7 +17355,7 @@ wr_fs_ret_1334.:
       IF GE JUMP 0xbe6c84;                   // -> wr_fs_else_1335.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6c65;                        // return address - 1: wr_fs_ret_1336. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1336.;
 wr_fs_ret_1336.:
       R1 = DM(54, I5);                  // 0.5
@@ -17442,7 +17442,7 @@ wr_fs_fi_1338.:
       R1 = 0x3cf5c28f;                  // 0.029999999329447746
       F0 = F1 + F0;
       I12 = 0xbe6ce4;                        // return address - 1: wr_fs_ret_1341. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1341.;
 wr_fs_ret_1341.:
       R1 = DM(382, I5);
@@ -17514,7 +17514,7 @@ wr_fs_else_1343.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe6d6b;                        // return address - 1: wr_fs_ret_1348. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1348.;
 wr_fs_ret_1348.:
       R1 = 0x3e99999a;                  // 0.30000001192092896
@@ -17565,7 +17565,7 @@ wr_fs_else_1346.:
       R1 = DM(63, I5);                  // 4.0
       F0 = F0 * F1;
       I12 = 0xbe6dca;                        // return address - 1: wr_fs_ret_1350. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_1350.;
 wr_fs_ret_1350.:
       R1 = DM(62, I5);                  // 0.25
@@ -17597,7 +17597,7 @@ wr_fs_else_1349.:
       IF GE JUMP 0xbe6e40;                   // -> wr_fs_else_1354.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6e0b;                        // return address - 1: wr_fs_ret_1355. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1355.;
 wr_fs_ret_1355.:
       R1 = DM(54, I5);                  // 0.5
@@ -17614,7 +17614,7 @@ wr_fs_ret_1355.:
       IF GE JUMP 0xbe6e40;                   // -> wr_fs_else_1356.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6e2b;                        // return address - 1: wr_fs_ret_1357. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1357.;
 wr_fs_ret_1357.:
       R1 = DM(54, I5);                  // 0.5
@@ -17654,7 +17654,7 @@ wr_fs_else_1352.:
       IF GE JUMP 0xbe6ea2;                   // -> wr_fs_else_1361.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6e6d;                        // return address - 1: wr_fs_ret_1362. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1362.;
 wr_fs_ret_1362.:
       R1 = DM(54, I5);                  // 0.5
@@ -17671,7 +17671,7 @@ wr_fs_ret_1362.:
       IF GE JUMP 0xbe6ea2;                   // -> wr_fs_else_1363.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6e8d;                        // return address - 1: wr_fs_ret_1364. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1364.;
 wr_fs_ret_1364.:
       R1 = DM(54, I5);                  // 0.5
@@ -17711,7 +17711,7 @@ wr_fs_else_1359.:
       IF GE JUMP 0xbe6f04;                   // -> wr_fs_else_1368.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6ecf;                        // return address - 1: wr_fs_ret_1369. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1369.;
 wr_fs_ret_1369.:
       R1 = DM(54, I5);                  // 0.5
@@ -17728,7 +17728,7 @@ wr_fs_ret_1369.:
       IF GE JUMP 0xbe6f04;                   // -> wr_fs_else_1370.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6eef;                        // return address - 1: wr_fs_ret_1371. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1371.;
 wr_fs_ret_1371.:
       R1 = DM(54, I5);                  // 0.5
@@ -17768,7 +17768,7 @@ wr_fs_else_1366.:
       IF GE JUMP 0xbe6f66;                   // -> wr_fs_else_1375.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6f31;                        // return address - 1: wr_fs_ret_1376. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1376.;
 wr_fs_ret_1376.:
       R1 = DM(54, I5);                  // 0.5
@@ -17785,7 +17785,7 @@ wr_fs_ret_1376.:
       IF GE JUMP 0xbe6f66;                   // -> wr_fs_else_1377.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6f51;                        // return address - 1: wr_fs_ret_1378. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1378.;
 wr_fs_ret_1378.:
       R1 = DM(54, I5);                  // 0.5
@@ -17832,7 +17832,7 @@ wr_fs_else_1351.:
       IF GE JUMP 0xbe6fc7;                   // -> wr_fs_else_1381.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6f92;                        // return address - 1: wr_fs_ret_1382. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1382.;
 wr_fs_ret_1382.:
       R1 = DM(54, I5);                  // 0.5
@@ -17847,7 +17847,7 @@ wr_fs_ret_1382.:
       IF GE JUMP 0xbe6fc7;                   // -> wr_fs_else_1383.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe6fac;                        // return address - 1: wr_fs_ret_1384. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1384.;
 wr_fs_ret_1384.:
       R1 = DM(54, I5);                  // 0.5
@@ -18050,7 +18050,7 @@ wr_fs_else_1394.:
       IF GT JUMP 0xbe7168;                   // -> wr_fs_else_1398.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe711d;                        // return address - 1: wr_fs_ret_1399. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1399.;
 wr_fs_ret_1399.:
       R1 = DM(54, I5);                  // 0.5
@@ -18062,7 +18062,7 @@ wr_fs_ret_1399.:
       DM(53, I2) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe7131;                        // return address - 1: wr_fs_ret_1400. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1400.;
 wr_fs_ret_1400.:
       R1 = DM(54, I5);                  // 0.5
@@ -18086,7 +18086,7 @@ wr_fs_else_1401.:
 wr_fs_fi_1402.:
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe7158;                        // return address - 1: wr_fs_ret_1403. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1403.;
 wr_fs_ret_1403.:
       R1 = DM(283, I5);
@@ -18195,7 +18195,7 @@ wr_fs_rret_1409.:
       R1 = DM(57, I2);
       F0 = F0 * F1;
       I12 = 0xbe721c;                        // return address - 1: wr_fs_ret_1410. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1410.;
 wr_fs_ret_1410.:
       DM(396, I5) = R0;
@@ -18280,7 +18280,7 @@ wr_fs_fi_1415.:
       F0 = F1 + F0;
       DM(376, I5) = R0;
       I12 = 0xbe72c3;                        // return address - 1: wr_fs_ret_1416. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1416.;
 wr_fs_ret_1416.:
       R1 = DM(382, I5);
@@ -18290,7 +18290,7 @@ wr_fs_ret_1416.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe72d6;                        // return address - 1: wr_fs_ret_1417. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1417.;
 wr_fs_ret_1417.:
       R1 = DM(118, I5);
@@ -18298,7 +18298,7 @@ wr_fs_ret_1417.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe72e5;                        // return address - 1: wr_fs_ret_1418. - 1
-      JUMP 0xbf1309;                         // -> wr_fs_sub_s_log2.
+      JUMP 0xbf1315;                         // -> wr_fs_sub_s_log2.
 .GLOBAL wr_fs_ret_1418.;
 wr_fs_ret_1418.:
       R1 = 0x44960000;                  // 1200.0
@@ -18325,7 +18325,7 @@ wr_fs_ret_1418.:
       IF EQ JUMP 0xbe7349;                   // -> wr_fs_else_1421.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe731f;                        // return address - 1: wr_fs_ret_1422. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1422.;
 wr_fs_ret_1422.:
       R1 = DM(54, I5);                  // 0.5
@@ -18360,7 +18360,7 @@ wr_fs_else_1419.:
       R1 = 0x3a5a740e;                  // 0.0008333333535119891
       F0 = F0 * F1;
       I12 = 0xbe7355;                        // return address - 1: wr_fs_ret_1424. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1424.;
 wr_fs_ret_1424.:
       R1 = DM(61, I2);
@@ -18369,7 +18369,7 @@ wr_fs_ret_1424.:
       R1 = 0x41c80000;                  // 25.0
       F0 = MAX(F0, F1);
       I12 = 0xbe7367;                        // return address - 1: wr_fs_ret_1425. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1425.;
 wr_fs_ret_1425.:
       R1 = 0x473b8000;                  // 48000.0
@@ -18410,7 +18410,7 @@ wr_fs_ret_1425.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe73c0;                        // return address - 1: wr_fs_ret_1428. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_1428.;
 wr_fs_ret_1428.:
       F1 = PASS F0;
@@ -18423,7 +18423,7 @@ wr_fs_else_1427.:
 .GLOBAL wr_fs_fi_1429.;
 wr_fs_fi_1429.:
       I12 = 0xbe73cf;                        // return address - 1: wr_fs_ret_1430. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1430.;
 wr_fs_ret_1430.:
       R1 = DM(274, I5);
@@ -18438,7 +18438,7 @@ wr_fs_else_1426.:
       F0 = MIN(F0, F1);
       DM(274, I5) = R0;
       I12 = 0xbe73ed;                        // return address - 1: wr_fs_ret_1431. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1431.;
 wr_fs_ret_1431.:
       R1 = DM(52, I5);                  // 1.0
@@ -18494,7 +18494,7 @@ wr_fs_ret_1431.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe746d;                        // return address - 1: wr_fs_ret_1432. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1432.;
 wr_fs_ret_1432.:
       DM(112, I5) = R0;
@@ -18546,7 +18546,7 @@ wr_fs_fi_1436.:
       R1 = DM(211, I5);
       F0 = F0 + F1;
       I12 = 0xbe74d1;                        // return address - 1: wr_fs_ret_1438. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1438.;
 wr_fs_ret_1438.:
       R1 = DM(52, I5);                  // 1.0
@@ -18567,7 +18567,7 @@ wr_fs_ret_1438.:
       R1 = DM(209, I5);
       F0 = F0 + F1;
       I12 = 0xbe74fb;                        // return address - 1: wr_fs_ret_1440. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1440.;
 wr_fs_ret_1440.:
       R1 = DM(52, I5);                  // 1.0
@@ -18675,7 +18675,7 @@ wr_fs_fi_1446.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbe75cf;                        // return address - 1: wr_fs_ret_1447. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1447.;
 wr_fs_ret_1447.:
       R1 = -0x40800000;                 // -1.0
@@ -18683,7 +18683,7 @@ wr_fs_ret_1447.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe75dd;                        // return address - 1: wr_fs_ret_1448. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1448.;
 wr_fs_ret_1448.:
       R1 = DM(52, I5);                  // 1.0
@@ -18722,7 +18722,7 @@ wr_fs_else_1449.:
       R1 = 0x3ff33333;                  // 1.899999976158142
       F0 = F0 * F1;
       I12 = 0xbe762d;                        // return address - 1: wr_fs_ret_1450. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1450.;
 wr_fs_ret_1450.:
       DM(223, I5) = R0;
@@ -18736,7 +18736,7 @@ wr_fs_ret_1450.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbe764a;                        // return address - 1: wr_fs_ret_1451. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1451.;
 wr_fs_ret_1451.:
       R1 = -0x40800000;                 // -1.0
@@ -18744,7 +18744,7 @@ wr_fs_ret_1451.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe7658;                        // return address - 1: wr_fs_ret_1452. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1452.;
 wr_fs_ret_1452.:
       DM(346, I5) = R0;
@@ -18759,7 +18759,7 @@ wr_fs_ret_1452.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe7676;                        // return address - 1: wr_fs_ret_1453. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1453.;
 wr_fs_ret_1453.:
       R1 = DM(346, I5);
@@ -18767,7 +18767,7 @@ wr_fs_ret_1453.:
       DM(628, I5) = R0;
       R0 = DM(403, I5);
       I12 = 0xbe7687;                        // return address - 1: wr_fs_ret_1454. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1454.;
 wr_fs_ret_1454.:
       R1 = DM(346, I5);
@@ -18784,7 +18784,7 @@ wr_fs_ret_1454.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe76aa;                        // return address - 1: wr_fs_ret_1455. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1455.;
 wr_fs_ret_1455.:
       R1 = DM(346, I5);
@@ -18792,7 +18792,7 @@ wr_fs_ret_1455.:
       DM(629, I5) = R0;
       R0 = DM(403, I5);
       I12 = 0xbe76bb;                        // return address - 1: wr_fs_ret_1456. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1456.;
 wr_fs_ret_1456.:
       R1 = DM(346, I5);
@@ -18809,7 +18809,7 @@ wr_fs_ret_1456.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe76de;                        // return address - 1: wr_fs_ret_1457. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1457.;
 wr_fs_ret_1457.:
       R1 = DM(346, I5);
@@ -18817,7 +18817,7 @@ wr_fs_ret_1457.:
       DM(630, I5) = R0;
       R0 = DM(403, I5);
       I12 = 0xbe76ef;                        // return address - 1: wr_fs_ret_1458. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1458.;
 wr_fs_ret_1458.:
       R1 = DM(346, I5);
@@ -18834,7 +18834,7 @@ wr_fs_ret_1458.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe7712;                        // return address - 1: wr_fs_ret_1459. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1459.;
 wr_fs_ret_1459.:
       R1 = DM(346, I5);
@@ -18842,7 +18842,7 @@ wr_fs_ret_1459.:
       DM(631, I5) = R0;
       R0 = DM(403, I5);
       I12 = 0xbe7723;                        // return address - 1: wr_fs_ret_1460. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1460.;
 wr_fs_ret_1460.:
       R1 = DM(346, I5);
@@ -18858,7 +18858,7 @@ wr_fs_ret_1460.:
       F1 = F1 * F2;
       F0 = F0 + F1;
       I12 = 0xbe7742;                        // return address - 1: wr_fs_ret_1461. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1461.;
 wr_fs_ret_1461.:
       R1 = 0x43960000;                  // 300.0
@@ -18874,7 +18874,7 @@ wr_fs_ret_1461.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe7764;                        // return address - 1: wr_fs_ret_1462. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1462.;
 wr_fs_ret_1462.:
       DM(156, I5) = R0;
@@ -18901,14 +18901,14 @@ wr_fs_fi_1465.:
 wr_fs_else_1463.:
       R0 = DM(378, I5);
       I12 = 0xbe7794;                        // return address - 1: wr_fs_ret_1466. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1466.;
 wr_fs_ret_1466.:
       R1 = DM(156, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe77a1;                        // return address - 1: wr_fs_ret_1467. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1467.;
 wr_fs_ret_1467.:
       F1 = PASS F0;
@@ -18922,7 +18922,7 @@ wr_fs_ret_1467.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe77bc;                        // return address - 1: wr_fs_ret_1468. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1468.;
 wr_fs_ret_1468.:
       DM(204, I5) = R0;
@@ -18994,13 +18994,13 @@ wr_fs_vloop_1470.:
 wr_fs_else_1471.:
       R0 = DM(329, I5);
       I12 = 0xbe7855;                        // return address - 1: wr_fs_ret_1473. - 1
-      JUMP 0xbf1309;                         // -> wr_fs_sub_s_log2.
+      JUMP 0xbf1315;                         // -> wr_fs_sub_s_log2.
 .GLOBAL wr_fs_ret_1473.;
 wr_fs_ret_1473.:
       R1 = DM(318, I5);
       F0 = F1 * F0;
       I12 = 0xbe7860;                        // return address - 1: wr_fs_ret_1474. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1474.;
 wr_fs_ret_1474.:
       DM(284, I5) = R0;
@@ -19026,7 +19026,7 @@ wr_fs_fi_1472.:
       R1 = 0x3b23d70a;                  // 0.0024999999441206455
       F0 = F0 * F1;
       I12 = 0xbe7891;                        // return address - 1: wr_fs_ret_1475. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1475.;
 wr_fs_ret_1475.:
       R1 = DM(214, I5);
@@ -19043,7 +19043,7 @@ wr_fs_ret_1475.:
       R1 = DM(171, I5);
       F0 = F0 * F1;
       I12 = 0xbe78b6;                        // return address - 1: wr_fs_ret_1476. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1476.;
 wr_fs_ret_1476.:
       R1 = DM(52, I5);                  // 1.0
@@ -19070,7 +19070,7 @@ wr_fs_ret_1476.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbe78ee;                        // return address - 1: wr_fs_ret_1477. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1477.;
 wr_fs_ret_1477.:
       R1 = -0x40800000;                 // -1.0
@@ -19078,7 +19078,7 @@ wr_fs_ret_1477.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe78fc;                        // return address - 1: wr_fs_ret_1478. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1478.;
 wr_fs_ret_1478.:
       DM(331, I5) = R0;
@@ -19090,7 +19090,7 @@ wr_fs_ret_1478.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe7913;                        // return address - 1: wr_fs_ret_1479. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1479.;
 wr_fs_ret_1479.:
       R1 = DM(331, I5);
@@ -19102,7 +19102,7 @@ wr_fs_ret_1479.:
       R1 = DM(60, I5);                  // 2.0833333110203966e-05
       F0 = F0 * F1;
       I12 = 0xbe792b;                        // return address - 1: wr_fs_ret_1480. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1480.;
 wr_fs_ret_1480.:
       R1 = DM(331, I5);
@@ -19209,7 +19209,7 @@ wr_fs_else_1469.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe7a0e;                        // return address - 1: wr_fs_ret_1482. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1482.;
 wr_fs_ret_1482.:
       R1 = DM(52, I5);                  // 1.0
@@ -19230,7 +19230,7 @@ wr_fs_ret_1482.:
       F0 = F1 * F0;
       DM(224, I5) = R0;
       I12 = 0xbe7a37;                        // return address - 1: wr_fs_ret_1483. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1483.;
 wr_fs_ret_1483.:
       R1 = 0x473b8000;                  // 48000.0
@@ -19251,13 +19251,13 @@ wr_fs_ret_1483.:
 wr_fs_else_1484.:
       R0 = DM(329, I5);
       I12 = 0xbe7a61;                        // return address - 1: wr_fs_ret_1486. - 1
-      JUMP 0xbf1309;                         // -> wr_fs_sub_s_log2.
+      JUMP 0xbf1315;                         // -> wr_fs_sub_s_log2.
 .GLOBAL wr_fs_ret_1486.;
 wr_fs_ret_1486.:
       R1 = 0x3f333333;                  // 0.699999988079071
       F0 = F1 * F0;
       I12 = 0xbe7a6c;                        // return address - 1: wr_fs_ret_1487. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1487.;
 wr_fs_ret_1487.:
       DM(317, I5) = R0;
@@ -19271,7 +19271,7 @@ wr_fs_fi_1485.:
       R1 = DM(122, I5);
       F0 = F0 + F1;
       I12 = 0xbe7a85;                        // return address - 1: wr_fs_ret_1488. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1488.;
 wr_fs_ret_1488.:
       R1 = DM(52, I5);                  // 1.0
@@ -19285,7 +19285,7 @@ wr_fs_ret_1488.:
       R1 = DM(179, I5);
       F0 = F0 + F1;
       I12 = 0xbe7aa0;                        // return address - 1: wr_fs_ret_1490. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1490.;
 wr_fs_ret_1490.:
       R1 = DM(52, I5);                  // 1.0
@@ -19299,7 +19299,7 @@ wr_fs_else_1489.:
       R1 = DM(122, I5);
       F0 = F0 + F1;
       I12 = 0xbe7ab7;                        // return address - 1: wr_fs_ret_1491. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1491.;
 wr_fs_ret_1491.:
       R1 = DM(52, I5);                  // 1.0
@@ -19312,7 +19312,7 @@ wr_fs_ret_1491.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe7ad0;                        // return address - 1: wr_fs_ret_1492. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1492.;
 wr_fs_ret_1492.:
       F1 = PASS F0;
@@ -19341,7 +19341,7 @@ wr_fs_ret_1492.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe7b0c;                        // return address - 1: wr_fs_ret_1494. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_1494.;
 wr_fs_ret_1494.:
       F1 = PASS F0;
@@ -19367,7 +19367,7 @@ wr_fs_fi_1495.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe7b37;                        // return address - 1: wr_fs_ret_1496. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1496.;
 wr_fs_ret_1496.:
       F1 = PASS F0;
@@ -19383,7 +19383,7 @@ wr_fs_ret_1496.:
       R1 = DM(224, I5);
       F0 = F0 * F1;
       I12 = 0xbe7b55;                        // return address - 1: wr_fs_ret_1497. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1497.;
 wr_fs_ret_1497.:
       R1 = -0x3fc00000;                 // -3.0
@@ -19391,7 +19391,7 @@ wr_fs_ret_1497.:
       F1 = F1 * F2;
       F0 = F1 * F0;
       I12 = 0xbe7b64;                        // return address - 1: wr_fs_ret_1498. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1498.;
 wr_fs_ret_1498.:
       DM(238, I5) = R0;
@@ -19406,7 +19406,7 @@ wr_fs_ret_1498.:
       F0 = F0 + F1;
       DM(287, I5) = R0;
       I12 = 0xbe7b82;                        // return address - 1: wr_fs_ret_1499. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1499.;
 wr_fs_ret_1499.:
       DM(249, I5) = R0;
@@ -19421,7 +19421,7 @@ wr_fs_ret_1499.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbe7ba2;                        // return address - 1: wr_fs_ret_1500. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1500.;
 wr_fs_ret_1500.:
       DM(156, I5) = R0;
@@ -19448,14 +19448,14 @@ wr_fs_fi_1503.:
 wr_fs_else_1501.:
       R0 = DM(378, I5);
       I12 = 0xbe7bd2;                        // return address - 1: wr_fs_ret_1504. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1504.;
 wr_fs_ret_1504.:
       R1 = DM(156, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe7bdf;                        // return address - 1: wr_fs_ret_1505. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1505.;
 wr_fs_ret_1505.:
       F1 = PASS F0;
@@ -19468,7 +19468,7 @@ wr_fs_ret_1505.:
       R1 = 0x3f19999a;                  // 0.6000000238418579
       F0 = F1 + F0;
       I12 = 0xbe7bf9;                        // return address - 1: wr_fs_ret_1506. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1506.;
 wr_fs_ret_1506.:
       DM(256, I5) = R0;
@@ -19480,7 +19480,7 @@ wr_fs_ret_1506.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe7c12;                        // return address - 1: wr_fs_ret_1507. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1507.;
 wr_fs_ret_1507.:
       DM(130, I5) = R0;
@@ -19537,7 +19537,7 @@ wr_fs_rret_1508.:
       F1 = F2 + F1;
       F0 = F0 * F1;
       I12 = 0xbe7c89;                        // return address - 1: wr_fs_ret_1510. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1510.;
 wr_fs_ret_1510.:
       R1 = DM(382, I5);
@@ -19559,7 +19559,7 @@ wr_fs_rret_1511.:
       R1 = DM(280, I5);
       F0 = F0 * F1;
       I12 = 0xbe7cb5;                        // return address - 1: wr_fs_ret_1512. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1512.;
 wr_fs_ret_1512.:
       R1 = DM(203, I5);
@@ -19597,7 +19597,7 @@ wr_fs_ret_1512.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe7d04;                        // return address - 1: wr_fs_ret_1513. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1513.;
 wr_fs_ret_1513.:
       R1 = DM(52, I5);                  // 1.0
@@ -19619,7 +19619,7 @@ wr_fs_ret_1513.:
       DM(218, I5) = R0;
       R0 = DM(220, I5);
       I12 = 0xbe7d32;                        // return address - 1: wr_fs_ret_1514. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1514.;
 wr_fs_ret_1514.:
       R1 = 0x473b8000;                  // 48000.0
@@ -19632,7 +19632,7 @@ wr_fs_ret_1514.:
       R1 = DM(218, I5);
       F0 = F0 + F1;
       I12 = 0xbe7d4d;                        // return address - 1: wr_fs_ret_1515. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1515.;
 wr_fs_ret_1515.:
       R1 = DM(52, I5);                  // 1.0
@@ -19646,7 +19646,7 @@ wr_fs_ret_1515.:
       R1 = DM(180, I5);
       F0 = F0 + F1;
       I12 = 0xbe7d68;                        // return address - 1: wr_fs_ret_1517. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1517.;
 wr_fs_ret_1517.:
       R1 = DM(52, I5);                  // 1.0
@@ -19660,7 +19660,7 @@ wr_fs_else_1516.:
       R1 = DM(218, I5);
       F0 = F0 + F1;
       I12 = 0xbe7d7f;                        // return address - 1: wr_fs_ret_1518. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1518.;
 wr_fs_ret_1518.:
       R1 = DM(52, I5);                  // 1.0
@@ -19673,7 +19673,7 @@ wr_fs_ret_1518.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe7d98;                        // return address - 1: wr_fs_ret_1519. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1519.;
 wr_fs_ret_1519.:
       F1 = PASS F0;
@@ -19692,7 +19692,7 @@ wr_fs_ret_1519.:
       DM(216, I5) = R0;
       R0 = DM(171, I5);
       I12 = 0xbe7dc0;                        // return address - 1: wr_fs_ret_1520. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1520.;
 wr_fs_ret_1520.:
       R1 = DM(52, I5);                  // 1.0
@@ -19723,7 +19723,7 @@ wr_fs_ret_1520.:
       R1 = DM(220, I5);
       F0 = F0 * F1;
       I12 = 0xbe7dfc;                        // return address - 1: wr_fs_ret_1521. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1521.;
 wr_fs_ret_1521.:
       R1 = -0x3fc00000;                 // -3.0
@@ -19731,7 +19731,7 @@ wr_fs_ret_1521.:
       F1 = F1 * F2;
       F0 = F1 * F0;
       I12 = 0xbe7e0b;                        // return address - 1: wr_fs_ret_1522. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1522.;
 wr_fs_ret_1522.:
       DM(228, I5) = R0;
@@ -19769,7 +19769,7 @@ wr_fs_ret_1522.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbe7e5a;                        // return address - 1: wr_fs_ret_1523. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1523.;
 wr_fs_ret_1523.:
       R1 = -0x40800000;                 // -1.0
@@ -19777,7 +19777,7 @@ wr_fs_ret_1523.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe7e68;                        // return address - 1: wr_fs_ret_1524. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1524.;
 wr_fs_ret_1524.:
       DM(187, I5) = R0;
@@ -19804,7 +19804,7 @@ wr_fs_else_1509.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbe7e9e;                        // return address - 1: wr_fs_ret_1525. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1525.;
 wr_fs_ret_1525.:
       R1 = -0x40800000;                 // -1.0
@@ -19812,7 +19812,7 @@ wr_fs_ret_1525.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbe7eac;                        // return address - 1: wr_fs_ret_1526. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1526.;
 wr_fs_ret_1526.:
       DM(127, I5) = R0;
@@ -19830,7 +19830,7 @@ wr_fs_ret_1526.:
       F1 = F2 + F1;
       F0 = F0 * F1;
       I12 = 0xbe7ed1;                        // return address - 1: wr_fs_ret_1528. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1528.;
 wr_fs_ret_1528.:
       R1 = DM(55, I5);                  // the pool
@@ -19850,7 +19850,7 @@ wr_fs_ret_1528.:
       F1 = F2 + F1;
       F0 = F0 * F1;
       I12 = 0xbe7ef9;                        // return address - 1: wr_fs_ret_1529. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1529.;
 wr_fs_ret_1529.:
       R1 = DM(55, I5);                  // the pool
@@ -19870,7 +19870,7 @@ wr_fs_ret_1529.:
       F1 = F2 + F1;
       F0 = F0 * F1;
       I12 = 0xbe7f22;                        // return address - 1: wr_fs_ret_1530. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1530.;
 wr_fs_ret_1530.:
       R1 = DM(55, I5);                  // the pool
@@ -19890,7 +19890,7 @@ wr_fs_ret_1530.:
       F1 = F2 + F1;
       F0 = F0 * F1;
       I12 = 0xbe7f4a;                        // return address - 1: wr_fs_ret_1531. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1531.;
 wr_fs_ret_1531.:
       R1 = DM(55, I5);                  // the pool
@@ -19910,7 +19910,7 @@ wr_fs_ret_1531.:
       F1 = F2 + F1;
       F0 = F0 * F1;
       I12 = 0xbe7f73;                        // return address - 1: wr_fs_ret_1532. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1532.;
 wr_fs_ret_1532.:
       R1 = DM(55, I5);                  // the pool
@@ -19930,7 +19930,7 @@ wr_fs_ret_1532.:
       F1 = F2 + F1;
       F0 = F0 * F1;
       I12 = 0xbe7f9c;                        // return address - 1: wr_fs_ret_1533. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1533.;
 wr_fs_ret_1533.:
       R1 = DM(55, I5);                  // the pool
@@ -20190,7 +20190,7 @@ wr_fs_else_1557.:
 wr_fs_else_1556.:
       R0 = DM(286, I5);
       I12 = 0xbe8176;                        // return address - 1: wr_fs_ret_1558. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1558.;
 wr_fs_ret_1558.:
       R1 = DM(259, I5);
@@ -20216,7 +20216,7 @@ wr_fs_ret_1558.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
       F0 = F1 + F0;
       I12 = 0xbe81ab;                        // return address - 1: wr_fs_ret_1560. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1560.;
 wr_fs_ret_1560.:
       R1 = DM(382, I5);
@@ -20242,7 +20242,7 @@ wr_fs_else_1561.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe81e0;                        // return address - 1: wr_fs_ret_1564. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1564.;
 wr_fs_ret_1564.:
       R1 = DM(236, I5);
@@ -20355,7 +20355,7 @@ wr_fs_else_1559.:
       R1 = DM(188, I3);
       F0 = F0 * F1;
       I12 = 0xbe82ba;                        // return address - 1: wr_fs_ret_1572. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1572.;
 wr_fs_ret_1572.:
       R1 = DM(397, I5);
@@ -20394,7 +20394,7 @@ wr_fs_ret_1572.:
       R1 = 0x3a5a740e;                  // 0.0008333333535119891
       F0 = F0 * F1;
       I12 = 0xbe8308;                        // return address - 1: wr_fs_ret_1573. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1573.;
 wr_fs_ret_1573.:
       R1 = DM(61, I2);
@@ -20403,7 +20403,7 @@ wr_fs_ret_1573.:
       R1 = 0x41c80000;                  // 25.0
       F0 = MAX(F0, F1);
       I12 = 0xbe831a;                        // return address - 1: wr_fs_ret_1574. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1574.;
 wr_fs_ret_1574.:
       R1 = 0x473b8000;                  // 48000.0
@@ -20647,7 +20647,7 @@ wr_fs_fi_1593.:
       F0 = FLOAT R0 BY R12;
       DM(328, I5) = R0;
       I12 = 0xbe84eb;                        // return address - 1: wr_fs_ret_1594. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1594.;
 wr_fs_ret_1594.:
       DM(345, I5) = R0;
@@ -20662,7 +20662,7 @@ wr_fs_ret_1594.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe8509;                        // return address - 1: wr_fs_ret_1596. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_1596.;
 wr_fs_ret_1596.:
       F1 = PASS F0;
@@ -20705,7 +20705,7 @@ wr_fs_fi_1599.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe8553;                        // return address - 1: wr_fs_ret_1602. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_1602.;
 wr_fs_ret_1602.:
       F1 = PASS F0;
@@ -20720,7 +20720,7 @@ wr_fs_fi_1603.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F0 + F1;
       I12 = 0xbe8565;                        // return address - 1: wr_fs_ret_1604. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1604.;
 wr_fs_ret_1604.:
       DM(282, I5) = R0;
@@ -20867,7 +20867,7 @@ wr_fs_else_1600.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe86ca;                        // return address - 1: wr_fs_ret_1606. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_1606.;
 wr_fs_ret_1606.:
       F1 = PASS F0;
@@ -20880,7 +20880,7 @@ wr_fs_else_1605.:
 .GLOBAL wr_fs_fi_1607.;
 wr_fs_fi_1607.:
       I12 = 0xbe86d9;                        // return address - 1: wr_fs_ret_1608. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1608.;
 wr_fs_ret_1608.:
       DM(357, I5) = R0;
@@ -21116,7 +21116,7 @@ wr_fs_loop_1621.:
 wr_fs_loop_1622.:
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe88b1;                        // return address - 1: wr_fs_ret_1623. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1623.;
 wr_fs_ret_1623.:
       DM(294, I5) = R0;
@@ -21136,7 +21136,7 @@ wr_fs_ret_1623.:
       DM(309, I5) = R0;
       R0 = DM(312, I5);
       I12 = 0xbe88db;                        // return address - 1: wr_fs_ret_1625. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1625.;
 wr_fs_ret_1625.:
       R1 = 0x41000000;                  // 8.0
@@ -21149,7 +21149,7 @@ wr_fs_ret_1625.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe88f4;                        // return address - 1: wr_fs_ret_1627. - 1
-      JUMP 0xbf1003;                         // -> wr_fs_sub_rsqrt.
+      JUMP 0xbf100f;                         // -> wr_fs_sub_rsqrt.
 .GLOBAL wr_fs_ret_1627.;
 wr_fs_ret_1627.:
       F1 = PASS F0;
@@ -21167,7 +21167,7 @@ wr_fs_fi_1628.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe890e;                        // return address - 1: wr_fs_ret_1629. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1629.;
 wr_fs_ret_1629.:
       F1 = PASS F0;
@@ -21181,7 +21181,7 @@ wr_fs_ret_1629.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbe8929;                        // return address - 1: wr_fs_ret_1630. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1630.;
 wr_fs_ret_1630.:
       F1 = PASS F0;
@@ -21449,7 +21449,7 @@ wr_fs_else_1647.:
       IF EQ JUMP 0xbe8b2e;                   // -> wr_fs_else_1649.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe8b03;                        // return address - 1: wr_fs_ret_1650. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1650.;
 wr_fs_ret_1650.:
       R1 = DM(54, I5);                  // 0.5
@@ -21464,7 +21464,7 @@ wr_fs_ret_1650.:
       IF GE JUMP 0xbe8b2e;                   // -> wr_fs_else_1651.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe8b1d;                        // return address - 1: wr_fs_ret_1652. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1652.;
 wr_fs_ret_1652.:
       R1 = 0x3eb33333;                  // 0.3499999940395355
@@ -21750,7 +21750,7 @@ wr_fs_rret_1662.:
       R1 = DM(287, I5);
       F0 = F0 * F1;
       I12 = 0xbe8d65;                        // return address - 1: wr_fs_ret_1663. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_1663.;
 wr_fs_ret_1663.:
       R1 = DM(249, I5);
@@ -21808,7 +21808,7 @@ wr_fs_rret_1665.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe8de3;                        // return address - 1: wr_fs_ret_1666. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1666.;
 wr_fs_ret_1666.:
       DM(340, I5) = R0;
@@ -21840,7 +21840,7 @@ wr_fs_else_1664.:
       IF LE JUMP 0xbe8e4d;                   // -> wr_fs_else_1667.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe8e22;                        // return address - 1: wr_fs_ret_1668. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1668.;
 wr_fs_ret_1668.:
       R1 = DM(54, I5);                  // 0.5
@@ -22037,7 +22037,7 @@ wr_fs_else_1659.:
       COMP(R0, R1);
       IF NE JUMP 0xbe9327;                   // -> wr_fs_else_1677.
       I12 = 0xbe8f99;                        // return address - 1: wr_fs_ret_1678. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1678.;
 wr_fs_ret_1678.:
       R12 = DM(54, I5);                 // 0.5
@@ -22065,7 +22065,7 @@ wr_fs_ret_1678.:
       COMP(F1, F2);
       IF GE JUMP 0xbe9003;                   // -> wr_fs_else_1679.
       I12 = 0xbe8fcd;                        // return address - 1: wr_fs_ret_1680. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1680.;
 wr_fs_ret_1680.:
       R12 = DM(54, I5);                 // 0.5
@@ -22132,7 +22132,7 @@ wr_fs_else_1679.:
       COMP(F1, F2);
       IF EQ JUMP 0xbe9079;                   // -> wr_fs_else_1682.
       I12 = 0xbe9056;                        // return address - 1: wr_fs_ret_1683. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1683.;
 wr_fs_ret_1683.:
       R12 = DM(54, I5);                 // 0.5
@@ -22186,7 +22186,7 @@ wr_fs_else_1681.:
       COMP(F1, F2);
       IF EQ JUMP 0xbe90e8;                   // -> wr_fs_else_1685.
       I12 = 0xbe90c5;                        // return address - 1: wr_fs_ret_1686. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1686.;
 wr_fs_ret_1686.:
       R12 = DM(54, I5);                 // 0.5
@@ -22240,7 +22240,7 @@ wr_fs_else_1684.:
       COMP(F1, F2);
       IF EQ JUMP 0xbe9157;                   // -> wr_fs_else_1688.
       I12 = 0xbe9134;                        // return address - 1: wr_fs_ret_1689. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1689.;
 wr_fs_ret_1689.:
       R12 = DM(54, I5);                 // 0.5
@@ -22294,7 +22294,7 @@ wr_fs_else_1687.:
       COMP(F1, F2);
       IF EQ JUMP 0xbe91c6;                   // -> wr_fs_else_1691.
       I12 = 0xbe91a3;                        // return address - 1: wr_fs_ret_1692. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1692.;
 wr_fs_ret_1692.:
       R12 = DM(54, I5);                 // 0.5
@@ -22348,7 +22348,7 @@ wr_fs_else_1690.:
       COMP(F1, F2);
       IF EQ JUMP 0xbe9235;                   // -> wr_fs_else_1694.
       I12 = 0xbe9212;                        // return address - 1: wr_fs_ret_1695. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1695.;
 wr_fs_ret_1695.:
       R12 = DM(54, I5);                 // 0.5
@@ -22402,7 +22402,7 @@ wr_fs_else_1693.:
       COMP(F1, F2);
       IF EQ JUMP 0xbe92a4;                   // -> wr_fs_else_1697.
       I12 = 0xbe9281;                        // return address - 1: wr_fs_ret_1698. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1698.;
 wr_fs_ret_1698.:
       R12 = DM(54, I5);                 // 0.5
@@ -22654,7 +22654,7 @@ wr_fs_rret_1706.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbe949c;                        // return address - 1: wr_fs_ret_1707. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1707.;
 wr_fs_ret_1707.:
       DM(340, I5) = R0;
@@ -22675,7 +22675,7 @@ wr_fs_else_1705.:
       IF EQ JUMP 0xbe95d0;                   // -> wr_fs_else_1708.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe94c3;                        // return address - 1: wr_fs_ret_1709. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1709.;
 wr_fs_ret_1709.:
       R1 = DM(54, I5);                  // 0.5
@@ -22694,7 +22694,7 @@ wr_fs_ret_1709.:
       IF GE JUMP 0xbe95cd;                   // -> wr_fs_else_1710.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe94e3;                        // return address - 1: wr_fs_ret_1711. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1711.;
 wr_fs_ret_1711.:
       R1 = DM(54, I5);                  // 0.5
@@ -22706,7 +22706,7 @@ wr_fs_ret_1711.:
       DM(252, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe94f7;                        // return address - 1: wr_fs_ret_1712. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1712.;
 wr_fs_ret_1712.:
       R1 = DM(54, I5);                  // 0.5
@@ -22724,7 +22724,7 @@ wr_fs_ret_1712.:
 wr_fs_else_1713.:
       R0 = DM(329, I5);
       I12 = 0xbe9516;                        // return address - 1: wr_fs_ret_1715. - 1
-      JUMP 0xbf1309;                         // -> wr_fs_sub_s_log2.
+      JUMP 0xbf1315;                         // -> wr_fs_sub_s_log2.
 .GLOBAL wr_fs_ret_1715.;
 wr_fs_ret_1715.:
       R1 = DM(314, I5);
@@ -22734,7 +22734,7 @@ wr_fs_ret_1715.:
       F1 = F2 + F1;
       F0 = F1 * F0;
       I12 = 0xbe9529;                        // return address - 1: wr_fs_ret_1716. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1716.;
 wr_fs_ret_1716.:
       DM(326, I5) = R0;
@@ -22755,7 +22755,7 @@ wr_fs_fi_1714.:
       DM(260, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe954f;                        // return address - 1: wr_fs_ret_1717. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1717.;
 wr_fs_ret_1717.:
       R1 = 0x3b83126f;                  // 0.004000000189989805
@@ -22769,7 +22769,7 @@ wr_fs_ret_1717.:
       DM(142, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe956b;                        // return address - 1: wr_fs_ret_1718. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1718.;
 wr_fs_ret_1718.:
       R1 = DM(54, I5);                  // 0.5
@@ -22826,7 +22826,7 @@ wr_fs_else_1708.:
       IF GE JUMP 0xbe96e9;                   // -> wr_fs_else_1720.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe95df;                        // return address - 1: wr_fs_ret_1721. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1721.;
 wr_fs_ret_1721.:
       R1 = DM(54, I5);                  // 0.5
@@ -22845,7 +22845,7 @@ wr_fs_ret_1721.:
       IF GE JUMP 0xbe96e9;                   // -> wr_fs_else_1722.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe95ff;                        // return address - 1: wr_fs_ret_1723. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1723.;
 wr_fs_ret_1723.:
       R1 = DM(54, I5);                  // 0.5
@@ -22857,7 +22857,7 @@ wr_fs_ret_1723.:
       DM(252, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe9613;                        // return address - 1: wr_fs_ret_1724. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1724.;
 wr_fs_ret_1724.:
       R1 = DM(54, I5);                  // 0.5
@@ -22875,7 +22875,7 @@ wr_fs_ret_1724.:
 wr_fs_else_1725.:
       R0 = DM(329, I5);
       I12 = 0xbe9632;                        // return address - 1: wr_fs_ret_1727. - 1
-      JUMP 0xbf1309;                         // -> wr_fs_sub_s_log2.
+      JUMP 0xbf1315;                         // -> wr_fs_sub_s_log2.
 .GLOBAL wr_fs_ret_1727.;
 wr_fs_ret_1727.:
       R1 = DM(314, I5);
@@ -22885,7 +22885,7 @@ wr_fs_ret_1727.:
       F1 = F2 + F1;
       F0 = F1 * F0;
       I12 = 0xbe9645;                        // return address - 1: wr_fs_ret_1728. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1728.;
 wr_fs_ret_1728.:
       DM(326, I5) = R0;
@@ -22906,7 +22906,7 @@ wr_fs_fi_1726.:
       DM(260, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe966b;                        // return address - 1: wr_fs_ret_1729. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1729.;
 wr_fs_ret_1729.:
       R1 = 0x3b83126f;                  // 0.004000000189989805
@@ -22920,7 +22920,7 @@ wr_fs_ret_1729.:
       DM(142, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe9687;                        // return address - 1: wr_fs_ret_1730. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1730.;
 wr_fs_ret_1730.:
       R1 = DM(54, I5);                  // 0.5
@@ -23035,7 +23035,7 @@ wr_fs_else_1733.:
       R1 = DM(100, I3);
       F0 = F0 * F1;
       I12 = 0xbe976b;                        // return address - 1: wr_fs_ret_1734. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1734.;
 wr_fs_ret_1734.:
       R1 = DM(96, I3);
@@ -23380,7 +23380,7 @@ wr_fs_fi_1755.:
       F5 = F5 * F6;
       F0 = PASS F5;
       I12 = 0xbe99e7;                        // return address - 1: wr_fs_ret_1759. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_1759.;
 wr_fs_ret_1759.:
       R6 = DM(347, I5);
@@ -23456,7 +23456,7 @@ wr_fs_else_1739.:
       COMP(R0, R1);
       IF NE JUMP 0xbe9abd;                   // -> wr_fs_else_1763.
       I12 = 0xbe9a6e;                        // return address - 1: wr_fs_ret_1764. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1764.;
 wr_fs_ret_1764.:
       R12 = DM(54, I5);                 // 0.5
@@ -23510,7 +23510,7 @@ wr_fs_else_1763.:
       COMP(F0, F1);
       IF LE JUMP 0xbe9b29;                   // -> wr_fs_else_1767.
       I12 = 0xbe9ad2;                        // return address - 1: wr_fs_ret_1768. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1768.;
 wr_fs_ret_1768.:
       R12 = DM(54, I5);                 // 0.5
@@ -23689,7 +23689,7 @@ wr_fs_else_1770.:
       R1 = 0x3f19999a;                  // 0.6000000238418579
       F0 = F0 * F1;
       I12 = 0xbe9c2c;                        // return address - 1: wr_fs_ret_1771. - 1
-      JUMP 0xbf0f01;                         // -> wr_fs_sub_tanh.
+      JUMP 0xbf0f0d;                         // -> wr_fs_sub_tanh.
 .GLOBAL wr_fs_ret_1771.;
 wr_fs_ret_1771.:
       R1 = DM(121, I5);
@@ -23927,7 +23927,7 @@ wr_fs_rt_s_wand1_1.:
       DM(401, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe9e32;                        // return address - 1: wr_fs_ret_1780. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1780.;
 wr_fs_ret_1780.:
       R1 = 0x3fd9999a;                  // 1.7000000476837158
@@ -24005,13 +24005,13 @@ wr_fs_else_1785.:
 wr_fs_else_1788.:
       R0 = DM(329, I5);
       I12 = 0xbe9ec4;                        // return address - 1: wr_fs_ret_1790. - 1
-      JUMP 0xbf1309;                         // -> wr_fs_sub_s_log2.
+      JUMP 0xbf1315;                         // -> wr_fs_sub_s_log2.
 .GLOBAL wr_fs_ret_1790.;
 wr_fs_ret_1790.:
       R1 = 0x40200000;                  // 2.5
       F0 = F1 * F0;
       I12 = 0xbe9ecf;                        // return address - 1: wr_fs_ret_1791. - 1
-      JUMP 0xbf0ec0;                         // -> wr_fs_sub_exp2.
+      JUMP 0xbf0ecc;                         // -> wr_fs_sub_exp2.
 .GLOBAL wr_fs_ret_1791.;
 wr_fs_ret_1791.:
       DM(168, I5) = R0;
@@ -24045,7 +24045,7 @@ wr_fs_rt_s_wand2_1.:
       DM(401, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe9efb;                        // return address - 1: wr_fs_ret_1793. - 1
-      JUMP 0xbf1375;                         // -> wr_fs_sub_sb2.
+      JUMP 0xbf1381;                         // -> wr_fs_sub_sb2.
 .GLOBAL wr_fs_ret_1793.;
 wr_fs_ret_1793.:
       R1 = 0x3fd9999a;                  // 1.7000000476837158
@@ -24083,7 +24083,7 @@ wr_fs_rt_s_wand1_8.:
       DM(401, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbe9f41;                        // return address - 1: wr_fs_ret_1794. - 1
-      JUMP 0xbf12e6;                         // -> wr_fs_sub_sb1.
+      JUMP 0xbf12f2;                         // -> wr_fs_sub_sb1.
 .GLOBAL wr_fs_ret_1794.;
 wr_fs_ret_1794.:
       R1 = 0x3fd9999a;                  // 1.7000000476837158
@@ -24179,7 +24179,7 @@ wr_fs_rt_s_bowk.:
 wr_fs_else_1797.:
       R0 = DM(134, I5);
       I12 = 0xbe9ff7;                        // return address - 1: wr_fs_ret_1799. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1799.;
 wr_fs_ret_1799.:
       DM(146, I5) = R0;
@@ -24375,7 +24375,7 @@ wr_fs_else_1805.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbea175;                        // return address - 1: wr_fs_ret_1808. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_1808.;
 wr_fs_ret_1808.:
       R1 = 0x43dc0000;                  // 440.0
@@ -24398,19 +24398,19 @@ wr_fs_else_1809.:
       DM(222, I5) = R0;
       R0 = DM(11, I2);
       I12 = 0xbea1a3;                        // return address - 1: wr_fs_ret_1810. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_1810.;
 wr_fs_ret_1810.:
       DM(218, I5) = R0;
       R0 = DM(12, I2);
       I12 = 0xbea1ae;                        // return address - 1: wr_fs_ret_1811. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_1811.;
 wr_fs_ret_1811.:
       DM(219, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea1b8;                        // return address - 1: wr_fs_ret_1812. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1812.;
 wr_fs_ret_1812.:
       R1 = DM(59, I5);                  // 2.0
@@ -24420,7 +24420,7 @@ wr_fs_ret_1812.:
       DM(385, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea1c8;                        // return address - 1: wr_fs_ret_1813. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1813.;
 wr_fs_ret_1813.:
       R1 = DM(59, I5);                  // 2.0
@@ -24430,7 +24430,7 @@ wr_fs_ret_1813.:
       DM(386, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea1d8;                        // return address - 1: wr_fs_ret_1814. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1814.;
 wr_fs_ret_1814.:
       R1 = DM(59, I5);                  // 2.0
@@ -24440,7 +24440,7 @@ wr_fs_ret_1814.:
       DM(387, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea1e8;                        // return address - 1: wr_fs_ret_1815. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1815.;
 wr_fs_ret_1815.:
       R1 = DM(59, I5);                  // 2.0
@@ -24450,7 +24450,7 @@ wr_fs_ret_1815.:
       DM(388, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea1f8;                        // return address - 1: wr_fs_ret_1816. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1816.;
 wr_fs_ret_1816.:
       R1 = DM(59, I5);                  // 2.0
@@ -24460,7 +24460,7 @@ wr_fs_ret_1816.:
       DM(389, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea208;                        // return address - 1: wr_fs_ret_1817. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1817.;
 wr_fs_ret_1817.:
       R1 = DM(59, I5);                  // 2.0
@@ -24470,7 +24470,7 @@ wr_fs_ret_1817.:
       DM(390, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea218;                        // return address - 1: wr_fs_ret_1818. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1818.;
 wr_fs_ret_1818.:
       R1 = DM(59, I5);                  // 2.0
@@ -24480,7 +24480,7 @@ wr_fs_ret_1818.:
       DM(391, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea228;                        // return address - 1: wr_fs_ret_1819. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1819.;
 wr_fs_ret_1819.:
       R1 = DM(59, I5);                  // 2.0
@@ -24490,7 +24490,7 @@ wr_fs_ret_1819.:
       DM(392, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea238;                        // return address - 1: wr_fs_ret_1820. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1820.;
 wr_fs_ret_1820.:
       R1 = DM(59, I5);                  // 2.0
@@ -24500,7 +24500,7 @@ wr_fs_ret_1820.:
       DM(393, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea248;                        // return address - 1: wr_fs_ret_1821. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1821.;
 wr_fs_ret_1821.:
       R1 = DM(59, I5);                  // 2.0
@@ -24510,7 +24510,7 @@ wr_fs_ret_1821.:
       DM(394, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea258;                        // return address - 1: wr_fs_ret_1822. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1822.;
 wr_fs_ret_1822.:
       R1 = DM(59, I5);                  // 2.0
@@ -24520,7 +24520,7 @@ wr_fs_ret_1822.:
       DM(395, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea268;                        // return address - 1: wr_fs_ret_1823. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1823.;
 wr_fs_ret_1823.:
       R1 = DM(59, I5);                  // 2.0
@@ -24530,7 +24530,7 @@ wr_fs_ret_1823.:
       DM(396, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea278;                        // return address - 1: wr_fs_ret_1824. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1824.;
 wr_fs_ret_1824.:
       R1 = DM(59, I5);                  // 2.0
@@ -24540,7 +24540,7 @@ wr_fs_ret_1824.:
       DM(397, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea288;                        // return address - 1: wr_fs_ret_1825. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1825.;
 wr_fs_ret_1825.:
       R1 = DM(59, I5);                  // 2.0
@@ -24550,7 +24550,7 @@ wr_fs_ret_1825.:
       DM(398, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea298;                        // return address - 1: wr_fs_ret_1826. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1826.;
 wr_fs_ret_1826.:
       R1 = DM(59, I5);                  // 2.0
@@ -24560,7 +24560,7 @@ wr_fs_ret_1826.:
       DM(399, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea2a8;                        // return address - 1: wr_fs_ret_1827. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1827.;
 wr_fs_ret_1827.:
       R1 = DM(59, I5);                  // 2.0
@@ -24570,7 +24570,7 @@ wr_fs_ret_1827.:
       DM(400, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea2b8;                        // return address - 1: wr_fs_ret_1828. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1828.;
 wr_fs_ret_1828.:
       R1 = DM(59, I5);                  // 2.0
@@ -24580,7 +24580,7 @@ wr_fs_ret_1828.:
       DM(401, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea2c8;                        // return address - 1: wr_fs_ret_1829. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1829.;
 wr_fs_ret_1829.:
       R1 = DM(59, I5);                  // 2.0
@@ -24590,7 +24590,7 @@ wr_fs_ret_1829.:
       DM(402, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea2d8;                        // return address - 1: wr_fs_ret_1830. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1830.;
 wr_fs_ret_1830.:
       R1 = DM(59, I5);                  // 2.0
@@ -24600,7 +24600,7 @@ wr_fs_ret_1830.:
       DM(403, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea2e8;                        // return address - 1: wr_fs_ret_1831. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1831.;
 wr_fs_ret_1831.:
       R1 = DM(59, I5);                  // 2.0
@@ -24610,7 +24610,7 @@ wr_fs_ret_1831.:
       DM(404, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea2f8;                        // return address - 1: wr_fs_ret_1832. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1832.;
 wr_fs_ret_1832.:
       R1 = DM(59, I5);                  // 2.0
@@ -24620,7 +24620,7 @@ wr_fs_ret_1832.:
       DM(405, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea308;                        // return address - 1: wr_fs_ret_1833. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1833.;
 wr_fs_ret_1833.:
       R1 = DM(59, I5);                  // 2.0
@@ -24630,7 +24630,7 @@ wr_fs_ret_1833.:
       DM(406, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea318;                        // return address - 1: wr_fs_ret_1834. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1834.;
 wr_fs_ret_1834.:
       R1 = DM(59, I5);                  // 2.0
@@ -24640,7 +24640,7 @@ wr_fs_ret_1834.:
       DM(407, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea328;                        // return address - 1: wr_fs_ret_1835. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1835.;
 wr_fs_ret_1835.:
       R1 = DM(59, I5);                  // 2.0
@@ -24650,7 +24650,7 @@ wr_fs_ret_1835.:
       DM(408, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea338;                        // return address - 1: wr_fs_ret_1836. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1836.;
 wr_fs_ret_1836.:
       R1 = DM(59, I5);                  // 2.0
@@ -24660,7 +24660,7 @@ wr_fs_ret_1836.:
       DM(409, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea348;                        // return address - 1: wr_fs_ret_1837. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1837.;
 wr_fs_ret_1837.:
       R1 = DM(59, I5);                  // 2.0
@@ -24670,7 +24670,7 @@ wr_fs_ret_1837.:
       DM(410, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea358;                        // return address - 1: wr_fs_ret_1838. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1838.;
 wr_fs_ret_1838.:
       R1 = DM(59, I5);                  // 2.0
@@ -24680,7 +24680,7 @@ wr_fs_ret_1838.:
       DM(411, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea368;                        // return address - 1: wr_fs_ret_1839. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1839.;
 wr_fs_ret_1839.:
       R1 = DM(59, I5);                  // 2.0
@@ -24690,7 +24690,7 @@ wr_fs_ret_1839.:
       DM(412, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea378;                        // return address - 1: wr_fs_ret_1840. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1840.;
 wr_fs_ret_1840.:
       R1 = DM(59, I5);                  // 2.0
@@ -24700,7 +24700,7 @@ wr_fs_ret_1840.:
       DM(413, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea388;                        // return address - 1: wr_fs_ret_1841. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1841.;
 wr_fs_ret_1841.:
       R1 = DM(59, I5);                  // 2.0
@@ -24710,7 +24710,7 @@ wr_fs_ret_1841.:
       DM(414, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea398;                        // return address - 1: wr_fs_ret_1842. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1842.;
 wr_fs_ret_1842.:
       R1 = DM(59, I5);                  // 2.0
@@ -24720,7 +24720,7 @@ wr_fs_ret_1842.:
       DM(415, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbea3a8;                        // return address - 1: wr_fs_ret_1843. - 1
-      JUMP 0xbf1398;                         // -> wr_fs_sub_lnz.
+      JUMP 0xbf13a4;                         // -> wr_fs_sub_lnz.
 .GLOBAL wr_fs_ret_1843.;
 wr_fs_ret_1843.:
       R1 = DM(59, I5);                  // 2.0
@@ -24766,7 +24766,7 @@ wr_fs_else_1845.:
       DM(189, I5) = R0;
       R0 = DM(120, I5);
       I12 = 0xbea400;                        // return address - 1: wr_fs_ret_1846. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_1846.;
 wr_fs_ret_1846.:
       R1 = 0x473b8000;                  // 48000.0
@@ -26442,7 +26442,7 @@ wr_fs_rt_l_phase.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbeb100;                        // return address - 1: wr_fs_ret_2013. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2013.;
 wr_fs_ret_2013.:
       R1 = DM(155, I5);
@@ -26620,7 +26620,7 @@ wr_fs_else_2028.:
 wr_fs_fi_2027.:
       R0 = DM(169, I5);
       I12 = 0xbeb235;                        // return address - 1: wr_fs_ret_2029. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2029.;
 wr_fs_ret_2029.:
       R1 = DM(54, I5);                  // 0.5
@@ -26630,7 +26630,7 @@ wr_fs_ret_2029.:
       R1 = DM(169, I5);
       F0 = F0 - F1;
       I12 = 0xbeb248;                        // return address - 1: wr_fs_ret_2030. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2030.;
 wr_fs_ret_2030.:
       R1 = DM(54, I5);                  // 0.5
@@ -26832,7 +26832,7 @@ wr_fs_fi_2049.:
       IF NE JUMP 0xbeb3a2;                   // -> wr_fs_else_2050.
       R0 = DM(192, I5);
       I12 = 0xbeb39e;                        // return address - 1: wr_fs_ret_2051. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2051.;
 wr_fs_ret_2051.:
       DM(244, I5) = R0;
@@ -27019,7 +27019,7 @@ wr_fs_rt_l_slope.:
       R1 = 0x41600000;                  // 14.0
       F0 = F0 * F1;
       I12 = 0xbeb4eb;                        // return address - 1: wr_fs_ret_2071. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2071.;
 wr_fs_ret_2071.:
       R1 = 0x3a03126f;                  // 0.0005000000237487257
@@ -27034,7 +27034,7 @@ wr_fs_ret_2071.:
 wr_fs_else_2072.:
       R0 = DM(250, I5);
       I12 = 0xbeb509;                        // return address - 1: wr_fs_ret_2073. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2073.;
 wr_fs_ret_2073.:
       R1 = -0x48513cc2;                 // -2.0833333110203966e-05
@@ -27042,7 +27042,7 @@ wr_fs_ret_2073.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbeb518;                        // return address - 1: wr_fs_ret_2074. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2074.;
 wr_fs_ret_2074.:
       R1 = DM(52, I5);                  // 1.0
@@ -27052,7 +27052,7 @@ wr_fs_ret_2074.:
       R1 = 0x41600000;                  // 14.0
       F0 = F0 * F1;
       I12 = 0xbeb52c;                        // return address - 1: wr_fs_ret_2075. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2075.;
 wr_fs_ret_2075.:
       R1 = 0x3a03126f;                  // 0.0005000000237487257
@@ -27067,7 +27067,7 @@ wr_fs_ret_2075.:
 wr_fs_else_2076.:
       R0 = DM(250, I5);
       I12 = 0xbeb54a;                        // return address - 1: wr_fs_ret_2077. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2077.;
 wr_fs_ret_2077.:
       R1 = -0x48513cc2;                 // -2.0833333110203966e-05
@@ -27075,7 +27075,7 @@ wr_fs_ret_2077.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbeb559;                        // return address - 1: wr_fs_ret_2078. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2078.;
 wr_fs_ret_2078.:
       R1 = DM(52, I5);                  // 1.0
@@ -27106,7 +27106,7 @@ wr_fs_loop_2079.:
       R1 = DM(63, I5);                  // 4.0
       F0 = F0 * F1;
       I12 = 0xbeb59a;                        // return address - 1: wr_fs_ret_2081. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2081.;
 wr_fs_ret_2081.:
       DM(215, I5) = R0;
@@ -27342,7 +27342,7 @@ wr_fs_rt_l_cycle.:
       R1 = 0x41880000;                  // 17.0
       F0 = F0 * F1;
       I12 = 0xbeb727;                        // return address - 1: wr_fs_ret_2109. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2109.;
 wr_fs_ret_2109.:
       R1 = 0x3ca3d70a;                  // 0.019999999552965164
@@ -27372,7 +27372,7 @@ wr_fs_else_2112.:
 wr_fs_fi_2111.:
       R0 = DM(169, I5);
       I12 = 0xbeb761;                        // return address - 1: wr_fs_ret_2113. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2113.;
 wr_fs_ret_2113.:
       DM(202, I5) = R0;
@@ -27380,7 +27380,7 @@ wr_fs_ret_2113.:
       R1 = DM(169, I5);
       F0 = F0 - F1;
       I12 = 0xbeb770;                        // return address - 1: wr_fs_ret_2114. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2114.;
 wr_fs_ret_2114.:
       DM(203, I5) = R0;
@@ -27405,7 +27405,7 @@ wr_fs_loop_2115.:
       R1 = 0x40a00000;                  // 5.0
       F0 = F0 * F1;
       I12 = 0xbeb7a5;                        // return address - 1: wr_fs_ret_2117. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2117.;
 wr_fs_ret_2117.:
       R1 = DM(124, I5);
@@ -27560,7 +27560,7 @@ wr_fs_rt_l_filt.:
       R1 = 0x41200000;                  // 10.0
       F0 = F0 * F1;
       I12 = 0xbeb8a4;                        // return address - 1: wr_fs_ret_2132. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2132.;
 wr_fs_ret_2132.:
       R1 = 0x41a00000;                  // 20.0
@@ -27605,7 +27605,7 @@ wr_fs_fi_2134.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbeb8fe;                        // return address - 1: wr_fs_ret_2136. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_2136.;
 wr_fs_ret_2136.:
       DM(126, I5) = R0;
@@ -27632,14 +27632,14 @@ wr_fs_fi_2139.:
 wr_fs_else_2137.:
       R0 = DM(240, I5);
       I12 = 0xbeb92e;                        // return address - 1: wr_fs_ret_2140. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_2140.;
 wr_fs_ret_2140.:
       R1 = DM(126, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbeb93b;                        // return address - 1: wr_fs_ret_2141. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2141.;
 wr_fs_ret_2141.:
       F1 = PASS F0;
@@ -27656,7 +27656,7 @@ wr_fs_ret_2141.:
       F1 = F1 * F2;
       F0 = F0 + F1;
       I12 = 0xbeb95c;                        // return address - 1: wr_fs_ret_2142. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2142.;
 wr_fs_ret_2142.:
       DM(136, I5) = R0;
@@ -27690,7 +27690,7 @@ wr_fs_loop_2143.:
       R1 = 0x40a00000;                  // 5.0
       F0 = F0 * F1;
       I12 = 0xbeb9a7;                        // return address - 1: wr_fs_ret_2146. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2146.;
 wr_fs_ret_2146.:
       R1 = DM(124, I5);
@@ -27723,7 +27723,7 @@ wr_fs_fi_2148.:
       R1 = 0x3fc90fdb;                  // 1.5707963705062866
       F0 = F0 + F1;
       I12 = 0xbeb9e6;                        // return address - 1: wr_fs_ret_2150. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_2150.;
 wr_fs_ret_2150.:
       DM(126, I5) = R0;
@@ -27750,14 +27750,14 @@ wr_fs_fi_2153.:
 wr_fs_else_2151.:
       R0 = DM(240, I5);
       I12 = 0xbeba16;                        // return address - 1: wr_fs_ret_2154. - 1
-      JUMP 0xbf125f;                         // -> wr_fs_sub_o_sinf.
+      JUMP 0xbf126b;                         // -> wr_fs_sub_o_sinf.
 .GLOBAL wr_fs_ret_2154.;
 wr_fs_ret_2154.:
       R1 = DM(126, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbeba23;                        // return address - 1: wr_fs_ret_2155. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2155.;
 wr_fs_ret_2155.:
       F1 = PASS F0;
@@ -27775,7 +27775,7 @@ wr_fs_ret_2155.:
       F1 = F1 * F2;
       F0 = F0 + F1;
       I12 = 0xbeba43;                        // return address - 1: wr_fs_ret_2156. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2156.;
 wr_fs_ret_2156.:
       DM(9, I3) = R0;
@@ -28038,7 +28038,7 @@ wr_fs_loop_2171.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 * F1;
       I12 = 0xbebc44;                        // return address - 1: wr_fs_ret_2172. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2172.;
 wr_fs_ret_2172.:
       DM(0, I0) = R0;
@@ -28257,7 +28257,7 @@ wr_fs_rt_l_hold.:
       R1 = 0x41600000;                  // 14.0
       F0 = F0 * F1;
       I12 = 0xbebddd;                        // return address - 1: wr_fs_ret_2193. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2193.;
 wr_fs_ret_2193.:
       R1 = 0x3a03126f;                  // 0.0005000000237487257
@@ -28272,7 +28272,7 @@ wr_fs_ret_2193.:
 wr_fs_else_2194.:
       R0 = DM(250, I5);
       I12 = 0xbebdfb;                        // return address - 1: wr_fs_ret_2195. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2195.;
 wr_fs_ret_2195.:
       R1 = -0x48513cc2;                 // -2.0833333110203966e-05
@@ -28280,7 +28280,7 @@ wr_fs_ret_2195.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbebe0a;                        // return address - 1: wr_fs_ret_2196. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2196.;
 wr_fs_ret_2196.:
       R1 = DM(52, I5);                  // 1.0
@@ -28295,7 +28295,7 @@ wr_fs_else_2192.:
       F0 = F1 + F0;
       DM(176, I5) = R0;
       I12 = 0xbebe25;                        // return address - 1: wr_fs_ret_2197. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2197.;
 wr_fs_ret_2197.:
       DM(204, I5) = R0;
@@ -28433,7 +28433,7 @@ wr_fs_rt_l_modes.:
 wr_fs_else_2207.:
       R0 = DM(191, I5);
       I12 = 0xbebf24;                        // return address - 1: wr_fs_ret_2208. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2208.;
 wr_fs_ret_2208.:
       R1 = DM(155, I5);
@@ -28447,7 +28447,7 @@ wr_fs_ret_2208.:
       R1 = 0x41400000;                  // 12.0
       F0 = F0 * F1;
       I12 = 0xbebf42;                        // return address - 1: wr_fs_ret_2209. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2209.;
 wr_fs_ret_2209.:
       R1 = 0x3b03126f;                  // 0.0020000000949949026
@@ -28469,14 +28469,14 @@ wr_fs_ret_2209.:
       R1 = R1 - R1;                     // 0.0
       F0 = F0 * F1;
       I12 = 0xbebf6f;                        // return address - 1: wr_fs_ret_2211. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2211.;
 wr_fs_ret_2211.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbebf7d;                        // return address - 1: wr_fs_ret_2212. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2212.;
 wr_fs_ret_2212.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -28486,7 +28486,7 @@ wr_fs_ret_2212.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbebf8f;                        // return address - 1: wr_fs_ret_2213. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2213.;
 wr_fs_ret_2213.:
       DM(206, I5) = R0;
@@ -28498,7 +28498,7 @@ wr_fs_ret_2213.:
       R1 = R1 - R1;                     // 0.0
       F0 = F0 * F1;
       I12 = 0xbebfa5;                        // return address - 1: wr_fs_ret_2214. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2214.;
 wr_fs_ret_2214.:
       R1 = DM(54, I5);                  // 0.5
@@ -28533,7 +28533,7 @@ wr_fs_else_2217.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbebfe9;                        // return address - 1: wr_fs_ret_2219. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2219.;
 wr_fs_ret_2219.:
       R1 = DM(59, I5);                  // 2.0
@@ -28549,7 +28549,7 @@ wr_fs_ret_2219.:
       DM(418, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec00b;                        // return address - 1: wr_fs_ret_2220. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2220.;
 wr_fs_ret_2220.:
       R1 = DM(151, I5);
@@ -28571,14 +28571,14 @@ wr_fs_fi_2216.:
       R1 = 0x3f2c32e6;                  // 0.6726516485214233
       F0 = F0 * F1;
       I12 = 0xbec031;                        // return address - 1: wr_fs_ret_2221. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2221.;
 wr_fs_ret_2221.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec03f;                        // return address - 1: wr_fs_ret_2222. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2222.;
 wr_fs_ret_2222.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -28588,7 +28588,7 @@ wr_fs_ret_2222.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec051;                        // return address - 1: wr_fs_ret_2223. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2223.;
 wr_fs_ret_2223.:
       DM(206, I5) = R0;
@@ -28600,7 +28600,7 @@ wr_fs_ret_2223.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F0 * F1;
       I12 = 0xbec068;                        // return address - 1: wr_fs_ret_2224. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2224.;
 wr_fs_ret_2224.:
       R1 = DM(54, I5);                  // 0.5
@@ -28635,7 +28635,7 @@ wr_fs_else_2227.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec0ac;                        // return address - 1: wr_fs_ret_2229. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2229.;
 wr_fs_ret_2229.:
       R1 = DM(59, I5);                  // 2.0
@@ -28651,7 +28651,7 @@ wr_fs_ret_2229.:
       DM(421, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec0ce;                        // return address - 1: wr_fs_ret_2230. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2230.;
 wr_fs_ret_2230.:
       R1 = DM(151, I5);
@@ -28673,14 +28673,14 @@ wr_fs_fi_2226.:
       R1 = 0x3f8c2611;                  // 1.0949116945266724
       F0 = F0 * F1;
       I12 = 0xbec0f4;                        // return address - 1: wr_fs_ret_2231. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2231.;
 wr_fs_ret_2231.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec102;                        // return address - 1: wr_fs_ret_2232. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2232.;
 wr_fs_ret_2232.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -28690,7 +28690,7 @@ wr_fs_ret_2232.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec114;                        // return address - 1: wr_fs_ret_2233. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2233.;
 wr_fs_ret_2233.:
       DM(206, I5) = R0;
@@ -28702,7 +28702,7 @@ wr_fs_ret_2233.:
       R1 = 0x3fcae00d;                  // 1.5849624872207642
       F0 = F0 * F1;
       I12 = 0xbec12c;                        // return address - 1: wr_fs_ret_2234. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2234.;
 wr_fs_ret_2234.:
       R1 = DM(54, I5);                  // 0.5
@@ -28737,7 +28737,7 @@ wr_fs_else_2237.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec170;                        // return address - 1: wr_fs_ret_2239. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2239.;
 wr_fs_ret_2239.:
       R1 = DM(59, I5);                  // 2.0
@@ -28753,7 +28753,7 @@ wr_fs_ret_2239.:
       DM(424, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec192;                        // return address - 1: wr_fs_ret_2240. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2240.;
 wr_fs_ret_2240.:
       R1 = DM(151, I5);
@@ -28775,14 +28775,14 @@ wr_fs_fi_2236.:
       R1 = 0x3f997cda;                  // 1.199122667312622
       F0 = F0 * F1;
       I12 = 0xbec1b8;                        // return address - 1: wr_fs_ret_2241. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2241.;
 wr_fs_ret_2241.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec1c6;                        // return address - 1: wr_fs_ret_2242. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2242.;
 wr_fs_ret_2242.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -28792,7 +28792,7 @@ wr_fs_ret_2242.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec1d8;                        // return address - 1: wr_fs_ret_2243. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2243.;
 wr_fs_ret_2243.:
       DM(206, I5) = R0;
@@ -28804,7 +28804,7 @@ wr_fs_ret_2243.:
       R1 = DM(59, I5);                  // 2.0
       F0 = F0 * F1;
       I12 = 0xbec1ef;                        // return address - 1: wr_fs_ret_2244. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2244.;
 wr_fs_ret_2244.:
       R1 = DM(54, I5);                  // 0.5
@@ -28839,7 +28839,7 @@ wr_fs_else_2247.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec233;                        // return address - 1: wr_fs_ret_2249. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2249.;
 wr_fs_ret_2249.:
       R1 = DM(59, I5);                  // 2.0
@@ -28855,7 +28855,7 @@ wr_fs_ret_2249.:
       DM(427, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec255;                        // return address - 1: wr_fs_ret_2250. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2250.;
 wr_fs_ret_2250.:
       R1 = DM(151, I5);
@@ -28877,14 +28877,14 @@ wr_fs_fi_2246.:
       R1 = 0x3fb42d0c;                  // 1.4076247215270996
       F0 = F0 * F1;
       I12 = 0xbec27b;                        // return address - 1: wr_fs_ret_2251. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2251.;
 wr_fs_ret_2251.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec289;                        // return address - 1: wr_fs_ret_2252. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2252.;
 wr_fs_ret_2252.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -28894,7 +28894,7 @@ wr_fs_ret_2252.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec29b;                        // return address - 1: wr_fs_ret_2253. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2253.;
 wr_fs_ret_2253.:
       DM(206, I5) = R0;
@@ -28906,7 +28906,7 @@ wr_fs_ret_2253.:
       R1 = 0x40149a78;                  // 2.321928024291992
       F0 = F0 * F1;
       I12 = 0xbec2b3;                        // return address - 1: wr_fs_ret_2254. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2254.;
 wr_fs_ret_2254.:
       R1 = DM(54, I5);                  // 0.5
@@ -28941,7 +28941,7 @@ wr_fs_else_2257.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec2f7;                        // return address - 1: wr_fs_ret_2259. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2259.;
 wr_fs_ret_2259.:
       R1 = DM(59, I5);                  // 2.0
@@ -28957,7 +28957,7 @@ wr_fs_ret_2259.:
       DM(430, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec319;                        // return address - 1: wr_fs_ret_2260. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2260.;
 wr_fs_ret_2260.:
       R1 = DM(151, I5);
@@ -28979,14 +28979,14 @@ wr_fs_fi_2256.:
       R1 = 0x3fc5c1e7;                  // 1.5449799299240112
       F0 = F0 * F1;
       I12 = 0xbec33f;                        // return address - 1: wr_fs_ret_2261. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2261.;
 wr_fs_ret_2261.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec34d;                        // return address - 1: wr_fs_ret_2262. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2262.;
 wr_fs_ret_2262.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -28996,7 +28996,7 @@ wr_fs_ret_2262.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec35f;                        // return address - 1: wr_fs_ret_2263. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2263.;
 wr_fs_ret_2263.:
       DM(206, I5) = R0;
@@ -29008,7 +29008,7 @@ wr_fs_ret_2263.:
       R1 = 0x40257007;                  // 2.5849626064300537
       F0 = F0 * F1;
       I12 = 0xbec377;                        // return address - 1: wr_fs_ret_2264. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2264.;
 wr_fs_ret_2264.:
       R1 = DM(54, I5);                  // 0.5
@@ -29043,7 +29043,7 @@ wr_fs_else_2267.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec3bb;                        // return address - 1: wr_fs_ret_2269. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2269.;
 wr_fs_ret_2269.:
       R1 = DM(59, I5);                  // 2.0
@@ -29059,7 +29059,7 @@ wr_fs_ret_2269.:
       DM(433, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec3dd;                        // return address - 1: wr_fs_ret_2270. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2270.;
 wr_fs_ret_2270.:
       R1 = DM(151, I5);
@@ -29084,14 +29084,14 @@ wr_fs_else_2210.:
       R1 = R1 - R1;                     // 0.0
       F0 = F0 * F1;
       I12 = 0xbec403;                        // return address - 1: wr_fs_ret_2272. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2272.;
 wr_fs_ret_2272.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec411;                        // return address - 1: wr_fs_ret_2273. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2273.;
 wr_fs_ret_2273.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -29101,7 +29101,7 @@ wr_fs_ret_2273.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec423;                        // return address - 1: wr_fs_ret_2274. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2274.;
 wr_fs_ret_2274.:
       DM(206, I5) = R0;
@@ -29113,7 +29113,7 @@ wr_fs_ret_2274.:
       R1 = R1 - R1;                     // 0.0
       F0 = F0 * F1;
       I12 = 0xbec439;                        // return address - 1: wr_fs_ret_2275. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2275.;
 wr_fs_ret_2275.:
       R1 = DM(54, I5);                  // 0.5
@@ -29148,7 +29148,7 @@ wr_fs_else_2278.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec47d;                        // return address - 1: wr_fs_ret_2280. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2280.;
 wr_fs_ret_2280.:
       R1 = DM(59, I5);                  // 2.0
@@ -29164,7 +29164,7 @@ wr_fs_ret_2280.:
       DM(418, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec49f;                        // return address - 1: wr_fs_ret_2281. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2281.;
 wr_fs_ret_2281.:
       R1 = DM(151, I5);
@@ -29186,14 +29186,14 @@ wr_fs_fi_2277.:
       R1 = 0x3fbb35b0;                  // 1.462575912475586
       F0 = F0 * F1;
       I12 = 0xbec4c5;                        // return address - 1: wr_fs_ret_2282. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2282.;
 wr_fs_ret_2282.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec4d3;                        // return address - 1: wr_fs_ret_2283. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2283.;
 wr_fs_ret_2283.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -29203,7 +29203,7 @@ wr_fs_ret_2283.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec4e5;                        // return address - 1: wr_fs_ret_2284. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2284.;
 wr_fs_ret_2284.:
       DM(206, I5) = R0;
@@ -29215,7 +29215,7 @@ wr_fs_ret_2284.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F0 * F1;
       I12 = 0xbec4fc;                        // return address - 1: wr_fs_ret_2285. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2285.;
 wr_fs_ret_2285.:
       R1 = DM(54, I5);                  // 0.5
@@ -29250,7 +29250,7 @@ wr_fs_else_2288.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec540;                        // return address - 1: wr_fs_ret_2290. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2290.;
 wr_fs_ret_2290.:
       R1 = DM(59, I5);                  // 2.0
@@ -29266,7 +29266,7 @@ wr_fs_ret_2290.:
       DM(421, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec562;                        // return address - 1: wr_fs_ret_2291. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2291.;
 wr_fs_ret_2291.:
       R1 = DM(151, I5);
@@ -29288,14 +29288,14 @@ wr_fs_fi_2287.:
       R1 = 0x401bc71c;                  // 2.434027671813965
       F0 = F0 * F1;
       I12 = 0xbec588;                        // return address - 1: wr_fs_ret_2292. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2292.;
 wr_fs_ret_2292.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec596;                        // return address - 1: wr_fs_ret_2293. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2293.;
 wr_fs_ret_2293.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -29305,7 +29305,7 @@ wr_fs_ret_2293.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec5a8;                        // return address - 1: wr_fs_ret_2294. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2294.;
 wr_fs_ret_2294.:
       DM(206, I5) = R0;
@@ -29317,7 +29317,7 @@ wr_fs_ret_2294.:
       R1 = 0x3fcae00d;                  // 1.5849624872207642
       F0 = F0 * F1;
       I12 = 0xbec5c0;                        // return address - 1: wr_fs_ret_2295. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2295.;
 wr_fs_ret_2295.:
       R1 = DM(54, I5);                  // 0.5
@@ -29352,7 +29352,7 @@ wr_fs_else_2298.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec604;                        // return address - 1: wr_fs_ret_2300. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2300.;
 wr_fs_ret_2300.:
       R1 = DM(59, I5);                  // 2.0
@@ -29368,7 +29368,7 @@ wr_fs_ret_2300.:
       DM(424, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec626;                        // return address - 1: wr_fs_ret_2301. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2301.;
 wr_fs_ret_2301.:
       R1 = DM(151, I5);
@@ -29390,14 +29390,14 @@ wr_fs_fi_2297.:
       R1 = 0x404a2f6e;                  // 3.159144878387451
       F0 = F0 * F1;
       I12 = 0xbec64c;                        // return address - 1: wr_fs_ret_2302. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2302.;
 wr_fs_ret_2302.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec65a;                        // return address - 1: wr_fs_ret_2303. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2303.;
 wr_fs_ret_2303.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -29407,7 +29407,7 @@ wr_fs_ret_2303.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec66c;                        // return address - 1: wr_fs_ret_2304. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2304.;
 wr_fs_ret_2304.:
       DM(206, I5) = R0;
@@ -29419,7 +29419,7 @@ wr_fs_ret_2304.:
       R1 = DM(59, I5);                  // 2.0
       F0 = F0 * F1;
       I12 = 0xbec683;                        // return address - 1: wr_fs_ret_2305. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2305.;
 wr_fs_ret_2305.:
       R1 = DM(54, I5);                  // 0.5
@@ -29454,7 +29454,7 @@ wr_fs_else_2308.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec6c7;                        // return address - 1: wr_fs_ret_2310. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2310.;
 wr_fs_ret_2310.:
       R1 = DM(59, I5);                  // 2.0
@@ -29470,7 +29470,7 @@ wr_fs_ret_2310.:
       DM(427, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec6e9;                        // return address - 1: wr_fs_ret_2311. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2311.;
 wr_fs_ret_2311.:
       R1 = DM(151, I5);
@@ -29492,14 +29492,14 @@ wr_fs_fi_2307.:
       R1 = 0x406f3d59;                  // 3.73811936378479
       F0 = F0 * F1;
       I12 = 0xbec70f;                        // return address - 1: wr_fs_ret_2312. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2312.;
 wr_fs_ret_2312.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec71d;                        // return address - 1: wr_fs_ret_2313. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2313.;
 wr_fs_ret_2313.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -29509,7 +29509,7 @@ wr_fs_ret_2313.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec72f;                        // return address - 1: wr_fs_ret_2314. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2314.;
 wr_fs_ret_2314.:
       DM(206, I5) = R0;
@@ -29521,7 +29521,7 @@ wr_fs_ret_2314.:
       R1 = 0x40149a78;                  // 2.321928024291992
       F0 = F0 * F1;
       I12 = 0xbec747;                        // return address - 1: wr_fs_ret_2315. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2315.;
 wr_fs_ret_2315.:
       R1 = DM(54, I5);                  // 0.5
@@ -29556,7 +29556,7 @@ wr_fs_else_2318.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec78b;                        // return address - 1: wr_fs_ret_2320. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2320.;
 wr_fs_ret_2320.:
       R1 = DM(59, I5);                  // 2.0
@@ -29572,7 +29572,7 @@ wr_fs_ret_2320.:
       DM(430, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec7ad;                        // return address - 1: wr_fs_ret_2321. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2321.;
 wr_fs_ret_2321.:
       R1 = DM(151, I5);
@@ -29594,14 +29594,14 @@ wr_fs_fi_2317.:
       R1 = 0x40870bad;                  // 4.220175266265869
       F0 = F0 * F1;
       I12 = 0xbec7d3;                        // return address - 1: wr_fs_ret_2322. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2322.;
 wr_fs_ret_2322.:
       R1 = DM(109, I5);
       F0 = F1 * F0;
       DM(110, I5) = R0;
       I12 = 0xbec7e1;                        // return address - 1: wr_fs_ret_2323. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2323.;
 wr_fs_ret_2323.:
       R1 = -0x3f22f34d;                 // -6.907800197601318
@@ -29611,7 +29611,7 @@ wr_fs_ret_2323.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbec7f3;                        // return address - 1: wr_fs_ret_2324. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2324.;
 wr_fs_ret_2324.:
       DM(206, I5) = R0;
@@ -29623,7 +29623,7 @@ wr_fs_ret_2324.:
       R1 = 0x40257007;                  // 2.5849626064300537
       F0 = F0 * F1;
       I12 = 0xbec80b;                        // return address - 1: wr_fs_ret_2325. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2325.;
 wr_fs_ret_2325.:
       R1 = DM(54, I5);                  // 0.5
@@ -29658,7 +29658,7 @@ wr_fs_else_2328.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbec84f;                        // return address - 1: wr_fs_ret_2330. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2330.;
 wr_fs_ret_2330.:
       R1 = DM(59, I5);                  // 2.0
@@ -29674,7 +29674,7 @@ wr_fs_ret_2330.:
       DM(433, I5) = R0;
       R0 = DM(253, I5);
       I12 = 0xbec871;                        // return address - 1: wr_fs_ret_2331. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2331.;
 wr_fs_ret_2331.:
       R1 = DM(151, I5);
@@ -30108,7 +30108,7 @@ wr_fs_loop_2345.:
       R1 = DM(59, I5);                  // 2.0
       F0 = F0 * F1;
       I12 = 0xbecbfe;                        // return address - 1: wr_fs_ret_2347. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2347.;
 wr_fs_ret_2347.:
       DM(178, I5) = R0;
@@ -30256,7 +30256,7 @@ wr_fs_else_2356.:
       R0 = R0 - R0;                     // 0
       DM(180, I5) = R0;
       I12 = 0xbecd16;                        // return address - 1: wr_fs_ret_2359. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2359.;
 wr_fs_ret_2359.:
       R1 = DM(54, I5);                  // 0.5
@@ -30270,7 +30270,7 @@ wr_fs_else_2360.:
 wr_fs_fi_2358.:
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbecd28;                        // return address - 1: wr_fs_ret_2361. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2361.;
 wr_fs_ret_2361.:
       R1 = 0x3f7fbe77;                  // 0.9990000128746033
@@ -30338,7 +30338,7 @@ wr_fs_rt_l_impl.:
       R1 = 0x41100000;                  // 9.0
       F0 = F0 * F1;
       I12 = 0xbecdae;                        // return address - 1: wr_fs_ret_2364. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2364.;
 wr_fs_ret_2364.:
       R1 = 0x3ca3d70a;                  // 0.019999999552965164
@@ -30397,7 +30397,7 @@ wr_fs_fi_2370.:
       R1 = 0x40400000;                  // 3.0
       F0 = F0 * F1;
       I12 = 0xbece1d;                        // return address - 1: wr_fs_ret_2372. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2372.;
 wr_fs_ret_2372.:
       R1 = DM(136, I5);
@@ -30426,7 +30426,7 @@ wr_fs_else_2373.:
 wr_fs_else_2374.:
       R0 = DM(200, I5);
       I12 = 0xbece51;                        // return address - 1: wr_fs_ret_2375. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2375.;
 wr_fs_ret_2375.:
       R1 = DM(59, I5);                  // 2.0
@@ -30456,7 +30456,7 @@ wr_fs_else_2376.:
 wr_fs_else_2378.:
       R0 = DM(200, I5);
       I12 = 0xbece8a;                        // return address - 1: wr_fs_ret_2379. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2379.;
 wr_fs_ret_2379.:
       R1 = DM(59, I5);                  // 2.0
@@ -30725,7 +30725,7 @@ wr_fs_rt_l_tick.:
       R0 = DM(0, I1);
       DM(233, I5) = R0;
       I12 = 0xbed076;                        // return address - 1: wr_fs_ret_2400. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2400.;
 wr_fs_ret_2400.:
       DM(237, I5) = R0;
@@ -30778,7 +30778,7 @@ wr_fs_else_2402.:
       IF NE JUMP 0xbed125;                   // -> wr_fs_else_2404.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed0e1;                        // return address - 1: wr_fs_ret_2405. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2405.;
 wr_fs_ret_2405.:
       R1 = 0x3f7fbe77;                  // 0.9990000128746033
@@ -30796,7 +30796,7 @@ wr_fs_ret_2405.:
       DM(229, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed105;                        // return address - 1: wr_fs_ret_2408. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2408.;
 wr_fs_ret_2408.:
       R1 = DM(229, I5);
@@ -30828,7 +30828,7 @@ wr_fs_else_2404.:
       IF LE JUMP 0xbed174;                   // -> wr_fs_else_2411.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed133;                        // return address - 1: wr_fs_ret_2412. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2412.;
 wr_fs_ret_2412.:
       R1 = 0x3f7fbe77;                  // 0.9990000128746033
@@ -30846,7 +30846,7 @@ wr_fs_ret_2412.:
       DM(229, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed157;                        // return address - 1: wr_fs_ret_2415. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2415.;
 wr_fs_ret_2415.:
       R1 = DM(229, I5);
@@ -30887,7 +30887,7 @@ wr_fs_else_2403.:
       IF NE JUMP 0xbed1d5;                   // -> wr_fs_else_2419.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed191;                        // return address - 1: wr_fs_ret_2420. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2420.;
 wr_fs_ret_2420.:
       R1 = 0x3f7fbe77;                  // 0.9990000128746033
@@ -30905,7 +30905,7 @@ wr_fs_ret_2420.:
       DM(229, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed1b5;                        // return address - 1: wr_fs_ret_2423. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2423.;
 wr_fs_ret_2423.:
       R1 = DM(229, I5);
@@ -30937,7 +30937,7 @@ wr_fs_else_2419.:
       IF LE JUMP 0xbed224;                   // -> wr_fs_else_2426.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed1e3;                        // return address - 1: wr_fs_ret_2427. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2427.;
 wr_fs_ret_2427.:
       R1 = 0x3f7fbe77;                  // 0.9990000128746033
@@ -30955,7 +30955,7 @@ wr_fs_ret_2427.:
       DM(229, I5) = R0;
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed207;                        // return address - 1: wr_fs_ret_2430. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2430.;
 wr_fs_ret_2430.:
       R1 = DM(229, I5);
@@ -31194,7 +31194,7 @@ wr_fs_else_2442.:
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbed3a6;                        // return address - 1: wr_fs_ret_2452. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2452.;
 wr_fs_ret_2452.:
       F1 = PASS F0;
@@ -31239,7 +31239,7 @@ wr_fs_else_2455.:
       R1 = -0x40800000;                 // -1.0
       F0 = F0 * F1;
       I12 = 0xbed3e9;                        // return address - 1: wr_fs_ret_2457. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2457.;
 wr_fs_ret_2457.:
       R1 = DM(7, I3);
@@ -31305,7 +31305,7 @@ wr_fs_rt_l_dust.:
       R1 = 0x41400000;                  // 12.0
       F0 = F0 * F1;
       I12 = 0xbed462;                        // return address - 1: wr_fs_ret_2461. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2461.;
 wr_fs_ret_2461.:
       R1 = DM(54, I5);                  // 0.5
@@ -31313,7 +31313,7 @@ wr_fs_ret_2461.:
       DM(124, I5) = R0;
       R0 = 0x3d23d70a;                  // 0.03999999910593033
       I12 = 0xbed472;                        // return address - 1: wr_fs_ret_2462. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2462.;
 wr_fs_ret_2462.:
       R1 = DM(60, I5);                  // 2.0833333110203966e-05
@@ -31342,7 +31342,7 @@ wr_fs_loop_2463.:
       R1 = 0x40c00000;                  // 6.0
       F0 = F0 * F1;
       I12 = 0xbed4af;                        // return address - 1: wr_fs_ret_2465. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2465.;
 wr_fs_ret_2465.:
       R1 = DM(124, I5);
@@ -31361,7 +31361,7 @@ wr_fs_fi_2466.:
       R1 = 0x3a83126f;                  // 0.0010000000474974513
       F0 = F0 + F1;
       I12 = 0xbed4d1;                        // return address - 1: wr_fs_ret_2467. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2467.;
 wr_fs_ret_2467.:
       DM(209, I5) = R0;
@@ -31440,7 +31440,7 @@ wr_fs_else_2473.:
 wr_fs_else_2474.:
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed55c;                        // return address - 1: wr_fs_ret_2475. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2475.;
 wr_fs_ret_2475.:
       DM(235, I5) = R0;
@@ -31455,7 +31455,7 @@ wr_fs_ret_2475.:
       IF GE JUMP 0xbed58c;                   // -> wr_fs_else_2476.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed577;                        // return address - 1: wr_fs_ret_2477. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2477.;
 wr_fs_ret_2477.:
       R1 = 0x3f400000;                  // 0.75
@@ -31495,7 +31495,7 @@ wr_fs_rt_l_chaos.:
       R1 = 0x4169999a;                  // 14.600000381469727
       F0 = F0 * F1;
       I12 = 0xbed5ca;                        // return address - 1: wr_fs_ret_2478. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2478.;
 wr_fs_ret_2478.:
       R1 = 0x3dcccccd;                  // 0.10000000149011612
@@ -31633,7 +31633,7 @@ wr_fs_fi_2483.:
       IF LT JUMP 0xbed6bd;                   // -> wr_fs_else_2493.
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed6b0;                        // return address - 1: wr_fs_ret_2494. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2494.;
 wr_fs_ret_2494.:
       R1 = 0x3f4ccccd;                  // 0.800000011920929
@@ -31648,7 +31648,7 @@ wr_fs_else_2493.:
 wr_fs_else_2492.:
       R0 = R0 - R0;                     // 0.0
       I12 = 0xbed6c6;                        // return address - 1: wr_fs_ret_2496. - 1
-      JUMP 0xbf13be;                         // -> wr_fs_sub_lrg.
+      JUMP 0xbf13ca;                         // -> wr_fs_sub_lrg.
 .GLOBAL wr_fs_ret_2496.;
 wr_fs_ret_2496.:
       R1 = 0x3f4ccccd;                  // 0.800000011920929
@@ -31738,14 +31738,14 @@ wr_fs_rt_l_crush.:
       R1 = 0x41800000;                  // 16.0
       F0 = F1 - F0;
       I12 = 0xbed76f;                        // return address - 1: wr_fs_ret_2503. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2503.;
 wr_fs_ret_2503.:
       R1 = DM(54, I5);                  // 0.5
       F0 = F1 * F0;
       DM(124, I5) = R0;
       I12 = 0xbed77c;                        // return address - 1: wr_fs_ret_2504. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2504.;
 wr_fs_ret_2504.:
       DM(199, I5) = R0;
@@ -31753,7 +31753,7 @@ wr_fs_ret_2504.:
       R1 = 0x40c00000;                  // 6.0
       F0 = F0 * F1;
       I12 = 0xbed78c;                        // return address - 1: wr_fs_ret_2505. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2505.;
 wr_fs_ret_2505.:
       DM(125, I5) = R0;
@@ -31778,7 +31778,7 @@ wr_fs_loop_2506.:
       R1 = 0x40400000;                  // 3.0
       F0 = F0 * F1;
       I12 = 0xbed7c1;                        // return address - 1: wr_fs_ret_2508. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2508.;
 wr_fs_ret_2508.:
       R1 = DM(125, I5);
@@ -31941,7 +31941,7 @@ wr_fs_rt_l_env.:
       R1 = 0x41600000;                  // 14.0
       F0 = F0 * F1;
       I12 = 0xbed8f8;                        // return address - 1: wr_fs_ret_2520. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2520.;
 wr_fs_ret_2520.:
       R1 = 0x3a03126f;                  // 0.0005000000237487257
@@ -31956,7 +31956,7 @@ wr_fs_ret_2520.:
 wr_fs_else_2521.:
       R0 = DM(250, I5);
       I12 = 0xbed916;                        // return address - 1: wr_fs_ret_2522. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2522.;
 wr_fs_ret_2522.:
       R1 = -0x48513cc2;                 // -2.0833333110203966e-05
@@ -31964,7 +31964,7 @@ wr_fs_ret_2522.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbed925;                        // return address - 1: wr_fs_ret_2523. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2523.;
 wr_fs_ret_2523.:
       R1 = DM(52, I5);                  // 1.0
@@ -31974,7 +31974,7 @@ wr_fs_ret_2523.:
       R1 = 0x41600000;                  // 14.0
       F0 = F0 * F1;
       I12 = 0xbed939;                        // return address - 1: wr_fs_ret_2524. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2524.;
 wr_fs_ret_2524.:
       R1 = 0x3a03126f;                  // 0.0005000000237487257
@@ -31989,7 +31989,7 @@ wr_fs_ret_2524.:
 wr_fs_else_2525.:
       R0 = DM(250, I5);
       I12 = 0xbed957;                        // return address - 1: wr_fs_ret_2526. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2526.;
 wr_fs_ret_2526.:
       R1 = -0x48513cc2;                 // -2.0833333110203966e-05
@@ -31997,7 +31997,7 @@ wr_fs_ret_2526.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbed966;                        // return address - 1: wr_fs_ret_2527. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2527.;
 wr_fs_ret_2527.:
       R1 = DM(52, I5);                  // 1.0
@@ -32034,7 +32034,7 @@ wr_fs_loop_2529.:
       R1 = DM(63, I5);                  // 4.0
       F0 = F0 * F1;
       I12 = 0xbed9ad;                        // return address - 1: wr_fs_ret_2531. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2531.;
 wr_fs_ret_2531.:
       DM(215, I5) = R0;
@@ -32157,7 +32157,7 @@ wr_fs_rt_l_lissa.:
       R1 = 0x41880000;                  // 17.0
       F0 = F0 * F1;
       I12 = 0xbeda84;                        // return address - 1: wr_fs_ret_2544. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2544.;
 wr_fs_ret_2544.:
       R1 = 0x3ca3d70a;                  // 0.019999999552965164
@@ -32205,7 +32205,7 @@ wr_fs_loop_2545.:
       R1 = 0x40a00000;                  // 5.0
       F0 = F0 * F1;
       I12 = 0xbedaea;                        // return address - 1: wr_fs_ret_2547. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2547.;
 wr_fs_ret_2547.:
       R1 = DM(124, I5);
@@ -32284,7 +32284,7 @@ wr_fs_fi_2552.:
       R1 = DM(174, I5);
       F0 = F0 * F1;
       I12 = 0xbedb5b;                        // return address - 1: wr_fs_ret_2556. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2556.;
 wr_fs_ret_2556.:
       DM(0, I0) = R0;
@@ -32336,7 +32336,7 @@ wr_fs_else_2559.:
       R1 = 0x41d80000;                  // 27.0
       F0 = F1 + F0;
       I12 = 0xbedbcb;                        // return address - 1: wr_fs_ret_2561. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2561.;
 wr_fs_ret_2561.:
       R1 = 0x41d80000;                  // 27.0
@@ -32372,7 +32372,7 @@ wr_fs_rt_d_trig.:
       R1 = 0x41100000;                  // 9.0
       F0 = F0 * F1;
       I12 = 0xbedc0d;                        // return address - 1: wr_fs_ret_2562. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2562.;
 wr_fs_ret_2562.:
       R1 = 0x3ca3d70a;                  // 0.019999999552965164
@@ -32385,7 +32385,7 @@ wr_fs_ret_2562.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedc28;                        // return address - 1: wr_fs_ret_2563. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2563.;
 wr_fs_ret_2563.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -32395,7 +32395,7 @@ wr_fs_ret_2563.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedc3a;                        // return address - 1: wr_fs_ret_2564. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2564.;
 wr_fs_ret_2564.:
       DM(8, I2) = R0;
@@ -32403,7 +32403,7 @@ wr_fs_ret_2564.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedc49;                        // return address - 1: wr_fs_ret_2565. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2565.;
 wr_fs_ret_2565.:
       R1 = R1 - R1;                     // 0.0
@@ -32411,7 +32411,7 @@ wr_fs_ret_2565.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedc56;                        // return address - 1: wr_fs_ret_2566. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2566.;
 wr_fs_ret_2566.:
       DM(10, I2) = R0;
@@ -32442,7 +32442,7 @@ wr_fs_ret_2566.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbedc93;                        // return address - 1: wr_fs_ret_2568. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2568.;
 wr_fs_ret_2568.:
       R1 = 0x43dc0000;                  // 440.0
@@ -32466,7 +32466,7 @@ wr_fs_ret_2568.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedcc6;                        // return address - 1: wr_fs_ret_2569. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2569.;
 wr_fs_ret_2569.:
       R1 = R1 - R1;                     // 0.0
@@ -32474,7 +32474,7 @@ wr_fs_ret_2569.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedcd3;                        // return address - 1: wr_fs_ret_2570. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2570.;
 wr_fs_ret_2570.:
       DM(23, I2) = R0;
@@ -32496,7 +32496,7 @@ wr_fs_ret_2570.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedd02;                        // return address - 1: wr_fs_ret_2571. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2571.;
 wr_fs_ret_2571.:
       R1 = R1 - R1;                     // 0.0
@@ -32504,7 +32504,7 @@ wr_fs_ret_2571.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedd0f;                        // return address - 1: wr_fs_ret_2572. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2572.;
 wr_fs_ret_2572.:
       DM(25, I2) = R0;
@@ -32540,7 +32540,7 @@ wr_fs_ret_2572.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedd59;                        // return address - 1: wr_fs_ret_2573. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2573.;
 wr_fs_ret_2573.:
       R1 = R1 - R1;                     // 0.0
@@ -32548,7 +32548,7 @@ wr_fs_ret_2573.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedd66;                        // return address - 1: wr_fs_ret_2574. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2574.;
 wr_fs_ret_2574.:
       DM(29, I2) = R0;
@@ -32558,7 +32558,7 @@ wr_fs_ret_2574.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedd7a;                        // return address - 1: wr_fs_ret_2575. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2575.;
 wr_fs_ret_2575.:
       R1 = R1 - R1;                     // 0.0
@@ -32566,7 +32566,7 @@ wr_fs_ret_2575.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedd87;                        // return address - 1: wr_fs_ret_2576. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2576.;
 wr_fs_ret_2576.:
       DM(31, I2) = R0;
@@ -32576,7 +32576,7 @@ wr_fs_ret_2576.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedd9a;                        // return address - 1: wr_fs_ret_2577. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2577.;
 wr_fs_ret_2577.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -32586,7 +32586,7 @@ wr_fs_ret_2577.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbeddac;                        // return address - 1: wr_fs_ret_2578. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2578.;
 wr_fs_ret_2578.:
       DM(8, I2) = R0;
@@ -32610,7 +32610,7 @@ wr_fs_else_2567.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbeddd8;                        // return address - 1: wr_fs_ret_2580. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2580.;
 wr_fs_ret_2580.:
       R1 = 0x43dc0000;                  // 440.0
@@ -32632,7 +32632,7 @@ wr_fs_ret_2580.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbede07;                        // return address - 1: wr_fs_ret_2581. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2581.;
 wr_fs_ret_2581.:
       R1 = R1 - R1;                     // 0.0
@@ -32640,7 +32640,7 @@ wr_fs_ret_2581.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbede14;                        // return address - 1: wr_fs_ret_2582. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2582.;
 wr_fs_ret_2582.:
       DM(23, I2) = R0;
@@ -32683,7 +32683,7 @@ wr_fs_ret_2582.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbede6a;                        // return address - 1: wr_fs_ret_2583. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2583.;
 wr_fs_ret_2583.:
       R1 = R1 - R1;                     // 0.0
@@ -32691,7 +32691,7 @@ wr_fs_ret_2583.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbede77;                        // return address - 1: wr_fs_ret_2584. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2584.;
 wr_fs_ret_2584.:
       DM(25, I2) = R0;
@@ -32711,7 +32711,7 @@ wr_fs_ret_2584.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedea0;                        // return address - 1: wr_fs_ret_2585. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2585.;
 wr_fs_ret_2585.:
       R1 = R1 - R1;                     // 0.0
@@ -32719,7 +32719,7 @@ wr_fs_ret_2585.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedead;                        // return address - 1: wr_fs_ret_2586. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2586.;
 wr_fs_ret_2586.:
       DM(36, I2) = R0;
@@ -32743,7 +32743,7 @@ wr_fs_else_2579.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbeded9;                        // return address - 1: wr_fs_ret_2588. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2588.;
 wr_fs_ret_2588.:
       R1 = 0x43dc0000;                  // 440.0
@@ -32757,7 +32757,7 @@ wr_fs_ret_2588.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedef5;                        // return address - 1: wr_fs_ret_2589. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2589.;
 wr_fs_ret_2589.:
       R1 = R1 - R1;                     // 0.0
@@ -32765,7 +32765,7 @@ wr_fs_ret_2589.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedf02;                        // return address - 1: wr_fs_ret_2590. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2590.;
 wr_fs_ret_2590.:
       DM(23, I2) = R0;
@@ -32797,7 +32797,7 @@ wr_fs_ret_2590.:
       R1 = -0x80000000;                 // -0.0
       F0 = F0 * F1;
       I12 = 0xbedf46;                        // return address - 1: wr_fs_ret_2591. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2591.;
 wr_fs_ret_2591.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -32815,7 +32815,7 @@ wr_fs_ret_2591.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedf68;                        // return address - 1: wr_fs_ret_2592. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2592.;
 wr_fs_ret_2592.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -32825,7 +32825,7 @@ wr_fs_ret_2592.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedf7a;                        // return address - 1: wr_fs_ret_2593. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2593.;
 wr_fs_ret_2593.:
       DM(64, I2) = R0;
@@ -32841,7 +32841,7 @@ wr_fs_ret_2593.:
       R1 = -0x40800000;                 // -1.0
       F0 = F0 * F1;
       I12 = 0xbedf9a;                        // return address - 1: wr_fs_ret_2594. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2594.;
 wr_fs_ret_2594.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -32858,7 +32858,7 @@ wr_fs_ret_2594.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbedfbb;                        // return address - 1: wr_fs_ret_2595. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2595.;
 wr_fs_ret_2595.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -32868,7 +32868,7 @@ wr_fs_ret_2595.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbedfcd;                        // return address - 1: wr_fs_ret_2596. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2596.;
 wr_fs_ret_2596.:
       DM(65, I2) = R0;
@@ -32884,7 +32884,7 @@ wr_fs_ret_2596.:
       R1 = -0x40351ff3;                 // -1.5849624872207642
       F0 = F0 * F1;
       I12 = 0xbedfed;                        // return address - 1: wr_fs_ret_2597. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2597.;
 wr_fs_ret_2597.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -32902,7 +32902,7 @@ wr_fs_ret_2597.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee010;                        // return address - 1: wr_fs_ret_2598. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2598.;
 wr_fs_ret_2598.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -32912,7 +32912,7 @@ wr_fs_ret_2598.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee022;                        // return address - 1: wr_fs_ret_2599. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2599.;
 wr_fs_ret_2599.:
       DM(66, I2) = R0;
@@ -32928,7 +32928,7 @@ wr_fs_ret_2599.:
       R1 = -0x40000000;                 // -2.0
       F0 = F0 * F1;
       I12 = 0xbee042;                        // return address - 1: wr_fs_ret_2600. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2600.;
 wr_fs_ret_2600.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -32946,7 +32946,7 @@ wr_fs_ret_2600.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee066;                        // return address - 1: wr_fs_ret_2601. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2601.;
 wr_fs_ret_2601.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -32956,7 +32956,7 @@ wr_fs_ret_2601.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee078;                        // return address - 1: wr_fs_ret_2602. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2602.;
 wr_fs_ret_2602.:
       DM(67, I2) = R0;
@@ -32972,7 +32972,7 @@ wr_fs_ret_2602.:
       R1 = -0x3feb6588;                 // -2.321928024291992
       F0 = F0 * F1;
       I12 = 0xbee098;                        // return address - 1: wr_fs_ret_2603. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2603.;
 wr_fs_ret_2603.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -32990,7 +32990,7 @@ wr_fs_ret_2603.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee0bb;                        // return address - 1: wr_fs_ret_2604. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2604.;
 wr_fs_ret_2604.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -33000,7 +33000,7 @@ wr_fs_ret_2604.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee0cd;                        // return address - 1: wr_fs_ret_2605. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2605.;
 wr_fs_ret_2605.:
       DM(68, I2) = R0;
@@ -33016,7 +33016,7 @@ wr_fs_ret_2605.:
       R1 = -0x3fda8ff9;                 // -2.5849626064300537
       F0 = F0 * F1;
       I12 = 0xbee0ed;                        // return address - 1: wr_fs_ret_2606. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2606.;
 wr_fs_ret_2606.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -33034,7 +33034,7 @@ wr_fs_ret_2606.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee111;                        // return address - 1: wr_fs_ret_2607. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2607.;
 wr_fs_ret_2607.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -33044,7 +33044,7 @@ wr_fs_ret_2607.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee123;                        // return address - 1: wr_fs_ret_2608. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2608.;
 wr_fs_ret_2608.:
       DM(69, I2) = R0;
@@ -33060,7 +33060,7 @@ wr_fs_ret_2608.:
       R1 = -0x3fcc544c;                 // -2.8073549270629883
       F0 = F0 * F1;
       I12 = 0xbee143;                        // return address - 1: wr_fs_ret_2609. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2609.;
 wr_fs_ret_2609.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -33078,7 +33078,7 @@ wr_fs_ret_2609.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee167;                        // return address - 1: wr_fs_ret_2610. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2610.;
 wr_fs_ret_2610.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -33088,7 +33088,7 @@ wr_fs_ret_2610.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee179;                        // return address - 1: wr_fs_ret_2611. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2611.;
 wr_fs_ret_2611.:
       DM(70, I2) = R0;
@@ -33104,7 +33104,7 @@ wr_fs_ret_2611.:
       R1 = -0x3fc00000;                 // -3.0
       F0 = F0 * F1;
       I12 = 0xbee199;                        // return address - 1: wr_fs_ret_2612. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2612.;
 wr_fs_ret_2612.:
       R1 = 0x3ecccccd;                  // 0.4000000059604645
@@ -33122,7 +33122,7 @@ wr_fs_ret_2612.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee1bd;                        // return address - 1: wr_fs_ret_2613. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2613.;
 wr_fs_ret_2613.:
       R1 = 0x40dd0cb3;                  // 6.907800197601318
@@ -33132,7 +33132,7 @@ wr_fs_ret_2613.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee1cf;                        // return address - 1: wr_fs_ret_2614. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2614.;
 wr_fs_ret_2614.:
       DM(71, I2) = R0;
@@ -33157,7 +33157,7 @@ wr_fs_ret_2614.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee203;                        // return address - 1: wr_fs_ret_2615. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2615.;
 wr_fs_ret_2615.:
       R1 = R1 - R1;                     // 0.0
@@ -33165,7 +33165,7 @@ wr_fs_ret_2615.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee210;                        // return address - 1: wr_fs_ret_2616. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2616.;
 wr_fs_ret_2616.:
       DM(38, I2) = R0;
@@ -33191,7 +33191,7 @@ wr_fs_else_2587.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbee23f;                        // return address - 1: wr_fs_ret_2618. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2618.;
 wr_fs_ret_2618.:
       R1 = 0x43dc0000;                  // 440.0
@@ -33261,7 +33261,7 @@ wr_fs_ret_2618.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee2e0;                        // return address - 1: wr_fs_ret_2619. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2619.;
 wr_fs_ret_2619.:
       R1 = R1 - R1;                     // 0.0
@@ -33269,7 +33269,7 @@ wr_fs_ret_2619.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee2ed;                        // return address - 1: wr_fs_ret_2620. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2620.;
 wr_fs_ret_2620.:
       DM(76, I2) = R0;
@@ -33283,7 +33283,7 @@ wr_fs_ret_2620.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee309;                        // return address - 1: wr_fs_ret_2621. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2621.;
 wr_fs_ret_2621.:
       R1 = R1 - R1;                     // 0.0
@@ -33291,7 +33291,7 @@ wr_fs_ret_2621.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee316;                        // return address - 1: wr_fs_ret_2622. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2622.;
 wr_fs_ret_2622.:
       DM(77, I2) = R0;
@@ -33305,7 +33305,7 @@ wr_fs_ret_2622.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee332;                        // return address - 1: wr_fs_ret_2623. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2623.;
 wr_fs_ret_2623.:
       R1 = R1 - R1;                     // 0.0
@@ -33313,7 +33313,7 @@ wr_fs_ret_2623.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee33f;                        // return address - 1: wr_fs_ret_2624. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2624.;
 wr_fs_ret_2624.:
       DM(78, I2) = R0;
@@ -33327,7 +33327,7 @@ wr_fs_ret_2624.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee35c;                        // return address - 1: wr_fs_ret_2625. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2625.;
 wr_fs_ret_2625.:
       R1 = R1 - R1;                     // 0.0
@@ -33335,7 +33335,7 @@ wr_fs_ret_2625.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee369;                        // return address - 1: wr_fs_ret_2626. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2626.;
 wr_fs_ret_2626.:
       DM(79, I2) = R0;
@@ -33353,7 +33353,7 @@ wr_fs_ret_2626.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee390;                        // return address - 1: wr_fs_ret_2627. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2627.;
 wr_fs_ret_2627.:
       R1 = R1 - R1;                     // 0.0
@@ -33361,7 +33361,7 @@ wr_fs_ret_2627.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee39d;                        // return address - 1: wr_fs_ret_2628. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2628.;
 wr_fs_ret_2628.:
       DM(86, I2) = R0;
@@ -33371,7 +33371,7 @@ wr_fs_ret_2628.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbee3b1;                        // return address - 1: wr_fs_ret_2629. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2629.;
 wr_fs_ret_2629.:
       DM(180, I5) = R0;
@@ -33397,7 +33397,7 @@ wr_fs_ret_2629.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbee3e8;                        // return address - 1: wr_fs_ret_2630. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2630.;
 wr_fs_ret_2630.:
       R1 = DM(59, I5);                  // 2.0
@@ -33428,7 +33428,7 @@ wr_fs_ret_2630.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbee42a;                        // return address - 1: wr_fs_ret_2631. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2631.;
 wr_fs_ret_2631.:
       R1 = DM(59, I5);                  // 2.0
@@ -33457,7 +33457,7 @@ wr_fs_ret_2631.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbee468;                        // return address - 1: wr_fs_ret_2632. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2632.;
 wr_fs_ret_2632.:
       R1 = DM(59, I5);                  // 2.0
@@ -33531,7 +33531,7 @@ wr_fs_fi_2634.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee500;                        // return address - 1: wr_fs_ret_2635. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2635.;
 wr_fs_ret_2635.:
       R1 = R1 - R1;                     // 0.0
@@ -33539,7 +33539,7 @@ wr_fs_ret_2635.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee50d;                        // return address - 1: wr_fs_ret_2636. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2636.;
 wr_fs_ret_2636.:
       DM(92, I2) = R0;
@@ -33567,7 +33567,7 @@ wr_fs_else_2617.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbee543;                        // return address - 1: wr_fs_ret_2638. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2638.;
 wr_fs_ret_2638.:
       R1 = 0x43dc0000;                  // 440.0
@@ -33605,7 +33605,7 @@ wr_fs_ret_2638.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee593;                        // return address - 1: wr_fs_ret_2639. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2639.;
 wr_fs_ret_2639.:
       R1 = R1 - R1;                     // 0.0
@@ -33613,7 +33613,7 @@ wr_fs_ret_2639.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee5a0;                        // return address - 1: wr_fs_ret_2640. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2640.;
 wr_fs_ret_2640.:
       DM(25, I2) = R0;
@@ -33648,7 +33648,7 @@ wr_fs_else_2637.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbee5e4;                        // return address - 1: wr_fs_ret_2642. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2642.;
 wr_fs_ret_2642.:
       R1 = 0x43dc0000;                  // 440.0
@@ -33670,7 +33670,7 @@ wr_fs_ret_2642.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee613;                        // return address - 1: wr_fs_ret_2643. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2643.;
 wr_fs_ret_2643.:
       R1 = R1 - R1;                     // 0.0
@@ -33678,7 +33678,7 @@ wr_fs_ret_2643.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee620;                        // return address - 1: wr_fs_ret_2644. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2644.;
 wr_fs_ret_2644.:
       DM(23, I2) = R0;
@@ -33718,7 +33718,7 @@ wr_fs_ret_2644.:
       R1 = 0x473b8000;                  // 48000.0
       F0 = F0 * F1;
       I12 = 0xbee673;                        // return address - 1: wr_fs_ret_2645. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2645.;
 wr_fs_ret_2645.:
       R1 = R1 - R1;                     // 0.0
@@ -33726,7 +33726,7 @@ wr_fs_ret_2645.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbee680;                        // return address - 1: wr_fs_ret_2646. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2646.;
 wr_fs_ret_2646.:
       DM(25, I2) = R0;
@@ -33837,7 +33837,7 @@ wr_fs_else_2661.:
       R1 = 0x41d80000;                  // 27.0
       F0 = F1 + F0;
       I12 = 0xbee73a;                        // return address - 1: wr_fs_ret_2663. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2663.;
 wr_fs_ret_2663.:
       R1 = 0x41d80000;                  // 27.0
@@ -33855,7 +33855,7 @@ wr_fs_fi_2660.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F0 * F1;
       I12 = 0xbee757;                        // return address - 1: wr_fs_ret_2664. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2664.;
 wr_fs_ret_2664.:
       DM(161, I5) = R0;
@@ -33892,7 +33892,7 @@ wr_fs_else_2667.:
       R1 = 0x41d80000;                  // 27.0
       F0 = F1 + F0;
       I12 = 0xbee7a5;                        // return address - 1: wr_fs_ret_2669. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2669.;
 wr_fs_ret_2669.:
       R1 = 0x41d80000;                  // 27.0
@@ -33908,7 +33908,7 @@ wr_fs_fi_2668.:
 wr_fs_fi_2666.:
       R0 = DM(172, I5);
       I12 = 0xbee7bf;                        // return address - 1: wr_fs_ret_2670. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2670.;
 wr_fs_ret_2670.:
       DM(162, I5) = R0;
@@ -33968,7 +33968,7 @@ wr_fs_else_2676.:
       F0 = F0 * F1;
       DM(138, I5) = R0;
       I12 = 0xbee82c;                        // return address - 1: wr_fs_ret_2677. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2677.;
 wr_fs_ret_2677.:
       R1 = DM(52, I5);                  // 1.0
@@ -33982,7 +33982,7 @@ wr_fs_ret_2677.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbee847;                        // return address - 1: wr_fs_ret_2678. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2678.;
 wr_fs_ret_2678.:
       R1 = 0x43dc0000;                  // 440.0
@@ -34000,18 +34000,18 @@ wr_fs_ret_2678.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbee86b;                        // return address - 1: wr_fs_ret_2679. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2679.;
 wr_fs_ret_2679.:
       I12 = 0xbee871;                        // return address - 1: wr_fs_ret_2680. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2680.;
 wr_fs_ret_2680.:
       R1 = DM(188, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbee87e;                        // return address - 1: wr_fs_ret_2681. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2681.;
 wr_fs_ret_2681.:
       F1 = PASS F0;
@@ -34028,7 +34028,7 @@ wr_fs_ret_2681.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbee8a2;                        // return address - 1: wr_fs_ret_2682. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2682.;
 wr_fs_ret_2682.:
       DM(108, I5) = R0;
@@ -34046,7 +34046,7 @@ wr_fs_ret_2682.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbee8ca;                        // return address - 1: wr_fs_ret_2683. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2683.;
 wr_fs_ret_2683.:
       R1 = 0x43dc0000;                  // 440.0
@@ -34064,18 +34064,18 @@ wr_fs_ret_2683.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbee8ee;                        // return address - 1: wr_fs_ret_2684. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2684.;
 wr_fs_ret_2684.:
       I12 = 0xbee8f4;                        // return address - 1: wr_fs_ret_2685. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2685.;
 wr_fs_ret_2685.:
       R1 = DM(188, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbee901;                        // return address - 1: wr_fs_ret_2686. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2686.;
 wr_fs_ret_2686.:
       F1 = PASS F0;
@@ -34094,7 +34094,7 @@ wr_fs_ret_2686.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbee929;                        // return address - 1: wr_fs_ret_2687. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2687.;
 wr_fs_ret_2687.:
       DM(109, I5) = R0;
@@ -34115,7 +34115,7 @@ wr_fs_ret_2687.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbee958;                        // return address - 1: wr_fs_ret_2688. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2688.;
 wr_fs_ret_2688.:
       R1 = 0x43dc0000;                  // 440.0
@@ -34133,18 +34133,18 @@ wr_fs_ret_2688.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbee97c;                        // return address - 1: wr_fs_ret_2689. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2689.;
 wr_fs_ret_2689.:
       I12 = 0xbee982;                        // return address - 1: wr_fs_ret_2690. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2690.;
 wr_fs_ret_2690.:
       R1 = DM(188, I5);
       F2 = PASS F0;
       F0 = PASS F1;
       I12 = 0xbee98f;                        // return address - 1: wr_fs_ret_2691. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2691.;
 wr_fs_ret_2691.:
       F1 = PASS F0;
@@ -34163,7 +34163,7 @@ wr_fs_ret_2691.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
       I12 = 0xbee9b7;                        // return address - 1: wr_fs_ret_2692. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2692.;
 wr_fs_ret_2692.:
       DM(110, I5) = R0;
@@ -34184,7 +34184,7 @@ wr_fs_ret_2692.:
       R1 = 0x411f851f;                  // 9.970000267028809
       F0 = F0 * F1;
       I12 = 0xbee9e5;                        // return address - 1: wr_fs_ret_2693. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2693.;
 wr_fs_ret_2693.:
       R1 = 0x3dcccccd;                  // 0.10000000149011612
@@ -34258,7 +34258,7 @@ wr_fs_else_2698.:
       R1 = 0x41d80000;                  // 27.0
       F0 = F1 + F0;
       I12 = 0xbeea86;                        // return address - 1: wr_fs_ret_2700. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2700.;
 wr_fs_ret_2700.:
       R1 = 0x41d80000;                  // 27.0
@@ -34321,7 +34321,7 @@ wr_fs_else_2704.:
       R1 = 0x41d80000;                  // 27.0
       F0 = F1 + F0;
       I12 = 0xbeeb01;                        // return address - 1: wr_fs_ret_2706. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2706.;
 wr_fs_ret_2706.:
       R1 = 0x41d80000;                  // 27.0
@@ -34504,7 +34504,7 @@ wr_fs_else_2709.:
       IF LE JUMP 0xbeecc5;                   // -> wr_fs_else_2710.
       R0 = DM(120, I2);
       I12 = 0xbeec8b;                        // return address - 1: wr_fs_ret_2711. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2711.;
 wr_fs_ret_2711.:
       R1 = DM(54, I5);                  // 0.5
@@ -34643,7 +34643,7 @@ wr_fs_else_2718.:
       R1 = DM(59, I5);                  // 2.0
       F0 = F0 * F1;
       I12 = 0xbeed91;                        // return address - 1: wr_fs_ret_2719. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2719.;
 wr_fs_ret_2719.:
       DM(177, I5) = R0;
@@ -34698,7 +34698,7 @@ wr_fs_fi_2723.:
       R1 = DM(185, I5);
       F0 = F0 + F1;
       I12 = 0xbeedf2;                        // return address - 1: wr_fs_ret_2724. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2724.;
 wr_fs_ret_2724.:
       DM(121, I5) = R0;
@@ -34706,14 +34706,14 @@ wr_fs_ret_2724.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbeee00;                        // return address - 1: wr_fs_ret_2725. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2725.;
 wr_fs_ret_2725.:
       R1 = DM(28, I2);
       F0 = F0 * F1;
       DM(178, I5) = R0;
       I12 = 0xbeee0c;                        // return address - 1: wr_fs_ret_2726. - 1
-      JUMP 0xbf13e4;                         // -> wr_fs_sub_dbi.
+      JUMP 0xbf13f0;                         // -> wr_fs_sub_dbi.
 .GLOBAL wr_fs_ret_2726.;
 wr_fs_ret_2726.:
       R1 = DM(30, I2);
@@ -34802,7 +34802,7 @@ wr_fs_else_2728.:
       R1 = DM(15, I2);
       F0 = F1 + F0;
       I12 = 0xbeeeb3;                        // return address - 1: wr_fs_ret_2729. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2729.;
 wr_fs_ret_2729.:
       DM(159, I5) = R0;
@@ -34830,12 +34830,12 @@ wr_fs_else_2730.:
       R1 = DM(14, I2);
       F0 = F1 + F0;
       I12 = 0xbeeee4;                        // return address - 1: wr_fs_ret_2731. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2731.;
 wr_fs_ret_2731.:
       DM(201, I5) = R0;
       I12 = 0xbeeeed;                        // return address - 1: wr_fs_ret_2732. - 1
-      JUMP 0xbf13e4;                         // -> wr_fs_sub_dbi.
+      JUMP 0xbf13f0;                         // -> wr_fs_sub_dbi.
 .GLOBAL wr_fs_ret_2732.;
 wr_fs_ret_2732.:
       R1 = DM(35, I2);
@@ -34919,7 +34919,7 @@ wr_fs_loop_2733.:
 wr_fs_else_2734.:
       R0 = DM(14, I2);
       I12 = 0xbeef8d;                        // return address - 1: wr_fs_ret_2735. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2735.;
 wr_fs_ret_2735.:
       R1 = DM(48, I2);
@@ -34954,7 +34954,7 @@ wr_fs_ret_2735.:
 wr_fs_else_2736.:
       R0 = DM(15, I2);
       I12 = 0xbeefca;                        // return address - 1: wr_fs_ret_2737. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2737.;
 wr_fs_ret_2737.:
       R1 = DM(49, I2);
@@ -34989,7 +34989,7 @@ wr_fs_ret_2737.:
 wr_fs_else_2738.:
       R0 = DM(16, I2);
       I12 = 0xbef007;                        // return address - 1: wr_fs_ret_2739. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2739.;
 wr_fs_ret_2739.:
       R1 = DM(50, I2);
@@ -35024,7 +35024,7 @@ wr_fs_ret_2739.:
 wr_fs_else_2740.:
       R0 = DM(17, I2);
       I12 = 0xbef044;                        // return address - 1: wr_fs_ret_2741. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2741.;
 wr_fs_ret_2741.:
       R1 = DM(51, I2);
@@ -35059,7 +35059,7 @@ wr_fs_ret_2741.:
 wr_fs_else_2742.:
       R0 = DM(18, I2);
       I12 = 0xbef081;                        // return address - 1: wr_fs_ret_2743. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2743.;
 wr_fs_ret_2743.:
       R1 = DM(52, I2);
@@ -35094,7 +35094,7 @@ wr_fs_ret_2743.:
 wr_fs_else_2744.:
       R0 = DM(19, I2);
       I12 = 0xbef0be;                        // return address - 1: wr_fs_ret_2745. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2745.;
 wr_fs_ret_2745.:
       R1 = DM(53, I2);
@@ -35129,7 +35129,7 @@ wr_fs_ret_2745.:
 wr_fs_else_2746.:
       R0 = DM(20, I2);
       I12 = 0xbef0fb;                        // return address - 1: wr_fs_ret_2747. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2747.;
 wr_fs_ret_2747.:
       R1 = DM(54, I2);
@@ -35164,7 +35164,7 @@ wr_fs_ret_2747.:
 wr_fs_else_2748.:
       R0 = DM(21, I2);
       I12 = 0xbef138;                        // return address - 1: wr_fs_ret_2749. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2749.;
 wr_fs_ret_2749.:
       R1 = DM(55, I2);
@@ -35179,7 +35179,7 @@ wr_fs_ret_2749.:
       F0 = F0 * F1;
       DM(63, I2) = R0;
       I12 = 0xbef154;                        // return address - 1: wr_fs_ret_2750. - 1
-      JUMP 0xbf13e4;                         // -> wr_fs_sub_dbi.
+      JUMP 0xbf13f0;                         // -> wr_fs_sub_dbi.
 .GLOBAL wr_fs_ret_2750.;
 wr_fs_ret_2750.:
       DM(199, I5) = R0;
@@ -35310,7 +35310,7 @@ wr_fs_else_2755.:
 .GLOBAL wr_fs_else_2756.;
 wr_fs_else_2756.:
       I12 = 0xbef264;                        // return address - 1: wr_fs_ret_2757. - 1
-      JUMP 0xbf13e4;                         // -> wr_fs_sub_dbi.
+      JUMP 0xbf13f0;                         // -> wr_fs_sub_dbi.
 .GLOBAL wr_fs_ret_2757.;
 wr_fs_ret_2757.:
       DM(199, I5) = R0;
@@ -35351,7 +35351,7 @@ wr_fs_ret_2757.:
       F0 = F0 * F1;
       DM(173, I5) = R0;
       I12 = 0xbef2c7;                        // return address - 1: wr_fs_ret_2758. - 1
-      JUMP 0xbf13e4;                         // -> wr_fs_sub_dbi.
+      JUMP 0xbf13f0;                         // -> wr_fs_sub_dbi.
 .GLOBAL wr_fs_ret_2758.;
 wr_fs_ret_2758.:
       DM(199, I5) = R0;
@@ -35428,7 +35428,7 @@ wr_fs_else_2762.:
       R1 = 0x41d80000;                  // 27.0
       F0 = F1 + F0;
       I12 = 0xbef374;                        // return address - 1: wr_fs_ret_2764. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2764.;
 wr_fs_ret_2764.:
       R1 = 0x41d80000;                  // 27.0
@@ -35488,7 +35488,7 @@ wr_fs_else_2765.:
 wr_fs_else_2766.:
       R0 = DM(15, I2);
       I12 = 0xbef3d6;                        // return address - 1: wr_fs_ret_2767. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2767.;
 wr_fs_ret_2767.:
       R1 = DM(89, I2);
@@ -35496,7 +35496,7 @@ wr_fs_ret_2767.:
       R1 = DM(14, I2);
       F0 = F1 + F0;
       I12 = 0xbef3e5;                        // return address - 1: wr_fs_ret_2768. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2768.;
 wr_fs_ret_2768.:
       R1 = DM(91, I2);
@@ -35590,7 +35590,7 @@ wr_fs_else_2771.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F0 * F1;
       I12 = 0xbef49b;                        // return address - 1: wr_fs_ret_2772. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2772.;
 wr_fs_ret_2772.:
       R1 = DM(159, I5);
@@ -35600,7 +35600,7 @@ wr_fs_ret_2772.:
       F1 = F1 * F2;
       F0 = F1 + F0;
       I12 = 0xbef4ad;                        // return address - 1: wr_fs_ret_2773. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2773.;
 wr_fs_ret_2773.:
       DM(169, I5) = R0;
@@ -35624,7 +35624,7 @@ wr_fs_fi_2775.:
       R1 = 0x3fbdd2f2;                  // 1.4830000400543213
       F0 = F0 * F1;
       I12 = 0xbef4d9;                        // return address - 1: wr_fs_ret_2776. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2776.;
 wr_fs_ret_2776.:
       R1 = DM(159, I5);
@@ -35634,7 +35634,7 @@ wr_fs_ret_2776.:
       F1 = F1 * F2;
       F0 = F1 + F0;
       I12 = 0xbef4ec;                        // return address - 1: wr_fs_ret_2777. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2777.;
 wr_fs_ret_2777.:
       DM(169, I5) = R0;
@@ -35658,7 +35658,7 @@ wr_fs_fi_2779.:
       R1 = 0x3ff74bc7;                  // 1.9320000410079956
       F0 = F0 * F1;
       I12 = 0xbef518;                        // return address - 1: wr_fs_ret_2780. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2780.;
 wr_fs_ret_2780.:
       R1 = DM(159, I5);
@@ -35668,7 +35668,7 @@ wr_fs_ret_2780.:
       F1 = F1 * F2;
       F0 = F1 + F0;
       I12 = 0xbef52b;                        // return address - 1: wr_fs_ret_2781. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2781.;
 wr_fs_ret_2781.:
       DM(169, I5) = R0;
@@ -35692,7 +35692,7 @@ wr_fs_fi_2783.:
       R1 = 0x4022f1aa;                  // 2.5460000038146973
       F0 = F0 * F1;
       I12 = 0xbef557;                        // return address - 1: wr_fs_ret_2784. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2784.;
 wr_fs_ret_2784.:
       R1 = DM(159, I5);
@@ -35702,7 +35702,7 @@ wr_fs_ret_2784.:
       F1 = F1 * F2;
       F0 = F1 + F0;
       I12 = 0xbef56a;                        // return address - 1: wr_fs_ret_2785. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2785.;
 wr_fs_ret_2785.:
       DM(169, I5) = R0;
@@ -35726,7 +35726,7 @@ wr_fs_fi_2787.:
       R1 = 0x402851ec;                  // 2.630000114440918
       F0 = F0 * F1;
       I12 = 0xbef596;                        // return address - 1: wr_fs_ret_2788. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2788.;
 wr_fs_ret_2788.:
       R1 = DM(159, I5);
@@ -35736,7 +35736,7 @@ wr_fs_ret_2788.:
       F1 = F1 * F2;
       F0 = F1 + F0;
       I12 = 0xbef5a9;                        // return address - 1: wr_fs_ret_2789. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2789.;
 wr_fs_ret_2789.:
       DM(169, I5) = R0;
@@ -35760,7 +35760,7 @@ wr_fs_fi_2791.:
       R1 = 0x40796873;                  // 3.8970000743865967
       F0 = F0 * F1;
       I12 = 0xbef5d5;                        // return address - 1: wr_fs_ret_2792. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2792.;
 wr_fs_ret_2792.:
       R1 = DM(159, I5);
@@ -35770,7 +35770,7 @@ wr_fs_ret_2792.:
       F1 = F1 * F2;
       F0 = F1 + F0;
       I12 = 0xbef5e8;                        // return address - 1: wr_fs_ret_2793. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2793.;
 wr_fs_ret_2793.:
       DM(169, I5) = R0;
@@ -35869,7 +35869,7 @@ wr_fs_else_2797.:
       R1 = DM(15, I2);
       F0 = F1 + F0;
       I12 = 0xbef6a9;                        // return address - 1: wr_fs_ret_2798. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2798.;
 wr_fs_ret_2798.:
       DM(159, I5) = R0;
@@ -35897,7 +35897,7 @@ wr_fs_else_2799.:
       R1 = DM(14, I2);
       F0 = F1 + F0;
       I12 = 0xbef6da;                        // return address - 1: wr_fs_ret_2800. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2800.;
 wr_fs_ret_2800.:
       DM(201, I5) = R0;
@@ -36119,13 +36119,13 @@ wr_fs_else_2807.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbef8a2;                        // return address - 1: wr_fs_ret_2809. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2809.;
 wr_fs_ret_2809.:
       R1 = 0x43dc0000;                  // 440.0
       F0 = F1 * F0;
       I12 = 0xbef8ad;                        // return address - 1: wr_fs_ret_2810. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2810.;
 wr_fs_ret_2810.:
       R1 = 0x4130738b;                  // 11.02820873260498
@@ -36274,7 +36274,7 @@ wr_fs_loop_2816.:
       R1 = 0x40d33333;                  // 6.599999904632568
       F0 = F0 * F1;
       I12 = 0xbef9df;                        // return address - 1: wr_fs_ret_2817. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2817.;
 wr_fs_ret_2817.:
       R1 = 0x43480000;                  // 200.0
@@ -36288,7 +36288,7 @@ wr_fs_ret_2817.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbef9fb;                        // return address - 1: wr_fs_ret_2818. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2818.;
 wr_fs_ret_2818.:
       R1 = DM(52, I5);                  // 1.0
@@ -36300,7 +36300,7 @@ wr_fs_ret_2818.:
       R1 = 0x41100000;                  // 9.0
       F0 = F0 * F1;
       I12 = 0xbefa12;                        // return address - 1: wr_fs_ret_2819. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2819.;
 wr_fs_ret_2819.:
       R1 = 0x41200000;                  // 10.0
@@ -36314,7 +36314,7 @@ wr_fs_ret_2819.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbefa2e;                        // return address - 1: wr_fs_ret_2820. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2820.;
 wr_fs_ret_2820.:
       R1 = DM(52, I5);                  // 1.0
@@ -36326,7 +36326,7 @@ wr_fs_ret_2820.:
       R1 = 0x41100000;                  // 9.0
       F0 = F0 * F1;
       I12 = 0xbefa45;                        // return address - 1: wr_fs_ret_2821. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2821.;
 wr_fs_ret_2821.:
       R1 = 0x41200000;                  // 10.0
@@ -36340,7 +36340,7 @@ wr_fs_ret_2821.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbefa61;                        // return address - 1: wr_fs_ret_2822. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2822.;
 wr_fs_ret_2822.:
       R1 = DM(52, I5);                  // 1.0
@@ -36354,7 +36354,7 @@ wr_fs_ret_2822.:
       R1 = R1 - R1;                     // 0.0
       F0 = F1 - F0;
       I12 = 0xbefa7b;                        // return address - 1: wr_fs_ret_2823. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2823.;
 wr_fs_ret_2823.:
       R1 = 0x46947000;                  // 19000.0
@@ -36368,7 +36368,7 @@ wr_fs_ret_2823.:
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
       I12 = 0xbefa97;                        // return address - 1: wr_fs_ret_2824. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2824.;
 wr_fs_ret_2824.:
       R1 = DM(52, I5);                  // 1.0
@@ -36437,7 +36437,7 @@ wr_fs_fi_2826.:
       R1 = 0x41000000;                  // 8.0
       F0 = F0 * F1;
       I12 = 0xbefb2a;                        // return address - 1: wr_fs_ret_2827. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2827.;
 wr_fs_ret_2827.:
       R1 = 0x3d4ccccd;                  // 0.05000000074505806
@@ -36469,7 +36469,7 @@ wr_fs_ret_2827.:
 wr_fs_else_2828.:
       R0 = DM(160, I5);
       I12 = 0xbefb6b;                        // return address - 1: wr_fs_ret_2829. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2829.;
 wr_fs_ret_2829.:
       R1 = DM(52, I5);                  // 1.0
@@ -36481,7 +36481,7 @@ wr_fs_ret_2829.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbefb83;                        // return address - 1: wr_fs_ret_2830. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2830.;
 wr_fs_ret_2830.:
       R1 = DM(52, I5);                  // 1.0
@@ -36491,7 +36491,7 @@ wr_fs_ret_2830.:
       DM(325, I5) = R0;
       R0 = DM(161, I5);
       I12 = 0xbefb98;                        // return address - 1: wr_fs_ret_2831. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2831.;
 wr_fs_ret_2831.:
       R1 = DM(52, I5);                  // 1.0
@@ -36507,7 +36507,7 @@ wr_fs_ret_2831.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbefbb8;                        // return address - 1: wr_fs_ret_2832. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2832.;
 wr_fs_ret_2832.:
       R1 = DM(52, I5);                  // 1.0
@@ -36540,7 +36540,7 @@ wr_fs_ret_2832.:
       F0 = F1 + F0;
       DM(123, I5) = R0;
       I12 = 0xbefbff;                        // return address - 1: wr_fs_ret_2833. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2833.;
 wr_fs_ret_2833.:
       DM(163, I5) = R0;
@@ -36930,7 +36930,7 @@ wr_fs_else_2854.:
       R1 = 0x41d80000;                  // 27.0
       F0 = F1 + F0;
       I12 = 0xbeff40;                        // return address - 1: wr_fs_ret_2856. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2856.;
 wr_fs_ret_2856.:
       R1 = 0x41d80000;                  // 27.0
@@ -37294,7 +37294,7 @@ wr_fs_rt_c_render.:
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
       I12 = 0xbf025b;                        // return address - 1: wr_fs_ret_2865. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2865.;
 wr_fs_ret_2865.:
       R1 = 0x43dc0000;                  // 440.0
@@ -37346,7 +37346,7 @@ wr_fs_ret_2865.:
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
       I12 = 0xbf02cf;                        // return address - 1: wr_fs_ret_2866. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2866.;
 wr_fs_ret_2866.:
       DM(108, I5) = R0;
@@ -37354,7 +37354,7 @@ wr_fs_ret_2866.:
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 * F1;
       I12 = 0xbf02de;                        // return address - 1: wr_fs_ret_2867. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2867.;
 wr_fs_ret_2867.:
       DM(136, I5) = R0;
@@ -37406,7 +37406,13 @@ wr_fs_ret_2867.:
       R0 = DM(176, I5);
       R1 = DM(56, I5);                  // 0.007874015718698502
       F0 = F0 * F1;
-      R1 = DM(62, I5);                  // 0.25
+      R1 = DM(176, I5);
+      R2 = DM(56, I5);                  // 0.007874015718698502
+      F1 = F1 * F2;
+      R2 = 0x3d570a3d;                  // 0.05249999836087227
+      F1 = F1 * F2;
+      R2 = 0x3c8f5c29;                  // 0.017500000074505806
+      F1 = F1 + F2;
       F0 = F0 * F1;
       DM(117, I5) = R0;
       R0 = DM(177, I5);
@@ -37439,8 +37445,8 @@ wr_fs_loop_2868.:
       F0 = F1 + F0;
       R1 = DM(4, I2);
       F0 = F1 + F0;
-      I12 = 0xbf0397;                        // return address - 1: wr_fs_ret_2869. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      I12 = 0xbf03a3;                        // return address - 1: wr_fs_ret_2869. - 1
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_2869.;
 wr_fs_ret_2869.:
       DM(4, I2) = R0;
@@ -37451,21 +37457,21 @@ wr_fs_ret_2869.:
       F0 = F1 + F0;
       R1 = DM(5, I2);
       F0 = F1 + F0;
-      I12 = 0xbf03ae;                        // return address - 1: wr_fs_ret_2870. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      I12 = 0xbf03ba;                        // return address - 1: wr_fs_ret_2870. - 1
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_2870.;
 wr_fs_ret_2870.:
       DM(5, I2) = R0;
       R0 = DM(6, I2);
       R1 = 0x3635c0cf;                  // 2.7083331133326283e-06
       F0 = F0 + F1;
-      I12 = 0xbf03bc;                        // return address - 1: wr_fs_ret_2871. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      I12 = 0xbf03c8;                        // return address - 1: wr_fs_ret_2871. - 1
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_2871.;
 wr_fs_ret_2871.:
       DM(6, I2) = R0;
-      I12 = 0xbf03c4;                        // return address - 1: wr_fs_ret_2872. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf03d0;                        // return address - 1: wr_fs_ret_2872. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2872.;
 wr_fs_ret_2872.:
       R1 = DM(115, I5);
@@ -37476,8 +37482,8 @@ wr_fs_ret_2872.:
       F0 = F0 + F1;
       R1 = DM(114, I5);
       F0 = F0 + F1;
-      I12 = 0xbf03db;                        // return address - 1: wr_fs_ret_2873. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf03e7;                        // return address - 1: wr_fs_ret_2873. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2873.;
 wr_fs_ret_2873.:
       DM(147, I5) = R0;
@@ -37488,8 +37494,8 @@ wr_fs_ret_2873.:
       F0 = F1 + F0;
       R1 = DM(114, I5);
       F0 = F0 + F1;
-      I12 = 0xbf03f3;                        // return address - 1: wr_fs_ret_2874. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf03ff;                        // return address - 1: wr_fs_ret_2874. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2874.;
 wr_fs_ret_2874.:
       DM(146, I5) = R0;
@@ -37530,9 +37536,9 @@ wr_fs_ret_2874.:
       DM(151, I5) = R0;
       R0 = DM(134, I5);
       R0 = PASS R0;
-      IF NE JUMP 0xbf0455;                   // -> wr_fs_else_2875.
-      I12 = 0xbf0454;                        // return address - 1: wr_fs_rret_2876. - 1
-      JUMP 0xbf05d8;                         // -> wr_fs_rt_c_s0.
+      IF NE JUMP 0xbf0461;                   // -> wr_fs_else_2875.
+      I12 = 0xbf0460;                        // return address - 1: wr_fs_rret_2876. - 1
+      JUMP 0xbf05e4;                         // -> wr_fs_rt_c_s0.
 .GLOBAL wr_fs_rret_2876.;
 wr_fs_rret_2876.:
 .GLOBAL wr_fs_else_2875.;
@@ -37540,9 +37546,9 @@ wr_fs_else_2875.:
       R0 = DM(134, I5);
       R1 = 0x1;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0464;                   // -> wr_fs_else_2877.
-      I12 = 0xbf0463;                        // return address - 1: wr_fs_rret_2878. - 1
-      JUMP 0xbf0607;                         // -> wr_fs_rt_c_s1.
+      IF NE JUMP 0xbf0470;                   // -> wr_fs_else_2877.
+      I12 = 0xbf046f;                        // return address - 1: wr_fs_rret_2878. - 1
+      JUMP 0xbf0613;                         // -> wr_fs_rt_c_s1.
 .GLOBAL wr_fs_rret_2878.;
 wr_fs_rret_2878.:
 .GLOBAL wr_fs_else_2877.;
@@ -37550,9 +37556,9 @@ wr_fs_else_2877.:
       R0 = DM(134, I5);
       R1 = 0x2;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0473;                   // -> wr_fs_else_2879.
-      I12 = 0xbf0472;                        // return address - 1: wr_fs_rret_2880. - 1
-      JUMP 0xbf0636;                         // -> wr_fs_rt_c_s2.
+      IF NE JUMP 0xbf047f;                   // -> wr_fs_else_2879.
+      I12 = 0xbf047e;                        // return address - 1: wr_fs_rret_2880. - 1
+      JUMP 0xbf0642;                         // -> wr_fs_rt_c_s2.
 .GLOBAL wr_fs_rret_2880.;
 wr_fs_rret_2880.:
 .GLOBAL wr_fs_else_2879.;
@@ -37560,9 +37566,9 @@ wr_fs_else_2879.:
       R0 = DM(134, I5);
       R1 = 0x3;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0482;                   // -> wr_fs_else_2881.
-      I12 = 0xbf0481;                        // return address - 1: wr_fs_rret_2882. - 1
-      JUMP 0xbf0679;                         // -> wr_fs_rt_c_s3.
+      IF NE JUMP 0xbf048e;                   // -> wr_fs_else_2881.
+      I12 = 0xbf048d;                        // return address - 1: wr_fs_rret_2882. - 1
+      JUMP 0xbf0685;                         // -> wr_fs_rt_c_s3.
 .GLOBAL wr_fs_rret_2882.;
 wr_fs_rret_2882.:
 .GLOBAL wr_fs_else_2881.;
@@ -37570,9 +37576,9 @@ wr_fs_else_2881.:
       R0 = DM(134, I5);
       R1 = 0x4;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0491;                   // -> wr_fs_else_2883.
-      I12 = 0xbf0490;                        // return address - 1: wr_fs_rret_2884. - 1
-      JUMP 0xbf06a4;                         // -> wr_fs_rt_c_s4.
+      IF NE JUMP 0xbf049d;                   // -> wr_fs_else_2883.
+      I12 = 0xbf049c;                        // return address - 1: wr_fs_rret_2884. - 1
+      JUMP 0xbf06b0;                         // -> wr_fs_rt_c_s4.
 .GLOBAL wr_fs_rret_2884.;
 wr_fs_rret_2884.:
 .GLOBAL wr_fs_else_2883.;
@@ -37580,9 +37586,9 @@ wr_fs_else_2883.:
       R0 = DM(134, I5);
       R1 = 0x5;
       COMP(R0, R1);
-      IF NE JUMP 0xbf04a0;                   // -> wr_fs_else_2885.
-      I12 = 0xbf049f;                        // return address - 1: wr_fs_rret_2886. - 1
-      JUMP 0xbf06d3;                         // -> wr_fs_rt_c_s5.
+      IF NE JUMP 0xbf04ac;                   // -> wr_fs_else_2885.
+      I12 = 0xbf04ab;                        // return address - 1: wr_fs_rret_2886. - 1
+      JUMP 0xbf06df;                         // -> wr_fs_rt_c_s5.
 .GLOBAL wr_fs_rret_2886.;
 wr_fs_rret_2886.:
 .GLOBAL wr_fs_else_2885.;
@@ -37590,9 +37596,9 @@ wr_fs_else_2885.:
       R0 = DM(134, I5);
       R1 = 0x6;
       COMP(R0, R1);
-      IF NE JUMP 0xbf04af;                   // -> wr_fs_else_2887.
-      I12 = 0xbf04ae;                        // return address - 1: wr_fs_rret_2888. - 1
-      JUMP 0xbf0718;                         // -> wr_fs_rt_c_s6.
+      IF NE JUMP 0xbf04bb;                   // -> wr_fs_else_2887.
+      I12 = 0xbf04ba;                        // return address - 1: wr_fs_rret_2888. - 1
+      JUMP 0xbf0724;                         // -> wr_fs_rt_c_s6.
 .GLOBAL wr_fs_rret_2888.;
 wr_fs_rret_2888.:
 .GLOBAL wr_fs_else_2887.;
@@ -37600,9 +37606,9 @@ wr_fs_else_2887.:
       R0 = DM(134, I5);
       R1 = 0x7;
       COMP(R0, R1);
-      IF NE JUMP 0xbf04be;                   // -> wr_fs_else_2889.
-      I12 = 0xbf04bd;                        // return address - 1: wr_fs_rret_2890. - 1
-      JUMP 0xbf073b;                         // -> wr_fs_rt_c_s7.
+      IF NE JUMP 0xbf04ca;                   // -> wr_fs_else_2889.
+      I12 = 0xbf04c9;                        // return address - 1: wr_fs_rret_2890. - 1
+      JUMP 0xbf0747;                         // -> wr_fs_rt_c_s7.
 .GLOBAL wr_fs_rret_2890.;
 wr_fs_rret_2890.:
 .GLOBAL wr_fs_else_2889.;
@@ -37612,12 +37618,12 @@ wr_fs_else_2889.:
       R0 = DM(129, I5);
       R1 = R1 - R1;                     // 0.0
       COMP(F0, F1);
-      IF LE JUMP 0xbf0556;                   // -> wr_fs_else_2891.
+      IF LE JUMP 0xbf0562;                   // -> wr_fs_else_2891.
       R0 = DM(135, I5);
       R0 = PASS R0;
-      IF NE JUMP 0xbf04d9;                   // -> wr_fs_else_2892.
-      I12 = 0xbf04d8;                        // return address - 1: wr_fs_rret_2893. - 1
-      JUMP 0xbf05d8;                         // -> wr_fs_rt_c_s0.
+      IF NE JUMP 0xbf04e5;                   // -> wr_fs_else_2892.
+      I12 = 0xbf04e4;                        // return address - 1: wr_fs_rret_2893. - 1
+      JUMP 0xbf05e4;                         // -> wr_fs_rt_c_s0.
 .GLOBAL wr_fs_rret_2893.;
 wr_fs_rret_2893.:
 .GLOBAL wr_fs_else_2892.;
@@ -37625,9 +37631,9 @@ wr_fs_else_2892.:
       R0 = DM(135, I5);
       R1 = 0x1;
       COMP(R0, R1);
-      IF NE JUMP 0xbf04e8;                   // -> wr_fs_else_2894.
-      I12 = 0xbf04e7;                        // return address - 1: wr_fs_rret_2895. - 1
-      JUMP 0xbf0607;                         // -> wr_fs_rt_c_s1.
+      IF NE JUMP 0xbf04f4;                   // -> wr_fs_else_2894.
+      I12 = 0xbf04f3;                        // return address - 1: wr_fs_rret_2895. - 1
+      JUMP 0xbf0613;                         // -> wr_fs_rt_c_s1.
 .GLOBAL wr_fs_rret_2895.;
 wr_fs_rret_2895.:
 .GLOBAL wr_fs_else_2894.;
@@ -37635,9 +37641,9 @@ wr_fs_else_2894.:
       R0 = DM(135, I5);
       R1 = 0x2;
       COMP(R0, R1);
-      IF NE JUMP 0xbf04f7;                   // -> wr_fs_else_2896.
-      I12 = 0xbf04f6;                        // return address - 1: wr_fs_rret_2897. - 1
-      JUMP 0xbf0636;                         // -> wr_fs_rt_c_s2.
+      IF NE JUMP 0xbf0503;                   // -> wr_fs_else_2896.
+      I12 = 0xbf0502;                        // return address - 1: wr_fs_rret_2897. - 1
+      JUMP 0xbf0642;                         // -> wr_fs_rt_c_s2.
 .GLOBAL wr_fs_rret_2897.;
 wr_fs_rret_2897.:
 .GLOBAL wr_fs_else_2896.;
@@ -37645,9 +37651,9 @@ wr_fs_else_2896.:
       R0 = DM(135, I5);
       R1 = 0x3;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0506;                   // -> wr_fs_else_2898.
-      I12 = 0xbf0505;                        // return address - 1: wr_fs_rret_2899. - 1
-      JUMP 0xbf0679;                         // -> wr_fs_rt_c_s3.
+      IF NE JUMP 0xbf0512;                   // -> wr_fs_else_2898.
+      I12 = 0xbf0511;                        // return address - 1: wr_fs_rret_2899. - 1
+      JUMP 0xbf0685;                         // -> wr_fs_rt_c_s3.
 .GLOBAL wr_fs_rret_2899.;
 wr_fs_rret_2899.:
 .GLOBAL wr_fs_else_2898.;
@@ -37655,9 +37661,9 @@ wr_fs_else_2898.:
       R0 = DM(135, I5);
       R1 = 0x4;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0515;                   // -> wr_fs_else_2900.
-      I12 = 0xbf0514;                        // return address - 1: wr_fs_rret_2901. - 1
-      JUMP 0xbf06a4;                         // -> wr_fs_rt_c_s4.
+      IF NE JUMP 0xbf0521;                   // -> wr_fs_else_2900.
+      I12 = 0xbf0520;                        // return address - 1: wr_fs_rret_2901. - 1
+      JUMP 0xbf06b0;                         // -> wr_fs_rt_c_s4.
 .GLOBAL wr_fs_rret_2901.;
 wr_fs_rret_2901.:
 .GLOBAL wr_fs_else_2900.;
@@ -37665,9 +37671,9 @@ wr_fs_else_2900.:
       R0 = DM(135, I5);
       R1 = 0x5;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0524;                   // -> wr_fs_else_2902.
-      I12 = 0xbf0523;                        // return address - 1: wr_fs_rret_2903. - 1
-      JUMP 0xbf06d3;                         // -> wr_fs_rt_c_s5.
+      IF NE JUMP 0xbf0530;                   // -> wr_fs_else_2902.
+      I12 = 0xbf052f;                        // return address - 1: wr_fs_rret_2903. - 1
+      JUMP 0xbf06df;                         // -> wr_fs_rt_c_s5.
 .GLOBAL wr_fs_rret_2903.;
 wr_fs_rret_2903.:
 .GLOBAL wr_fs_else_2902.;
@@ -37675,9 +37681,9 @@ wr_fs_else_2902.:
       R0 = DM(135, I5);
       R1 = 0x6;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0533;                   // -> wr_fs_else_2904.
-      I12 = 0xbf0532;                        // return address - 1: wr_fs_rret_2905. - 1
-      JUMP 0xbf0718;                         // -> wr_fs_rt_c_s6.
+      IF NE JUMP 0xbf053f;                   // -> wr_fs_else_2904.
+      I12 = 0xbf053e;                        // return address - 1: wr_fs_rret_2905. - 1
+      JUMP 0xbf0724;                         // -> wr_fs_rt_c_s6.
 .GLOBAL wr_fs_rret_2905.;
 wr_fs_rret_2905.:
 .GLOBAL wr_fs_else_2904.;
@@ -37685,9 +37691,9 @@ wr_fs_else_2904.:
       R0 = DM(135, I5);
       R1 = 0x7;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0542;                   // -> wr_fs_else_2906.
-      I12 = 0xbf0541;                        // return address - 1: wr_fs_rret_2907. - 1
-      JUMP 0xbf073b;                         // -> wr_fs_rt_c_s7.
+      IF NE JUMP 0xbf054e;                   // -> wr_fs_else_2906.
+      I12 = 0xbf054d;                        // return address - 1: wr_fs_rret_2907. - 1
+      JUMP 0xbf0747;                         // -> wr_fs_rt_c_s7.
 .GLOBAL wr_fs_rret_2907.;
 wr_fs_rret_2907.:
 .GLOBAL wr_fs_else_2906.;
@@ -37705,14 +37711,14 @@ wr_fs_else_2891.:
       R0 = DM(119, I5);
       R1 = R1 - R1;                     // 0.0
       COMP(F0, F1);
-      IF LE JUMP 0xbf0571;                   // -> wr_fs_else_2908.
+      IF LE JUMP 0xbf057d;                   // -> wr_fs_else_2908.
       R0 = DM(162, I5);
       R1 = DM(120, I5);
       F0 = F0 * F1;
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 * F1;
-      I12 = 0xbf056d;                        // return address - 1: wr_fs_ret_2909. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf0579;                        // return address - 1: wr_fs_ret_2909. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2909.;
 wr_fs_ret_2909.:
       DM(162, I5) = R0;
@@ -37723,12 +37729,12 @@ wr_fs_else_2908.:
       R0 = DM(9, I2);
       R1 = R1 - R1;                     // 0.0
       COMP(F0, F1);
-      IF LE JUMP 0xbf0587;                   // -> wr_fs_else_2910.
+      IF LE JUMP 0xbf0593;                   // -> wr_fs_else_2910.
       R0 = DM(9, I2);
       R1 = DM(52, I5);                  // 1.0
       F0 = F0 - F1;
       DM(9, I2) = R0;
-      JUMP 0xbf0591;                         // -> wr_fs_fi_2911.
+      JUMP 0xbf059d;                         // -> wr_fs_fi_2911.
 .GLOBAL wr_fs_else_2910.;
 wr_fs_else_2910.:
       R0 = DM(162, I5);
@@ -37765,7 +37771,7 @@ wr_fs_fi_2911.:
       R12 = 0x1;
       R0 = R0 - R12;
       DM(109, I5) = R0;
-      IF NE JUMP 0xbf0383;                   // -> wr_fs_loop_2868.
+      IF NE JUMP 0xbf038f;                   // -> wr_fs_loop_2868.
       I12 = DM(0x200a7300);
       JUMP (M14, I12);
 .GLOBAL wr_fs_rt_c_s0.;
@@ -37774,8 +37780,8 @@ wr_fs_rt_c_s0.:
       R0 = DM(151, I5);
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 * F1;
-      I12 = 0xbf05e6;                        // return address - 1: wr_fs_ret_2912. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf05f2;                        // return address - 1: wr_fs_ret_2912. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2912.;
 wr_fs_ret_2912.:
       R1 = DM(156, I5);
@@ -37785,8 +37791,8 @@ wr_fs_ret_2912.:
       F1 = F1 + F2;
       F2 = PASS F0;
       F0 = PASS F1;
-      I12 = 0xbf05f9;                        // return address - 1: wr_fs_ret_2913. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf0605;                        // return address - 1: wr_fs_ret_2913. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2913.;
 wr_fs_ret_2913.:
       F1 = PASS F0;
@@ -37805,8 +37811,8 @@ wr_fs_rt_c_s1.:
       F0 = F0 * F1;
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
-      I12 = 0xbf061d;                        // return address - 1: wr_fs_ret_2914. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      I12 = 0xbf0629;                        // return address - 1: wr_fs_ret_2914. - 1
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_2914.;
 wr_fs_ret_2914.:
       DM(140, I5) = R0;
@@ -37858,8 +37864,8 @@ wr_fs_rt_c_s3.:
       R0 = DM(156, I5);
       R1 = 0x3fc00000;                  // 1.5
       F0 = F0 * F1;
-      I12 = 0xbf0688;                        // return address - 1: wr_fs_ret_2915. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf0694;                        // return address - 1: wr_fs_ret_2915. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2915.;
 wr_fs_ret_2915.:
       R1 = 0x3eb33333;                  // 0.3499999940395355
@@ -37868,8 +37874,8 @@ wr_fs_ret_2915.:
       R2 = DM(54, I5);                  // 0.5
       F1 = F1 * F2;
       F0 = F1 + F0;
-      I12 = 0xbf069b;                        // return address - 1: wr_fs_ret_2916. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf06a7;                        // return address - 1: wr_fs_ret_2916. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2916.;
 wr_fs_ret_2916.:
       DM(161, I5) = R0;
@@ -37892,8 +37898,8 @@ wr_fs_rt_c_s4.:
       F0 = F0 + F1;
       R1 = 0x3fc00000;                  // 1.5
       F0 = F0 * F1;
-      I12 = 0xbf06ca;                        // return address - 1: wr_fs_ret_2917. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf06d6;                        // return address - 1: wr_fs_ret_2917. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2917.;
 wr_fs_ret_2917.:
       DM(161, I5) = R0;
@@ -37905,8 +37911,8 @@ wr_fs_rt_c_s5.:
       R0 = DM(151, I5);
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 * F1;
-      I12 = 0xbf06e1;                        // return address - 1: wr_fs_ret_2918. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf06ed;                        // return address - 1: wr_fs_ret_2918. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2918.;
 wr_fs_ret_2918.:
       R1 = DM(63, I5);                  // 4.0
@@ -37917,8 +37923,8 @@ wr_fs_ret_2918.:
       F1 = F1 + F2;
       F2 = PASS F0;
       F0 = PASS F1;
-      I12 = 0xbf06f5;                        // return address - 1: wr_fs_ret_2919. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf0701;                        // return address - 1: wr_fs_ret_2919. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2919.;
 wr_fs_ret_2919.:
       F1 = PASS F0;
@@ -37929,8 +37935,8 @@ wr_fs_ret_2919.:
       R0 = R0 AND R1;
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
-      I12 = 0xbf070a;                        // return address - 1: wr_fs_ret_2920. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0716;                        // return address - 1: wr_fs_ret_2920. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2920.;
 wr_fs_ret_2920.:
       R1 = DM(116, I5);
@@ -37950,8 +37956,8 @@ wr_fs_rt_c_s6.:
       R2 = 0x3f400000;                  // 0.75
       F1 = F1 * F2;
       F0 = F0 + F1;
-      I12 = 0xbf0732;                        // return address - 1: wr_fs_ret_2921. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf073e;                        // return address - 1: wr_fs_ret_2921. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2921.;
 wr_fs_ret_2921.:
       DM(161, I5) = R0;
@@ -37966,8 +37972,8 @@ wr_fs_rt_c_s7.:
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 + F1;
       DM(144, I5) = R0;
-      I12 = 0xbf074f;                        // return address - 1: wr_fs_ret_2922. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      I12 = 0xbf075b;                        // return address - 1: wr_fs_ret_2922. - 1
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_2922.;
 wr_fs_ret_2922.:
       R1 = DM(144, I5);
@@ -37981,8 +37987,8 @@ wr_fs_ret_2922.:
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 + F1;
       DM(145, I5) = R0;
-      I12 = 0xbf076d;                        // return address - 1: wr_fs_ret_2923. - 1
-      JUMP 0xbf1075;                         // -> wr_fs_sub_frac.
+      I12 = 0xbf0779;                        // return address - 1: wr_fs_ret_2923. - 1
+      JUMP 0xbf1081;                         // -> wr_fs_sub_frac.
 .GLOBAL wr_fs_ret_2923.;
 wr_fs_ret_2923.:
       R1 = DM(145, I5);
@@ -37993,8 +37999,8 @@ wr_fs_ret_2923.:
       R0 = DM(155, I5);
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 * F1;
-      I12 = 0xbf0785;                        // return address - 1: wr_fs_ret_2924. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf0791;                        // return address - 1: wr_fs_ret_2924. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2924.;
 wr_fs_ret_2924.:
       R1 = DM(159, I5);
@@ -38004,8 +38010,8 @@ wr_fs_ret_2924.:
       F1 = F1 + F2;
       F2 = PASS F0;
       F0 = PASS F1;
-      I12 = 0xbf0798;                        // return address - 1: wr_fs_ret_2925. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf07a4;                        // return address - 1: wr_fs_ret_2925. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2925.;
 wr_fs_ret_2925.:
       F1 = PASS F0;
@@ -38035,7 +38041,7 @@ wr_fs_rt_g_slot.:
       I1 = R0;
       R8 = DM(0, I1);
       R1 = PASS R1;
-      IF EQ JUMP 0xbf07d4;                   // -> wr_fs_else_2926.
+      IF EQ JUMP 0xbf07e0;                   // -> wr_fs_else_2926.
       R8 = LSHIFT R8 BY -16;
 .GLOBAL wr_fs_else_2926.;
 wr_fs_else_2926.:
@@ -38099,7 +38105,7 @@ wr_fs_else_2926.:
       I3 = R12;
       R0 = DM(161, I5);
       R0 = PASS R0;
-      IF EQ JUMP 0xbf0882;                   // -> wr_fs_else_2927.
+      IF EQ JUMP 0xbf088e;                   // -> wr_fs_else_2927.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = 0x1;
@@ -38115,8 +38121,8 @@ wr_fs_else_2927.:
       R0 = DM(146, I5);
       R1 = 0x41400000;                  // 12.0
       F0 = F0 * F1;
-      I12 = 0xbf0893;                        // return address - 1: wr_fs_ret_2928. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf089f;                        // return address - 1: wr_fs_ret_2928. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2928.;
 wr_fs_ret_2928.:
       R1 = 0x38d1b717;                  // 9.999999747378752e-05
@@ -38125,8 +38131,8 @@ wr_fs_ret_2928.:
       R0 = DM(148, I5);
       R1 = 0x4144cccd;                  // 12.300000190734863
       F0 = F0 * F1;
-      I12 = 0xbf08a8;                        // return address - 1: wr_fs_ret_2929. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf08b4;                        // return address - 1: wr_fs_ret_2929. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2929.;
 wr_fs_ret_2929.:
       R1 = 0x3b03126f;                  // 0.0020000000949949026
@@ -38139,12 +38145,12 @@ wr_fs_ret_2929.:
       R0 = DM(3, I3);
       R1 = 0x1;
       COMP(R0, R1);
-      IF NE JUMP 0xbf091d;                   // -> wr_fs_else_2930.
+      IF NE JUMP 0xbf0929;                   // -> wr_fs_else_2930.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(109, I5);
-      I12 = 0xbf08d0;                        // return address - 1: wr_fs_ret_2931. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf08dc;                        // return address - 1: wr_fs_ret_2931. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2931.;
 wr_fs_ret_2931.:
       R1 = 0x3a2ec33e;                  // 0.0006666666595265269
@@ -38157,7 +38163,7 @@ wr_fs_ret_2931.:
       R0 = DM(4, I3);
       R1 = DM(52, I5);                  // 1.0
       COMP(F0, F1);
-      IF LT JUMP 0xbf08fc;                   // -> wr_fs_else_2932.
+      IF LT JUMP 0xbf0908;                   // -> wr_fs_else_2932.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = 0x2;
@@ -38166,7 +38172,7 @@ wr_fs_ret_2931.:
       DM(4, I3) = R0;
       R0 = DM(52, I5);                  // 1.0
       DM(5, I3) = R0;
-      JUMP 0xbf091a;                         // -> wr_fs_fi_2933.
+      JUMP 0xbf0926;                         // -> wr_fs_fi_2933.
 .GLOBAL wr_fs_else_2932.;
 wr_fs_else_2932.:
       R0 = DM(4, I3);
@@ -38175,8 +38181,8 @@ wr_fs_else_2932.:
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 - F1;
       DM(110, I5) = R0;
-      I12 = 0xbf090f;                        // return address - 1: wr_fs_rret_2934. - 1
-      JUMP 0xbf0db2;                         // -> wr_fs_rt_g_bend.
+      I12 = 0xbf091b;                        // return address - 1: wr_fs_rret_2934. - 1
+      JUMP 0xbf0dbe;                         // -> wr_fs_rt_g_bend.
 .GLOBAL wr_fs_rret_2934.;
 wr_fs_rret_2934.:
       R12 = DM(159, I5);
@@ -38185,7 +38191,7 @@ wr_fs_rret_2934.:
       DM(5, I3) = R0;
 .GLOBAL wr_fs_fi_2933.;
 wr_fs_fi_2933.:
-      JUMP 0xbf098b;                         // -> wr_fs_fi_2935.
+      JUMP 0xbf0997;                         // -> wr_fs_fi_2935.
 .GLOBAL wr_fs_else_2930.;
 wr_fs_else_2930.:
       R12 = DM(159, I5);
@@ -38193,12 +38199,12 @@ wr_fs_else_2930.:
       R0 = DM(3, I3);
       R1 = 0x2;
       COMP(R0, R1);
-      IF NE JUMP 0xbf0983;                   // -> wr_fs_else_2936.
+      IF NE JUMP 0xbf098f;                   // -> wr_fs_else_2936.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(118, I5);
-      I12 = 0xbf0937;                        // return address - 1: wr_fs_ret_2937. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0943;                        // return address - 1: wr_fs_ret_2937. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2937.;
 wr_fs_ret_2937.:
       R1 = 0x3a2ec33e;                  // 0.0006666666595265269
@@ -38211,14 +38217,14 @@ wr_fs_ret_2937.:
       R0 = DM(4, I3);
       R1 = DM(52, I5);                  // 1.0
       COMP(F0, F1);
-      IF LT JUMP 0xbf095f;                   // -> wr_fs_else_2938.
+      IF LT JUMP 0xbf096b;                   // -> wr_fs_else_2938.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = R0 - R0;                     // 0
       DM(3, I3) = R0;
       DM(4, I3) = R0;
       DM(5, I3) = R0;
-      JUMP 0xbf0980;                         // -> wr_fs_fi_2939.
+      JUMP 0xbf098c;                         // -> wr_fs_fi_2939.
 .GLOBAL wr_fs_else_2938.;
 wr_fs_else_2938.:
       R0 = DM(4, I3);
@@ -38227,8 +38233,8 @@ wr_fs_else_2938.:
       R1 = DM(54, I5);                  // 0.5
       F0 = F0 - F1;
       DM(110, I5) = R0;
-      I12 = 0xbf0972;                        // return address - 1: wr_fs_rret_2940. - 1
-      JUMP 0xbf0db2;                         // -> wr_fs_rt_g_bend.
+      I12 = 0xbf097e;                        // return address - 1: wr_fs_rret_2940. - 1
+      JUMP 0xbf0dbe;                         // -> wr_fs_rt_g_bend.
 .GLOBAL wr_fs_rret_2940.;
 wr_fs_rret_2940.:
       R12 = DM(159, I5);
@@ -38239,7 +38245,7 @@ wr_fs_rret_2940.:
       DM(5, I3) = R0;
 .GLOBAL wr_fs_fi_2939.;
 wr_fs_fi_2939.:
-      JUMP 0xbf098b;                         // -> wr_fs_fi_2941.
+      JUMP 0xbf0997;                         // -> wr_fs_fi_2941.
 .GLOBAL wr_fs_else_2936.;
 wr_fs_else_2936.:
       R12 = DM(159, I5);
@@ -38257,13 +38263,13 @@ wr_fs_fi_2935.:
       R0 = DM(152, I5);
       R1 = DM(54, I5);                  // 0.5
       COMP(F0, F1);
-      IF LT JUMP 0xbf0a27;                   // -> wr_fs_else_2942.
+      IF LT JUMP 0xbf0a33;                   // -> wr_fs_else_2942.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(7, I3);
       R1 = DM(6, I3);
       COMP(F0, F1);
-      IF LE JUMP 0xbf09db;                   // -> wr_fs_else_2943.
+      IF LE JUMP 0xbf09e7;                   // -> wr_fs_else_2943.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(7, I3);
@@ -38281,14 +38287,14 @@ wr_fs_fi_2935.:
       R2 = DM(7, I3);
       F1 = F1 * F2;
       COMP(F0, F1);
-      IF LE JUMP 0xbf09d8;                   // -> wr_fs_else_2944.
+      IF LE JUMP 0xbf09e4;                   // -> wr_fs_else_2944.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = R0 - R0;                     // 0.0
       DM(7, I3) = R0;
 .GLOBAL wr_fs_else_2944.;
 wr_fs_else_2944.:
-      JUMP 0xbf0a24;                         // -> wr_fs_fi_2945.
+      JUMP 0xbf0a30;                         // -> wr_fs_fi_2945.
 .GLOBAL wr_fs_else_2943.;
 wr_fs_else_2943.:
       R12 = DM(159, I5);
@@ -38309,8 +38315,8 @@ wr_fs_else_2943.:
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(167, I5);
-      I12 = 0xbf0a0b;                        // return address - 1: wr_fs_ret_2946. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0a17;                        // return address - 1: wr_fs_ret_2946. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2946.;
 wr_fs_ret_2946.:
       R1 = 0x3a2ec33e;                  // 0.0006666666595265269
@@ -38319,8 +38325,8 @@ wr_fs_ret_2946.:
       F0 = F1 - F0;
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
-      I12 = 0xbf0a1d;                        // return address - 1: wr_fs_ret_2947. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf0a29;                        // return address - 1: wr_fs_ret_2947. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2947.;
 wr_fs_ret_2947.:
       R1 = DM(6, I3);
@@ -38328,7 +38334,7 @@ wr_fs_ret_2947.:
       DM(6, I3) = R0;
 .GLOBAL wr_fs_fi_2945.;
 wr_fs_fi_2945.:
-      JUMP 0xbf0a33;                         // -> wr_fs_fi_2948.
+      JUMP 0xbf0a3f;                         // -> wr_fs_fi_2948.
 .GLOBAL wr_fs_else_2942.;
 wr_fs_else_2942.:
       R12 = DM(159, I5);
@@ -38364,7 +38370,7 @@ wr_fs_fi_2948.:
       R0 = DM(152, I5);
       R1 = DM(54, I5);                  // 0.5
       COMP(F0, F1);
-      IF LT JUMP 0xbf0a84;                   // -> wr_fs_else_2949.
+      IF LT JUMP 0xbf0a90;                   // -> wr_fs_else_2949.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(141, I5);
@@ -38382,8 +38388,8 @@ wr_fs_else_2949.:
       F0 = F0 - F1;
       R1 = 0x3daaaaab;                  // 0.0833333358168602
       F0 = F0 * F1;
-      I12 = 0xbf0a94;                        // return address - 1: wr_fs_ret_2950. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf0aa0;                        // return address - 1: wr_fs_ret_2950. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2950.;
 wr_fs_ret_2950.:
       R1 = 0x43dc0000;                  // 440.0
@@ -38399,19 +38405,19 @@ wr_fs_ret_2950.:
       DM(168, I5) = R0;
       R1 = DM(62, I5);                  // 0.25
       F0 = F0 + F1;
-      I12 = 0xbf0ab9;                        // return address - 1: wr_fs_ret_2951. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf0ac5;                        // return address - 1: wr_fs_ret_2951. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2951.;
 wr_fs_ret_2951.:
-      I12 = 0xbf0abf;                        // return address - 1: wr_fs_ret_2952. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0acb;                        // return address - 1: wr_fs_ret_2952. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2952.;
 wr_fs_ret_2952.:
       R1 = DM(168, I5);
       F2 = PASS F0;
       F0 = PASS F1;
-      I12 = 0xbf0acc;                        // return address - 1: wr_fs_ret_2953. - 1
-      JUMP 0xbf116c;                         // -> wr_fs_sub_o_sint.
+      I12 = 0xbf0ad8;                        // return address - 1: wr_fs_ret_2953. - 1
+      JUMP 0xbf1178;                         // -> wr_fs_sub_o_sint.
 .GLOBAL wr_fs_ret_2953.;
 wr_fs_ret_2953.:
       F1 = PASS F0;
@@ -38428,8 +38434,8 @@ wr_fs_ret_2953.:
       DM(156, I5) = R0;
       R1 = 0x411f73da;                  // 9.965784072875977
       F0 = F0 * F1;
-      I12 = 0xbf0af3;                        // return address - 1: wr_fs_ret_2954. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf0aff;                        // return address - 1: wr_fs_ret_2954. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2954.;
 wr_fs_ret_2954.:
       R1 = 0x3b83126f;                  // 0.004000000189989805
@@ -38443,8 +38449,8 @@ wr_fs_ret_2954.:
       R1 = DM(54, I5);                  // 0.5
       F0 = MAX(F0, F1);
       DM(144, I5) = R0;
-      I12 = 0xbf0b13;                        // return address - 1: wr_fs_ret_2955. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0b1f;                        // return address - 1: wr_fs_ret_2955. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2955.;
 wr_fs_ret_2955.:
       DM(132, I5) = R0;
@@ -38455,8 +38461,8 @@ wr_fs_ret_2955.:
       F0 = F1 * F0;
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 + F0;
-      I12 = 0xbf0b2c;                        // return address - 1: wr_fs_ret_2956. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0b38;                        // return address - 1: wr_fs_ret_2956. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2956.;
 wr_fs_ret_2956.:
       DM(108, I5) = R0;
@@ -38468,8 +38474,8 @@ wr_fs_ret_2956.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F1 - F0;
       DM(120, I5) = R0;
-      I12 = 0xbf0b48;                        // return address - 1: wr_fs_ret_2957. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0b54;                        // return address - 1: wr_fs_ret_2957. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2957.;
 wr_fs_ret_2957.:
       DM(127, I5) = R0;
@@ -38480,8 +38486,8 @@ wr_fs_ret_2957.:
       F0 = F1 - F0;
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
-      I12 = 0xbf0b5f;                        // return address - 1: wr_fs_ret_2958. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf0b6b;                        // return address - 1: wr_fs_ret_2958. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2958.;
 wr_fs_ret_2958.:
       R1 = DM(52, I5);                  // 1.0
@@ -38494,7 +38500,7 @@ wr_fs_ret_2958.:
       R0 = DM(153, I5);
       R1 = 0x3e99999a;                  // 0.30000001192092896
       COMP(F0, F1);
-      IF GE JUMP 0xbf0b89;                   // -> wr_fs_else_2959.
+      IF GE JUMP 0xbf0b95;                   // -> wr_fs_else_2959.
       R0 = DM(153, I5);
       R1 = 0x40555555;                  // 3.3333332538604736
       F0 = F0 * F1;
@@ -38510,14 +38516,14 @@ wr_fs_else_2959.:
       R0 = DM(152, I5);
       R1 = DM(54, I5);                  // 0.5
       COMP(F0, F1);
-      IF LT JUMP 0xbf0baf;                   // -> wr_fs_else_2960.
+      IF LT JUMP 0xbf0bbb;                   // -> wr_fs_else_2960.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(163, I5);
       DM(135, I5) = R0;
       R0 = DM(6, I3);
       DM(136, I5) = R0;
-      JUMP 0xbf0bb7;                         // -> wr_fs_fi_2961.
+      JUMP 0xbf0bc3;                         // -> wr_fs_fi_2961.
 .GLOBAL wr_fs_else_2960.;
 wr_fs_else_2960.:
       R0 = DM(52, I5);                  // 1.0
@@ -38592,21 +38598,21 @@ wr_fs_loop_2963.:
       DM(128, I5) = R0;
       R1 = 0x3f99999a;                  // 1.2000000476837158
       COMP(F0, F1);
-      IF GT JUMP 0xbf0c55;                   // -> wr_fs_else_2964.
-      JUMP 0xbf0cae;                         // -> wr_fs_fi_2965.
+      IF GT JUMP 0xbf0c61;                   // -> wr_fs_else_2964.
+      JUMP 0xbf0cba;                         // -> wr_fs_fi_2965.
 .GLOBAL wr_fs_else_2964.;
 wr_fs_else_2964.:
       R0 = DM(128, I5);
       R1 = 0x40666667;                  // 3.6000001430511475
       COMP(F0, F1);
-      IF LT JUMP 0xbf0c7b;                   // -> wr_fs_else_2966.
+      IF LT JUMP 0xbf0c87;                   // -> wr_fs_else_2966.
       R0 = DM(157, I5);
       R1 = R1 - R1;                     // 0.0
       COMP(F0, F1);
-      IF LE JUMP 0xbf0c70;                   // -> wr_fs_else_2967.
+      IF LE JUMP 0xbf0c7c;                   // -> wr_fs_else_2967.
       R0 = 0x4019999a;                  // 2.4000000953674316
       DM(157, I5) = R0;
-      JUMP 0xbf0c78;                         // -> wr_fs_fi_2968.
+      JUMP 0xbf0c84;                         // -> wr_fs_fi_2968.
 .GLOBAL wr_fs_else_2967.;
 wr_fs_else_2967.:
       R0 = R0 - R0;                     // 0.0
@@ -38615,7 +38621,7 @@ wr_fs_else_2967.:
       DM(157, I5) = R0;
 .GLOBAL wr_fs_fi_2968.;
 wr_fs_fi_2968.:
-      JUMP 0xbf0cae;                         // -> wr_fs_fi_2969.
+      JUMP 0xbf0cba;                         // -> wr_fs_fi_2969.
 .GLOBAL wr_fs_else_2966.;
 wr_fs_else_2966.:
       R0 = DM(128, I5);
@@ -38632,10 +38638,10 @@ wr_fs_else_2966.:
       R0 = DM(157, I5);
       R1 = R1 - R1;                     // 0.0
       COMP(F0, F1);
-      IF LE JUMP 0xbf0ca6;                   // -> wr_fs_else_2970.
+      IF LE JUMP 0xbf0cb2;                   // -> wr_fs_else_2970.
       R0 = DM(133, I5);
       DM(157, I5) = R0;
-      JUMP 0xbf0cae;                         // -> wr_fs_fi_2971.
+      JUMP 0xbf0cba;                         // -> wr_fs_fi_2971.
 .GLOBAL wr_fs_else_2970.;
 wr_fs_else_2970.:
       R0 = R0 - R0;                     // 0.0
@@ -38658,7 +38664,7 @@ wr_fs_fi_2965.:
       R12 = 0x1;
       R0 = R0 - R12;
       DM(143, I5) = R0;
-      IF NE JUMP 0xbf0c0b;                   // -> wr_fs_loop_2963.
+      IF NE JUMP 0xbf0c17;                   // -> wr_fs_loop_2963.
       R0 = DM(165, I5);
       R1 = DM(127, I5);
       F0 = F0 * F1;
@@ -38695,7 +38701,7 @@ wr_fs_fi_2965.:
       R0 = DM(154, I5);
       R1 = DM(54, I5);                  // 0.5
       COMP(F0, F1);
-      IF GT JUMP 0xbf0d46;                   // -> wr_fs_else_2972.
+      IF GT JUMP 0xbf0d52;                   // -> wr_fs_else_2972.
       R0 = DM(154, I5);
       R1 = DM(59, I5);                  // 2.0
       F0 = F0 * F1;
@@ -38712,7 +38718,7 @@ wr_fs_fi_2965.:
       F1 = F2 * F1;
       F0 = F0 + F1;
       DM(142, I5) = R0;
-      JUMP 0xbf0d6b;                         // -> wr_fs_fi_2973.
+      JUMP 0xbf0d77;                         // -> wr_fs_fi_2973.
 .GLOBAL wr_fs_else_2972.;
 wr_fs_else_2972.:
       R0 = DM(154, I5);
@@ -38753,7 +38759,7 @@ wr_fs_fi_2973.:
       R12 = 0x1;
       R0 = R0 - R12;
       DM(126, I5) = R0;
-      IF NE JUMP 0xbf0bf5;                   // -> wr_fs_loop_2962.
+      IF NE JUMP 0xbf0c01;                   // -> wr_fs_loop_2962.
       R12 = DM(159, I5);
       I3 = R12;
       R0 = DM(157, I5);
@@ -38772,10 +38778,10 @@ wr_fs_rt_g_bend.:
       R0 = R0 AND R1;
       R1 = 0x3b83126f;                  // 0.004000000189989805
       COMP(F0, F1);
-      IF GE JUMP 0xbf0dcb;                   // -> wr_fs_else_2974.
+      IF GE JUMP 0xbf0dd7;                   // -> wr_fs_else_2974.
       R0 = DM(116, I5);
       DM(111, I5) = R0;
-      JUMP 0xbf0e38;                         // -> wr_fs_fi_2975.
+      JUMP 0xbf0e44;                         // -> wr_fs_fi_2975.
 .GLOBAL wr_fs_else_2974.;
 wr_fs_else_2974.:
       R0 = DM(110, I5);
@@ -38786,28 +38792,28 @@ wr_fs_else_2974.:
       DM(113, I5) = R0;
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
-      I12 = 0xbf0de2;                        // return address - 1: wr_fs_ret_2976. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf0dee;                        // return address - 1: wr_fs_ret_2976. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2976.;
 wr_fs_ret_2976.:
       R1 = DM(52, I5);                  // 1.0
       F0 = F0 - F1;
-      I12 = 0xbf0deb;                        // return address - 1: wr_fs_ret_2977. - 1
-      JUMP 0xbf0fa2;                         // -> wr_fs_sub_recip.
+      I12 = 0xbf0df7;                        // return address - 1: wr_fs_ret_2977. - 1
+      JUMP 0xbf0fae;                         // -> wr_fs_sub_recip.
 .GLOBAL wr_fs_ret_2977.;
 wr_fs_ret_2977.:
       DM(112, I5) = R0;
       R0 = DM(110, I5);
       R1 = R1 - R1;                     // 0.0
       COMP(F0, F1);
-      IF GE JUMP 0xbf0e15;                   // -> wr_fs_else_2978.
+      IF GE JUMP 0xbf0e21;                   // -> wr_fs_else_2978.
       R0 = DM(113, I5);
       R1 = DM(116, I5);
       F0 = F0 * F1;
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
-      I12 = 0xbf0e07;                        // return address - 1: wr_fs_ret_2979. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf0e13;                        // return address - 1: wr_fs_ret_2979. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2979.;
 wr_fs_ret_2979.:
       R1 = DM(52, I5);                  // 1.0
@@ -38815,7 +38821,7 @@ wr_fs_ret_2979.:
       R1 = DM(112, I5);
       F0 = F0 * F1;
       DM(111, I5) = R0;
-      JUMP 0xbf0e38;                         // -> wr_fs_fi_2980.
+      JUMP 0xbf0e44;                         // -> wr_fs_fi_2980.
 .GLOBAL wr_fs_else_2978.;
 wr_fs_else_2978.:
       R0 = DM(52, I5);                  // 1.0
@@ -38825,8 +38831,8 @@ wr_fs_else_2978.:
       F0 = F1 * F0;
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
-      I12 = 0xbf0e29;                        // return address - 1: wr_fs_ret_2981. - 1
-      JUMP 0xbf0e3d;                         // -> wr_fs_sub_o_exp2.
+      I12 = 0xbf0e35;                        // return address - 1: wr_fs_ret_2981. - 1
+      JUMP 0xbf0e49;                         // -> wr_fs_sub_o_exp2.
 .GLOBAL wr_fs_ret_2981.;
 wr_fs_ret_2981.:
       R1 = DM(52, I5);                  // 1.0
@@ -38847,9 +38853,9 @@ wr_fs_sub_o_exp2.:
       F15 = PASS F0;
       R12 = -0x3d040000;                // -126.0
       COMP(F15, F12);
-      IF GE JUMP 0xbf0e4a;                   // -> wr_fs_else_2982.
+      IF GE JUMP 0xbf0e56;                   // -> wr_fs_else_2982.
       R15 = R15 - R15;                  // 0.0
-      JUMP 0xbf0e87;                         // -> wr_fs_fi_2983.
+      JUMP 0xbf0e93;                         // -> wr_fs_fi_2983.
 .GLOBAL wr_fs_else_2982.;
 wr_fs_else_2982.:
       R12 = 0x42fe0000;                 // 127.0
@@ -38858,7 +38864,7 @@ wr_fs_else_2982.:
       R12 = R12 - R12;                  // 0
       F14 = FLOAT R13 BY R12;
       COMP(F15, F14);
-      IF GE JUMP 0xbf0e5e;                   // -> wr_fs_else_2984.
+      IF GE JUMP 0xbf0e6a;                   // -> wr_fs_else_2984.
       R12 = DM(52, I5);                 // 1.0
       F14 = F14 - F12;
       R12 = 0x1;
@@ -38921,7 +38927,7 @@ wr_fs_sub_fl.:
       R13 = R15 AND R14;
       R14 = 0x2edbe6ff;                 // 1.000000013351432e-10
       COMP(F13, F14);
-      IF GE JUMP 0xbf0ebc;                   // -> wr_fs_else_2985.
+      IF GE JUMP 0xbf0ec8;                   // -> wr_fs_else_2985.
       R15 = R15 - R15;                  // 0.0
 .GLOBAL wr_fs_else_2985.;
 wr_fs_else_2985.:
@@ -38938,7 +38944,7 @@ wr_fs_sub_exp2.:
       R12 = R12 - R12;                  // 0
       F14 = FLOAT R13 BY R12;
       COMP(F15, F14);
-      IF GE JUMP 0xbf0edb;                   // -> wr_fs_else_2986.
+      IF GE JUMP 0xbf0ee7;                   // -> wr_fs_else_2986.
       R12 = DM(52, I5);                 // 1.0
       F14 = F14 - F12;
       R12 = 0x1;
@@ -39190,7 +39196,7 @@ wr_fs_sub_frac.:
       R12 = R12 - R12;                  // 0
       F14 = FLOAT R13 BY R12;
       COMP(F15, F14);
-      IF GE JUMP 0xbf1086;                   // -> wr_fs_else_2987.
+      IF GE JUMP 0xbf1092;                   // -> wr_fs_else_2987.
       R12 = DM(52, I5);                 // 1.0
       F14 = F14 - F12;
       R12 = 0x1;
@@ -39341,7 +39347,7 @@ wr_fs_sub_o_sint.:
       R13 = R13 - R13;                  // 0
       F13 = FLOAT R12 BY R13;
       COMP(F14, F13);
-      IF GE JUMP 0xbf117e;                   // -> wr_fs_else_2988.
+      IF GE JUMP 0xbf118a;                   // -> wr_fs_else_2988.
       R12 = DM(52, I5);                 // 1.0
       F13 = F13 - F12;
 .GLOBAL wr_fs_else_2988.;
@@ -39349,15 +39355,15 @@ wr_fs_else_2988.:
       F15 = F15 - F13;
       R12 = DM(62, I5);                 // 0.25
       COMP(F15, F12);
-      IF LE JUMP 0xbf118c;                   // -> wr_fs_else_2989.
+      IF LE JUMP 0xbf1198;                   // -> wr_fs_else_2989.
       R12 = DM(54, I5);                 // 0.5
       F15 = F12 - F15;
-      JUMP 0xbf1198;                         // -> wr_fs_fi_2990.
+      JUMP 0xbf11a4;                         // -> wr_fs_fi_2990.
 .GLOBAL wr_fs_else_2989.;
 wr_fs_else_2989.:
       R12 = -0x41800000;                // -0.25
       COMP(F15, F12);
-      IF GE JUMP 0xbf1198;                   // -> wr_fs_else_2991.
+      IF GE JUMP 0xbf11a4;                   // -> wr_fs_else_2991.
       R12 = -0x41000000;                // -0.5
       F15 = F12 - F15;
 .GLOBAL wr_fs_else_2991.;
@@ -39411,9 +39417,9 @@ wr_fs_sub_o_sqrt.:
       F15 = PASS F0;
       R12 = R12 - R12;                  // 0.0
       COMP(F15, F12);
-      IF GT JUMP 0xbf11eb;                   // -> wr_fs_else_2992.
+      IF GT JUMP 0xbf11f7;                   // -> wr_fs_else_2992.
       R15 = R15 - R15;                  // 0.0
-      JUMP 0xbf125b;                         // -> wr_fs_fi_2993.
+      JUMP 0xbf1267;                         // -> wr_fs_fi_2993.
 .GLOBAL wr_fs_else_2992.;
 wr_fs_else_2992.:
       DM(212, I5) = R15;
@@ -39487,7 +39493,7 @@ wr_fs_sub_o_sinf.:
       R13 = R13 - R13;                  // 0
       F13 = FLOAT R12 BY R13;
       COMP(F14, F13);
-      IF GE JUMP 0xbf1275;                   // -> wr_fs_else_2994.
+      IF GE JUMP 0xbf1281;                   // -> wr_fs_else_2994.
       R12 = DM(52, I5);                 // 1.0
       F13 = F13 - F12;
 .GLOBAL wr_fs_else_2994.;
@@ -39502,15 +39508,15 @@ wr_fs_else_2994.:
       F15 = F15 * F12;
       R12 = DM(62, I5);                 // 0.25
       COMP(F15, F12);
-      IF LE JUMP 0xbf1292;                   // -> wr_fs_else_2995.
+      IF LE JUMP 0xbf129e;                   // -> wr_fs_else_2995.
       R12 = DM(54, I5);                 // 0.5
       F15 = F12 - F15;
-      JUMP 0xbf129e;                         // -> wr_fs_fi_2996.
+      JUMP 0xbf12aa;                         // -> wr_fs_fi_2996.
 .GLOBAL wr_fs_else_2995.;
 wr_fs_else_2995.:
       R12 = -0x41800000;                // -0.25
       COMP(F15, F12);
-      IF GE JUMP 0xbf129e;                   // -> wr_fs_else_2997.
+      IF GE JUMP 0xbf12aa;                   // -> wr_fs_else_2997.
       R12 = -0x41000000;                // -0.5
       F15 = F12 - F15;
 .GLOBAL wr_fs_else_2997.;
@@ -39585,9 +39591,9 @@ wr_fs_sub_s_log2.:
       F15 = PASS F0;
       R12 = R12 - R12;                  // 0.0
       COMP(F15, F12);
-      IF GT JUMP 0xbf1316;                   // -> wr_fs_else_2998.
+      IF GT JUMP 0xbf1322;                   // -> wr_fs_else_2998.
       R15 = -0x3d040000;                // -126.0
-      JUMP 0xbf1371;                         // -> wr_fs_fi_2999.
+      JUMP 0xbf137d;                         // -> wr_fs_fi_2999.
 .GLOBAL wr_fs_else_2998.;
 wr_fs_else_2998.:
       R14 = LSHIFT R15 BY -23;

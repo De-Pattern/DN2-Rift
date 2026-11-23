@@ -107,7 +107,10 @@ class Voice:
         fold = F(q["FOLD"] * F(3.0))
         fold1 = F(F(1.0) + fold)
         fm = F(q["FM"] * F(1.5))
-        fb = F(q["FDBK"] * F(0.25))
+        # v0.20 (owner, 2026-11-23: "too extreme beyond about 38 ... amazing before that, especially
+        # in the first 5 or so steps"): the whole knob is the old 0..~36, curved so the old first
+        # 5 steps take about the first 36 (fb = u (0.0175 + 0.0525 u), 0.07 at 127; was 0.25 u)
+        fb = F(q["FDBK"] * F(F(q["FDBK"] * F(0.0525)) + F(0.0175)))
         grit = F(int(k["GRIT"]) >> 3)
         lev = F(q["LEV"] * F(0.8))
         for i in range(n):

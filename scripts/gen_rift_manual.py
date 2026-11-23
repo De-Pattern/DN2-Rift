@@ -197,7 +197,7 @@ CONTOUR = {
     "WARP": "Warp: distorts the orbit's coordinates before the surface is read.",
     "FOLD": "Fold: a wavefolder after the surface.",
     "FM": "FM: the output modulates the orbit's speed (through-zero-ish growl at the top).",
-    "FDBK": "Feedback: the output pushes the orbit's position.",
+    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Curved since v0.20: the low end is finely spread, and the top stays usable.",
     "GRIT": "Grit: sample-and-bit crush.",
     "LEV": "Level.",
 }
@@ -695,6 +695,7 @@ def build() -> str:
 
 VERSIONS = [
     ("0.20", "NXT", ["Slides: SLEN NXT (from the DN2 mk2 mod v0.66): a slide lasts until the track's next trig. It is the default for a slide trig with no SLEN lock (before: 1 step).",
+                     "CONTOUR: FDBK rescaled (the old range past about 36 was unusable): the whole knob now spans the usable range, with the subtle low end spread over its first third.",
                      "Includes v0.19."]),
     ("0.19", "CONTOUR", ["CONTOUR, a new wave terrain synth machine: an orbit over one of eight surfaces, two pages, 16 controls.",
                          "RIFT's machine pages drawn at the stock size: the icons are larger and the page fills the screen.",
