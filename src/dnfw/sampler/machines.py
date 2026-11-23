@@ -211,13 +211,19 @@ TRK_UNITY = 0.1696 / 0.0725                # 2.339 (+7.4 dB): x the 1 / TRK_GAIN
 # take came out at its source's level, and a synth track's 7 dB over: scratch probe, bench STATE
 # 2026-11-19 09:30), so it is the unit's number, not the runner's. A FLEX take of a track is made
 # TRK_HW_DB louder on top of TRK_UNITY: GAIN 0 is what was +24; GAIN -24 is v0.50..v0.62's unity
-TRK_HW_DB = 24
+# RIFT v0.21 (the owner, 2026-11-23: the DN2 mk2 mod's v0.71 levels, "the one we need finally"):
+# NiKo's numbers on the mod's v0.67 (TRK_HW_DB 12): a slate tone peaking at -24 dBFS over USB needed
+# GAIN -6 on a track's take to peak at -24 too: 12 - 6 = 6. (Applied when the take is made: takes
+# recorded before stay 18 dB hot; GAIN -18 brings one back)
+TRK_HW_DB = 6
 # RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet, and GAIN
 # +12 to make it up clips the take): a MAIN take is recorded as it is (never boosted into the
 # clamp) and played back MAIN_PLAY_DB louder; so is a take of IN (the owner, the same day: IN as
 # quiet as MAIN, at the mixer page's highest input level). The DSP's recorder marks its buffer half (the
 # directory's steps word, bit 15: MAIN_MARK); a voice on a marked half plays it that much louder
-MAIN_PLAY_DB = 12
+# RIFT v0.21 (the mod's v0.71, NiKo's numbers): a MAIN take on v0.67 (12) needed GAIN -8 to peak at
+# its source's -24 dBFS: 12 - 8 = 4. (Applied when a marked take plays: earlier takes follow)
+MAIN_PLAY_DB = 4
 MAIN_MARK = 0x8000
 GAIN_ZERO = 25                             # the index of 0 dB: 1..63 is -24..+38 dB
 CMD_OFFSET = 0xF00                         # the command block in the pool's directory page:
