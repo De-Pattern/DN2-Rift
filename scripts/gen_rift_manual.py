@@ -197,7 +197,7 @@ CONTOUR = {
     "WARP": "Warp: distorts the orbit's coordinates before the surface is read.",
     "FOLD": "Fold: a wavefolder after the surface.",
     "FM": "FM: the output modulates the orbit's speed (through-zero-ish growl at the top).",
-    "FDBK": "Feedback: the output pushes the orbit's position.",
+    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Curved since v0.20: the low end is finely spread, and the top stays usable. Above B3 it follows the pitch, so high notes keep the low notes' character and stay in key.",
     "GRIT": "Grit: sample-and-bit crush.",
     "LEV": "Level.",
 }
@@ -678,7 +678,8 @@ def build() -> str:
                 "Everything a tuned track plays is retuned: keyboard, trigs, chords, arp and slides, on every RIFT machine. MIDI tracks and MIDI out stay 12-TET; SLICE and GRID are never retuned. Saved with the project."))
 
     perf = ["<b>Direct Jump:</b> hold [PTN] + [YES] turns it on (DIRECT JUMP ON), [PTN] + [NO] off. A pattern cued with [PTN] + [TRIG] then starts at once, from where the playing pattern was. Kept through power-off.",
-            "<b>Parameter slides</b> (Overtone / A4 mk2 style): on the TRIG page's second page, <b>SLD</b> (E) and <b>SLEN</b> (F). A trig with SLD on glides every continuous p-lock from the track's value to the lock over SLEN steps. Works on every RIFT machine control."]
+            "<b>Parameter slides</b> (Overtone / A4 mk2 style): on the TRIG page's second page, <b>SLD</b> (E) and <b>SLEN</b> (F). A trig with SLD on glides every continuous p-lock from the track's value to the lock over SLEN steps. Works on every RIFT machine control.",
+            "<b>SLEN NXT</b> (v0.20, from the DN2 mk2 mod, the Analog Four's rule): SLEN's first choice and what a slide trig with no SLEN lock does: the slide lasts until the track's next trig (a note or a lock trig), round the track's length; with no other trig, the whole length. The fixed lengths (1/8 .. 64 steps) are as before."]
     if TM:
         perf.append("<b>KEYBOARD HOLD</b> (v0.15): hold [PTN] and press [KEYBOARD]: KB HOLD ON (again: OFF). It is the stock sustain pedal on all 16 tracks: notes already held stay on when let go, new notes held join them, MIDI notes in and the arpeggiator's keys are held too. HOLD OFF releases them all. The sequencer's notes are not held.")
     s.append("<h2 id=\"perf\">Performance</h2>" + ul(*perf))
@@ -693,6 +694,10 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.20", "NXT", ["Slides: SLEN NXT (from the DN2 mk2 mod v0.66): a slide lasts until the track's next trig. It is the default for a slide trig with no SLEN lock (before: 1 step).",
+                     "CONTOUR: FDBK rescaled (the old range past about 36 was unusable): the whole knob now spans the usable range, with the subtle low end spread over its first third.",
+                     "CONTOUR: FDBK and FM stay in key on high notes. Up to B3 every note sounds exactly as before; above it, a voice with feedback keeps B3's behaviour transposed (the feedback follows the pitch, and the orbit takes 2 or 4 steps a sample). A high CONTOUR note with FDBK up costs the DSP more, up to about four times.",
+                     "Includes v0.19."]),
     ("0.19", "CONTOUR", ["CONTOUR, a new wave terrain synth machine: an orbit over one of eight surfaces, two pages, 16 controls.",
                          "RIFT's machine pages drawn at the stock size: the icons are larger and the page fills the screen.",
                          "SMEAR: page 2 shows the sample, the loop, the read point and a grain cloud that grows out of it with DENS, SPRY and OVLP.",

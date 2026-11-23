@@ -4435,6 +4435,23 @@ def step_contour(init, sound, machines) -> dict:
     if not ok_sw:
         bad.append("switch")
     print(f"    contour FASCIA -> CONTOUR: {'ok' if ok_sw else 'FAIL'}", flush=True)
+    # v0.20 (owner: FDBK and FM out of key from about C4): above B3 a voice with feedback keytracks it and
+    # takes 2 (to about B4) or 4 steps a sample; a note moving up mid-sound switches the step count
+    kh = CB.panel_knobs(SURF=88, FDBK=40, FM=89, SIZX=53, SIZY=47, ROT=126, DRFT=18, MORPH=78, WARP=119,
+                        FOLD=58, RATIO=95, LEV=90)
+    ok_h = True
+    for note, ns in ((64.0, 2), (76.0, 4)):
+        nmh = f"feedback, a high note ({note:g}: {ns} steps)"
+        rr = run_blocks(init, lambda b, note=note: ct_frame(sound, machines, {0: (kh, note)}, trig=(0,) if b == 1 else ()), 8)
+        judge(nmh, rr, ct_live(lambda b: kh, {1: note}, 8))
+        ok_h = ok_h and res[nmh]["ok"]
+    nm = {1: 48.0, 6: 76.0, 11: 64.0}
+
+    def note_at(b):
+        return nm[max([k for k in nm if k <= b] or [1])]
+    rr = run_blocks(init, lambda b: ct_frame(sound, machines, {0: (kh, note_at(b))}, trig=(0,) if b in nm else ()), 16)
+    judge("feedback, notes 48 -> 76 -> 64 (1, 4, 2 steps)", rr, ct_live(lambda b: kh, nm, 16))
+    ok_h = ok_h and res["feedback, notes 48 -> 76 -> 64 (1, 4, 2 steps)"]["ok"]
     checks = {
         "the defaults (a note, a retrigger): bit-exact to the model and live": res["defaults: a note, a retrigger"]["ok"],
         "the comparison tells live with SIZX one step off apart (negative control)":
@@ -4444,6 +4461,7 @@ def step_contour(init, sound, machines) -> dict:
         "extreme panels (low, middle, top notes): bit-exact": ok_x,
         "two at once: both bit-exact": res["two at once (track 1)"]["ok"] and res["two at once (track 2)"]["ok"],
         "a track switched from FASCIA to CONTOUR: a fresh voice, then bit-exact": ok_sw,
+        "v0.20: feedback on high notes (2 and 4 steps a sample, notes moving): bit-exact": ok_h,
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"cases": res, "failing": bad}}
 
@@ -5023,6 +5041,7 @@ def step_rcost(init, sound, machines) -> dict:
             "PLATEAU": (lambda b: plt_frame(sound, machines, {3: (PB.panel_knobs(DCAY=100), 60.0, 1)}, {}, trig=(3,) if b == 1 else ()), 30),
             "FASCIA (a bell)": (lambda b: plt_frame(sound, machines, {}, {0: (fp, 60, 1.0)}, trig=(0,) if b == 1 else ()), 12),
             "CONTOUR (every land control on, MORPH into EDGE)": (lambda b: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=(0,) if b == 1 else ()), 8),
+            "CONTOUR 4 steps (the same, FDBK on, note 84)": (lambda b: ct_frame(sound, machines, {0: (_ctr_heavy(), 84.0)}, trig=(0,) if b == 1 else ()), 8),
         }
         for name, (fb, n) in cases.items():
             r = worst(fb, n)
@@ -5033,6 +5052,8 @@ def step_rcost(init, sound, machines) -> dict:
     voc = out["SMEAR VOC (BLND 0)"]["worst_delta"] or 1e12
     checks = {"an idle frame measured": base > 0,
               f"SMEAR's VOC worst block within the guard's VOC_PEAK ({SMS.VOC_PEAK:,})": voc <= SMS.VOC_PEAK,
+              f"v0.20: CONTOUR's 4-step worst block within the guard's CTR_PEAK ({CTP.CTR_PEAK:,})":
+              (out["CONTOUR 4 steps (the same, FDBK on, note 84)"]["worst_delta"] or 1e12) <= CTP.CTR_PEAK,
               "every other machine's worst block, beside an idle frame, inside 0.92 of the frame":
               all(v["worst_delta"] is not None and base + v["worst_delta"] <= 0.92 * FRAME
                   for k, v in out.items() if not k.startswith("SMEAR VOC"))}

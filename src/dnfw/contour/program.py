@@ -78,7 +78,7 @@ def k(x) -> Kc:
 
 _SRC = pathlib.Path(__file__).read_text(encoding="utf-8")
 WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC))
-                     | {"trig", "nn", "vv", "k146", "cnt0", "cnt1", "krp", "kep", "vba", "outp", "s0", "s1"}))
+                     | {"trig", "nn", "vv", "k146", "cnt0", "cnt1", "krp", "kep", "vba", "outp", "s0", "s1", "nsi"}))
 ARRAYS = {"eff": NK}
 
 
@@ -320,7 +320,7 @@ class CG(OP.OG):
         self.set(c("fold"), q("FOLD") * k(3.0))
         self.set(c("fold1"), k(1.0) + c("fold"))
         self.set(c("fm"), q("FM") * k(1.5))
-        self.set(c("fb"), q("FDBK") * k(0.25))
+        self.set(c("fb"), q("FDBK") * (q("FDBK") * k(0.0525) + k(0.0175)))   # v0.20: live.py's curve
         self.ld(0, e("GRIT"))
         p.trunc(0, 0)
         p.lsh(0, 0, -3)
@@ -336,10 +336,35 @@ class CG(OP.OG):
         p.ldi(0, 0, 1)
         p.st(C["outp"], 0)
 
-        def one():
-            self.set(V("px"), frac(V("px") + (c("ix") + c("fb") * V("z"))))
-            self.set(V("py"), frac(V("py") + (c("iy") + c("fb") * V("z"))))
-            self.set(V("pd"), frac(V("pd") + k(LV.ID_DRIFT)))
+        # v0.20: above LV.IXREF with feedback, the feedback follows the pitch and the orbit takes
+        # 2 or 4 steps a sample (live.py)
+        self.set(c("nsub"), k(1.0))
+        p.iconst(0, 1)
+        p.st(C["nsi"], 0)
+
+        def high():
+            self.set(c("fb"), c("fb") * (c("ix") * k(LV.INV_IXREF)))
+            self.set(c("nsub"), k(2.0))
+            self.set(c("hn"), k(0.5))
+            p.iconst(0, 2)
+            p.st(C["nsi"], 0)
+
+            def four():
+                self.set(c("nsub"), k(4.0))
+                self.set(c("hn"), k(0.25))
+                p.iconst(0, 4)
+                p.st(C["nsi"], 0)
+            self.cmp(c("ix"), "GT", k(LV.IXREF2), four)
+            self.set(c("ixs"), c("ix") * c("hn"))
+            self.set(c("iys"), c("iy") * c("hn"))
+            self.set(c("fbs"), c("fb") * c("hn"))
+            self.set(c("ids"), k(LV.ID_DRIFT) * c("hn"))
+        self.cmp(c("fb"), "GT", k(0.0), lambda: self.cmp(c("ix"), "GT", k(LV.IXREF), high))
+
+        def step(ix, iy, fb, ids):
+            self.set(V("px"), frac(V("px") + (ix + fb * V("z"))))
+            self.set(V("py"), frac(V("py") + (iy + fb * V("z"))))
+            self.set(V("pd"), frac(V("pd") + ids))
             self.set(c("dr"), c("drft") * sin_turns(V("pd")))
             self.set(c("uy"), sin_turns((V("py") + Q) + c("dr")))
             self.set(c("ux"), sin_turns((V("px") + c("fm") * c("uy")) + c("dr")))
@@ -357,6 +382,8 @@ class CG(OP.OG):
             self.cmp(c("mo"), "GT", k(0.0), morph)
             self.cmp(c("fold"), "GT", k(0.0), lambda: self.set(c("zz"), sin_turns((c("zz") * c("fold1")) * Q)))
             self.set(V("z"), c("zz"))
+
+        def tail():
             self.cmp(V("gc"), "GT", k(0.0), lambda: self.set(V("gc"), V("gc") - k(1.0)),
                      lambda: (self.set(V("hold"), c("zz")), self.set(V("gc"), c("grit"))))
             self.set(c("yy"), (V("hold") - V("dcx")) + k(LV.DC_R) * V("dcy"))
@@ -367,7 +394,32 @@ class CG(OP.OG):
             self.ld(0, c("y1"))
             p.sti(0, 4, 0)
             self.bump("outp", 4)
-        p.loop(C["cnt0"], BLOCK, one)
+
+        def one():
+            step(c("ix"), c("iy"), c("fb"), k(LV.ID_DRIFT))
+            tail()
+
+        def subs():
+            # for (cnt1 = nsi; cnt1; cnt1--) step(): Prog.loop's, its count from the word nsi
+            p.ld(0, C["nsi"])
+            p.st(C["cnt1"], 0)
+            top = p.label("csub")
+            p.place(top)
+            while True:
+                step(c("ixs"), c("iys"), c("fbs"), c("ids"))
+                p.ld(0, C["cnt1"])
+                p.iconst(12, 1)
+                p.iop(0, 0, "-", 12)
+                p.st(C["cnt1"], 0)
+                if not p.run:
+                    p.jump("NE", top)
+                    break
+                if p.r[0] == 0:
+                    break
+
+        def many():
+            p.loop(C["cnt0"], BLOCK, lambda: (subs(), tail()))
+        self.cmp(c("nsub"), "GT", k(1.5), many, lambda: p.loop(C["cnt0"], BLOCK, one))
 
 
 def voice(p, L: Layout, t: int | None = None) -> CG:
@@ -389,6 +441,27 @@ def run_voice(L: Layout, read, t: int, mem=None):
     p.scr = (L.scratch, L.scratch_end, L.base5)
     voice(p, L, t)
     return p, mem
+
+
+# v0.20: a voice with feedback can take 4 steps a sample (above B3): its worst block on the unit, cycles
+# (instructions + 0.95 x (4 L2 + 10 DDR)), measured in the runner (rcost holds it to this). The guard
+# expects it whenever the slot's FDBK is up, so a high note's first block never overruns the frame.
+CTR_PEAK = 110_000
+
+
+def guard_expect(t_word: int):
+    """G.around's EXPECT for CONTOUR: R9 = max(R9, CTR_PEAK) when this slot's FDBK frame word is not 0.
+    Keeps R8; clobbers R0, R1, R4, R10..R13, I1."""
+    from ..fascia import machines as FM
+    from .machines import SLOTS
+
+    def expect(p):
+        p.ld(10, t_word)
+        PP.t146(p, 11, 10)
+        PP.half(p, 4, 168 + 2 * SLOTS["FDBK"][1], 11)
+        p.iconst(10, CTR_PEAK)
+        p.ifz(4, "NE", lambda: p.iop(9, 9, "MAX", 10))
+    return expect
 
 
 def layout() -> Layout:

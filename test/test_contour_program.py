@@ -82,3 +82,45 @@ def test_emits():
     p.scr = (L_.scratch, L_.scratch_end, L_.base5)
     g = P.voice(p, L_)
     g.emit_rts()
+
+
+def _held(knobs, note, blocks, dsp=None):
+    """a held note: the frame carries NOTE every block (B.compare's other blocks read 60)"""
+    dsp = dsp or B.Dsp()
+    v = L.Voice()
+    a, b = [], []
+    words = B.knobs_words(knobs)
+    for k in range(blocks):
+        f = B.Frame()
+        f.dd(0, words, note, k == 1)
+        a.append(dsp.block(f, [0])[0])
+        b.append(v.block(B.live_knobs(B.knobs_seen(words)), B.FB.note_seen(note), k == 1))
+    return np.concatenate(a), np.concatenate(b)
+
+
+@pytest.mark.parametrize("note", [59.0, 60.0, 66.0, 71.5, 76.0, 90.0])
+def test_v020_high_notes_with_feedback(note):
+    """v0.20 (owner: FDBK and FM out of key from about C4): above B3 a voice with feedback keytracks it
+    and takes 2 or 4 steps a sample; the DSP program is live's bit for bit there too"""
+    kn = B.panel_knobs(SURF=88, FDBK=40, FM=89, SIZX=53, SIZY=47, ROT=126, DRFT=18, MORPH=78, WARP=119,
+                       FOLD=58, RATIO=95, LEV=90)
+    a, b = _held(kn, note, 24)
+    assert np.array_equal(a.view(np.uint32), b.view(np.uint32))
+    assert np.abs(b).max() > 0.01
+
+
+def test_v020_nothing_changes_at_or_below_b3_or_without_feedback(monkeypatch):
+    """the owner: keep FDBK's effect exactly: at or below B3 (or FDBK 0 anywhere) every sample is v0.19's
+    (the high-note path off: IXREF out of reach)"""
+    cases = [(B.panel_knobs(SURF=88, FDBK=40, FM=89, RATIO=95), n) for n in (36.0, 48.0, 55.0, 59.0)]
+    cases += [(B.panel_knobs(SURF=40, FM=60), n) for n in (72.0, 96.0)]
+    for kn, note in cases:
+        words = B.knobs_words(kn)
+        lk = B.live_knobs(B.knobs_seen(words))
+        v1 = L.Voice()
+        new = np.concatenate([v1.block(lk, note, k == 0) for k in range(20)])
+        monkeypatch.setattr(L, "IXREF", L.F(1e9))
+        v2 = L.Voice()
+        old = np.concatenate([v2.block(lk, note, k == 0) for k in range(20)])
+        monkeypatch.undo()
+        assert np.array_equal(new.view(np.uint32), old.view(np.uint32)), note
