@@ -469,9 +469,12 @@ def build() -> str:
                "It drops the Machinedrum and Monomachine engines and puts new synthesis machines in their place: "
                "<b>FASCIA</b> (physical percussion and tuned bodies), <b>ORGAN</b> (a pipe organ), <b>SILT</b> (material synthesis), "
                "<b>LIGATURE</b> (a patchable block synth), <b>DIGIDRUM</b> (digital drums)"
+               + (", <b>CONTOUR</b> (wave terrain synthesis)" if HAS_CONTOUR else "")
                + (", <b>THOLET</b> (a felt/electric piano with a grain cloud)" if TM else "")
                + (", and <b>PLATEAU</b>, an FX machine (a plate reverb on its own track, fed by a BUS of the tracks you choose)" if PM else "") +
-               ". It keeps the Digitakt II sample machines, FLEX, the +Drive library, the recorder, Direct Jump and parameter slides from the mod. "
+               ". Among the sample machines it adds " + ("<b>SMEAR</b> (a granular looper), " if HAS_SMEAR else "")
+               + ("and a filter type, <b>GLASS</b>, on every machine's FLTR page. " if HAS_GLASS else "")
+               + "It keeps the Digitakt II sample machines, FLEX, the +Drive library, the recorder, Direct Jump and parameter slides from the mod. "
                "Unofficial: not made or supported by Elektron."))
     s.append(p("Everything below works like the stock Digitone II unless it says otherwise: p-locks, LFOs, slides, kits and sounds, copy/paste, "
                "MIDI. Every RIFT machine control can be p-locked and slid; most are LFO destinations (the few that are not are said)."))
