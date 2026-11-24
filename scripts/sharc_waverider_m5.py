@@ -5006,6 +5006,7 @@ def _ctr_heavy():
     return CB.panel_knobs(SURF=4 * 16 + 3, MORPH=90, FOLD=60, GRIT=0, FM=80, FDBK=50, WARP=70, DRFT=100, ROT=40)
 
 
+GLASS_SLOT = 5_000                     # RIFT v0.22: GLASS's worst cost a slot a block (rcost)
 _GL_HEAVY = {67: 0x4000, 68: 0x7400, 66: 0x3F80, 69: 0x6400, 70: 0x7F00, 71: 0x1800, 72: 0x3000, 73: 0x1000, 74: 0x7000}
 
 
@@ -5057,14 +5058,21 @@ def step_rcost(init, sound, machines) -> dict:
     finally:
         undo()
     voc = out["SMEAR VOC (BLND 0)"]["worst_delta"] or 1e12
+    g15, m15 = out["15 WaveTone tracks on GLASS (RES high, ENV, LPG)"]["worst_delta"], out["15 WaveTone tracks, Multi-Mode"]["worst_delta"]
+    glass_slot = (g15 - m15) / 15 if g15 is not None and m15 is not None else 1e12
+    print(f"    rcost GLASS a slot: {glass_slot:,.0f}", flush=True)
     checks = {"an idle frame measured": base > 0,
               f"SMEAR's VOC worst block within the guard's VOC_PEAK ({SMS.VOC_PEAK:,})": voc <= SMS.VOC_PEAK,
               f"v0.20: CONTOUR's 4-step worst block within the guard's CTR_PEAK ({CTP.CTR_PEAK:,})":
               (out["CONTOUR 4 steps (the same, FDBK on, note 84)"]["worst_delta"] or 1e12) <= CTP.CTR_PEAK,
               "every other machine's worst block, beside an idle frame, inside 0.92 of the frame":
               all(v["worst_delta"] is not None and base + v["worst_delta"] <= 0.92 * FRAME
-                  for k, v in out.items() if not k.startswith("SMEAR VOC"))}
-    return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, **out}}
+                  for k, v in out.items() if not k.startswith("SMEAR VOC") and not k.startswith("15 WaveTone")),
+              # RIFT v0.22 (the owner's GLASS overload): GLASS a slot, fifteen tracks on it less the same on
+              # Multi-Mode, within GLASS_SLOT (v0.18..v0.21's register-less loop: about 7,200; v0.22 about 4,200).
+              # Fifteen busy tracks on GLASS are past the frame by design: the guard's limit leaves them room
+              f"v0.22: GLASS's cost a slot within {GLASS_SLOT:,}": glass_slot <= GLASS_SLOT}
+    return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, "glass_slot": glass_slot, **out}}
 
 
 def mv_frame(sound, machines, words) -> bytes:
