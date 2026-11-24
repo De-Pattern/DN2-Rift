@@ -18,9 +18,9 @@ F = np.float32
 
 
 def rec_floats(**kw) -> dict:
-    d = {LV.R_TYPE: 0.0, LV.R_FREQ: 0.6, LV.R_RES: 0.8, LV.R_LPG: 0.0, LV.R_ATK: 0.1, LV.R_DEC: 0.5,
+    d = {LV.R_TYPE: 0.0, LV.R_FREQ: 0.6, LV.R_RES: 0.8, LV.R_ATK: 0.1, LV.R_DEC: 0.5,
          LV.R_ABND: 0.5, LV.R_DBND: 0.5, LV.R_DEPTH: 0.5, LV.R_KEYT: 0.0}
-    names = {"TYPE": LV.R_TYPE, "FREQ": LV.R_FREQ, "RES": LV.R_RES, "LPG": LV.R_LPG, "ATK": LV.R_ATK,
+    names = {"TYPE": LV.R_TYPE, "FREQ": LV.R_FREQ, "RES": LV.R_RES, "ATK": LV.R_ATK,
              "DEC": LV.R_DEC, "ABND": LV.R_ABND, "DBND": LV.R_DBND, "DEPTH": LV.R_DEPTH, "KEYT": LV.R_KEYT}
     for kk, v in kw.items():
         d[names[kk]] = v

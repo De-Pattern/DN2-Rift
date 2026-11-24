@@ -1,4 +1,4 @@
-"""GLASS's names on the FLTR page (RIFT v0.18; PING's P2 mechanism from the DN2 mk2 mod).
+"""RUBBER's (v0.24; GLASS's until v0.23) names on the FLTR page (RIFT v0.18; PING's P2 mechanism from the DN2 mk2 mod).
 
 A GLASS (6) track's FLTR page is Multi-Mode's page (`dnfw.glass.coldfire`): the same records, which the
 DSP side reads as GLASS's controls (`dnfw.glass.live`). While the active track's filter is GLASS,
@@ -6,17 +6,16 @@ DSP side reads as GLASS's controls (`dnfw.glass.live`). While the active track's
 GLASS's names, so the page, the LFO and modulation destination lists and the header's parameter line say
 what the knob does; the stock pointers go back as soon as it is not.
 
-    page 1   ATK  DEC  ABND DBND  /  FREQ RES  TYPE ENV
-    page 2   LPG  .    .    KEY.T /  BASE WDTH ...
+    page 1   ATK  DEC  .    .     /  FREQ RES  DRIV ENV     (v0.24: RUBBER)
+    page 2   .    ABND DBND KEY.T /  BASE WDTH ...
 """
 
 from __future__ import annotations
 
 FILTER = 6
-SETS = {6: {44: ("Low Pass Gate", "LPG"),    # the filter envelope's Env. Delay: OFF under 64, ON from 64
-            47: ("Attack Bend", "ABND"),     # ... Sustain Level: 0 exponential, 64 straight, 127 logarithmic
-            48: ("Decay Bend", "DBND"),      # ... Release Time: the same, on the decay
-            37: ("Ring Time", "RES")}}       # Resonance: the ring's length, the same at every pitch
+SETS = {6: {47: ("Attack Bend", "ABND"),     # the filter envelope's Sustain Level, on page 2: 0 exponential, 64 straight, 127 logarithmic
+            48: ("Decay Bend", "DBND"),      # ... Release Time, on page 2: the same, on the decay
+            38: ("Drive", "DRIV")}}          # Type: RUBBER's input level into the chip (v0.24)
 
 
 def ids() -> list[int]:

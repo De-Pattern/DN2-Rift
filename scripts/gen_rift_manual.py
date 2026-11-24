@@ -455,7 +455,7 @@ def build() -> str:
     if HAS_SMEAR:
         nav.append(("smear", "SMEAR"))
     if HAS_GLASS:
-        nav.append(("glass", "GLASS filter"))
+        nav.append(("glass", "RUBBER filter"))
     if have("dnfw.mverb.live"):
         nav.append(("mverb", "Master reverb"))
     nav += [("samples", "Sample machines"), ("flex", "FLEX"), ("recorder", "Recorder"),
@@ -478,7 +478,7 @@ def build() -> str:
                + (", <b>THOLET</b> (a felt/electric piano with a grain cloud)" if TM else "")
                + (", and <b>PLATEAU</b>, an FX machine (a plate reverb on its own track, fed by a BUS of the tracks you choose)" if PM else "") +
                ". Among the sample machines it adds " + ("<b>SMEAR</b> (a granular looper), " if HAS_SMEAR else "")
-               + ("and a filter type, <b>GLASS</b>, on every machine's FLTR page. " if HAS_GLASS else "")
+               + ("and a filter type, <b>RUBBER</b>, on every machine's FLTR page. " if HAS_GLASS else "")
                + "It keeps the Digitakt II sample machines, FLEX, the +Drive library, the recorder, Direct Jump and parameter slides from the mod. "
                "Unofficial: not made or supported by Elektron."))
     s.append(p("Everything below works like the stock Digitone II unless it says otherwise: p-locks, LFOs, slides, kits and sounds, copy/paste, "
@@ -630,21 +630,21 @@ def build() -> str:
             for c in PM.CONTROLS) + "</table>")
 
     if HAS_GLASS:
-        s.append("<h2 id=\"glass\">GLASS (a filter type)</h2>")
-        s.append(p("A filter type after the Serge VCFQ, on <b>every</b> machine's FLTR page (MACHINE SEL's FLTR list: <b>Glass</b>, after Equalizer). "
-                   "It's a state-variable filter like Multi-Mode, built to ring: at high RES a hard hit rings as a clean, round tone, like tapping a wine glass, "
-                   "never clipped or harsh, and it keeps the low end under the ring. Great on very short, popping sounds.",
-                   "<b>Its page is Multi-Mode's</b>, with these meanings:"))
-        s.append(ul("<b>FREQ</b>: the cutoff, and the pitch the filter rings at.",
-                    "<b>RES</b> (Ring Time): how long a hit rings, from a few milliseconds to about four seconds, the same at every pitch. At the top it is a playable resonator: turn KEY.T up and the ring follows the notes.",
-                    "<b>TYPE</b>: the morph, low-pass (0) to band-pass (middle) to high-pass (top).",
-                    "<b>ENV</b>: the envelope's depth on the cutoff, up or down (middle: none).",
-                    "<b>ATK</b> and <b>DEC</b>: GLASS's own envelope, attack then decay from each trig.",
-                    "<b>ABND</b> (Attack Bend, on SUS) and <b>DBND</b> (Decay Bend, on REL): the shape of each segment: fully left exponential (slow, then fast), the middle straight, fully right logarithmic (fast, then slow).",
-                    "<b>LPG</b> (on page 2, in ENV DELAY's place): from 64, a low-pass gate: the level and the cutoff open together at each trig and close like a vactrol, quickly and then slowly (DEC sets how long). The classic bongo-like ping.",
+        s.append("<h2 id=\"glass\">RUBBER (a filter type)</h2>")
+        s.append(p("A filter type after the Roland SH-101's, on <b>every</b> machine's FLTR page (MACHINE SEL's FLTR list: <b>Rubber</b>, after Equalizer). "
+                   "A four-pole low-pass ladder (24 dB a octave) with the 101 chip's soft saturation at its input and in its resonance: "
+                   "snappy, squelchy, rubbery mono basslines. Resonance keeps the low end round, and at the top the filter self-oscillates. "
+                   "The cutoff glides smoothly however fast the envelope moves it. (v0.24: RUBBER replaced GLASS.)",
+                   "<b>Its pages are Multi-Mode's</b>, with these meanings:"))
+        s.append(ul("<b>FREQ</b>: the cutoff.",
+                    "<b>RES</b>: the resonance, up to self-oscillation at the top (turn KEY.T up and it plays in tune).",
+                    "<b>DRIV</b> (in TYPE's place): how hard the signal drives the chip, from clean to thick and rubbery.",
+                    "<b>ENV</b>: the envelope's depth on the cutoff, up or down (middle: none), up to six octaves.",
+                    "<b>ATK</b> and <b>DEC</b>: RUBBER's own envelope, attack then decay from each trig. SUS and REL are blank on page 1.",
+                    "<b>ABND</b> and <b>DBND</b> (page 2, as knobs): the shape of the attack and of the decay: fully left exponential (slow, then fast), the middle straight, fully right logarithmic (fast, then slow). Short DEC with DBND to the left is the 101's snap.",
                     "<b>KEY.T</b>: how far the cutoff follows the note."))
-        s.append(p("<b>CPU (v0.22):</b> GLASS costs the DSP time on every track that uses it. v0.18 to v0.21 could run the DSP past its frame with GLASS on several busy tracks, which sounded crushed and crackly, like the Monomachine's overload. In v0.22 GLASS does the same arithmetic at well under two thirds of the cost, so it sounds exactly as before, and its time is counted with the rest, so when the DSP is busy the oldest notes' tails give way instead.",
-                   "<b>Note:</b> a sound saved with GLASS and loaded on stock firmware or the DN2 mk2 mod loads as Multi-Mode."))
+        s.append(p("<b>CPU:</b> RUBBER costs less DSP time a track than GLASS did, and its time counts toward the DSP's budget.",
+                   "<b>Note:</b> a sound saved with RUBBER and loaded on stock firmware or the DN2 mk2 mod loads as Multi-Mode. A sound saved with GLASS on v0.18 to v0.23 opens with RUBBER."))
 
     if HAS_SMEAR:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
@@ -713,7 +713,8 @@ def build() -> str:
 
 
 VERSIONS = [
-    ("0.24", "APART", ["SMEAR: pitch and speed apart, as on the Nebulae. TUNE and the note set PLAY's pitch only, through two crossfading read heads; SPD sets the speed only (v0.22 and v0.23 played PLAY as tape). With no transposition at speed 1, PLAY reads exactly as before.",
+    ("0.24", "APART", ["RUBBER, a new filter type after the Roland SH-101, in GLASS's place on every machine's FLTR page: a four-pole ladder with the chip's soft saturation, snappy and rubbery, self-oscillating at the top. DRIV in TYPE's place; ABND and DBND as knobs on page 2; SUS and REL blank on page 1 (the curves no longer move the envelope's picture); no LPG.",
+                       "SMEAR: pitch and speed apart, as on the Nebulae. TUNE and the note set PLAY's pitch only, through two crossfading read heads; SPD sets the speed only (v0.22 and v0.23 played PLAY as tape). With no transposition at speed 1, PLAY reads exactly as before.",
                        "The knob icons on RIFT's pages: a clean one-pixel ring and pointer (the scaled-up ring looked shaded).",
                        "Includes v0.23."]),
     ("0.23", "STEADY", ["FASCIA's crackle (v0.21, even with one note), its likely cause: the DSP's time guard expected a FASCIA voice to cost one and a half times its last block and, with the master plate's few thousand cycles in the stock's share, left a lone voice out on some blocks. It now expects one and a quarter times (FASCIA, ORGAN, SILT, LIGATURE, DIGIDRUM and CONTOUR); the reserve at the frame's end is unchanged.",
