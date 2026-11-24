@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""RIFT's quick guide (site/rift-quick.html): a legend of every RIFT machine's controls laid out as
-the Digitone's own pages (knobs A-D over E-H, each "PARAM: what it does"), quick starts, the FLEX
-and SMEAR walk-throughs and tips, for people who don't want to read the manual yet.
-
-Owner, 2026-11-24: "a kind of legend for the complex esoteric controls of the new engines ...
-how to quickly set up flex tracks and record and playback ... how to use the smear ... visually
-appealing ... more graphics for quick skimming and hunting for certain helpful tips". Served next
-to the MANUAL button (both patchers) and linked from the manual's top.
+"""RIFT's quick guide (site/rift-quick.html), to the owner's own design (2026-11-24,
+"RIFT Visual Quick Start v0.22 EXPLAINED": a dark quick-reference, one page per machine, each
+synth page as the Digitone's knob grid A-D over E-H with what every knob does, a FIRST SOUND
+strip). The owner's text is kept; corrections against src/dnfw/*/machines.py PAGES and the manual.
+Served next to the MANUAL button on both patchers and linked from the manual's top.
 
     python3 scripts/gen_rift_quick.py [--out site/rift-quick.html]
 """
@@ -15,398 +12,478 @@ from __future__ import annotations
 import argparse
 import base64
 import html
+import io
 import pathlib
+import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
-COVERS = "0.22"                         # the newest release the guide describes (not VERSION: a release in the making)
+COVERS = "0.22"            # the release the guide describes (not VERSION: the tree may be ahead)
+LOGO_REF = "v22"           # logos as the released firmware draws them (v0.23's CONTOUR is newer)
+TEAL = (111, 199, 180)
 
-E = html.escape
+def E(s: str) -> str:
+    """escaped, the owner's "->" drawn as an arrow (it no longer breaks across lines)"""
+    return html.escape(s).replace("-&gt;", "\u2192").replace("&lt;\u2192", "\u2194").replace("&lt;-", "\u2190")
 
 
-def logo(name: str) -> str:
-    p = LOGOS / f"{name}.png"
-    if not p.exists():
+def logo_png(name: str) -> bytes | None:
+    try:
+        return subprocess.run(["git", "-C", str(ROOT), "show", f"{LOGO_REF}:src/dnfw/waverider/logos/{name}.png"],
+                              capture_output=True, check=True).stdout
+    except Exception:
+        p = LOGOS / f"{name}.png"
+        return p.read_bytes() if p.exists() else None
+
+
+def logo(name: str | None) -> str:
+    """The MACHINE SEL logo, its lit pixels teal on a clear ground, drawn 2x pixelated"""
+    if not name:
         return ""
-    b = base64.b64encode(p.read_bytes()).decode()
-    return f'<img class="px" src="data:image/png;base64,{b}" alt="" width="92" height="64">'
+    raw = logo_png(name)
+    if not raw:
+        return ""
+    from PIL import Image
+    im = Image.open(io.BytesIO(raw)).convert("L")
+    out = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    px, po = im.load(), out.load()
+    for y in range(im.size[1]):
+        for x in range(im.size[0]):
+            if px[x, y] > 127:
+                po[x, y] = TEAL + (255,)
+    b = io.BytesIO()
+    out.save(b, "PNG")
+    return (f'<img class="logo" alt="" width="{im.size[0] * 2}" height="{im.size[1] * 2}" '
+            f'src="data:image/png;base64,{base64.b64encode(b.getvalue()).decode()}">')
 
 
-# Each machine: (id, name, logo, one line, quick start, pages, extra html)
-# A page: (title, [8 cells: (PARAM, what it does)])  -- cells in knob order A B C D / E F G H
-MACHINES = [
-    ("fascia", "FASCIA", "fascia", "Struck, bowed and blown bodies: an exciter sets one or two resonant bodies ringing.",
-     "Pick BODA, set TUNE and DAMP. Then TYPA and HARD. Colour with MATL, POS, GEOM. Body B + COUP adds a second, related body.",
-     [("SYN1 Exciters", [("TYPA", "Exciter A: STRIKE, BLOW, BOW, DUST, PULSE, TZFM"), ("TYPB", "Exciter B, the same six"),
-                         ("HARD", "Mallet hardness / bow pressure / breath"), ("DUST", "Grit, rosin catches, impulse density"),
-                         ("TZFM", "Through-zero FM: a metallic edge"), ("BEND", "Pitch glide as the body rings (drum skin)"),
-                         ("MIX", "A only at 0, B only at 127"), ("DEC", "How long the exciter keeps exciting")]),
-      ("SYN2 Resonators", [("BODA", "Body A: MEMB, PLATE, BAR, VIBE, CHIME, BELL, GLASS, TUBE, STRING"), ("BODB", "Body B (same types) or OFF"),
-                           ("TUNE", "Pitch around the note; FUNC + turn: octaves"), ("GEOM", "Harmonic, woody ← → inharmonic, metallic"),
-                           ("MATL", "Wood/skin (highs die) ↔ metal/glass (highs ring)"), ("POS", "Strike point: hollow centre ↔ bright edge"),
-                           ("COUP", "How much A drives B"), ("DAMP", "Ring time: low rings long, high is a thud")]),
-      ("SYN3 Spectral", [("MORPH", "Brightens or darkens the tail, same pitch"), ("FORM", "Vowel formants a e i o u"),
-                         ("SHIFT", "Frequency shift ±2 kHz: beats to alien"), ("RING", "Ring mod A × B"),
-                         ("SIDE", "TZFM modulator ratio"), ("FOLD", "Wavefolder"), ("LPG", "Darkens and quietens as it dies"),
-                         ("CHAR", "Warm then gritty saturation")]),
-      ("SYN4 Onset / interact", [("ATK", "Swell into the hit / bow rise"), ("CLIK", "A transient on top, sized by HARD"),
-                                 ("CTYP", "SNAP, TICK, NOISE, THUMP"), ("XMOD", "A on B: EXCITE, BEND, CHOKE, TRADE"),
-                                 ("FDBK", "B back into A: sustain, then howl"), ("BUZZ", "Snare wires, sitar buzz"),
-                                 ("WATR", "Gurgling water-drum partials"), ("VARY", "Every hit a little different")])],
-     [("Marimba", "BAR · STRIKE · HARD 50 · MATL low · DAMP 40"), ("Tubular bell", "CHIME · HARD 90 · DAMP 20"),
-      ("Bowed glass", "GLASS · BOW · DEC high · HARD 40"), ("Snare", "MEMB · BUZZ high · CLIK SNAP"),
-      ("Steel drum", "PLATE · WATR up"), ("Gong", "BELL + BODB PLATE · XMOD TRADE · a little FDBK")]),
-    ("organ", "ORGAN", "organ", "A pipe organ: stops and drawbars, the pipes' breath and speech, rotor, and a flute you can blow.",
-     "Choose a STOP and pull drawbars (8FT alone is the plainest; add 4FT and 2FT). Page 2 gives the pipes life. Send it to the reverb.",
-     [("SYN1 Ranks", [("STOP", "FLUTE, NACHTHN, PRINCPL, GAMBA, TRUMPET"), ("16FT", "Octave below"), ("8FT", "The note"),
-                      ("4FT", "Octave above"), ("NAZ", "12th: hollow quint"), ("2FT", "Two octaves up"), ("TIER", "17th: reedy Cornet with NAZ"),
-                      ("1FT", "Sparkle on top")]),
-      ("SYN2 Pipes", [("CHIFF", "Breathy puff at each note"), ("SPCH", "How slowly pipes speak"), ("SPRD", "Ranks detuned: big-organ chorus"),
-                      ("AIR", "Wind noise under the tone"), ("WIND", "Unsteady bellows wobble"), ("TREM", "Tremulant depth"),
-                      ("RATE", "Tremulant speed"), ("CELST", "A sharp rank beating: shimmer")]),
-      ("SYN3 Attack", [("PERC", "Hammond-style ping"), ("PDEC", "Ping decay"), ("MTUN", "Mixture tuned down"), ("KCLK", "Key click"),
-                       ("MCHR", "Mixture toward trumpet tone"), ("MIXT", "Glittering high crown"), ("ROTR", "Rotating speaker depth"),
-                       ("RSPD", "Rotor speed, with spin-up lag")]),
-      ("SYN4 Breath", [("BRTH", "Breath inside the tone: a played flute"), ("TURB", "Breath rate"), ("BREK", "Overblown voice break"),
-                       ("BDEP", "Break depth"), ("PRES", "Blowing pressure"), ("BLOM", "Breath blooming into tone"),
-                       ("EDGE", "Noise heard as it blooms"), ("PVEL", "Velocity blows harder")])],
-     [("Plenum", "PRINCPL · 16 8 4 2 up · MIXT up"), ("Vox celeste", "GAMBA · 8FT only · CELST up"),
-      ("Drawbar organ", "PERC 80 · KCLK 50 · ROTR 70"), ("Played flute", "FLUTE · BRTH 60 · BLOM 50 · EDGE 40 · PVEL up")]),
-    ("silt", "SILT", "silt", "Material synthesis: strings, grains, rubber and molten fluid, played by ten gestures, alone or as a crowd.",
-     "Start on page 4: MAT (what it is), GEST (what you do), MODE (one player or many). Then PRESS (how hard) and SPEED. Velocity and the trig's length play the gesture.",
-     [("SYN1 Matter", [("PART", "Stiffness, grain size"), ("TENS", "Tension, brightness, bounce"), ("MASS", "Body size, weight"),
-                       ("COHE", "Players apart ↔ locked (70 natural)"), ("VISC", "Damping: water ↔ honey"), ("GRAIN", "Grit and stroke length"),
-                       ("DENS", "Crackle, extra players, drip rate"), ("BODY", "Resonating body")]),
-      ("SYN2 Contact", [("PRESS", "Always: how hard"), ("SPEED", "Bow speed and all rates"), ("POS", "Edge ↔ middle"), ("ROSIN", "Grip"),
-                        ("SCRAP", "Irregular friction"), ("SNAP", "Transient hardness"), ("AIR", "Breath noise"), ("INST", "How near it is to failing")]),
-      ("SYN3 Structure", [("SPRD", "Cluster width"), ("VOICE", "How many players"), ("DRIFT", "Slow detune per player"), ("VIBR", "Vibrato"),
-                          ("GLISS", "Glissando / scoop (centre 0)"), ("FORM", "Formant that rises with energy"), ("ROUGH", "Scattered strikes"),
-                          ("MORPH", "Tonal ↔ particulate")]),
-      ("SYN4 Config (p-lock per trig)", [("MAT", "FIBER, SILT, SKIN, FLUID"), ("GEST", "BOW SCRAPE STACC TREMO SPICC LEGNO GLISS FRACT SWELL QUAKE"),
-                                         ("MODE", "SOLO, MASS, MASS-8, SWARM"), ("DIST", "NARROW, WIDE, BIMODAL, ASYM"),
-                                         ("LOOP", "Re-trigger while held: OFF 16TH 8TH 4TH FREE"), ("SHAPE", "SOFT, LINEAR, EXP, CHAOTIC"),
-                                         ("TUNE", "FREE, SCALE, MICRO, HARM"), ("QUAL", "ECO, NORMAL, DEEP (most CPU)")])],
-     [("Stable to squeal", "raise PRESS × ROSIN"), ("Cluster", "SPRD × DRIFT × COHE in MASS"), ("Water to honey", "FLUID · VISC × TENS × SPEED"),
-      ("Pluck to thud", "SKIN · SNAP × VISC")]),
-    ("ligature", "LIGATURE", "ligature", "A patchable block synth: twelve small blocks wired together, 128 patches per project.",
-     "Pick a factory PATCH (1-13) and play. To rewire, press [YES] on page 1.",
-     [("SYN1 Patch", [("PATCH", "Which of 128 wirings (p-lockable)"), ("TUNE", "±24 semitones"), ("FINE", "±50 cents"), ("LFO1", "Rate of the LFO1 source"),
-                      ("LFO2", "Rate of the LFO2 source"), ("VSNS", "Velocity on level"), ("DRIVE", "Soft clip on the output"), ("LEVEL", "Level")])],
-     [("EDIT ([YES])", "A block · B type · C/D input A + amount · E/F input B + amount · G B-moves-a-setting · H output block"),
-      ("Empty a block", "[FUNC] + [NO]"), ("Pages 2-4", "Two settings a block (1RISE, 3CUT…), offsets: 0 is the patch as wired"),
-      ("A voice to build", "e.g. PHAS into WAVE, into LP (a SLOP on its B), into MULT (another SLOP on its B), OUT on the MULT")]),
-    ("digidrum", "DIGIDRUM", "digidrum", "Digital drums: six voices on one track, picked per trig by TYPE.",
-     "Set TYPE, then p-lock TYPE on each trig (BD on 1 and 9, SD on 5 and 13…): a whole kit on one track.",
-     [("SYN1 Drum", [("TYPE", "BD, SD BASIC, SD VINTAGE, CP, CY, PC"), ("TUNE", "Pitch (64 the drum's own)"), ("PNCH", "Snap and weight at the front"),
-                     ("DEC", "Amp decay"), ("O1", "Per TYPE (below)"), ("O2", "Per TYPE"), ("O3", "Per TYPE"), ("O4", "Per TYPE")]),
-      ("SYN2 Tone", [("OVER", "Overdrive: warm → crushed"), ("EQF", "EQ band frequency"), ("EQG", "Boost / cut (64 flat)"), ("AMD", "Tremolo depth"),
-                     ("AMF", "Tremolo rate (fast: AM sidebands)"), ("FLTF", "Band-pass window bottom"), ("FLTW", "Window width (127 open)"), ("LEV", "Level")])],
-     [("BD MODERN", "SWEP pitch sweep · SMOD square mod · TMOD triangle mod · MENV mod length"),
-      ("SD BASIC", "SWEP · INHM drum → metal · MDFB tone → rattle · MENV"),
-      ("SD VINTAGE", "SWEP · INHM · FCMP denser body · MENV"), ("CP VINTAGE", "SPCR hand spacing · BAL claps/body · BODY · BENV"),
-      ("CY ALLOY", "SHIM · RADIO · MOD metallic FM · MENV"), ("PC CARBON", "SWEP · INHM · MOD · MENV")]),
-    ("contour", "CONTOUR", "contour", "Wave terrain synthesis: a point orbits over a surface; the height under it is the sound.",
-     "SURF SINE with small SIZX/SIZY is a clean tone. Open the sizes for brightness, move CNTX/CNTY to find a spot, then try SURF and RATIO.",
-     [("SYN1 Orbit", [("TUNE", "Pitch (64 the note)"), ("RATIO", "Y:X speed: circles to Lissajous"), ("SIZX", "Orbit width: sine → whole terrain"),
-                      ("SIZY", "Orbit height"), ("CNTX", "Where it sits, left ↔ right"), ("CNTY", "Where it sits, down ↔ up"),
-                      ("ROT", "Turns the orbit"), ("DRFT", "Centre wanders: held notes evolve")]),
-      ("SYN2 Land", [("SURF", "SINE FOLD CHEB FM RING EDGE CHAOS BITS"), ("MORPH", "Bends the surface"), ("WARP", "Distorts the orbit before reading"),
-                     ("FOLD", "Wavefolder after"), ("FM", "Output speeds the orbit: growl"), ("FDBK", "Output pushes the orbit: thickens, snarls"),
-                     ("GRIT", "Sample and bit crush"), ("LEV", "Level")])],
-     [("A clean tone", "SURF SINE, SIZX and SIZY small"), ("Brighter", "open SIZX and SIZY: the orbit crosses more hills"),
-      ("Held notes that move", "raise DRFT"), ("A snarl", "raise FM and FDBK")]),
+# ---- the pages ---------------------------------------------------------------------------------
+# panel kinds: ("knobs", title, caption, [(name, text) x8])   -- A-H chips
+#              ("concept", title, caption, [(name, text) ...]) -- no chips: ideas, not knob places
+#              ("kv", title, [(key, text) ...])
+#              ("steps", [(title, text) ...])                 -- numbered cards
+#              ("cards", [(name, tag, lead, text) ...])       -- the sample machines
+#              ("box", title, [text, ...])
+
+def K(*pairs):
+    return list(pairs)
+
+
+PAGES = [
+    dict(id="fascia", title="FASCIA", tag="SYNTH MACHINE", logo="fascia",
+         sub="Two exciters drive resonant objects; every control tells you which physical behaviour changes.",
+         panels=[("knobs", "SYN1 / EXCITERS", "WHAT HITS THE BODY", K(
+             ("TYPA", "Select the main exciter: STRIKE / BLOW / BOW / DUST / PULSE / TZFM."),
+             ("TYPB", "Choose a second exciter for hybrid attacks."),
+             ("HARD", "Soft mallet -> hard tip; bow pressure; breath brightness."),
+             ("DUST", "Extra grit, rosin noise or micro-impacts."),
+             ("TZFM", "Metallic FM edge; more = harsher."),
+             ("BEND", "Pitch glides with the body's level, like a struck skin."),
+             ("MIX", "Balance exciter A against exciter B."),
+             ("DEC", "Exciter duration: tap -> sustained rub."))),
+             ("knobs", "SYN2 / RESONATORS", "WHAT RINGS", K(
+                 ("BODA", "Choose resonator: membrane, plate, bar, bell, glass, string..."),
+                 ("BODB", "Optional second body; OFF disables it."),
+                 ("TUNE", "Body pitch relative to the note. [FUNC]+turn: octaves."),
+                 ("GEOM", "Harmonic/woody -> inharmonic/metal. [FUNC]+turn: centre."),
+                 ("MATL", "High harmonics die fast -> ring longer."),
+                 ("POS", "Strike location; changes overtone mix."),
+                 ("COUP", "How strongly A excites body B."),
+                 ("DAMP", "LOW = long ring; HIGH = short thud."))),
+             ("knobs", "SYN3 / SPECTRAL", "HOW IT SOUNDS", K(
+                 ("MORPH", "Spectral colour changes over the tail."),
+                 ("FORM", "Vowel-like resonances: a/e/i/o/u."),
+                 ("SHIFT", "Frequency shift: beats -> alien clang. [FUNC]+turn: 0."),
+                 ("RING", "Ring-modulate the resonators together."),
+                 ("SIDE", "Sideband ratio for the TZFM exciter."),
+                 ("FOLD", "Wavefold for bright buzzy harmonics."),
+                 ("LPG", "Darker and quieter as the note dies."),
+                 ("CHAR", "Output saturation: warmth -> grit."))),
+             ("knobs", "SYN4 / ONSET", "HOW IT STARTS", K(
+                 ("ATK", "Smeared strike / slower bow or breath."),
+                 ("CLIK", "Amount of extra attack click/thump."),
+                 ("CTYP", "Click type: SNAP / TICK / NOISE / THUMP."),
+                 ("XMOD", "Body A acts on B: EXCITE / BEND / CHOKE / TRADE."),
+                 ("FDBK", "B feeds A; sustain -> self-oscillation."),
+                 ("BUZZ", "Snare-wire / sitar-style contact rattle."),
+                 ("WATR", "Gurgling upper spectral water tones."),
+                 ("VARY", "Per-hit change; less machine-gun repeat.")))],
+         first=("MARIMBA", "BODA BAR -> TYPA STRIKE -> HARD 50 -> DAMP 40"), foot="KNOB BY KNOB"),
+    dict(id="organ", title="ORGAN", tag="SYNTH MACHINE", logo="organ",
+         sub="Each drawbar changes a pipe rank; other pages add breath, attack, chorus and motion.",
+         panels=[("knobs", "SYN1 / RANKS", "DRAWBAR LEVELS", K(
+             ("STOP", "Pipe family: flute, nachthorn, principal, gamba, trumpet."),
+             ("16FT", "Sub octave; adds bass weight."), ("8FT", "Fundamental note; start here."),
+             ("4FT", "1 octave up; adds brightness."), ("NAZ", "Octave + fifth; hollow colour."),
+             ("2FT", "2 octaves up; bright upper rank."), ("TIER", "2 octaves + third; reedy colour."),
+             ("1FT", "3 octaves up; highest sparkle."))),
+             ("knobs", "SYN2 / PIPES", "MAKE IT BREATHE", K(
+                 ("CHIFF", "Breathy puff at the note onset."), ("SPCH", "Pipe speech: instant -> slow bloom."),
+                 ("SPRD", "Slight rank detune; natural chorus."), ("AIR", "Airflow noise under the organ tone."),
+                 ("WIND", "Bellows wobble of pitch / volume."), ("TREM", "Pulsing wind / tremulant depth."),
+                 ("RATE", "Speed of the tremulant pulse."), ("CELST", "Sharp detuned rank; shimmering beats."))),
+             ("knobs", "SYN3 / ATTACK", "ADD CHARACTER", K(
+                 ("PERC", "Hammond-like ping on note attack."), ("PDEC", "How long the percussion ping decays."),
+                 ("MTUN", "Tune the added mixture ranks down."), ("KCLK", "Mechanical keyboard click amount."),
+                 ("MCHR", "Character / timbre of mixture pipes."), ("MIXT", "Extra high organ pipes; bright crown."),
+                 ("ROTR", "Rotating-speaker swirl depth."), ("RSPD", "Speed of the spinning rotor."))),
+             ("knobs", "SYN4 / BREATH", "FLUTE-LIKE PLAYING", K(
+                 ("BRTH", "Amount of breath / jet turbulence."), ("TURB", "Speed of turbulent breath flutter."),
+                 ("BREK", "Voice break / subharmonic growl."), ("BDEP", "How strong the voice break becomes."),
+                 ("PRES", "Breath pressure; sharper, break-prone."), ("BLOM", "Breath grows slowly into full note."),
+                 ("EDGE", "Audible air-edge noise during bloom."), ("PVEL", "Velocity changes blowing pressure.")))],
+         first=("PIPE CHORUS", "STOP PRINCPL -> raise 8FT -> add 4FT + 2FT -> increase MIXT"), foot="KNOB BY KNOB"),
+    dict(id="silt", title="SILT", tag="SYNTH MACHINE", logo="silt",
+         sub="Select material and playing gesture first, then shape its mass, friction and ensemble.",
+         panels=[("knobs", "SYN1 / MATTER", "WHAT IT IS MADE OF", K(
+             ("PART", "Stiffness or grain size; gut -> wire."), ("TENS", "Tension / elasticity of material."),
+             ("MASS", "Physical size / weight; light -> heavy."), ("COHE", "Players or grains separate -> bind."),
+             ("VISC", "Damping / thickness; water -> honey."), ("GRAIN", "Grain or friction-stroke duration."),
+             ("DENS", "Crackle / particle or player density."), ("BODY", "Amount of resonant body in the tone."))),
+             ("knobs", "SYN2 / CONTACT", "HOW YOU TOUCH IT", K(
+                 ("PRESS", "How hard the material is pressed."), ("SPEED", "Bow / scrape / melt / gesture movement rate."),
+                 ("POS", "Where it is struck: edge -> middle."), ("ROSIN", "Grip and stick-slip; more squeal."),
+                 ("SCRAP", "Irregular rubbing / scraping."), ("SNAP", "Sharpness of impact / transient."),
+                 ("AIR", "Breath, dust or liquid-air noise."), ("INST", "Instability; closer to breaking."))),
+             ("knobs", "SYN3 / STRUCTURE", "HOW IT MOVES", K(
+                 ("SPRD", "How wide / detuned the cluster is."), ("VOICE", "How many layers / ensemble players."),
+                 ("DRIFT", "Slow detuning of each player."), ("VIBR", "Vibrato strength / movement."),
+                 ("GLISS", "Pitch scoop or travelling glissando."), ("FORM", "Energy-driven band-pass colour."),
+                 ("ROUGH", "Friction and scattered impact timing."), ("MORPH", "Tonal pitch -> broken particles."))),
+             ("knobs", "SYN4 / CONFIG", "CHOOSE PERFORMANCE (P-LOCK PER TRIG)", K(
+                 ("MAT", "FIBER / SILT / SKIN / FLUID."), ("GEST", "BOW / SCRAPE / STACC / TREMO / SPICC / LEGNO / GLISS / FRACT / SWELL / QUAKE."),
+                 ("MODE", "SOLO / MASS / MASS-8 / SWARM."), ("DIST", "Cluster layout and gliss motion."),
+                 ("LOOP", "Repeat gesture while key is held."), ("SHAPE", "Soft / linear / exp / chaotic curve."),
+                 ("TUNE", "FREE / SCALE / MICRO / HARM."), ("QUAL", "ECO / NORMAL / DEEP (DSP cost).")))],
+         first=("BOWED ENSEMBLE", "SYN4 MAT FIBER + GEST BOW + MODE MASS -> SYN2 PRESS + ROSIN -> SYN3 SPRD"), foot="KNOB BY KNOB"),
+    dict(id="ligature", title="LIGATURE", tag="SYNTH MACHINE", logo="ligature",
+         sub="A modular patch: choose a wiring, edit its blocks, then automate per-block offsets.",
+         panels=[("knobs", "SYN1 / PATCH CONTROLS", "1-13 FACTORY PATCHES", K(
+             ("PATCH", "Select one of 128 stored wirings (p-lockable)."), ("TUNE", "Transpose entire voice, +/-24 semitones."),
+             ("FINE", "Fine tuning, +/-50 cents."), ("LFO1", "Speed of modulation source LFO 1."),
+             ("LFO2", "Speed of modulation source LFO 2."), ("VSNS", "How much velocity changes level."),
+             ("DRIVE", "Output soft clipping / distortion."), ("LEVEL", "Total voice volume."))),
+             ("knobs", "[YES] EDIT / BLOCK WIRING", "EDITOR ENCODERS A-H", K(
+                 ("BLK", "Choose one of the 12 patch blocks."), ("TYP", "Choose oscillator / filter / logic / etc."),
+                 ("INA", "Source feeding the first input."), ("AMA", "Amount of input A; negative inverts."),
+                 ("INB", "Source feeding the second input."), ("AMB", "Amount of input B."),
+                 ("MOV", "Input B moves the block's second setting instead."), ("OUT", "Select the block you hear."))),
+             ("knobs", "SYN2 / BLOCKS 1-4", "0 = PATCH AS WIRED", K(
+                 ("1A", "Block 1: offset for its first setting."), ("1B", "Block 1: offset for its second setting."),
+                 ("2A", "Block 2: first setting."), ("2B", "Block 2: second setting."),
+                 ("3A", "Block 3: first setting."), ("3B", "Block 3: second setting."),
+                 ("4A", "Block 4: first setting."), ("4B", "Block 4: second setting."))),
+             ("knobs", "SYN3 / BLOCKS 5-8", "NAMES DEPEND ON BLOCK", K(
+                 ("5A", "Block 5: first setting."), ("5B", "Block 5: second setting."),
+                 ("6A", "Block 6: first setting."), ("6B", "Block 6: second setting."),
+                 ("7A", "Block 7: first setting."), ("7B", "Block 7: second setting."),
+                 ("8A", "Block 8: first setting."), ("8B", "Block 8: second setting."))),
+             ("knobs", "SYN4 / BLOCKS 9-12", "e.g. 9RISE, 11CUT ON SCREEN", K(
+                 ("9A", "Block 9: first setting."), ("9B", "Block 9: second setting."),
+                 ("10A", "Block 10: first setting."), ("10B", "Block 10: second setting."),
+                 ("11A", "Block 11: first setting."), ("11B", "Block 11: second setting."),
+                 ("12A", "Block 12: first setting."), ("12B", "Block 12: second setting."))),
+             ("box", "EDIT KEYS", ["[YES] opens EDIT on the selected tile; [YES] again shows the BLOCK view.",
+                                   "[FUNC]+[NO] empties the block. [NO] leaves EDIT. Every change is heard at once and saved with the project.",
+                                   "On SYN2-4 each knob is named on screen by its block's setting (1RISE, 3CUT...): offsets, so p-locks and LFOs move around the patch as wired."])],
+         first=("PATCH A VOICE", "SYN1 PATCH 1 -> [YES] edit -> e.g. PHAS -> WAVE -> LP -> MULT (SLOP into B) as OUT"), foot="KNOB BY KNOB"),
+    dict(id="ligblocks", title="LIGATURE / BLOCKS", tag="SYNTH MACHINE", logo="ligature",
+         sub="What each block type does, and what an input can listen to.",
+         panels=[("concept", "SOUND + SHAPE", "OSCILLATORS / FILTERS / RESONATORS", K(
+             ("PHAS", "Ramp oscillator at the note x a ratio; FM on A, sync on B."), ("WAVE", "Waveshaper osc: sine -> tri -> saw -> square."),
+             ("LP / BP / HP", "Resonant 12 dB filter outputs; B moves the cutoff."), ("SKIN", "Drum-skin resonator: strike it for toms."),
+             ("BAR", "Free-bar resonator: marimba / glock."), ("IMPL", "Impulse train or tick: strikes resonators."),
+             ("FOLD", "Sine wavefolder: west-coast overtones."), ("SAT", "Soft saturator with even-harmonic bias."),
+             ("CRES", "A fold at zero: a hard, buzzy edge."), ("CRSH", "Bitcrusher and sample-rate reducer."))),
+             ("concept", "CONTROL + LOGIC", "ENVELOPES / LFOS / CLOCKS", K(
+                 ("SLOP", "Attack/decay envelope from each note."), ("ENV", "Attack/release that holds with the gate."),
+                 ("CYCL", "LFO / slow oscillator, triangle to ramp."), ("LISA", "Lissajous LFO: complex slow shapes."),
+                 ("SLEW", "Lag / portamento, up and down times."), ("HOLD", "Sample & hold, optional steps and glide."),
+                 ("TICK", "Tempo-locked clock with chance."), ("CDIV", "Clock divider / multiplier."),
+                 ("RUNG", "Rungler: chaotic looping 8-step pattern."), ("CHAO", "Logistic map: stepped chaos."),
+                 ("DUST", "Random clumped impulses: rain, crackle."))),
+             ("concept", "MIX + MATH", "VCAs / COMPARATORS", K(
+                 ("ADD", "A + B + offset, times gain."), ("MULT", "A x (B + offset): the VCA, ring mod."),
+                 ("VCA", "Gain with a linear -> audio-taper curve."), ("MIX", "Crossfade A -> B."),
+                 ("COMP", "Comparator: gates and pulses."), ("XOR", "Logic: high when one of A/B is high."),
+                 ("FLIP", "Flip-flop: divides a clock or pitch by 2."))),
+             ("kv", "INPUT SOURCES", [("B1..BC", "Another block (1-9, A, B, C). A later block or itself: one block late = feedback."),
+                                      ("PTCH", "The note's pitch as a control"), ("GATE", "1 while the note is held"),
+                                      ("TRIG", "A pulse at each new note"), ("VEL", "Velocity 0..1"), ("NOIS", "White noise"),
+                                      ("LFO1 / LFO2", "Sines at SYN1's LFO rates")])],
+         first=("RINGING DRUM", "IMPL (TRIG into A) -> SKIN as OUT -> raise its TUNE (ring time)"), foot="BLOCK BY BLOCK"),
+    dict(id="digidrum", title="DIGIDRUM", tag="SYNTH MACHINE", logo="digidrum",
+         sub="TYPE selects six digital drum models. Their last four knobs take on new meanings per type.",
+         panels=[("knobs", "SYN1 / DRUM", "O1-O4 CHANGE WITH TYPE", K(
+             ("TYPE", "Select kick, snare, clap, cymbal, perc (p-lockable)."), ("TUNE", "Pitch of selected drum type."),
+             ("PNCH", "Extra front-end snap and body."), ("DEC", "Volume tail: tight -> long."),
+             ("O1", "Type-specific: e.g. pitch sweep."), ("O2", "Type-specific: e.g. FM or balance."),
+             ("O3", "Type-specific: e.g. body / overtone."), ("O4", "Type-specific: e.g. mod decay."))),
+             ("knobs", "SYN2 / TONE", "SHAPE EACH HIT", K(
+                 ("OVER", "Overdrive: warm -> crushed."), ("EQF", "Choose EQ band frequency."),
+                 ("EQG", "Cut or boost selected EQ band (64 flat)."), ("AMD", "Amplitude modulation / tremolo depth."),
+                 ("AMF", "Tremolo speed -> audio-rate sidebands."), ("FLTF", "Bottom frequency of filter window."),
+                 ("FLTW", "Width of band-pass filter window."), ("LEV", "Overall drum output level."))),
+             ("kv", "O1-O4 / KICK + SNARES", [("BD MODERN", "SWEP pitch drop · SMOD gritty square mod · TMOD softer triangle mod · MENV mod envelope length"),
+                                             ("SD BASIC", "SWEP attack pitch drop · INHM drum -> metallic · MDFB tone -> rattle · MENV"),
+                                             ("SD VINTAGE", "SWEP · INHM · FCMP denser, brighter body · MENV")]),
+             ("kv", "O1-O4 / CLAP + CYMBAL + PERC", [("CP VINTAGE", "SPCR time between claps · BAL hands vs body · BODY thump -> ringing FM body · BENV body decay"),
+                                                    ("CY ALLOY", "SHIM metallic osc ratio · RADIO metallic colour · MOD FM between oscillators · MENV"),
+                                                    ("PC CARBON", "SWEP pitch drop · INHM drum -> metal · MOD FM amount · MENV")])],
+         first=("ONE-TRACK KIT", "Lock TYPE BD on trigs 1 + 9; TYPE SD on 5 + 13; tune each hit independently"), foot="KNOB BY KNOB"),
+    dict(id="contour", title="CONTOUR", tag="SYNTH MACHINE", logo="contour",
+         sub="A moving point samples a terrain; the height along its orbit becomes an audible waveform.",
+         panels=[("knobs", "SYN1 / ORBIT", "SHAPE THE PATH", K(
+             ("TUNE", "Transpose pitch of the repeated orbit."), ("RATIO", "Y vs X orbit speed; circles -> knots / loops."),
+             ("SIZX", "Horizontal travel: tiny -> wide."), ("SIZY", "Vertical travel: tiny -> wide."),
+             ("CNTX", "Move orbit left / right on terrain."), ("CNTY", "Move orbit up / down on terrain."),
+             ("ROT", "Rotate path through the landscape."), ("DRFT", "Slowly evolve orbit while note holds."))),
+             ("knobs", "SYN2 / LAND", "SHAPE THE SURFACE", K(
+                 ("SURF", "Terrain: SINE / FOLD / CHEB / FM / RING / EDGE / CHAOS / BITS."),
+                 ("MORPH", "Reshape the terrain for character."), ("WARP", "Bend or distort the orbit's coordinates."),
+                 ("FOLD", "Fold the result for harmonics."), ("FM", "Output speeds up / slows the orbit: growl."),
+                 ("FDBK", "Output pushes the orbit: thickens -> snarls (stays in tune high up)."),
+                 ("GRIT", "Sample-and-bit crush texture."), ("LEV", "Output level of this terrain voice."))),
+             ("concept", "VISUAL MODEL / PATH", "CONCEPTS, NOT KNOBS", K(
+                 ("RATIO", "1:1 is simple; others trace knots."), ("SIZE", "Small loop = local variation."),
+                 ("SIZE +", "Larger orbit visits more hills / valleys."), ("CENTER", "Moving center samples another region."),
+                 ("ROT", "Angle changes the crossing pattern."), ("DRIFT", "Motion creates evolving timbre."),
+                 ("TUNE", "Orbit repeats at note frequency."), ("PATH", "Height along the orbit becomes the waveform."))),
+             ("concept", "SOUND / DIRECTION", "STARTING POINTS", K(
+                 ("CLEAN", "SURF SINE, small SIZX / SIZY."), ("BRIGHT", "Increase either orbit dimension."),
+                 ("MOVING", "Add DRFT to held notes."), ("METAL", "Experiment with RATIO + FM."),
+                 ("ROUGH", "Use CHAOS / BITS + GRIT."), ("HARSH", "Increase FDBK carefully."),
+                 ("LOCATION", "Sweep CNTX and CNTY by ear."), ("BALANCE", "Use LEV after aggressive settings.")))],
+         first=("MOVING TERRAIN", "SURF SINE -> SIZX / SIZY small -> move CNTX / CNTY -> add DRFT"), foot="KNOB BY KNOB"),
+    dict(id="smear", title="SMEAR", tag="SAMPLING", logo="smear",
+         sub="Continuously morph a sample from traditional tape playback into granular fragments.",
+         panels=[("knobs", "SYN1 / TAPE + CLOUD", "START AT BLND 0", K(
+             ("TUNE", "Transpose: PLAY as tape (speed + pitch) and the grains."), ("SPD", "Playback rate -4..+4; center freezes the read point."),
+             ("BLND", "0 = tape; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
+             ("STRT", "Where the loop begins in the sample."), ("SIZE", "Loop length / sampled region size."),
+             ("DENS", "How many grains play each second."), ("LEV", "Output volume of the machine."))),
+             ("knobs", "SYN2 / GRAINS", "MORE = CLOUD-LIKE", K(
+                 ("OVLP", "Length / overlap of each tiny grain."), ("SPRY", "Scatter grain start positions."),
+                 ("PRND", "Randomize each grain pitch."), ("WIN", "Shape grain edges (7 windows)."),
+                 ("FRZ", "Hold current position as a grain cloud."), ("-", "Not assigned on this page."),
+                 ("-", "Not assigned on this page."), ("-", "Not assigned on this page."))),
+             ("concept", "WHAT YOU HEAR", "PLAY <-> GRANULAR", K(
+                 ("PLAY", "A continuous, tape-style loop."), ("GRAIN", "Many tiny snippets overlap."),
+                 ("BLND", "Crossfade between tape and cloud."), ("SPRY", "Fragments scatter through the buffer."),
+                 ("PRND", "Individual fragments bend in pitch."), ("OVLP", "Small flecks -> longer smear."),
+                 ("FRZ", "Stays on the captured moment."), ("WIN", "Smooth / sharp grain edges."))),
+             ("concept", "SAMPLE WORKFLOW", "SAMPLE HANDLING", K(
+                 ("SAMP", "Turn to open the project sample list."), ("[YES]", "Keep selected sample."),
+                 ("[NO]", "Cancel selection."), ("[FUNC]+[YES]", "Open the +Drive browser."),
+                 ("B1-B8", "FLEX buffers appear after 127."), ("LOOP", "Use STRT + SIZE to isolate a segment."),
+                 ("TRANS", "Notes and TUNE transpose the sound."), ("VOC", "Currently unavailable; its end plays PLAY.")))],
+         first=("FROZEN CLOUD", "SAMP choose sample -> BLND from 0 upward -> DENS -> SPRY -> FRZ ON"), foot="KNOB BY KNOB"),
+    dict(id="samples", title="SAMPLE MACHINES", tag="SAMPLING", logo="dt2",
+         sub="A visual chooser for Digitakt II playback modes and slicing.",
+         panels=[("cards", [("ONESHOT", "HITS / FREE LOOPS", "Free sample playback", "STRT = start | LEN = length | LOOP = repeat point"),
+                            ("STRETCH", "BEAT MATCHING", "Tempo-locked duration", "BARS = target bars; pitch independent"),
+                            ("REPITCH", "TAPE-LIKE LOOPS", "Tempo by speed", "BARS determines playback speed / pitch"),
+                            ("GRID", "RHYTHMIC CHOPS", "Even sample divisions", "GRID = number of evenly-spaced slices; SLCE picks one"),
+                            ("SLICE", "HAND-PLACED HITS", "Custom marker divisions", "SLCE picks a saved slice; [YES] on its page: EDIT SLICE POINTS / CREATE SLICE GRID (TR.DET = at transients) / LOCKS / CLEAR"),
+                            ("FLEX", "LIVE RESAMPLING", "Live buffer playback", "BUF selects recording buffer B1-B8")]),
+                 ("box", "KEYBOARD SLICES", ["On SLICE and GRID with SLCE at NOTE, each key plays its own slice from C1 up."])],
+         first=("SAMPLE SELECT", "Turn SAMP -> [YES] accept / [NO] cancel • [FUNC]+[YES] +Drive • B1-B8 after slot 127"), foot="MACHINE CHOOSER", strip="SAMPLE SELECT"),
+    dict(id="flex", title="FLEX / LIVE RECORDING", tag="SAMPLING", logo="flex",
+         sub="A direct guide to every recording decision, from source to saved sample.",
+         panels=[("steps", [("CHOOSE FLEX", "Place FLEX on a track; BUF selects buffer B1-B8. Any sample machine can also play B1-B8."),
+                            ("OPEN REC", "[FUNC]+[VOICE] opens the FLEX recorder. LEFT / RIGHT: REC TRIGS / REC SETUP / REC BUS."),
+                            ("SOURCE / SRC", "TRK1-16 = a track; IN = input; MAIN = mix; BUS = chosen tracks (pick them on REC BUS with the [TRIG] keys)."),
+                            ("R.LEN", "Recorded take length in pattern steps; [FUNC]+turn moves 16 steps."),
+                            ("TRIG / Q.REC", "On REC TRIGS: [TRIG] = one-shot, [FUNC]+[TRIG] = every pass, [PAGE] = next 16 steps. Or [YES] while playing: records at the next Q.REC boundary; [NO] cancels."),
+                            ("PLAY / SAVE", "FLEX plays its buffer; [FUNC]+[YES] saves the take to the next empty slot and the +Drive.")]),
+                 ("kv", "RECORDER OPTIONS", [("MUTE SRC", "Keeps the source out of the mix while FLEX plays it (held 0.2 s after the note)."),
+                                             ("GAIN", "Take level: 0 = the source's own level; turn down if a bus or MAIN clips."),
+                                             ("ONE-SHOT TRIG", "[YES] [YES] re-arms spent one-shots."),
+                                             ("CLEAR BUF", "[FUNC]+[NO] on REC SETUP, then [YES]: erases the take."),
+                                             ("Q.REC", "Quantized trigless recording: 1-64 steps or the pattern length.")])],
+         first=("CPU SAVER", "Record a heavy track into B1 -> FLEX note trig on step 1 plays it -> MUTE SRC ON"), foot="RECORD / RESAMPLE"),
+    dict(id="fx", title="EFFECTS / PERFORMANCE", tag="GLOBAL", logo=None,
+         sub="The essential controls and shortcuts, with their audible result.",
+         panels=[("kv", "GLASS FILTER (FLTR: GLASS)", [("FREQ", "Filter cutoff / ringing pitch"), ("RES", "Ring duration: tiny -> several seconds"),
+                                                       ("TYPE", "Low-pass -> band-pass -> high-pass"), ("ENV", "Envelope amount +/-; centre = none"),
+                                                       ("ATK / DEC", "Filter envelope attack and decay"),
+                                                       ("ABND / DBND", "Attack / decay curve (on SUS / REL): exp <- straight -> log"),
+                                                       ("LPG", "Page 2, ENV DELAY's place, from 64: low-pass gate ping"), ("KEY.T", "Tracks played note pitch")]),
+                 ("kv", "PLATE REVERB (FX: REVERB)", [("PRE", "Delay before tail (up to 0.3 s)"), ("DEC", "Small room -> long plate"),
+                                                      ("FREQ", "Brightness shelf frequency"), ("GAIN", "Amount of treble surviving in tail"),
+                                                      ("HPF / LPF", "Stock: filter the reverb"), ("MIX VOL", "Stock: reverb level")]),
+                 ("kv", "PERFORMANCE", [("TRK+CLEAR", "Reset machine start values ([FUNC]+[PLAY] = CLEAR)"), ("PTN+YES", "Direct Jump ON"),
+                                        ("PTN+NO", "Direct Jump OFF"), ("PTN+KEYBOARD", "Sustain held keyboard notes"),
+                                        ("TRIG PAGE 2", "SLD enables slides; SLEN duration"), ("SLEN NXT", "Slide until next track trig"),
+                                        ("FUNC+TURN", "FASCIA: TUNE in octaves; GEOM / SHIFT snap to 0")]),
+                 ("kv", "TUNING + MONITOR", [("KB SETUP H", "Turn to select a tuning"), ("PUSH H", "Open tuning page"),
+                                             ("USER 1-8", "Editable custom microtunings"), ("REC MON", "Knob C monitors input when armed"),
+                                             ("MIDI", "MIDI tracks stay in 12-TET"), ("GRID / SLICE", "Slice playback is not retuned")])],
+         first=None, foot="REFERENCE"),
 ]
 
-SMEAR_PAGES = [("SYN1", [("TUNE", "Transposes PLAY (tape) and the grains"), ("SPD", "Read speed −4…+4; centre stops it"),
-                         ("BLND", "PLAY ↔ GRN grains"), ("SAMP", "Sample or FLEX buffer B1-B8"), ("STRT", "Loop start: scan here"),
-                         ("SIZE", "Loop length (fine when small)"), ("DENS", "Grains a second"), ("LEV", "Level")]),
-               ("SYN2", [("OVLP", "Grain length"), ("SPRY", "Grains scattered round the read point"), ("PRND", "Random grain pitch"),
-                         ("WIN", "Grain shape: GAUS BHAR EXPO TRI RAMP SINC RECT"), ("FRZ", "Freeze: hold the moment as grains"),
-                         ("", ""), ("", ""), ("", "")])]
 
-FLEX_PAGE = ("FLEX track", [("TUNE", "Pitch"), ("PLAY", "FWD, FWDL, REV, REVL"), ("", ""), ("BUF", "Which buffer B1-B8"),
-                            ("STRT", "Start in the take"), ("LEN", "Length"), ("LOOP", "Loop point"), ("LEV", "Level")])
-SETUP_PAGE = ("FLEX REC · REC SETUP", [("SRC", "TRK1-16, IN, MAIN, BUS"), ("CHAN", "L+R, L or R"), ("BUF", "Buffer it records into"),
-                                             ("R.LEN", "Take length (FUNC: bars)"), ("ARM", "Recorder's own arming"), ("Q.REC", "Trigless: start on next boundary"),
-                                             ("GAIN", "Take level (0 = source level)"), ("MUTE", "Silence the source while it plays")])
-
-GLASS_PAGE = ("FLTR page with Glass", [("ATK", "Envelope attack"), ("DEC", "Envelope decay"), ("ABND", "Attack curve (on SUS)"), ("DBND", "Decay curve (on REL)"),
-                                       ("FREQ", "Cutoff = the ringing pitch"), ("RES", "Ring time: ms to 4 s"), ("TYPE", "LP → BP → HP"),
-                                       ("ENV", "Envelope on cutoff (middle none)")])
-VERB = [("PRE", "Pre-delay, up to 0.3 s"), ("DEC", "A short room to a long plate"), ("FREQ", "Corner of the high shelf inside the tank"),
-        ("GAIN", "How much brightness survives each pass (low: a dark tail)"), ("HPF, LPF, VOL", "Stock's, unchanged")]
-
-TIPS = [("Any machine", "[TRK] + CLEAR ([FUNC] + [PLAY]) resets a RIFT machine to its own start sound."),
-        ("Any machine", "Hold a trig to see its p-locks highlighted with their values."),
-        ("Any machine", "Word controls move four detents a choice: they never glide, even under LFOs."),
-        ("FASCIA", "[FUNC] + turn: TUNE jumps octaves; GEOM and SHIFT snap to 0."),
-        ("CPU", "When the DSP is busy, the oldest tails drop first, never the newest note or a held chord."),
-        ("CPU", "SILT's QUAL DEEP costs the most DSP time: use it on one or two tracks."),
-        ("FLEX", "Record a CPU-heavy track into a buffer, play it from FLEX, mute the source (MUTE SRC)."),
-        ("FLEX", "Any sample machine can play a buffer: turn SAMP past 127 to B1-B8."),
-        ("FLEX", "A loud BUS or MAIN take can clip: turn GAIN down."),
-        ("SMEAR", "An LFO on SPD, STRT or BLND gives it motion: STRT scans, BLND moves between tape and cloud."),
-        ("SMEAR", "p-lock FRZ ON on single trigs for frozen stutters."),
-        ("Slides", "TRIG page 2: SLD on, SLEN sets the time; SLEN NXT glides until the next trig."),
-        ("Direct Jump", "[PTN] + [YES] on: a pattern cued with [PTN] + [TRIG] starts at once, from the same position. [PTN] + [NO] off."),
-        ("Keyboard", "[PTN] + [KEYBOARD]: KEYBOARD HOLD keeps notes on; again releases them."),
-        ("Tuning", "KB SETUP's H is TUNE: turn it for the track's tuning, push it for the TUNING page. SLICE and GRID are never retuned."),
-        ("GLASS", "Max RES + KEY.T up: GLASS becomes a playable resonator for short hits.")]
+def chip(k: str) -> str:
+    return f'<span class="chip">{k}</span>'
 
 
-def cells(page) -> str:
-    title, cs = page
-    out = []
-    for i, (p, d) in enumerate(cs):
-        k = "ABCDEFGH"[i]
-        if not p:
-            out.append(f'<div class="cell empty"><span class="k">{k}</span></div>')
-        else:
-            out.append(f'<div class="cell" data-s="{E((p + " " + d).lower())}"><span class="k">{k}</span>'
-                       f'<b>{E(p)}</b><span class="d">{E(d)}</span></div>')
-    return f'<figure class="screen"><figcaption>{E(title)}</figcaption><div class="grid">{"".join(out)}</div></figure>'
+def panel(p) -> str:
+    kind = p[0]
+    if kind in ("knobs", "concept"):
+        _, title, cap, cells = p
+        out = []
+        for i, (n, t) in enumerate(cells):
+            dead = " dead" if n == "-" else ""
+            c = chip("ABCDEFGH"[i]) if kind == "knobs" else ""
+            out.append(f'<div class="kc{dead}" data-s="{E((n + " " + t).lower())}">{c}<b>{E(n)}</b><p>{E(t)}</p></div>')
+        cls = "kg" if kind == "knobs" else "kg cg"
+        return (f'<section class="pn"><header><h3>{E(title)}</h3><span class="cap">{E(cap)}</span></header>'
+                f'<div class="{cls}">{"".join(out)}</div></section>')
+    if kind == "kv":
+        _, title, rows = p
+        r = "".join(f'<div class="kv" data-s="{E((a + " " + b).lower())}"><b>{E(a)}</b><span>{E(b)}</span></div>' for a, b in rows)
+        w = " wide" if title.startswith("RECORDER") else ""
+        return f'<section class="pn{w}"><header><h3>{E(title)}</h3></header><div class="kvs">{r}</div></section>'
+    if kind == "steps":
+        _, steps = p
+        r = "".join(f'<div class="st" data-s="{E((a + " " + b).lower())}"><header><span class="num">{i + 1:02d}</span><b>{E(a)}</b></header><p>{E(b)}</p></div>'
+                    for i, (a, b) in enumerate(steps))
+        return f'<div class="sts wide">{r}</div>'
+    if kind == "cards":
+        _, cards = p
+        r = "".join(f'<div class="sm" data-s="{E((a + " " + d).lower())}"><header><b>{E(a)}</b><span class="pill">{E(t)}</span></header>'
+                    f'<p class="lead">{E(l)}</p><p>{E(d)}</p></div>' for a, t, l, d in cards)
+        return f'<div class="sms wide">{r}</div>'
+    if kind == "box":
+        _, title, lines = p
+        return (f'<section class="pn wide note" data-s="{E((title + " " + " ".join(lines)).lower())}"><header><h3>{E(title)}</h3></header>'
+                + "".join(f"<p>{E(x)}</p>" for x in lines) + "</section>")
+    raise ValueError(kind)
 
 
-def recipes(rs) -> str:
-    return '<ul class="rec">' + "".join(f'<li data-s="{E((a + " " + b).lower())}"><b>{E(a)}</b><span>{E(b)}</span></li>' for a, b in rs) + "</ul>"
+def page(n: int, pg) -> str:
+    first = pg.get("first")
+    strip = ""
+    if first:
+        label = pg.get("strip") or f"FIRST SOUND / {first[0]}"
+        strip = f'<div class="first"><b>{E(label)}</b><p>{E(first[1])}</p></div>'
+    return f"""<article class="page" id="{pg['id']}"><div class="bar"></div>
+<div class="hd"><span class="brand">RIFT / QUICK REFERENCE</span><span class="pg">v{COVERS} &nbsp;/&nbsp; {n:02d}</span></div>
+<div class="ttl"><div class="tl">{logo(pg.get('logo'))}<h2>{E(pg['title'])}</h2></div><span class="tag">{E(pg['tag'])}</span></div>
+<p class="sub">{E(pg['sub'])}</p><hr>
+<div class="pns">{"".join(panel(p) for p in pg['panels'])}</div>
+{strip}
+<div class="ft"><span>A-D TOP ROW &nbsp;/&nbsp; E-H BOTTOM ROW</span><span>{E(pg['foot'])} &nbsp;•&nbsp; {n:02d}</span></div></article>"""
 
 
-def machine(m) -> str:
-    mid, name, lg, line, quick, pages, recs = m
-    return (f'<section class="mach" id="{mid}"><header><div class="logo">{logo(lg)}</div><div><h2>{name}</h2><p class="line">{E(line)}</p></div></header>'
-            f'<p class="quick"><span class="tag">Fastest sound</span>{E(quick)}</p>'
-            f'<div class="pages">{"".join(cells(p) for p in pages)}</div>{recipes(recs)}</section>')
+def index_page() -> str:
+    links = "".join(f'<a href="#{pg["id"]}"><b>{E(pg["title"])}</b><span>{i + 2:02d}</span></a>' for i, pg in enumerate(PAGES))
+    return f"""<article class="page" id="top"><div class="bar"></div>
+<div class="hd"><span class="brand">RIFT / QUICK REFERENCE</span><span class="pg">v{COVERS} &nbsp;/&nbsp; 01</span></div>
+<div class="ttl"><h1>KNOBS, EXPLAINED</h1><span class="tag">START HERE</span></div>
+<p class="sub">A scan-first field guide: what each encoder changes, not just what it is called. The full story is in the <a href="rift-manual.html">manual</a>.</p><hr>
+<div class="idx"><div class="how">
+<section class="pn"><h4>01 / HOW TO USE</h4><p>[FUNC]+[SYN] = select machine. [SYN] = next synth page.</p></section>
+<section class="pn"><h4>02 / PHYSICAL GRID</h4><p>A B C D are the upper encoders; E F G H are the lower row.</p></section>
+<section class="pn"><h4>03 / SOUND DESIGN</h4><p>Every card: knob name + a direct description of its audible effect.</p></section>
+<section class="pn"><h4>04 / REFERENCE</h4><p>Page titles match SYN1, SYN2, SYN3, SYN4 on the hardware.</p></section>
+</div><nav class="pn go"><h4>GO STRAIGHT TO...</h4>{links}</nav></div>
+<input id="q" type="search" placeholder="Find a knob or tip: FRZ, DAMP, R.LEN, BOW..." aria-label="Find a knob or tip" autocomplete="off">
+<div class="first"><b>READ EACH SYNTH PAGE LIKE THE HARDWARE</b><p>Top four cells = A B C D &nbsp; | &nbsp; Bottom four cells = E F G H</p></div>
+<div class="ft"><span>A-D TOP ROW &nbsp;/&nbsp; E-H BOTTOM ROW</span><span>ENGINE INDEX &nbsp;•&nbsp; 01</span></div></article>"""
 
 
-KEY = lambda s: "".join(f'<kbd>{E(k)}</kbd>' if i % 2 == 0 else f'<i>{E(k)}</i>' for i, k in enumerate(s.split("|")))
+CSS = """
+:root{color-scheme:dark;--bg:#0b0e10;--pg:#0f1315;--pn:#1a2025;--card:#222a30;--line:#2d363c;--ink:#eef0ee;--dim:#a9b2b5;--teal:#6fc7b4;--gold:#e2c27a;--chip:#33464a}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:12px}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;overflow-x:clip}
+a{color:var(--teal)}
+main{max-width:1240px;margin:0 auto;padding:18px max(12px,2vw) 60px;display:grid;gap:22px}
+.page{position:relative;background:var(--pg);border:1px solid #1c2226;border-radius:6px;padding:26px clamp(16px,3vw,40px) 18px;overflow:hidden}
+.bar{position:absolute;left:0;right:0;top:0;height:6px;background:var(--teal)}
+.hd{display:flex;justify-content:space-between;gap:12px;font:700 13px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.06em}
+.brand{color:var(--teal)}.pg{color:var(--dim);font-weight:400}
+.ttl{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.tl{display:flex;align-items:center;gap:16px}
+h1,h2{font-size:clamp(28px,4vw,40px);line-height:1.05;margin:0;letter-spacing:.02em;font-weight:800}
+.logo{image-rendering:pixelated;flex:none;background:#000;border:1px solid var(--line);border-radius:6px;padding:4px;width:100px;height:72px}
+.tag{font:700 12px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--gold)}
+.sub{color:var(--dim);margin:8px 0 14px;font-size:14px}
+hr{border:0;border-top:1px solid var(--line);margin:0 0 22px}
+.pns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.pn{background:var(--pn);border:1px solid var(--line);border-radius:10px;padding:14px}
+.pn header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.pn h3{margin:0;font-size:15px;letter-spacing:.05em;color:var(--teal);font-weight:800}
+.cap{font:11px 'IBM Plex Mono',monospace;color:var(--dim);letter-spacing:.06em;text-align:right}
+.kg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kc{background:var(--card);border-radius:6px;padding:9px 9px 10px;min-height:82px}
+.kc b{font:800 14px 'IBM Plex Sans',sans-serif;letter-spacing:.03em;vertical-align:middle}
+.kc p{margin:7px 0 0;font-size:12.5px;line-height:1.35;color:#c9d0d2}
+.chip{display:inline-block;min-width:21px;text-align:center;background:var(--chip);color:var(--teal);font:700 12px 'IBM Plex Mono',monospace;border-radius:3px;padding:2px 5px;margin-right:8px;vertical-align:middle}
+.cg .kc{border-left:3px solid var(--gold)}
+.cg .kc b{color:var(--gold)}
+.kc.dead{opacity:.55}
+.kvs{display:grid;gap:9px}
+.kv{display:grid;grid-template-columns:minmax(90px,30%) minmax(0,1fr);gap:12px;font-size:13px}
+.kv b{color:var(--gold);font:700 12px 'IBM Plex Mono',monospace;letter-spacing:.04em;padding-top:1px}
+.kv span{color:#d7dcdd}
+.wide{grid-column:1/-1}
+.sts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.st,.sm{background:var(--pn);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-height:120px}
+.st header{display:flex;gap:10px;align-items:center}
+.num{background:var(--chip);color:var(--gold);font:700 11px 'IBM Plex Mono',monospace;border-radius:3px;padding:3px 6px}
+.st b{font-size:15px;letter-spacing:.04em}
+.st p,.sm p{margin:10px 0 0;font-size:13.5px;color:#cdd3d5}
+.sms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.sm header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.sm header b{font-size:20px;letter-spacing:.03em}
+.pill{background:var(--chip);color:var(--gold);font:700 10.5px 'IBM Plex Mono',monospace;border-radius:4px;padding:4px 8px;letter-spacing:.05em}
+.sm .lead{color:var(--teal);font-weight:700;font-size:15px}
+.note p{margin:6px 0 0;font-size:13.5px;color:#d0d6d8}
+.first{background:#263035;border-radius:8px;padding:12px 14px;margin-top:14px}
+.first b{color:var(--gold);font:700 12.5px 'IBM Plex Mono',monospace;letter-spacing:.06em}
+.first p{margin:6px 0 0;font-size:14px}
+.ft{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:20px;padding-top:10px;font:11px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--dim)}
+.ft span:first-child{color:var(--teal)}
+.idx{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);gap:16px}
+.how{display:grid;gap:12px}
+.how h4,.go h4{margin:0 0 8px;color:var(--gold);font-size:13px;letter-spacing:.05em}
+.how p{margin:0;font-size:13.5px}
+.go h4{color:var(--teal);font-size:15px}
+.go a{display:flex;justify-content:space-between;padding:6px 2px;text-decoration:none;color:var(--ink);border-radius:4px}
+.go a span{color:var(--gold);font:12px 'IBM Plex Mono',monospace}
+.go a:hover,.go a:focus-visible{background:var(--card)}
+#q{display:block;width:100%;margin-top:16px;font:16px 'IBM Plex Mono',monospace;background:var(--pn);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:11px 12px;min-height:44px}
+#q:focus{outline:2px solid var(--teal);outline-offset:1px}
+.hit{outline:2px solid var(--gold);outline-offset:-2px}
+.gone{display:none!important}
+@media(max-width:820px){.pns,.idx,.sms{grid-template-columns:minmax(0,1fr)}.sts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.kg{grid-template-columns:repeat(2,minmax(0,1fr))}.sts{grid-template-columns:minmax(0,1fr)}.logo{width:72px;height:52px}.kv{grid-template-columns:minmax(0,1fr);gap:2px}}
+"""
 
-FLEX_STEPS = [
-    ("Put FLEX on a track", "[FUNC]|+|[SYN]", "MACHINE SEL → FLEX. Its trig length becomes INF so you hear whole takes. BUF picks the buffer it plays."),
-    ("Open FLEX REC", "[FUNC]|+|[VOICE]", "On the FLEX track. LEFT / RIGHT: REC TRIGS ↔ REC SETUP ↔ REC BUS."),
-    ("Choose what to record", "REC SETUP", "SRC: a track (TRK1-16), IN, MAIN or BUS. R.LEN: how many steps. BUF: which buffer."),
-    ("Place recorder trigs", "[TRIG]|or|[FUNC]|+|[TRIG]", "On REC TRIGS: [TRIG] a one-shot (records once), [FUNC] + [TRIG] every pass. [PAGE] for more steps."),
-    ("Play and listen", "[PLAY]", "The take records on its step. A FLEX note trig on that step plays it as it arrives."),
-]
-FLEX_MORE = [("Record now, no trigs", "[YES] while playing: Q.REC waits for the next boundary, then records R.LEN steps. [NO] cancels."),
-             ("Re-arm one-shots", "[YES] [YES]"), ("Keep a take", "[FUNC] + [YES]: next empty sample slot, onto the +Drive."),
-             ("Clear a buffer", "[FUNC] + [NO] on REC SETUP, then [YES]."), ("Free the CPU", "MUTE SRC ON: the source is silent while the take plays.")]
-
-
-def flex() -> str:
-    steps = "".join(f'<li data-s="{E((t + " " + d).lower())}"><div class="n">{i + 1}</div><div><h4>{E(t)}</h4><div class="keys">{KEY(k)}</div>'
-                    f'<p>{E(d)}</p></div></li>' for i, (t, k, d) in enumerate(FLEX_STEPS))
-    more = "".join(f'<li data-s="{E((a + " " + b).lower())}"><b>{E(a)}</b><span>{E(b)}</span></li>' for a, b in FLEX_MORE)
-    return f"""<section class="mach" id="flex"><header><div class="logo">{logo("flex")}</div><div><h2>FLEX: record and play back live</h2>
-<p class="line">Eight buffers (B1-B8). Record a track, the input, the whole mix or a bus of tracks, in time, then play it like a sample.</p></div></header>
-<div class="pipe">
-<div class="pb"><b>SOURCE</b><span>TRK1-16 \u00b7 IN \u00b7 MAIN \u00b7 BUS</span></div><div class="pa" aria-hidden="true"></div>
-<div class="pb"><b>REC TRIG</b><span class="trigs"><i class="sw on"></i><i class="sw hatch"></i><i class="sw"></i><i class="sw"></i><i class="sw"></i></span></div><div class="pa" aria-hidden="true"></div>
-<div class="pb"><b>BUFFER B1-B8</b><svg viewBox="0 0 110 22" width="110" height="22" aria-hidden="true"><path class="wave" d="M2 11 l5 -7 l5 14 l5 -17 l5 20 l5 -11 l5 6 l5 -12 l5 15 l5 -9 l5 5 l5 -7 l5 9 l5 -4 l5 3 l5 -2 l5 1 l5 -1 l5 0 l5 0 l5 0"/></svg></div><div class="pa" aria-hidden="true"></div>
-<div class="pb"><b>FLEX TRACK</b><span>a note trig plays it</span></div>
-</div>
-<ol class="steps">{steps}</ol>
-<div class="cols">{cells(SETUP_PAGE)}{cells(FLEX_PAGE)}</div>
-<ul class="rec">{more}</ul>
-<p class="legend"><span class="sw on"></span>recorder trig (every pass) <span class="sw hatch"></span>one-shot <span class="sw spent"></span>spent one-shot</p>
-</section>"""
-
-
-def smear() -> str:
-    return f"""<section class="mach" id="smear"><header><div class="logo">{logo("smear")}</div><div><h2>SMEAR: granular looper</h2>
-<p class="line">One loop of a sample (or a FLEX buffer), read two ways: PLAY like tape, GRN as a cloud of grains. BLND mixes them.</p></div></header>
-<div class="flow sm"><svg viewBox="0 0 520 210" role="img" aria-label="A sample with its loop, the read point and grains">
-<rect x="1" y="1" width="518" height="208" rx="12" class="panel"/>
-<path class="wave dim" d="{wave_path(20, 112, 480, 56, 3)}"/>
-<rect x="150" y="56" width="220" height="112" class="loop"/>
-<path class="wave" d="{wave_path(150, 112, 220, 56, 3, start=130)}"/>
-<path d="M150 176V186H370V176" class="br"/><text x="260" y="203" class="lab">SIZE: loop length</text>
-<text x="144" y="190" class="lab" text-anchor="end">STRT</text>
-<line x1="230" y1="56" x2="230" y2="168" class="head"/><path d="M230 54l-6 -9h12z" class="headtip"/><text x="244" y="34" class="lab" text-anchor="start">read point, moved by SPD</text>
-{grains()}
-</svg>
-<ul class="vl side">
-<li><b><span class="dot g"></span>Grains</b><span>DENS how many \u00b7 OVLP how long \u00b7 SPRY how scattered \u00b7 PRND detune \u00b7 WIN shape</span></li>
-<li><b><span class="blnd"><i></i></span>BLND</b><span>0: PLAY (tape) \u2192 127: GRN (grains)</span></li>
-<li><b><span class="dot f"></span>FRZ</b><span>Holds the read point; PLAY's share turns into grains</span></li>
-</ul></div>
-<ol class="steps">
-<li data-s="load sample samp"><div class="n">1</div><div><h4>Load a sample</h4><div class="keys"><kbd>SAMP</kbd></div><p>Turn SAMP: the sample list opens. [YES] keeps it. Past 127 are the FLEX buffers.</p></div></li>
-<li data-s="play tape tune blnd"><div class="n">2</div><div><h4>Play it as tape</h4><div class="keys"><kbd>BLND 0</kbd></div><p>Notes and TUNE transpose it. SPD changes speed (and pitch); its centre stops the read point.</p></div></li>
-<li data-s="loop strt size scan"><div class="n">3</div><div><h4>Pick the loop</h4><div class="keys"><kbd>STRT</kbd><kbd>SIZE</kbd></div><p>Small SIZE loops a tiny piece. Move STRT, or put an LFO on it, to scan.</p></div></li>
-<li data-s="grains cloud dens ovlp spry"><div class="n">4</div><div><h4>Turn it into grains</h4><div class="keys"><kbd>BLND → 127</kbd></div><p>DENS for more grains, OVLP for longer ones, SPRY to scatter, PRND to detune, WIN to shape.</p></div></li>
-<li data-s="freeze frz hold"><div class="n">5</div><div><h4>Freeze the moment</h4><div class="keys"><kbd>FRZ ON</kbd></div><p>Page 2, knob E. The read point holds and keeps sounding as grains while you play over it.</p></div></li>
-</ol>
-<div class="cols">{"".join(cells(p) for p in SMEAR_PAGES)}</div>
-<p class="note">The phase vocoder (VOC) is switched off for now: BLND's VOC end plays PLAY. It returns once it fits the DSP.</p>
-</section>"""
-
-
-def wave_path(x0, cy, w, amp, step, start=0) -> str:
-    import math
-    pts = []
-    for i in range(0, w + 1, step):
-        t = (i + start) / 18.0
-        a = amp * (0.35 + 0.65 * abs(math.sin(t / 7.3))) * (0.55 + 0.45 * math.sin(t * 1.7))
-        pts.append(f"{x0 + i},{cy + (a if (i // step) % 2 else -a) * 0.5:.1f}")
-    return "M" + " L".join(pts)
-
-
-def grains() -> str:
-    import random
-    r = random.Random(7)
-    out = []
-    for _ in range(18):
-        x = 230 + r.gauss(0, 30)
-        y = 112 + r.gauss(0, 24)
-        out.append(f'<ellipse cx="{x:.0f}" cy="{y:.0f}" rx="{r.uniform(5, 10):.0f}" ry="4" class="grain"/>')
-    return "".join(out)
-
-
-def fx() -> str:
-    return f"""<section class="mach" id="fx"><header><div class="logo glyph"><svg viewBox="0 0 46 32" width="92" height="64"><path d="M2 26C10 26 12 4 23 4S36 26 44 26" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14 16c3 -4 6 -4 9 0s6 4 9 0" fill="none" stroke="currentColor"/></svg></div><div><h2>GLASS filter and the plate</h2>
-<p class="line">GLASS: a ringing filter on any machine's FLTR page (pick Glass after Equalizer). The master REVERB is a plate now.</p></div></header>
-<p class="quick"><span class="tag">Fastest sound</span>GLASS: raise RES, set FREQ to the pitch you want it to ring at, hit it with short sounds. KEY.T up: the ring follows the notes. Page 2's LPG (from 64): a bongo-like ping.</p>
-<div class="cols">{cells(GLASS_PAGE)}<figure class="screen"><figcaption>FX \u00b7 REVERB: a stereo plate (same page, same knobs)</figcaption><ul class="vl">{"".join(f'<li data-s="{E((a + " " + b + " reverb plate").lower())}"><b>{E(a)}</b><span>{E(b)}</span></li>' for a, b in VERB)}</ul></figure></div>
-<ul class="rec"><li data-s="lpg glass gate"><b>LPG</b><span>Page 2, in ENV DELAY's place: from 64, level and cutoff open on each trig and close like a vactrol (DEC sets how long).</span></li>
-<li data-s="key.t glass"><b>KEY.T</b><span>How far the cutoff follows the note.</span></li></ul></section>"""
-
-
-def tips() -> str:
-    return '<section id="tips"><h2>Tips</h2><div class="tips">' + "".join(
-        f'<div class="tip" data-s="{E((a + " " + b).lower())}"><span class="tag">{E(a)}</span><p>{E(b)}</p></div>' for a, b in TIPS) + "</div></section>"
+JS = """<script>
+{
+const q=document.getElementById('q');
+const pages=[...document.querySelectorAll('main .page')].slice(1);
+const run=()=>{const v=q.value.trim().toLowerCase();
+for(const el of document.querySelectorAll('[data-s]'))el.classList.toggle('hit',!!v&&el.dataset.s.includes(v));
+for(const p of pages){if(!v){p.classList.remove('gone');continue;}
+const any=[...p.querySelectorAll('[data-s]')].some(e=>e.dataset.s.includes(v))||p.querySelector('h2').textContent.toLowerCase().includes(v);
+p.classList.toggle('gone',!any);}};
+q.addEventListener('input',run);
+}
+</script>"""
 
 
 def build() -> str:
-    nav = [("flex", "FLEX"), ("smear", "SMEAR")] + [(m[0], m[1]) for m in MACHINES] + [("fx", "GLASS + plate"), ("tips", "Tips")]
-    tiles = "".join(f'<a class="tile" href="#{i}">{logo(lg) if lg else ""}<span>{n}</span></a>' for i, n, lg in
-                    [("flex", "FLEX", "flex"), ("smear", "SMEAR", "smear")] + [(m[0], m[1], m[2]) for m in MACHINES])
-    body = "".join([flex(), smear()] + [machine(m) for m in MACHINES] + [fx(), tips()])
-    return PAGE.replace("@VER@", E(COVERS)).replace("@NAV@", "".join(f'<a href="#{i}">{E(n)}</a>' for i, n in nav)).replace("@TILES@", tiles).replace("@BODY@", body)
-
-
-PAGE = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    body = index_page() + "".join(page(i + 2, pg) for i, pg in enumerate(PAGES))
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RIFT quick guide</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-/* VOICE everyday reference for players at the instrument
-   IDEA the Digitone's own screen: every page drawn as its eight knob cells, A-D over E-H
-   PICTURE the machines' MACHINE SEL logos as a row of pixel tiles, then each machine's pages
-   COLOUR the manual's night ground, OLED black screens, mint for what you press
-   TYPE Space Grotesk + JetBrains Mono for the instrument's words
-   LAYOUT laptop: tiles band, then sections with screens two across; phone: one column */
-:root{color-scheme:dark;--bg:#0a0b0c;--panel:#141518;--scr:#000;--line:#2c2f34;--ink:#ecebe7;--dim:#9a9da3;--acc:#5fe3b0;--hot:#ffb86b}
-*{box-sizing:border-box;min-width:0}
-html{scroll-padding-top:64px}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Space Grotesk',system-ui,sans-serif;overflow-x:clip}
-a{color:var(--acc)}
-.wrap{max-width:1180px;margin:0 auto;padding:0 max(16px,3vw)}
-.top{padding:28px 0 8px}
-h1{font-size:clamp(32px,5vw,48px);line-height:1.05;margin:0 0 6px;letter-spacing:-.02em}
-.sub{color:var(--dim);margin:0 0 18px;max-width:62ch}
-.sub a{white-space:nowrap}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;margin:8px 0 18px}
-.tile{display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--scr);border:1px solid var(--line);border-radius:12px;padding:14px 8px 10px;text-decoration:none;color:var(--ink);font:700 13px 'JetBrains Mono',monospace;transition:border-color .15s}
-.tile:hover,.tile:focus-visible{border-color:var(--acc)}
-.px{image-rendering:pixelated;width:92px;height:64px;filter:drop-shadow(0 0 6px rgba(95,227,176,.25))}
-.find{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
-.find .wrap{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
-.find input{flex:1 1 260px;font:16px 'JetBrains Mono',monospace;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
-.find input:focus{outline:2px solid var(--acc);outline-offset:1px}
-.find nav{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:14px}
-.find nav a{text-decoration:none}
-.mach,#tips{padding:34px 0 10px;border-bottom:1px solid var(--line)}
-.mach header{display:flex;gap:16px;align-items:center;margin-bottom:14px}
-.logo{flex:none;background:var(--scr);border:1px solid var(--line);border-radius:12px;padding:8px;display:grid;place-items:center;color:var(--acc)}
-h2{font-size:clamp(24px,3vw,32px);line-height:1.05;margin:0 0 4px;letter-spacing:-.01em}
-.line{margin:0;color:var(--dim);max-width:70ch}
-.quick{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 14px}
-.tag{display:inline-block;font:700 12px 'JetBrains Mono',monospace;color:#0a0b0c;background:var(--acc);border-radius:6px;padding:2px 7px;margin-right:9px}
-.pages,.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:14px}
-.screen{margin:0;background:var(--scr);border:1px solid var(--line);border-radius:12px;padding:10px 10px 12px}
-.screen figcaption{font:700 12px 'JetBrains Mono',monospace;color:var(--dim);margin:0 2px 8px}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-.cell{position:relative;border:1px solid #23262a;border-radius:8px;padding:8px 8px 9px;min-height:84px;background:#07080a}
-.cell .k{position:absolute;top:5px;right:7px;font:11px 'JetBrains Mono',monospace;color:#5b5f66}
-.cell b{display:block;font:700 15px 'JetBrains Mono',monospace;color:var(--acc);letter-spacing:.02em}
-.cell .d{display:block;font-size:13px;line-height:1.3;margin-top:3px;color:#d9dad6}
-.cell.empty{background:transparent;border-style:dashed}
-.cell.hit{border-color:var(--hot);box-shadow:0 0 0 1px var(--hot) inset}
-.rec{list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:8px}
-.rec li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
-.rec b{display:block;font-size:14px}.rec span{font:13px/1.4 'JetBrains Mono',monospace;color:#cfd0cc}
-.flow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin:0 0 14px;overflow-x:auto}
-.flow svg{display:block;width:100%;min-width:560px;height:auto}
-.st rect{fill:#000;stroke:var(--line)}
-svg text{fill:var(--ink);font:700 14px 'JetBrains Mono',monospace;text-anchor:middle}
-svg text.s{font-weight:400;font-size:12px;fill:var(--dim)}
-.arr{stroke:var(--acc);stroke-width:2;fill:none}
-.trig rect{fill:none;stroke:var(--ink)}.trig .on{fill:var(--ink)}.trig .hatch{fill:url(#h)}
-.wave{fill:none;stroke:var(--acc);stroke-width:1.6}.wave.dim{stroke:#3a3e44}
-.panel{fill:#000;stroke:var(--line)}
-.loop{fill:rgba(95,227,176,.07);stroke:none}
-.br{fill:none;stroke:var(--dim)}
-.lab{font-weight:400;font-size:13px;fill:var(--dim)}
-.head{stroke:var(--hot);stroke-width:2}.headtip{fill:var(--hot)}
-.grain{fill:rgba(255,184,107,.28);stroke:var(--hot);stroke-width:.8}
-.track{fill:#23262a}.knob{fill:var(--acc)}
-.frz{fill:none;stroke:#9fd8ff;stroke-width:2}.frzx{stroke:#9fd8ff;stroke-width:2}
-.steps{list-style:none;counter-reset:s;padding:0;margin:0 0 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}
-.steps li{display:flex;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
-.steps .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--acc);color:#0a0b0c;font:700 15px 'JetBrains Mono',monospace;display:grid;place-items:center}
-.steps h4{margin:2px 0 6px;font-size:16px}.steps p{margin:6px 0 0;font-size:14px;color:#d3d4cf}
-.keys{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-kbd{font:700 12px 'JetBrains Mono',monospace;background:#1e2024;border:1px solid #3a3e44;border-bottom-width:3px;border-radius:6px;padding:3px 7px;color:var(--ink);white-space:nowrap}
-.keys i{font-style:normal;color:var(--dim);font-size:13px}
-.legend{font-size:13px;color:var(--dim);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
-.sw{display:inline-block;width:12px;height:12px;border:1px solid var(--ink);vertical-align:-2px;margin-right:4px}
-.sw.on{background:var(--ink)}.sw.hatch{background:repeating-linear-gradient(45deg,var(--ink) 0 2px,transparent 2px 4px)}
-.sw.spent{background:linear-gradient(45deg,transparent 45%,var(--ink) 45% 55%,transparent 55%)}
-.note{font-size:14px;color:var(--dim);border-left:3px solid var(--hot);padding:2px 0 2px 10px}
-.tips{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:10px;margin-top:12px}
-.tip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}.tip p{margin:8px 0 0;font-size:14px}
-.pipe{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:0 0 14px}
-.pb{flex:1 1 150px;background:var(--scr);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;text-align:center}
-.pb b{font:700 14px 'JetBrains Mono',monospace}.pb span{font:12px 'JetBrains Mono',monospace;color:var(--dim)}
-.pb .trigs{display:flex;gap:4px}.pb .trigs .sw{margin:0}
-.pa{flex:0 0 22px;align-self:center;height:2px;background:var(--acc);position:relative}
-.pa::after{content:"";position:absolute;right:-1px;top:-5px;border:6px solid transparent;border-left:8px solid var(--acc);border-right:0}
-.flow.sm{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;align-items:center;overflow:visible}
-.flow.sm svg{min-width:0}
-.vl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.vl li{display:grid;gap:2px}.vl b{font:700 14px 'JetBrains Mono',monospace;color:var(--acc);display:flex;align-items:center;gap:8px}.vl span{font-size:14px;color:#d3d4cf}
-.screen .vl{padding:4px 4px 0}
-.dot{display:inline-block;width:14px;height:10px;border-radius:50%}.dot.g{background:rgba(255,184,107,.35);border:1px solid var(--hot)}.dot.f{border:2px solid #9fd8ff;width:12px;height:12px}
-.blnd{display:inline-block;width:34px;height:8px;border-radius:4px;background:#23262a;position:relative}.blnd i{position:absolute;right:4px;top:-3px;width:14px;height:14px;border-radius:50%;background:var(--acc)}
-@media(max-width:700px){.flow.sm{grid-template-columns:minmax(0,1fr)}.pipe{flex-direction:column}.pb{flex:none}.pa{flex:none;height:14px;width:2px;margin:0 auto}.pa::after{right:-5px;top:auto;bottom:-2px;border:6px solid transparent;border-top:8px solid var(--acc);border-bottom:0}}
-.gone{display:none!important}
-.foot{color:var(--dim);font-size:13px;padding:24px 0 48px}
-@media(max-width:600px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mach header{align-items:flex-start}.px{width:69px;height:48px}}
-@media(prefers-reduced-motion:reduce){.tile{transition:none}}
-</style></head><body>
-<svg width="0" height="0" style="position:absolute"><defs><pattern id="h" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="4" fill="#ecebe7"/></pattern></defs></svg>
-<div class="wrap top">
-<h1>RIFT quick guide</h1>
-<p class="sub">Every RIFT machine's controls at a glance, laid out as the Digitone's pages: knobs A-D on top, E-H below. RIFT v@VER@. The full story is in the <a href="rift-manual.html">manual</a>.</p>
-<div class="tiles">@TILES@</div>
-</div>
-<div class="find"><div class="wrap"><input id="q" type="search" placeholder="Find a control or tip: FRZ, DAMP, R.LEN, bow…" aria-label="Find a control or tip" autocomplete="off"><nav>@NAV@</nav></div></div>
-<main class="wrap">@BODY@
-<p class="foot">Everything else (p-locks, LFOs, kits, MIDI) works as on the stock Digitone II. Unofficial: not made or supported by Elektron. <a href="rift-manual.html">Full manual</a>.</p>
-</main>
-<script>
-{
-const q=document.getElementById('q');
-const items=[...document.querySelectorAll('[data-s]')];
-const secs=[...document.querySelectorAll('main section')];
-const run=()=>{const v=q.value.trim().toLowerCase();
-for(const el of items){const hit=!!v&&el.dataset.s.includes(v);el.classList.toggle('hit',hit);}
-for(const s of secs){if(!v){s.classList.remove('gone');continue;}
-const any=[...s.querySelectorAll('[data-s]')].some(e=>e.dataset.s.includes(v))||s.querySelector('h2').textContent.toLowerCase().includes(v);
-s.classList.toggle('gone',!any);}};
-q.addEventListener('input',run);
-}
-</script>
-</body></html>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<style>{CSS}</style></head><body><main>{body}
+<p class="sub" style="text-align:center">Unofficial: not made or supported by Elektron. Everything else (p-locks, LFOs, kits, MIDI) works as on the stock Digitone II. <a href="rift-manual.html">Full manual</a>.</p>
+</main>{JS}</body></html>
 """
 
 
