@@ -49,7 +49,7 @@ BASE = 0x40000400
 NEW_FILTER = 6                          # GLASS
 NEW_FILTERS = (6,)                      # GLASS (7 and 8 load as Multi-Mode, as on stock)
 CLONE = 0                               # Multi-Mode
-NAMES = {6: ("Glass", "GLAS")}
+NAMES = {6: ("Rubber", "RUBR")}                  # RIFT v0.24: RUBBER in GLASS's place
 LONG_NAME, SHORT_NAME = NAMES[6]
 
 LOAD = 0x4670F000                       # Waverider's region (pages.LOAD..C_END): PING's room, until the machines chunk

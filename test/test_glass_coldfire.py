@@ -52,7 +52,7 @@ def _cstr(va: int) -> str:
 
 
 def test_names_row_six():
-    for t, want in ((6, ("Glass", "GLAS")),):                # v0.27: SHFT and GRAN removed
+    for t, want in ((6, ("Rubber", "RUBR")),):                # v0.27: SHFT and GRAN removed
         lo, sh, third = struct.unpack(">III", _at(LAY["glass_name_rows"] + 12 * t, 12))
         assert (_cstr(lo), _cstr(sh), third) == (*want, 0)
     for bound, base, _op, col in P.NAME_SITES:

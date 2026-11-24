@@ -140,6 +140,8 @@ static int widget_of(u32 id, int kind)
 }
 
 /* a small sine from the CZ page's table: x in 1/256 turn -> -127..127 */
+#define RUB_KX 0
+#define RUB_KY 8
 static int sin256(int x)
 {
     static const signed char q[17] = {0, 12, 25, 37, 49, 60, 71, 81, 90, 98, 106, 112, 117,
@@ -360,6 +362,13 @@ static void w_knob_at(void *c, int x, int y, int v, int top, int dotted)
         if (e2 > -dy) { err -= dy; px += sx; }
         if (e2 < dx) { err += dx; py += sy; }
     }
+}
+
+/* RIFT v0.24: RUBBER's ABND and DBND on FLTR page 2 (page.c wr_cell): the sample pages' knob, its value
+ * 0..127, in the cell at (x, y) */
+void rub_knob(void *c, int x, int y, int v)
+{
+    w_knob_at(c, x + RUB_KX, y + RUB_KY, v, 127, 0);
 }
 
 static void w_fader(void *c, int x, int y, int v, int top)

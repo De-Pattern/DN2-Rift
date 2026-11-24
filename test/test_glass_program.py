@@ -1,7 +1,7 @@
-"""GLASS's DSP program (run mode) is live.Voice bit for bit: the defaults, the morph LP -> BP -> HP, RES
-from 0 to its top, the envelope with both bends both ways, LPG, key tracking, a huge input (the knee),
-two slots at once with their own states, a slot on another filter left as it was, and a negative
-control."""
+"""RUBBER's DSP program (v0.24, the FLTR type 6 in GLASS's place; run mode) is live.Voice bit for bit: the
+defaults, DRIVE, RES from 0 to self-oscillation, the envelope with both bends both ways, key tracking, a huge
+input (the soft clip), two slots at once with their own states, a slot on another filter left as it was,
+and a negative control."""
 import random
 
 import numpy as np
@@ -24,7 +24,7 @@ def test_random_settings(seed):
     def rec(k):
         r2 = random.Random(seed * 1000 + k // 7)
         return B.rec_floats(TYPE=r2.random(), FREQ=r2.random(), RES=r2.choice([0.0, 1.0, r2.random()]),
-                            LPG=r2.choice([0.0, 1.0]), ATK=r2.random(), DEC=r2.random(),
+                            ATK=r2.random(), DEC=r2.random(),
                             ABND=r2.choice([0.0, 0.5, 1.0, r2.random()]), DBND=r2.choice([0.0, 1.0, r2.random()]),
                             DEPTH=r2.random(), KEYT=r2.random())
     _ = r
@@ -39,11 +39,16 @@ def test_envelope_bends(ab, db):
     assert first is None, first
 
 
-def test_lpg_closes():
-    a, b, first = B.compare(lambda k: B.rec_floats(LPG=1.0, DEC=0.3, RES=0.5), {1: 60.0}, 120,
-                            src=lambda k: (0.3 * np.ones(32)).astype(np.float32))
+def test_self_oscillates_at_the_top():
+    """RES at its top rings on with no input (a kick to start it), bounded"""
+    def kick(k):
+        x = np.zeros(32, np.float32)
+        if k == 1:
+            x[0] = 0.5
+        return x
+    a, b, first = B.compare(lambda k: B.rec_floats(RES=1.0, FREQ=0.5), {1: 60.0}, 120, src=kick)
     assert first is None, first
-    assert np.abs(a[:20 * 32]).max() > 0.05 and np.abs(a[-32:]).max() < 0.01
+    assert np.abs(a[-32 * 20:]).max() > 0.05 and np.abs(a).max() < 2.0
 
 
 def test_a_huge_input_stays_bounded():
@@ -54,7 +59,7 @@ def test_a_huge_input_stays_bounded():
         return x
     a, b, first = B.compare(lambda k: B.rec_floats(RES=1.0, TYPE=0.5), {1: 60.0}, 60, src=loud)
     assert first is None, first
-    assert np.isfinite(a).all() and np.abs(a).max() < 40.0
+    assert np.isfinite(a).all() and np.abs(a).max() < 4.0
 
 
 def test_two_slots_their_own_states_and_another_filter_untouched():
@@ -107,30 +112,26 @@ def test_emits():
     p.emit_subs()
     n = sum(1 for x in p.lines if x.startswith("      ") and not x.strip().startswith("//"))
     print("instructions", n)
-    assert 200 < n < 1100
+    assert 200 < n < 1400
+
+
 
 
 @pytest.mark.parametrize("amp,typ,res", [(0.5, 0.0, 0.2), (2.0, 0.25, 0.9), (6.0, 0.75, 1.0), (30.0, 1.0, 0.6)])
-def test_v022_registers_same_bits_as_v018(amp, typ, res):
-    """v0.22: samples_fast (the samples in registers) against v0.18..v0.21's sample() and live, every
-    block bit for bit: quiet, the knee's bend, its top, the morph's both halves"""
+def test_v024_registers_same_bits_as_words(amp, typ, res):
+    """v0.24: RUBBER's samples_fast (registers) against sample() (words) and live, every block bit for bit:
+    quiet, the soft clip's middle and its top, DRIVE's range"""
     from dnfw.glass import program as P
-    rng = np.random.default_rng(int(amp * 10))
 
-    def src(k):
-        return (amp * rng.standard_normal(32)).astype(np.float32)
-
-    def rec(k):
-        return B.rec_floats(TYPE=typ, RES=res, FREQ=0.55, DEPTH=0.8, ATK=0.2, DEC=0.5)
-    outs = []
-    for fast in (True, False):
-        P.FAST = fast
+    def run(fast):
         rng = np.random.default_rng(int(amp * 10))
+        P.FAST = fast
         try:
-            a, b, first = B.compare(rec, {1: 60.0, 25: 64.0}, 30, src=src)
+            return B.compare(lambda k: B.rec_floats(TYPE=typ, RES=res, FREQ=0.55, DEPTH=0.8, ATK=0.2, DEC=0.5),
+                             {1: 60.0, 25: 64.0}, 30, src=lambda k: (amp * rng.standard_normal(32)).astype(np.float32))
         finally:
             P.FAST = True
-        assert first is None, (fast, first)
-        outs.append(a)
-    assert np.array_equal(outs[0].view(np.uint32), outs[1].view(np.uint32))
-    assert np.abs(outs[0]).max() > 1e-3
+    (a1, _b, f1), (a2, _c, f2) = run(True), run(False)
+    assert f1 is None and f2 is None, (f1, f2)
+    assert np.array_equal(a1.view(np.uint32), a2.view(np.uint32))
+    assert np.abs(a1).max() > 1e-3
