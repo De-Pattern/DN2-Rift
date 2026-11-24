@@ -38,6 +38,7 @@ HAS_THOLET = False                      # v0.22 (owner: "it still mentions thole
 HAS_PLATEAU = have("dnfw.plateau.machines")      # RIFT v0.17: the first FX machine
 HAS_GLASS = have("dnfw.glass.live")              # RIFT v0.18: the FLTR type GLASS
 HAS_CONTOUR = have("dnfw.contour.machines")      # RIFT v0.19: wave terrain
+HAS_SPALL = have("dnfw.spall.machines")          # RIFT v0.25: particles
 
 
 def has_smear() -> bool:
@@ -182,6 +183,24 @@ DIGIDRUM = {
     "FLTF": "Filter base: the bottom of the band-pass window (high-pass from 0 up).",
     "FLTW": "Filter width: how wide the window is above FLTF (127 open).",
     "LEV": "Level.",
+}
+SPALL = {
+    "TYPE": "The particle: IMP (one sharp impulse: a click), DUST (a burst of noise), TONE (a tiny grain of the six oscillators), CHIP (a hard, digital pulse: one oscillator's sign times the next's).",
+    "SIZE": "How long each particle lasts, from 0.05 ms (a tick) to about 200 ms (a short tone).",
+    "DENS": "How often particles are offered, from one every four seconds to about 500 a second. At 0 a trig makes one particle and nothing more.",
+    "GAP": "The silence between: the chance an offered particle is skipped. Up, the texture gets sparser and more broken.",
+    "EDGE": "Hard or soft: fully up each particle is a sharp edge; down it is rounded and soft, like contact noise.",
+    "CLMP": "Clump: each particle that sounds is followed by up to seven more, fast, so particles land in little clusters with space around them.",
+    "MEM": "Memory: at 0 every particle is new; up, after that many clock ticks the pattern starts again from where the note began, so a phrase of particles repeats exactly.",
+    "LEV": "Level.",
+    "TUNE": "Tune, in semitones (bipolar, 64 the note's own pitch): the oscillators' pitch.",
+    "SPRD": "Spread: the six oscillators' tuning. At 0 a harmonic series; up, stretched and inharmonic, metallic.",
+    "ALG": "How the oscillators make a TONE particle: SUM (all six together), RING (one times the next: ring modulation), SCAN (one oscillator a particle, the next particle the next).",
+    "FRQA": "Resonator A's pitch, 30 Hz to 15 kHz. Every particle pings it.",
+    "FRQB": "Resonator B's pitch.",
+    "RING": "How long the resonators ring, from 5 ms to about 5 seconds.",
+    "COUP": "Coupling: how much of A's ring feeds B, so the two ring as one stranger surface.",
+    "MIX": "From the dry particles (0) to the resonators' rings (127).",
 }
 CONTOUR = {
     "TUNE": "Tune, in semitones (bipolar, 64 the note's own pitch).",
@@ -442,12 +461,15 @@ def build() -> str:
     if PM is not None and not getattr(PM, "LISTED", True):   # v0.21: PLATEAU withdrawn from MACHINE SEL
         PM = None
     CM = importlib.import_module("dnfw.contour.machines") if HAS_CONTOUR else None
+    SPM = importlib.import_module("dnfw.spall.machines") if HAS_SPALL else None
 
     nav = [("start", "Start here"), ("install", "Install &amp; recovery"), ("ui", "Using RIFT's machines"),
            ("fascia", "FASCIA"), ("organ", "ORGAN"), ("silt", "SILT"), ("ligature", "LIGATURE"),
            ("digidrum", "DIGIDRUM")]
     if CM:
         nav.append(("contour", "CONTOUR"))
+    if SPM:
+        nav.append(("spall", "SPALL"))
     if TM:
         nav.append(("tholet", "THOLET"))
     if PM:
@@ -602,6 +624,14 @@ def build() -> str:
         s.append(p("<span class=\"credit\">Concept: De-Pattern, after wave terrain synthesis (our own code).</span>"))
         s.append(table(CM, CONTOUR))
 
+    if SPM:
+        s.append("<h2 id=\"spall\">SPALL</h2>")
+        s.append(p("Sound built from tiny events: clicks, dust, tiny tonal grains and digital chips, each one shaped, placed in time by a stochastic clock, and rung through two resonators. One sharp click, or a whole landscape of microscopic activity, from the same machine. Silence matters as much as sound: GAP and CLMP decide the space between. Page 1 (PARTICLES) makes the events and places them; page 2 (SURFACE) gives them their colour and the surface they land on.",
+                   "<b>How to approach it:</b> start from the defaults: soft clicks, ringing. Turn DENS for how busy, GAP for how broken, CLMP for clusters. On page 2, move FRQA and FRQB: the same clicks become wood, glass or metal. RING longer and MIX up for pings; TYPE TONE with SPRD up for metallic grains. MEM up makes a phrase repeat exactly; p-lock FRQA on trigs for rhythms made of pitch.",
+                   "<b>Like every RIFT synth:</b> a trig starts it; it keeps sounding while the track's AMP lets it, so shape it with the AMP envelope. The name: a spall is a chip thrown off stone under impact."))
+        s.append(p("<span class=\"credit\">Concept: De-Pattern, after lowercase and clicks-and-cuts music (our own code).</span>"))
+        s.append(table(SPM, SPALL))
+
     if TM:
         s.append("<h2 id=\"tholet\">THOLET</h2>")
         s.append(p("A piano that leans toward a Rhodes: one of six real grand-piano hammer transients starts each note, two detuned sets of twelve string partials ring under it, a felt layer softens it after Nils Frahm, EP morphs it toward an electric piano, and a grain cloud (page 2) lets the note break up into grains as it fades.",
@@ -713,6 +743,9 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.25", "SPALL", ["SPALL, a new synth machine: sound from tiny events (clicks, dust, tonal grains, chips) on a stochastic clock, rung through two resonators; two pages, 16 controls, its own icons and logo.",
+                       "MACHINE SEL: the MIDI machine shows a 5-pin DIN socket and MIDI under it.",
+                       "Includes v0.24."]),
     ("0.24", "APART", ["RUBBER, a new filter type after the Roland SH-101, in GLASS's place on every machine's FLTR page: a four-pole ladder with the chip's soft saturation, snappy and rubbery, self-oscillating at the top. DRIV in TYPE's place; ABND and DBND as knobs on page 2; SUS and REL blank on page 1 (the curves no longer move the envelope's picture); no LPG.",
                        "SMEAR: pitch and speed apart, as on the Nebulae. TUNE and the note set PLAY's pitch only, through two crossfading read heads; SPD sets the speed only (v0.22 and v0.23 played PLAY as tape). With no transposition at speed 1, PLAY reads exactly as before.",
                        "The knob icons on RIFT's pages: a clean one-pixel ring and pointer (the scaled-up ring looked shaded).",

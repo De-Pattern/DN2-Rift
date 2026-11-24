@@ -19,7 +19,7 @@ import subprocess
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
 COVERS = "0.22"            # the release the guide describes (not VERSION: the tree may be ahead)
-LOGO_REF = "v22"           # logos as the released firmware draws them (v0.23's CONTOUR is newer)
+LOGO_REF = "v25"           # logos as this release draws them (SPALL's, MIDI's; CONTOUR's crosshair)
 TEAL = (111, 199, 180)
 
 def E(s: str) -> str:
@@ -255,6 +255,24 @@ PAGES = [
                  ("ROUGH", "Use CHAOS / BITS + GRIT."), ("HARSH", "Increase FDBK carefully."),
                  ("LOCATION", "Sweep CNTX and CNTY by ear."), ("BALANCE", "Use LEV after aggressive settings.")))],
          first=("MOVING TERRAIN", "SURF SINE -> SIZX / SIZY small -> move CNTX / CNTY -> add DRFT"), foot="KNOB BY KNOB"),
+    dict(id="spall", title="SPALL", tag="SYNTH MACHINE", logo="spall",
+         sub="Sound from tiny events: clicks, dust, grains and chips, placed in time and rung through two resonators.",
+         panels=[("knobs", "SYN1 / PARTICLES", "MAKE AND PLACE THE DOTS", K(
+             ("TYPE", "IMP click / DUST noise / TONE grain / CHIP pulse."), ("SIZE", "Each particle: 0.05 ms tick -> 200 ms tone."),
+             ("DENS", "How busy: one every 4 s -> 500 a second; 0 = one per trig."), ("GAP", "Chance a particle is skipped: sparser, broken."),
+             ("EDGE", "Hard edge <- -> soft, rounded contact."), ("CLMP", "Each particle brings up to 7 fast followers: clusters."),
+             ("MEM", "0 = always new; up = the phrase repeats exactly."), ("LEV", "Output level."))),
+             ("knobs", "SYN2 / SURFACE", "COLOUR AND MATERIAL", K(
+                 ("TUNE", "Oscillators' pitch (+/- 24 semitones)."), ("SPRD", "Six oscillators: harmonic -> stretched metal."),
+                 ("ALG", "SUM all six / RING one x next / SCAN one per particle."), ("FRQA", "Resonator A pitch: every particle pings it."),
+                 ("FRQB", "Resonator B pitch."), ("RING", "Ring time: 5 ms -> 5 s."),
+                 ("COUP", "A feeds B: two rings become one surface."), ("MIX", "Dry particles <- -> rings."))),
+             ("concept", "SOUND / DIRECTION", "STARTING POINTS", K(
+                 ("STIPPLE", "IMP, EDGE up, MIX low: separate clicks."), ("4-POLE", "DUST, GAP up, CLMP some, RING mid."),
+                 ("PINHOLE", "IMP, DENS low, RING long, MIX 127."), ("GLASS DUST", "DUST, high FRQA/FRQB, RING long."),
+                 ("PLEE", "TONE + SCAN, SPRD low, soft EDGE."), ("CAPACITOR", "CHIP, CLMP high: sputtering."),
+                 ("PHRASE", "MEM up: the pattern repeats."), ("PITCH RHYTHM", "p-lock FRQA on trigs.")))],
+         first=("A FIELD OF CLICKS", "Trig a note -> DENS for busy -> GAP for space -> FRQA / FRQB for the material"), foot="KNOB BY KNOB"),
     dict(id="smear", title="SMEAR", tag="SAMPLING", logo="smear",
          sub="Continuously morph a sample from traditional tape playback into granular fragments.",
          panels=[("knobs", "SYN1 / TAPE + CLOUD", "START AT BLND 0", K(
