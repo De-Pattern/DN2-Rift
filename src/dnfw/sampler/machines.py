@@ -50,7 +50,8 @@ RECORDS = {238: (25, 4, 120), 254: (41, 0, 127), 256: (43, 0, 144), 239: (26, 0,
            247: (27, 0, 1), 248: (37, 0, 3), 243: (32, 0, 120), 252: (38, 0, 127), 253: (40, 0, 127),
            259: (46, 0, 2), 251: (33, 0, 1),
            244: (35, 0, 7),
-           245: (36, 0, 127), 261: (48, 0, 127), 262: (49, 0, 127)}   # RIFT v0.16: SMEAR's page 2                  # v0.44 BOUNCE's BUF: buffer 1..8 (PERC's slot 35, free here)
+           245: (36, 0, 127), 261: (48, 0, 127), 262: (49, 0, 127),
+           246: (28, 0, 100)}   # RIFT v0.22: SMEAR's FRZ on OFS1 (0..100, WaveTone's default 50: OFF)   # RIFT v0.16: SMEAR's page 2                  # v0.44 BOUNCE's BUF: buffer 1..8 (PERC's slot 35, free here)
 
 # the eight controls each machine shows, in page order A..H: (record, short, long)
 PAGES = {        # v0.15: the DT2's own SRC layout -- A TUNE, B PLAY, C (empty), D SAMP on top
@@ -81,12 +82,16 @@ PAGES = {        # v0.15: the DT2's own SRC layout -- A TUNE, B PLAY, C (empty),
 }
 # RIFT v0.16: a sample machine with a page 2 of its own (else page 2 is page 1 over the waveform)
 PAGES2 = {"WERP": ((260, "OVLP", "Grain Overlap"), (245, "SPRY", "Grain Spray"), (261, "PRND", "Pitch Random"),
-                   (262, "WIN", "Grain Window"), (0, "-", "Unused"), (0, "-", "Unused"), (0, "-", "Unused"),
-                   (0, "-", "Unused"))}
+                   (262, "WIN", "Grain Window"), (246, "FRZ", "Freeze"), (0, "-", "Unused"), (0, "-", "Unused"),
+                   (0, "-", "Unused"))}   # RIFT v0.22: FRZ (owner: "a FREEZE param")
 # SMEAR's knobs in the voice's order (dnfw.smear.live.CONTROLS) -> their records; and the
 # values MACHINE SEL writes (the voice's DEFAULTS, live.DEFAULTS)
 SMEAR_RECORDS = dict(TUNE=238, SPD=254, BLND=255, SAMP=256, STRT=239, SIZE=258, DENS=257, OVLP=260,
-                     SPRY=245, PRND=261, WIN=262, LEV=241)
+                     SPRY=245, PRND=261, WIN=262, LEV=241, FRZ=246)
+# RIFT v0.22: FRZ's two choices on its record's 0..100: OFF below FRZ_ON_RAW (WaveTone's default, 50, is
+# OFF: a SMEAR track saved before v0.22 opens unfrozen), ON from it; read as a knob (x 127 / 100,
+# truncated) that is live.FRZ_ON (64) and over exactly from 51
+FRZ_ON_RAW = 51
 WIN_NAMES = ("GAUS", "BHAR", "EXPO", "TRI", "RAMP", "SINC", "RECT")
 # the top each SMEAR knob is read against: SIZE rides LEN's record, which the setter keeps to
 # 0..120 (its fine word, v0.48), as STRT's; the rest 0..127
@@ -95,7 +100,7 @@ SMEAR_TOPS = {"STRT": 120, "SIZE": 120}
 WIDGETS = {238: "bipolar", 254: "play", 260: "knob", 256: "samp", 239: "knob", 258: "knob",
            257: "knob", 241: "fader", 242: "seg", 255: "play", 240: "bars",
            244: "knob",                           # v0.44 BOUNCE: BUF 1..8 as a knob
-           245: "knob", 261: "knob", 262: "knob"}  # RIFT v0.16: SMEAR's page 2
+           245: "knob", 261: "knob", 262: "knob", 246: "knob"}  # RIFT v0.16: SMEAR's page 2
 # what each control's value means here
 TUNE_REC, PLAY_REC, SAMP_REC, LEV_REC = 238, 254, 256, 241
 BUF_REC = 244                              # v0.44 BOUNCE: its buffer (0..7 -> BUF 1..8)
@@ -310,6 +315,8 @@ QUANT = (
     # its WIN: seven windows, one a detent (live: k * 7 >> 7)
     (("WERP",), 262, _zones(7, 128), tuple(-(-128 * k // 7) + 9 for k in range(7))),
     (("GRID",), GRID_REC, (24, 48, 72, 96), (0, 24, 48, 72, 96)),
+    # RIFT v0.22: SMEAR's FRZ: OFF, ON
+    (("WERP",), 246, (FRZ_ON_RAW,), (0, 100)),
     # (v0.15..v0.21 had the recorder's SRC here: v0.22's recorder is a screen of its own)
 )
 QUANT_STEP = (                                  # (machines, record, raw coarse a choice)

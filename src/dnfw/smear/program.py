@@ -634,7 +634,7 @@ class VLayout:
 
     def __init__(self, base: int, tables: int, vtables: int, lanes: tuple, fft=None):
         a = base
-        names = [f"KN{k}" for k in range(12)] + ["TR", "RATE", "TRIG", "SIZE", "BASE", "FMT",
+        names = [f"KN{k}" for k in range(len(KNOBS))] + ["TR", "RATE", "TRIG", "SIZE", "BASE", "FMT",
                                                   "CLOCK", "LANE", "VSTATE", "LSTART", "LEND",
                                                   "LSIZE", "SI", "SF", "VG", "PG", "GG", "JOB",
                                                   "LW2", "LWD", "LST", "TMP", "CNT2"]
@@ -741,7 +741,7 @@ def emit_voice(p: Prog, V: VLayout) -> None:
     p.st(V.LEND, 5)
     # -- the speed
     _tab(p, 0, V, "SPD", "SPD")
-    p.ld(1, V.RATE)
+    p.ld(1, V.TR)                                    # RIFT v0.22: the speed times tr (TUNE, the note, the rate): PLAY as tape
     p.fop(0, 0, "*", 1)
     p.trunc(2, 0)
     p.iconst(12, 0)
@@ -754,6 +754,20 @@ def emit_voice(p: Prog, V: VLayout) -> None:
     for n in ("VG", "PG", "GG"):
         _tab(p, 0, V, n, "BLND")
         p.st(getattr(V, n), 0)
+
+    def frozen():                                    # RIFT v0.22 FREEZE (live.Voice.block): the read point held, PLAY's share to GRN
+        p.iconst(0, 0)
+        p.st(V.SI, 0)
+        p.st(V.SF, 0)
+        p.ld(0, V.GG)
+        p.ld(1, V.PG)
+        p.fop(0, 0, "+", 1)
+        p.st(V.GG, 0)
+        p.iconst(0, 0)
+        p.st(V.PG, 0)
+    p.ld(0, V.KN0 + 4 * KNOBS.index("FRZ"))
+    p.iconst(12, LV.FRZ_ON)
+    p.if_(0, "GE", 12, frozen, kind="i")
 
     # -- a trig
     def trig():

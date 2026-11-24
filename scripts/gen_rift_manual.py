@@ -34,7 +34,7 @@ def have(mod: str) -> bool:
         return False
 
 
-HAS_THOLET = have("dnfw.tholet.machines")
+HAS_THOLET = False                      # v0.22 (owner: "it still mentions tholet"): THOLET (v0.15..v0.16) is gone from the manual
 HAS_PLATEAU = have("dnfw.plateau.machines")      # RIFT v0.17: the first FX machine
 HAS_GLASS = have("dnfw.glass.live")              # RIFT v0.18: the FLTR type GLASS
 HAS_CONTOUR = have("dnfw.contour.machines")      # RIFT v0.19: wave terrain
@@ -257,8 +257,8 @@ THOLET = {
 }
 
 SMEAR = [
-    ("TUNE", "Tune", "Tune, in semitones (as every sample machine's). The note and TUNE set the pitch of all three readers."),
-    ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: frozen; +1.00 and -1.00 have wide detents). Negative reads backwards. The vocoder and the grains keep their pitch whatever the speed; PLAY (tape) changes pitch with it."),
+    ("TUNE", "Tune", "Tune, in semitones (as every sample machine's). The note and TUNE set the pitch of every reader: the grains are pitched without changing the speed; PLAY, as tape, plays faster or slower with them (v0.22: before, PLAY ignored TUNE and the note)."),
+    ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: the read point stops; +1.00 and -1.00 have wide detents). Negative reads backwards. The grains keep their pitch whatever the speed; PLAY (tape) changes pitch with it."),
     ("BLND", "Blend", "Crossfades the readers at constant power: PLAY (a plain tape-like read) at 0 and in the middle, GRN (the grains) at 127. (VOC, the phase vocoder, is off since v0.18: its share of BLND plays PLAY.)"),
     ("SAMP", "Sample Slot", "The sample (or FLEX buffer B1..B8) SMEAR plays, as on every sample machine. Taken at the note."),
     ("STRT", "Start", "Where the loop starts in the sample."),
@@ -269,6 +269,7 @@ SMEAR = [
     ("SPRY", "Grain Spray", "Scatters where each grain starts around the read point."),
     ("PRND", "Pitch Random", "Detunes each grain at random, up to +-120 cents."),
     ("WIN", "Grain Window", "The grains' envelope: GAUS (soft), BHAR (Blackman-Harris), EXPO (percussive), TRI, RAMP (reverse swell), SINC, RECT (hard-edged). Four detents a window, as every choice."),
+    ("FRZ", "Freeze", "(v0.22) OFF / ON. ON holds the read point where it is, whatever SPD says, and hands PLAY's share of BLND to the grains, so the moment you froze keeps sounding as a grain cloud (DENS, OVLP, SPRY, PRND and WIN shape it). OFF: the read point moves on from there at SPD. p-lock it, or put it on an LFO, for stutters."),
 ]
 
 # LIGATURE: the blocks (WEFT's), what they do, their two settings, what A and B do
@@ -461,7 +462,7 @@ def build() -> str:
             ("tuning", "Microtuning"), ("perf", "Performance")]
     nav += [("versions", "Versions")]
     s = []
-    newest = next(v for v, _t, _i in VERSIONS if (v != "0.15" or TM or HAS_PLATEAU) and (v != "0.16" or HAS_SMEAR)
+    newest = next(v for v, _t, _i in VERSIONS if (v != "0.16" or HAS_SMEAR)
                   and (v != "0.17" or HAS_PLATEAU) and (v != "0.18" or HAS_GLASS) and (v != "0.19" or CM))
     s.append(f"<h1>RIFT</h1><p class=\"dim\">The manual · covers v{E(newest)}</p>")
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
@@ -640,14 +641,15 @@ def build() -> str:
                     "<b>ABND</b> (Attack Bend, on SUS) and <b>DBND</b> (Decay Bend, on REL): the shape of each segment: fully left exponential (slow, then fast), the middle straight, fully right logarithmic (fast, then slow).",
                     "<b>LPG</b> (on page 2, in ENV DELAY's place): from 64, a low-pass gate: the level and the cutoff open together at each trig and close like a vactrol, quickly and then slowly (DEC sets how long). The classic bongo-like ping.",
                     "<b>KEY.T</b>: how far the cutoff follows the note."))
-        s.append(p("<b>Note:</b> a sound saved with GLASS and loaded on stock firmware or the DN2 mk2 mod loads as Multi-Mode."))
+        s.append(p("<b>CPU (v0.22):</b> GLASS costs the DSP time on every track that uses it. v0.18 to v0.21 could run the DSP past its frame with GLASS on several busy tracks, which sounded crushed and crackly, like the Monomachine's overload. In v0.22 GLASS does the same arithmetic at well under two thirds of the cost, so it sounds exactly as before, and its time is counted with the rest, so when the DSP is busy the oldest notes' tails give way instead.",
+                   "<b>Note:</b> a sound saved with GLASS and loaded on stock firmware or the DN2 mk2 mod loads as Multi-Mode."))
 
     if HAS_SMEAR:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
-        s.append(p("A granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through three readers of one loop: <b>VOC</b>, a phase vocoder that stretches without changing pitch (SPD 0 freezes the sound in place); <b>PLAY</b>, a plain tape-like read; and <b>GRN</b>, a cloud of grains. BLND moves between them. A note restarts the read at STRT and plays at its pitch, so SMEAR plays chromatically.",
-                   "<b>How to approach it:</b> load a sample, BLND 0 (VOC) and turn SPD toward FRZ: a held, smeared texture of that moment; move STRT to scan. BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece. LFO SPD, STRT or BLND for motion.",
-                   "<b>Note (v0.18):</b> VOC is off until it is redesigned to fit the DSP's time: on the unit it needed more than the frame allows, and a VOC note silenced the instrument. BLND's VOC end plays PLAY."
-                   + (" <b>The display (v0.19):</b> page 2 draws the sample with the loop (STRT, SIZE) marked, the read point moving through it, and the grain cloud around it: more grains with DENS, wider with SPRY, longer with OVLP." if CM else "")))
+        s.append(p("A granular looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through readers of one loop: <b>PLAY</b>, a plain tape-like read, and <b>GRN</b>, a cloud of grains; BLND moves between them. A note restarts the read at STRT and plays at its pitch (TUNE too), so SMEAR plays chromatically.",
+                   "<b>How to approach it:</b> load a sample and play it at BLND 0 (PLAY). Turn BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece; STRT scans. <b>FRZ</b> (page 2) holds the moment as a grain cloud while you play notes over it. LFO SPD, STRT or BLND for motion.",
+                   "<b>The phase vocoder (VOC) is off.</b> Since v0.18 it has been switched off: on the unit it needed more DSP time than a frame has, and a VOC note silenced the instrument. BLND's VOC end plays PLAY. A cheaper stretch is being designed to bring it back.",
+                   "<b>Page 2</b> (v0.22: laid out as ONESHOT's page 2) shows the sample across the screen, with the loop (STRT, SIZE) marked, the read point moving through it and a grain cloud round it (more grains with DENS, wider with SPRY, longer with OVLP). Above the sample, four small pictures for knobs A-D: <b>OVLP</b> two grains that overlap more as it rises; <b>SPRY</b> grains scattered round the read point; <b>PRND</b> grains at random pitches; <b>WIN</b> the window's own shape. Knob E is <b>FRZ</b>, a bar over its label while frozen. Values show as you turn, as on every page."))
         s.append(p("<span class=\"credit\">Concept: De-Pattern, after the Qu-Bit Nebulae v2 (its granular-looper instrument, MIT).</span>"))
         s.append("<h3>SRC page 1</h3><table class=\"ctl\">" + "".join(
             f"<tr><th><b>{E(a)}</b><br><span class=\"dim\">{E(b)}</span></th><td>{E(c)}</td></tr>" for a, b, c in SMEAR[:8]) + "</table>")
@@ -677,8 +679,8 @@ def build() -> str:
                 "<b>Three ways to record:</b> recorder trigs on their step for R.LEN steps (a one-shot trig records once, then is spent; [YES] [YES] re-arms); <b>Q.REC</b>, trigless: [YES] while playing waits for the next boundary (OFF, 1, 2, 4, 8, 16, 32, 64 steps, or the pattern length); and the recorder's own ARM / R.STRT.",
                 "<b>R.LEN</b> counts steps at the pattern's scale; [FUNC] + turn moves it a bar (16 steps) a detent.",
                 "<b>MUTE SRC</b>: the source track is silenced in the mix while the FLEX track plays it back (held 0.2 s after the note).",
-                "<b>Level:</b> a take of a track plays about as loud as the track at GAIN 0. A take of MAIN or IN is recorded as it comes in (never pushed into clipping) and played back 12 dB louder (v0.14). GAIN adds to that.",
-                "<b>Saving</b> ([FUNC] + [YES]): the take goes into the next empty sample slot and onto the +Drive, not normalised. (A saved MAIN or IN take plays 12 dB quieter than the buffer did: the save keeps the take as recorded.)",
+                "<b>Level</b> (v0.21, the DN2 mk2 mod's v0.71 levels): at GAIN 0 a take plays at its source's level, whether of a track, MAIN or IN. A take of MAIN or IN is recorded as it comes in (never pushed into clipping) and lifted 4 dB on playback to get there. GAIN adds to that.",
+                "<b>Saving</b> ([FUNC] + [YES]): the take goes into the next empty sample slot and onto the +Drive, not normalised. (A saved MAIN or IN take plays 4 dB quieter than the buffer did: the save keeps the take as recorded.)",
                 "Switching a track to FLEX sets its trig length to INF, so you hear the whole take. A BUF lock on a trig plays that buffer."))
 
     s.append("<h2 id=\"recorder\">Recorder</h2>")
@@ -695,13 +697,13 @@ def build() -> str:
     perf = ["<b>Direct Jump:</b> hold [PTN] + [YES] turns it on (DIRECT JUMP ON), [PTN] + [NO] off. A pattern cued with [PTN] + [TRIG] then starts at once, from where the playing pattern was. Kept through power-off.",
             "<b>Parameter slides</b> (Overtone / A4 mk2 style): on the TRIG page's second page, <b>SLD</b> (E) and <b>SLEN</b> (F). A trig with SLD on glides every continuous p-lock from the track's value to the lock over SLEN steps. Works on every RIFT machine control.",
             "<b>SLEN NXT</b> (v0.20, from the DN2 mk2 mod, the Analog Four's rule): SLEN's first choice and what a slide trig with no SLEN lock does: the slide lasts until the track's next trig (a note or a lock trig), round the track's length; with no other trig, the whole length. The fixed lengths (1/8 .. 64 steps) are as before."]
-    if TM:
+    if True:                                   # v0.22: always (v0.15..v0.21 showed it only with THOLET: lost from the manual since)
         perf.append("<b>KEYBOARD HOLD</b> (v0.15): hold [PTN] and press [KEYBOARD]: KB HOLD ON (again: OFF). It is the stock sustain pedal on all 16 tracks: notes already held stay on when let go, new notes held join them, MIDI notes in and the arpeggiator's keys are held too. HOLD OFF releases them all. The sequencer's notes are not held.")
     s.append("<h2 id=\"perf\">Performance</h2>" + ul(*perf))
 
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
     for vid, title, items in VERSIONS:
-        if (vid == "0.15" and not (TM or HAS_PLATEAU)) or (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and not HAS_PLATEAU) \
+        if (vid == "0.16" and not HAS_SMEAR) or (vid == "0.17" and not HAS_PLATEAU) \
                 or (vid == "0.18" and not HAS_GLASS) or (vid == "0.19" and not CM):
             continue
         s.append(f"<div class=\"box\" id=\"v{vid}\"><b>v{vid} · {E(title)}</b>" + ul(*items) + "</div>")
@@ -709,6 +711,13 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.22", "FROST", ["GLASS: the crushed, crackly overload sound fixed. GLASS does the same arithmetic at well under two thirds of the DSP time (same sound, bit for bit), and its time now counts toward the DSP's budget, so a busy DSP drops the oldest tails instead of running over.",
+                       "SMEAR: TUNE and the note now move PLAY (as tape: higher is faster). Before, at BLND 0 they did nothing.",
+                       "SMEAR: FRZ (Freeze), page 2's knob E: holds the read point and turns PLAY's share into grains, so the frozen moment keeps sounding.",
+                       "SMEAR: page 2 laid out as ONESHOT's: a big sample view, and small pictures of what OVLP, SPRY, PRND and WIN do.",
+                       "CONTOUR has its own MACHINE SEL logo: a terrain's contour lines.",
+                       "The manual brought up to date: KEYBOARD HOLD back in Performance, FLEX levels as they are since v0.21, SMEAR's VOC status said plainly, a removed machine no longer listed.",
+                       "Includes v0.21."]),
     ("0.21", "PLATE", ["The master reverb is now a plate (PLATEAU's tank, in stereo): the stock REVERB page and its controls, a new sound behind them.",
                       "A new start-up logo: the smoke gathers into RIFT in block letters, which then drip and decompose.",
                       "PLATEAU withdrawn for rework (it glitched with input gain and did not flow with the trigs): out of MACHINE SEL, and a saved PLATEAU track opens as FM Tone.",
@@ -728,15 +737,13 @@ VERSIONS = [
                        "Includes v0.17."]),
     ("0.17", "PLATEAU", ["PLATEAU, RIFT's first FX machine: a plate reverb on its own track, fed by a BUS of the tracks you choose ([FUNC] + [VOICE] on its track).",
                          "FLEX: SRC BUS records the sum of chosen tracks; REC BUS, a third page of FLEX REC (RIGHT from REC SETUP), picks them with the [TRIG] keys. MUTE SRC mutes every track on the bus.",
-                         "THOLET is removed: a saved THOLET track opens as FM Tone.",
                          "DIGIDRUM's MACHINE SEL logo is the owner's drum hit.",
                          "Includes v0.16."]),
     ("0.16", "SMEAR", ["SMEAR, a granular, phase-vocoded, stretchy looper after the Qu-Bit Nebulae, in WERP's place.",
                        "LIGATURE: eight new blocks from WEFT: TICK (a clock on the tempo, with CHANCE), ENV, VCA, CDIV (clock divider), DUST, CHAOS, CRUSH, LISSA (a Lissajous LFO).",
-                       "ORGAN's, THOLET's and SMEAR's tables come from the ColdFire at power-on (the DSP's upload had no room): those three machines are silent for the first moment after power-on.",
+                       "ORGAN's and SMEAR's tables come from the ColdFire at power-on (the DSP's upload had no room): both are silent for the first moment after power-on.",
                        "Includes v0.15."]),
-    ("0.15", "THOLET", ["THOLET, a piano that leans toward a Rhodes, with a grain cloud (Error Kit's concept).",
-                        "KEYBOARD HOLD from the DN2 mk2 mod: [PTN] + [KEYBOARD].",
+    ("0.15", "HOLD", ["KEYBOARD HOLD from the DN2 mk2 mod: [PTN] + [KEYBOARD].",
                         "Includes v0.14."]),
     ("0.14", "MONTUNE", ["FLEX takes of MAIN and IN play 12 dB louder (recorded as they come in, never clipped; thanks Error Kit). Takes of a single track are unchanged.",
                          "MON on the RECORDER (knob C), from the DN2 mk2 mod.",

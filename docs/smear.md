@@ -331,3 +331,17 @@ SMEAR becomes a stage of its own between them, `smear.asm` at its own address:
   ship_gate's ColdFire step `smear`.
 - **Not yet**: a saved WERP
   track opens as SMEAR with WERP's values on SMEAR's records.
+
+## v0.22 (owner, 2026-11-23): TUNE on PLAY, FRZ, page 2
+
+- **TUNE**: PLAY read at `SPD x RATE`, so TUNE and the note moved only the grains (and VOC, off since
+  v0.18): at BLND 0 they did nothing. PLAY now reads at `SPD x tr` (tr: the note, TUNE and the
+  sample's rate together), tape-like. `live.Voice.block`, `program.py`'s speed (`V.TR` for `V.RATE`).
+- **FRZ** (Freeze), page 2's E, on OFS1 (record 246, slot 28, 0..100; WaveTone's default 50 is OFF, so a
+  track saved before v0.22 opens unfrozen): two choices, OFF / ON from raw 51 (the knob word 64,
+  `live.FRZ_ON`). ON: SI = SF = 0 (the read point held; SPD kept) and GG += PG, PG = 0 (PLAY's share to
+  the grains). The 13th knob in the mailbox (MB_KN + 12, of 32 words). smp.asm grew past its room by
+  24 bytes: pvmix.asm's place is now the span's last 768 bytes (656 used).
+- **Page 2** as ONESHOT's: the top row's OVLP SPRY PRND WIN as small pictures (`smr_icon`), the strip
+  at cy 21, the bottom row's labels (FRZ with a bar while ON).
+- **Gate**: test_smear_live (`test_v022_*`), the runner's `smear` case "v0.22 FRZ", test_sampler's detents.

@@ -30,6 +30,7 @@ from . import live as LV
 
 F = np.float32
 assert BLOCK == LV.SUB
+FAST = True                            # RIFT v0.22: the samples in registers (samples_fast); False: v0.18..v0.21's sample()
 FILTER_HDR = 180                       # the frame's filter type a slot (dnfw.waverider.frame.FILTER)
 REC_STRIDE = WV.TRACK_STRIDE
 
@@ -255,11 +256,127 @@ class GG(OP.OG):
         p.seti(1, 12)
         p.ldi(0, 0, 1)
         p.st(C["bp"], 0)
+        if FAST:
+            self.samples_fast()
+            return
         p.loop(C["icnt"], BLOCK, self.sample)
         self.ptr(3, "sb")
         self.set(S("s1"), c("s1"))
         self.set(S("s2"), c("s2"))
         self.set(S("lowz"), c("lowz"))
+
+    def samples_fast(self) -> None:
+        """RIFT v0.22 (the owner, 2026-11-23: GLASS "weirdly bitcrushed, like the Monomachine's overload"):
+        sample()'s 32 samples with the filter's state, the cutoff's coefficients and the level in registers.
+        The same operations on the same operands in the same order as sample() (float32 after each, the
+        core's RND32): the same bits, at about a quarter of the cost (sample() loaded and stored every
+        intermediate; on fifteen tracks GLASS took 108k cycles a block and ran the frame over).
+
+        R2 s1, R3 s2, R13 lowz, R14 lev, R7 g, R8 a1, R9 2.0, R10 KNEE, R11 the abs mask; R4 xin (then hp),
+        R5 v1 (then bp), R6 v2 (then lp); R0 R1 R12 scratch; R15 the count; I4 the buffer, I3 the state."""
+        p, C = self.p, self.L.C
+        self.ptr(3, "sb")
+        p.ldi(2, ST["s1"], 3)
+        p.ldi(3, ST["s2"], 3)
+        p.ldi(13, ST["lowz"], 3)
+        p.ld(14, C["lev"])
+        p.ld(7, C["g"])
+        p.ld(8, C["a1"])
+        p.fconst(9, 2.0)
+        p.fconst(10, float(LV.KNEE))
+        p.iconst(11, 0x7FFFFFFF)
+        self.ptr(4, "bp")
+
+        def knee():                                  # R2 = live.knee(R2); R0 = |R2|
+            p.iop(0, 2, "AND", 11)
+
+            def over():
+                p.fconst(1, float(LV.KNEE3))
+
+                def top():
+                    p.fconst(12, 0.0)
+                    p.if_(2, "GT", 12, lambda: p.fconst(2, float(LV.KNEE2)),
+                          lambda: p.fconst(2, float(F(F(0.0) - LV.KNEE2))))
+
+                def bend_():
+                    p.fop(1, 0, "-", 10)             # kd = ka - KNEE
+                    p.fop(1, 1, "*", 1)              # kd kd
+                    p.fconst(12, float(LV.INV4K))
+                    p.fop(1, 1, "*", 12)             # (kd kd) INV4K
+                    p.fop(1, 0, "-", 1)              # ky = ka - that
+                    p.fconst(12, 0.0)
+                    p.if_(2, "GT", 12, lambda: p.fpass(2, 1), lambda: p.fop(2, 12, "-", 1))
+                p.if_(0, "GE", 1, top, bend_)
+            p.if_(0, "LE", 10, lambda: None, over)
+
+        def step():
+            p.fop(0, 4, "-", 3)                      # v3 = xin - s2
+            p.fop(0, 7, "*", 0)                      # g v3
+            p.fop(0, 2, "+", 0)                      # s1 + g v3
+            p.fop(5, 8, "*", 0)                      # v1 = a1 (..)
+            p.fop(0, 7, "*", 5)                      # g v1
+            p.fop(6, 3, "+", 0)                      # v2 = s2 + g v1
+            p.fop(0, 9, "*", 5)                      # 2 v1
+            p.fop(2, 0, "-", 2)                      # s1 = 2 v1 - s1
+            knee()
+            p.fop(0, 9, "*", 6)                      # 2 v2
+            p.fop(3, 0, "-", 3)                      # s2 = 2 v2 - s2
+
+        def one():
+            p.ldi(0, 0, 4)                           # xi
+            p.st(C["xi"], 0)
+            p.ld(1, C["drive"])
+            p.fop(4, 0, "*", 1)                      # xin = xi drive
+            step()
+            step()
+            p.ld(1, C["kk"])
+            p.fop(0, 1, "*", 5)                      # kk v1
+            p.fop(0, 4, "-", 0)                      # xin - kk v1
+            p.fop(0, 0, "-", 6)                      # .. - v2
+            p.ld(1, C["idrive"])
+            p.fop(4, 0, "*", 1)                      # hp
+            p.fop(5, 5, "*", 1)                      # bp
+            p.fop(6, 6, "*", 1)                      # lp
+            p.ld(0, C["xi"])
+            p.fop(0, 0, "-", 13)                     # xi - lowz
+            p.ld(1, C["lp1"])
+            p.fop(0, 1, "*", 0)
+            p.fop(13, 13, "+", 0)                    # lowz
+            p.fop(0, 13, "-", 6)                     # lowz - lp
+            p.ld(1, C["keep"])
+            p.fop(0, 1, "*", 0)
+            p.fop(6, 6, "+", 0)                      # lp + keep (lowz - lp)
+            p.ld(12, C["kb"])
+            p.fop(5, 5, "*", 12)                     # bp kb
+            p.ld(0, C["r_typ"])
+            p.fconst(1, 0.5)
+
+            def low():
+                p.fop(0, 0, "*", 9)                  # tt = typ 2
+                p.fconst(1, 1.0)
+                p.fop(1, 1, "-", 0)                  # 1 - tt
+                p.fop(1, 1, "*", 6)                  # (1 - tt) lp
+                p.fop(0, 0, "*", 5)                  # tt (bp kb)
+                p.fop(0, 1, "+", 0)
+
+            def high():
+                p.fop(0, 0, "-", 1)                  # typ - 0.5
+                p.fop(0, 0, "*", 9)                  # tt
+                p.fconst(1, 1.0)
+                p.fop(1, 1, "-", 0)                  # 1 - tt
+                p.fop(1, 1, "*", 5)                  # (1 - tt) (bp kb)
+                p.fop(0, 0, "*", 4)                  # tt hp
+                p.fop(0, 1, "+", 0)
+            p.if_(0, "LE", 1, low, high)
+            p.fop(0, 0, "*", 14)                     # o lev
+            p.stpost(4, 0)
+            p.ld(1, C["dlev"])
+            p.fop(14, 14, "+", 1)                    # lev + dlev
+        p.loop_r(15, BLOCK, one)
+        self.ptr(3, "sb")
+        p.sti(ST["s1"], 3, 2)
+        p.sti(ST["s2"], 3, 3)
+        p.sti(ST["lowz"], 3, 13)
 
     def bend(self, dst: str, u: Mv, b: Mv) -> None:
         """c(dst) = live.bend(u, b): one routine (g_bend) on bu, bc, into bd"""
