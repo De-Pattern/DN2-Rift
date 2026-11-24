@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.22** | 2026-11-24 | GLASS's overload fixed (the same sound at well under two thirds of the DSP time, inside the guard's budget); SMEAR: TUNE moves PLAY, FRZ (Freeze), page 2 redrawn; CONTOUR's own logo; the manual brought up to date | `builds/v0.22-FROST/` | yes |
+| **v0.23** | 2026-11-24 | FASCIA's crackle (the guard's budget for RIFT's synths: x 1.25, the reserve kept); CPU on RIFT's machine pages when the DSP drops a voice; CONTOUR's crosshair logo; the quick guide | `builds/v0.23-STEADY/` | yes |
+| v0.22 | 2026-11-24 | GLASS's overload fixed (the same sound at well under two thirds of the DSP time, inside the guard's budget); SMEAR: TUNE moves PLAY, FRZ (Freeze), page 2 redrawn; CONTOUR's own logo; the manual brought up to date | `builds/v0.22-FROST/` | yes |
 | v0.21 | 2026-11-23 | The master reverb is a plate (Dattorro's tank in stereo behind the stock REVERB page); the new start-up logo (RIFT in block letters that drip and decompose); PLATEAU withdrawn for rework; FLEX levels from the DN2 mk2 mod's v0.71 | `builds/v0.21-PLATE/` | yes |
 | v0.20 | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
 | v0.19 | 2026-11-22 | CONTOUR, a wave-terrain synth (8 surfaces, 2 pages); RIFT's machine pages at stock's size; SMEAR's page 2 shows the sample, its read point and a grain cloud | `builds/v0.19-CONTOUR/` | yes |
@@ -49,6 +50,30 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.23 · STEADY
+
+- **File:** `RIFT_v0.23_STEADY_OS1.11.syx` (`builds/v0.23-STEADY/`)
+- **sha256:** `ac090a3cd3db877ad781cb3f63e62a12ea64161f4a7d1182301bc8439fd9465a`
+- **Gated:** 2026-11-24, `CLEARED TO FLASH`
+- **Source:** `5839eea` (this repository)
+
+**Changes**
+
+- **FASCIA's crackle** (owner, 2026-11-24, v0.21: "crackling in fascia ... it does crackle with one note"; takton: "crackling and noise in some synths"). FASCIA's sound code is the same as v0.19's, and the master plate's scratch words were ruled out (FASCIA scrambled at those words between blocks renders bit for bit the same). The likely cause is the DSP's time guard: it expected a voice to cost 1.5 x its last block and kept 1/8 of the frame in reserve; FASCIA's voice is RIFT's costliest (about 113k cycles at its peak on the unit's model), and v0.21's plate lengthened the stock's tail by a few thousand cycles, so a lone voice was left out on some blocks: clicks. `perc.guard.around` gains `grow`: FASCIA's dispatch (FASCIA, ORGAN, SILT, LIGATURE, DIGIDRUM, CONTOUR) expects x 1.25 (GROW 2). The reserve is unchanged.
+- **CPU on RIFT's machine pages** (owner: "i dont see any cpu indicators"): while the DSP has left a voice out for time in the last half second (`smp_skipped_any`, the idle packets' SKIPMASK), "CPU" stands in the strip between the D/H column and the page dots (columns 121..123); the page is redrawn as it comes and goes.
+- **CONTOUR's MACHINE SEL logo:** the owner's pick (a ridge over a grid, its orbit, a crosshair, the moon).
+- **The quick guide** (`site/rift-quick.html`), linked from the manual and beside MANUAL on the patcher.
+
+**Tests**
+
+1. FASCIA, one note, then busy patterns: no clicks. If a click comes, look for CPU on the page: CPU showing means time; no CPU means something else (report it).
+2. Heavy patterns (FASCIA chords, CONTOUR FDBK high notes): CPU shows when a tail is dropped, and goes away.
+3. MACHINE SEL: CONTOUR's new logo.
+
+**Known issues**
+
+- Unverified on hardware: whether x 1.25 removes every click on the unit (the reserve keeps the frame safe either way).
 
 ## v0.22 · FROST
 
