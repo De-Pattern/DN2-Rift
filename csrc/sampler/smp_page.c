@@ -852,15 +852,25 @@ static void line_glyph(void *c, int g, int x, int r, int v)
         sline(c, x + 2, r + 1 + v * 2 / 127, x + 14, r + 9 - v * 2 / 127);
         break;
     default: {                                  /* LG_ARC: a thin 270-degree arc, a pointer */
-        int cx = x + 8, cr = r + 6;
-        for (k = 0; k <= 40; k++) {             /* the track dotted, the value's part solid */
-            int a = 160 - 192 * k / 40;
-            if ((k & 1) == 0 || k * 127 <= v * 40)
-                sp(c, cx + (5 * cos256(a) + (cos256(a) < 0 ? -63 : 63)) / 127,
-                   cr - (5 * sin256(a) + (sin256(a) < 0 ? -63 : 63)) / 127);
+        /* RIFT v0.23 (owner, 2026-11-24: the knob looked shaded, "go back to the clean circle
+         * line"): drawn at the page's own size, one pixel wide, not scaled up from the 17 x 12
+         * design (the scaling doubled some of its dots into blobs): a solid 270-degree ring and
+         * a pointer from the centre to it */
+        int sc = gs_on, cx = sc ? gs_X + 11 : x + 8, cr = sc ? gs_R + 7 : r + 6, R = sc ? 7 : 5;
+        int was = gs_on;
+        gs_on = 0;
+        int lx = 99, lr = 99;
+        for (k = 0; k <= 96; k++) {
+            int a = 160 - 192 * k / 96;
+            int px_ = cx + (R * cos256(a) + (cos256(a) < 0 ? -63 : 63)) / 127;
+            int pr_ = cr - (R * sin256(a) + (sin256(a) < 0 ? -63 : 63)) / 127;
+            if (px_ != lx || pr_ != lr)
+                sp(c, px_, pr_);
+            lx = px_; lr = pr_;
         }
         int a = 160 - 192 * v / 127;
-        sline(c, cx, cr, cx + 3 * cos256(a) / 127, cr - 3 * sin256(a) / 127);
+        sline(c, cx, cr, cx + (R - 1) * cos256(a) / 127, cr - (R - 1) * sin256(a) / 127);
+        gs_on = was;
     }
     }
 }
