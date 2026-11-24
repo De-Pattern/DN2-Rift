@@ -468,6 +468,8 @@ def build() -> str:
     s.append("<nav>" + "".join(f"<a href=\"#{a}\">{b}</a>" for a, b in nav) + "</nav>")
 
     s.append("<h2 id=\"start\">Start here</h2>")
+    # v0.23 (owner, 2026-11-24): the quick guide, for a first look before the manual
+    s.append('<div class="box"><b>New to RIFT?</b> The <a href="rift-quick.html">quick guide</a> lays out every machine\'s controls as the Digitone\'s pages, with FLEX and SMEAR walk-throughs and tips, on one page.</div>')
     s.append(p("<b>RIFT</b> is a second firmware for the Elektron Digitone II (OS 1.11), separate from the DN2 mk2 mod. "
                "It drops the Machinedrum and Monomachine engines and puts new synthesis machines in their place: "
                "<b>FASCIA</b> (physical percussion and tuned bodies), <b>ORGAN</b> (a pipe organ), <b>SILT</b> (material synthesis), "
