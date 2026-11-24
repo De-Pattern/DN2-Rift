@@ -2375,10 +2375,15 @@ static const signed char smr_scat[7] = {-6, 3, -2, 7, -9, 1, 5};    /* where the
 
 static void smr_hump(void *c, int x, int y, int w)               /* a grain's envelope, W wide, 10 high */
 {
-    int h2 = (w - 1) * (w - 1);
+    int h2 = (w - 1) * (w - 1), prev = -1;
     for (int k = 0; k < w; k++) {
         int d = 2 * k - (w - 1);
-        on(c, x + k, y + 10 - 10 * d * d / (h2 ? h2 : 1));
+        int yy = y + 10 - 10 * d * d / (h2 ? h2 : 1);
+        if (prev >= 0)
+            vline(c, x + k, prev, yy, 0);       /* joined to its neighbour: a line, not dots */
+        else
+            on(c, x + k, yy);
+        prev = yy;
     }
 }
 
