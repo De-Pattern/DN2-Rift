@@ -3842,33 +3842,33 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.e("COMP(R0, R12);")
     p.jump("NE", other)
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: _voice(g, None),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
     p.jump("", nxt)
     p.place(organ)
     tables_in(p, notready)                     # RIFT v0.16: ORGAN's tables come over the link
     OL = OP.Layout(L, organ_tables)
     og = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: og.append(OP.voice(p, OL)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
     p.jump("", nxt)
     p.place(silt)                              # RIFT: SILT (type 20, dnfw.silt.program)
     SL_ = SP.Layout(L, _dsp.SILT_TABLES_DDR, _dsp.SILT_DELAY_DDR)
     sg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: sg.append(SP.voice(p, SL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
     p.jump("", nxt)
     p.place(lig)                               # RIFT: LIGATURE (type 21, dnfw.ligature.program)
     from ..sampler import machines as _SMw     # v0.12: LIGATURE's wirings, in the pool's WIRE area
     LL_ = LP.Layout(L, _dsp.LIG_TABLES_DDR, _dsp.SMP_POOL_DDR + _SMw.WIRE_AREA)
     lg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: lg.append(LP.voice(p, LL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
     p.jump("", nxt)
     p.place(res)                               # RIFT: DIGIDRUM (type 22, dnfw.digidrum.program)
     DL_ = DP.Layout(L, _dsp.DIGIDRUM_TABLES_DDR)
     rg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: rg.append(DP.voice(p, DL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
     p.jump("", nxt)
     xg = []
     if _XM.ON_DSP:
@@ -3883,7 +3883,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     cg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: cg.append(CP.voice(p, CL_)),
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2,
-             expect=CP.guard_expect(L.C["t"]))
+             expect=CP.guard_expect(L.C["t"]), grow=2)
     p.jump("", nxt)
     p.place(notready)                          # RIFT v0.16: before the link's tables: silence
     p.ld(9, L.C["t"])

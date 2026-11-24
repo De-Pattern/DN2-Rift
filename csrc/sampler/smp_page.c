@@ -893,7 +893,31 @@ static void lig_set_label(void *view, const wr_mach_t *M, int j, char *out)
     out[n] = 0;
 }
 
+/* RIFT v0.23 (the owner, 2026-11-24: FASCIA crackles, "i dont see any cpu indicators"): while the
+ * DSP's guard has left a voice out for time in the last half second (smp_skipped_any, the idle
+ * packets' SKIPMASK), "CPU" stands down the strip between the right column's cells and the page
+ * dots (columns 118..120, clear of every cell's box, icon and label) */
+static void cpu_mark(void *c)
+{
+    extern int smp_skipped_any(void);
+    if (!smp_skipped_any())
+        return;
+    glyph(c, 118, 48, 'C', 1);
+    glyph(c, 118, 42, 'P', 1);
+    glyph(c, 118, 36, 'U', 1);
+}
+
+static void fsc_page_body(void *view, void *c, int page, int kind);
+
 void fsc_page_draw(void *view, void *c, int page, int kind)
+{
+    fsc_page_body(view, c, page, kind);
+    const wr_mach_t *M = wr_mach_kind(kind);
+    if (M && !(M == &wr_mach_lig && page == 0))   /* (LIGATURE's PATCH page fills that strip) */
+        cpu_mark(c);
+}
+
+static void fsc_page_body(void *view, void *c, int page, int kind)
 {
     const wr_mach_t *M = wr_mach_kind(kind);
     if (!M)

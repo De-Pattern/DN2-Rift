@@ -202,7 +202,7 @@ wr_fs_else_12.:
       R9 = MAX(R9, R10);
       R10 = 0x30d40;
       R9 = MIN(R9, R10);
-      R10 = LSHIFT R9 BY -1;
+      R10 = LSHIFT R9 BY -2;
       R9 = R9 + R10;
       R10 = 0xea60;
       R9 = MAX(R9, R10);
@@ -911,7 +911,7 @@ wr_fs_organ_13.:
       R9 = MAX(R9, R10);
       R10 = 0x30d40;
       R9 = MIN(R9, R10);
-      R10 = LSHIFT R9 BY -1;
+      R10 = LSHIFT R9 BY -2;
       R9 = R9 + R10;
       R10 = 0xea60;
       R9 = MAX(R9, R10);
@@ -2528,7 +2528,7 @@ wr_fs_silt_14.:
       R9 = MAX(R9, R10);
       R10 = 0x30d40;
       R9 = MIN(R9, R10);
-      R10 = LSHIFT R9 BY -1;
+      R10 = LSHIFT R9 BY -2;
       R9 = R9 + R10;
       R10 = 0xea60;
       R9 = MAX(R9, R10);
@@ -3068,7 +3068,7 @@ wr_fs_lig_15.:
       R9 = MAX(R9, R10);
       R10 = 0x30d40;
       R9 = MIN(R9, R10);
-      R10 = LSHIFT R9 BY -1;
+      R10 = LSHIFT R9 BY -2;
       R9 = R9 + R10;
       R10 = 0xea60;
       R9 = MAX(R9, R10);
@@ -3611,7 +3611,7 @@ wr_fs_res_16.:
       R9 = MAX(R9, R10);
       R10 = 0x30d40;
       R9 = MIN(R9, R10);
-      R10 = LSHIFT R9 BY -1;
+      R10 = LSHIFT R9 BY -2;
       R9 = R9 + R10;
       R10 = 0xea60;
       R9 = MAX(R9, R10);
@@ -3941,7 +3941,7 @@ wr_fs_ctr_19.:
       R9 = MAX(R9, R10);
       R10 = 0x30d40;
       R9 = MIN(R9, R10);
-      R10 = LSHIFT R9 BY -1;
+      R10 = LSHIFT R9 BY -2;
       R9 = R9 + R10;
       R10 = 0xea60;
       R9 = MAX(R9, R10);
