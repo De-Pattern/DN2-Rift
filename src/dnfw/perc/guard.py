@@ -288,7 +288,8 @@ def perc_limit(p, smp_types, smp_state: int, smp_stride: int, on_word: int, trig
 
 def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = None,
            rest_blocks: int = 0, strikes: int | None = None, steal_at: int = 1,
-           limit: int = LIMIT, struck: int | None = None, stop=None, expect=None) -> None:
+           limit: int = LIMIT, struck: int | None = None, stop=None, expect=None,
+           grow: int = 1) -> None:
     """VOICE() if it fits, else the slot's buffer zeroed and the skip counted. T_WORD:
     the scratch word holding the slot; COST: the slots' cost words; BUFFERS: the track
     buffers' pointers (0x254a60). v0.36: RESTS (the slots' rest counters) given, a voice
@@ -297,7 +298,11 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     block and, with time short, flickered in and out (DDRW's four-note chord: one block
     two voices, the next one). v0.49: LIMIT the limit word (PERC's: LIMIT_PERC); STRUCK and
     STOP (a sample voice): left out a second time in one note (STRUCK's bit t set by the
-    first), STOP() ends the voice until its next note, instead of a crunchy flicker."""
+    first), STOP() ends the voice until its next note, instead of a crunchy flicker.
+    RIFT v0.23 (the owner, 2026-11-24: FASCIA crackles on v0.21, one note): GROW 2 expects the last
+    cost x 1.25, not x 1.5 (GROW 1): FASCIA's dispatch. A lone FASCIA voice, its expected cost
+    over the limit by a few thousand cycles once the plate (v0.21) lengthened the stock's tail,
+    was left out on some blocks: clicks. The limit keeps its P/8 below the frame's end."""
     skip = p.label("gskip")
     done = p.label("gdone")
     p.e("R8 = EMUCLK;")
@@ -317,8 +322,8 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.iop(9, 9, "MAX", 10)
     p.iconst(10, COST_CAP)
     p.iop(9, 9, "MIN", 10)
-    p.lsh(10, 9, -1)
-    p.iop(9, 9, "+", 10)                       # x 1.5
+    p.lsh(10, 9, -grow)
+    p.iop(9, 9, "+", 10)                       # x 1.5 (GROW 1); RIFT v0.23: x 1.25 (GROW 2)
     p.iconst(10, FLOOR)
     p.iop(9, 9, "MAX", 10)
     if expect is not None:

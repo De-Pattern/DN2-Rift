@@ -388,7 +388,11 @@ int wr_poll(void *screen)
     static int slc_last __attribute__((section(".data"))) = 0;   /* on is drawn at once, not */
     extern int lig_state;                       /* v0.12: and LIGATURE's EDIT opening or closing */
     static int lig_last __attribute__((section(".data"))) = 0;
-    if (smp_overlay_dirty || slc_state != slc_last || lig_state != lig_last) {   /* at the next redraw tick */
+    extern int smp_skipped_any(void);           /* RIFT v0.23: the CPU marker (smp_page.c cpu_mark) comes and goes */
+    static int cpu_last __attribute__((section(".data"))) = 0;
+    int cpu_now = smp_skipped_any();
+    if (smp_overlay_dirty || slc_state != slc_last || lig_state != lig_last || cpu_now != cpu_last) {   /* at the next redraw tick */
+        cpu_last = cpu_now;
         smp_overlay_dirty = 0;
         slc_last = slc_state;
         lig_last = lig_state;

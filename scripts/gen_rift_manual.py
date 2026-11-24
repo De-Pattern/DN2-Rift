@@ -498,7 +498,7 @@ def build() -> str:
                 "<b>Choices</b> (word controls) step four detents a choice, never glide, and stay choices under LFOs and slides.",
                 "<b>Shortcuts:</b> [FUNC] + turn moves FASCIA's TUNE by octaves and snaps GEOM and SHIFT to 0. [TRK] + CLEAR ([FUNC] + [PLAY]) puts a machine back to its own start values.",
                 "<b>Start values:</b> each machine starts at a playable sound when chosen in MACHINE SEL (the tables below say where each control starts; bipolar controls are shown around 0).",
-                "<b>Voices and CPU:</b> RIFT's machines share the DSP with the stock ones. When it gets busy, the oldest notes' tails give way first, never the newest note or a held chord."))
+                "<b>Voices and CPU:</b> RIFT's machines share the DSP with the stock ones. When it gets busy, the oldest notes' tails give way first, never the newest note or a held chord. A small <b>CPU</b>, standing in the strip right of the D/H column, shows on a RIFT machine page while the DSP has just had to leave a voice out (v0.23): if you hear a click with CPU showing, the DSP was out of time; with no CPU, it was something else."))
 
     s.append("<h2 id=\"fascia\">FASCIA</h2>")
     s.append(p("Physical and spectral percussion and tuned bodies. Two exciters (page 1) strike, blow, bow or scatter dust into one or two resonant bodies (page 2): membranes, plates, bars, bells, glass, tubes, strings. Then a spectral stage (page 3) shapes what rings, and page 4 shapes the onset and how the two bodies interact.",
@@ -713,6 +713,10 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.23", "STEADY", ["FASCIA's crackle (v0.21, even with one note), its likely cause: the DSP's time guard expected a FASCIA voice to cost one and a half times its last block and, with the master plate's few thousand cycles in the stock's share, left a lone voice out on some blocks. It now expects one and a quarter times (FASCIA, ORGAN, SILT, LIGATURE, DIGIDRUM and CONTOUR); the reserve at the frame's end is unchanged.",
+                        "CPU on RIFT's machine pages: shown while the DSP has just left a voice out for time.",
+                        "CONTOUR's MACHINE SEL logo: a ridge over a grid, its orbit, a crosshair and the moon.",
+                        "Includes v0.22."]),
     ("0.22", "FROST", ["GLASS: the crushed, crackly overload sound fixed. GLASS does the same arithmetic at well under two thirds of the DSP time (same sound, bit for bit), and its time now counts toward the DSP's budget, so a busy DSP drops the oldest tails instead of running over.",
                        "SMEAR: TUNE and the note now move PLAY (as tape: higher is faster). Before, at BLND 0 they did nothing.",
                        "SMEAR: FRZ (Freeze), page 2's knob E: holds the read point and turns PLAY's share into grains, so the frozen moment keeps sounding.",
