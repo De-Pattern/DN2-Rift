@@ -188,7 +188,7 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_mon.py", "test/test_tunings.py",
          # RIFT v0.20: the v0.17..v0.19 machines' programs (run mode = live.py) and GLASS's ColdFire side
          "test/test_plateau_program.py", "test/test_glass_program.py", "test/test_glass_coldfire.py",
-         "test/test_contour_program.py",
+         "test/test_contour_program.py", "test/test_spall_program.py",
          "test/test_mverb_program.py"]                  # RIFT v0.21: the master reverb (run mode = live.py)                                # RIFT v0.14: MON on the RECORDER (the mod's v0.59)                  # RIFT: DIGIDRUM (run mode = live.py)
 HIT = re.compile(r"^\s+([0-9a-f]{8}):", re.M)
 
@@ -226,6 +226,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("ligedit", "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire)"),
        ("digidrum", "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("contour", "CONTOUR: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
+       ("spall", "SPALL: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)"),
        ("smear", "SMEAR: MACHINE SEL, its start, its two pages, LFO names (ColdFire)"),
        ("logos", "MACHINE SEL's logos: RIFT's machines, DRUM and SAMP; stock's picture kept (ColdFire)"),
        ("alloc", "GRID allocate slice locks (ColdFire)"),
@@ -3043,6 +3044,135 @@ def main() -> int:
             later("contour", "CONTOUR: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)",
                   "CONTOUR: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)", [ct_cmd, sorted(EMU_ENV.items())], ct_body)
 
+        # 6f5c. RIFT v0.25: SPALL (type 26, dnfw.spall.machines): CONTOUR's step on SPALL's table
+        if "smp_machine_commit" in lay and "wr_lfo_mask" in lay:
+            from dnfw.spall import machines as CTg         # noqa: PLC0415  (RIFT v0.25: SPALL, as CONTOUR's step)
+            kit = 0x4210C08C
+            snd0 = kit + 52
+            tyg = snd0 + 0xDE
+            tb0 = 0x4121898C + 97872                     # pattern 0's lock table (6i2's)
+            recs = 0x401F7F94
+            sp_hard, sp_dust = CTg.SLOTS["SIZE"][1], CTg.SLOTS["EDGE"][1]
+            sp_lk1, sp_lk2 = 0x7F00, 0x7F00
+            cm = lay["smp_machine_commit"]
+            sps = [f"wait:3,poke:{tyg:#x}:01", "wait:4", "tap:2", "wait:10", "png:wt",
+                  f"poke:{tyg:#x}:08", f"poke:{snd0 + 20 + 2 * 43:#x}:0500", "wait:4", "tap:2", "wait:6",
+                  "func-src", "wait:20", "down", "wait:4", "yes", "wait:20",
+                  f"call:{cm:#x}:arg1@{cm:#x}:0:{CTg.TYPE}:arg4@{cm:#x}:arg5@{cm:#x}", "wait:10", "types"]
+            sps += [f"mem:{snd0 + 20 + 2 * CTg.SLOTS[c][1]:#x}:2" for c in CTg.CONTROLS]
+            sp_npg = len(CTg.PAGES)                         # RIFT: pass 3's four
+            sps += ["no", "wait:10", "png:p0"]
+            for k in range(1, sp_npg):
+                sps += ["tap:2", "wait:10", f"png:p{k}"]
+            sps += ["tap:2", "wait:10", "png:r0"]
+            # (as stock p-locks: RECORD on (grid recording), a trig placed on step 1, the locks
+            # written into the playing pattern's table, then [TRIG 1] held; emu_slides' way)
+            sps += ["tap:19", "wait:10", "tap:25", "wait:10", "mem:0x42c5a9a0:4",
+                   f"poke:{tb0 + 20640:#x}:" + "ff" * (101 * 16),
+                   f"poke:{tb0 + 258 * 78:#x}:{sp_hard:02x}00{sp_lk1:04x}" + "ffff" * 127,
+                   f"poke:{tb0 + 258 * 79:#x}:{sp_dust:02x}00{sp_lk2:04x}" + "ffff" * 127,
+                   f"poke:{tb0 + 20640 + sp_hard:#x}:4e", f"poke:{tb0 + 20640 + sp_dust:#x}:4f",
+                   "wait:4", "png:r1", "press:25", "wait:10", "png:l0",
+                   # RIFT v0.7 (owner, 2026-11-17): with the locked trig held, knob C turned shows
+                   # its value in its cell, as stock does (smp_page.c smp_value_shows)
+                   "spin:2:1", "wait:10", "png:k0", f"mem:{lay['smp_knob_code']:#x}:4", "release:25", "wait:10",
+                   "tap:19", "wait:10", "png:r2", "press:2", "wait:30", "png:v0", "release:2", "wait:10"]
+            sp_named = [CTg.SLOTS[c][0] for c in CTg.CONTROLS]
+            sps += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in sp_named + list(CTg.UNUSED_RECORDS)]
+            sps += [f"mem:{recs + 60 * r + 0x28:#x}:4" for r in sp_named]
+            sps += [f"call:{lay['wr_lfo_mask']:#x}:{r}" for r in sp_named + list(CTg.UNUSED_RECORDS)]
+            # RIFT v0.4: TRK + CLEAR (hooks.S fsc_clear_hook): every control's word moved off its
+            # default, then [TRK] held with [FUNC] + [PLAY] (CLEAR): the machine's defaults come back
+            # (stock's would leave WaveTone's and FM Tone's; no clear would leave the moved words)
+            sp_dwm = CTg.default_words()
+            sps += [f"poke:{snd0 + 20 + 2 * CTg.SLOTS[c][1]:#x}:{(sp_dwm[c] ^ 0x1000) & 0xFFFF:04x}" for c in CTg.CONTROLS]
+            sps += ["wait:4", "press:16", "wait:4", "press:17", "wait:4", "tap:20", "wait:10", "release:17",
+                   "wait:4", "release:16", "wait:30", "png:cleared"]
+            sps += [f"mem:{snd0 + 20 + 2 * CTg.SLOTS[c][1]:#x}:2" for c in CTg.CONTROLS]
+            spjs, spsf = work / "spall.json", work / "spall.steps"
+            spsf.write_text(",".join(sps))
+            sp_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                     "--snapshot", snap, "--args-at", hex(cm), "--steps", f"@{spsf}", "--png-dir", work / "spall",
+                     "--json", spjs]
+
+            def sp_body(tdir):
+                rc, out = run("spall", sp_cmd, logs, env=EMU_ENV, trace=tdir)
+                why, good = out[-800:], False
+                if rc == 0 and spjs.exists():
+                    import numpy as np                     # noqa: PLC0415
+                    from PIL import Image                  # noqa: PLC0415
+                    r = json.loads(spjs.read_text())
+                    m = r["memory"]
+                    shots = {n: np.array(Image.open(f).convert("L")) > 128 for n, f in r["screens"].items()}
+                    sc = shots["p0"].shape[1] // 128
+
+                    def cell(img, i):                      # RIFT v0.9, the LINE page: cell i is columns 30 (i % 4) + 1 .. + 26,
+                        x0 = 30 * (i & 3) + 1              # screen rows 11..33 (top) and 38..60 (bottom), smp_page.c
+                        y0, h = (11, 23) if i < 4 else (38, 23)
+                        return img[y0 * sc:(y0 + h) * sc, x0 * sc:(x0 + 27) * sc]
+                    kc = f"{lay['smp_knob_code']:#x}"
+                    keys = [k for k in m if not k.startswith("types") and not k.startswith("0x42c5a9a0") and not k.startswith(kc)]
+                    words = [int(m[k], 16) for k in keys[:len(CTg.CONTROLS)]]
+                    playing = int(m.get("0x42c5a9a0", "0") or "0", 16)
+                    want = [CTg.default_words()[c] for c in CTg.CONTROLS]
+                    types = m.get("types@0") or [None]
+                    flip = [float((cell(shots["l0"], i) != cell(shots["r1"], i)).mean()) for i in range(8)]
+                    page = CTg.CONTROLS[:8]
+                    locked = {page.index("SIZE"), page.index("EDGE")}
+                    vals = [int(m[k], 16) for k in keys[len(CTg.CONTROLS):]]
+                    nn = len(sp_named) + len(CTg.UNUSED_RECORDS)
+                    short_p, long_p = vals[:nn], vals[nn:nn + len(sp_named)]
+                    blobs = list(platform.runtime(sec3))
+
+                    def cstr(ptr):
+                        for va, blob in blobs:
+                            if va <= ptr < va + len(blob):
+                                end = blob.index(b"\0", ptr - va)
+                                return blob[ptr - va:end].decode("ascii", "replace")
+                        return f"<{ptr:#x}: not ours>"
+                    shorts = [cstr(x) for x in short_p]
+                    longs = [cstr(x) for x in long_p]
+                    masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
+                    cleared = [int(m[k], 16) for k in keys[-len(CTg.CONTROLS):]]   # after TRK + CLEAR
+                    fasps = {
+                        "MACHINE SEL's commit to SPALL: track 1 is SPALL": types[0] == CTg.TYPE,
+                        f"its {len(CTg.CONTROLS)} controls at its model's DEFAULTS": words == want,
+                        f"{sp_npg} pages, each its own, none the stock grid":
+                        len({shots[f"p{k}"].tobytes() for k in range(sp_npg)}) == sp_npg
+                        and not any((shots[f"p{k}"] == shots["wt"]).all() for k in range(sp_npg)),
+                        "the last page key comes back to the first page's cells":
+                        all((cell(shots["r0"], i) == cell(shots["p0"], i)).all() for i in range(8)),
+                        "the playing pattern is the one whose table holds the locks": playing + 97872 == tb0,
+                        "[TRIG 1] held: SIZE's and EDGE's cells inverted (p-locked)": all(flip[i] > 0.6 for i in locked),
+                        "[TRIG 1] held, knob C turned: its cell shows its value, no other cell changes (RIFT v0.7)":
+                            int(m.get(kc, "0") or "0", 16) == 3
+                            and float((cell(shots["k0"], 2) != cell(shots["l0"], 2)).mean()) > 0.01
+                            and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
+                        "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
+                        "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
+                        "the LFO list names each control (short)": shorts[:len(sp_named)] == [CTg.LABELS[c] for c in CTg.CONTROLS],
+                        "... and long": longs == [CTg.LONG_NAMES[c] for c in CTg.CONTROLS],
+                        "... and its unused records -": all(x == "-" for x in shorts[len(sp_named):]),
+                        "every control an LFO destination": len(masks) == nn and all((x != 0) == (c not in CTg.NO_LFO)
+                                                                for c, x in zip(CTg.CONTROLS, masks[:len(sp_named)])),
+                        "... the unused records left out": all(x == 0 for x in masks[len(sp_named):]),
+                        "TRK + CLEAR: every control back at its machine's defaults (RIFT v0.4), not stock's":
+                            cleared == want,
+                        "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),
+                    }
+                    good = all(fasps.values())
+                    why = (json.dumps({k: v for k, v in fasps.items() if not v}) + f" types={types[:2]} words="
+                           f"{[hex(w) for w in words]} cleared={[hex(w) for w in cleared]} flip={[round(f, 2) for f in flip]} shorts={shorts} longs={longs} masks={masks}")[:1500]
+                return good, ("SPALL (on FASCIA's records): MACHINE SEL's commit gives it its defaults (the snapshot's list is "
+                              "v0.14's: the real list is not driven here); its "
+                              f"{sp_npg} pages drawn, each its own (labels, knobs); p-locked SIZE and EDGE lit "
+                              f"as stock lights a lock, nothing else; SYN held shows values; its {len(CTg.CONTROLS)} records "
+                              "named and offered to the LFOs, the unused ones named - "
+                              "and left out" if good else why)
+            later("spall", "SPALL: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)",
+                  "SPALL: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire)", [sp_cmd, sorted(EMU_ENV.items())], sp_body)
+
+
         # 6f7. RIFT v0.16: SMEAR (type 9, in WERP's place): MACHINE SEL's commit gives it its own start
         # (rec.c smr_default: SPD +1, the loop the whole sample...), its page 1 and its own page 2 are
         # drawn (each its own, neither another machine's), its records named and offered to the LFOs
@@ -3119,7 +3249,7 @@ def main() -> int:
             from PIL import Image                   # noqa: PLC0415
             lgf = lay["lg_force"]
             ls_ = ["func-src", "wait:20", "png:s0"]
-            for t in (18, 19, 20, 21, 22, 17, 23, *((24, 9) if "plateau" in GL.ORDER else ()), *((25,) if "contour" in GL.ORDER else ()), *((4,) if "midi" in GL.ORDER else ())):
+            for t in (18, 19, 20, 21, 22, 17, 23, *((24, 9) if "plateau" in GL.ORDER else ()), *((25,) if "contour" in GL.ORDER else ()), *((4,) if "midi" in GL.ORDER else ()), *((26,) if "spall" in GL.ORDER else ())):
                 ls_ += [f"poke:{lgf:#x}:{t:08x}", "down", "wait:4", "up", "wait:5", f"png:t{t}"]
             ls_ += [f"poke:{lgf:#x}:ffffffff", "down", "wait:4", "up", "wait:5", "png:back",
                     "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:5", "png:one",
@@ -3162,6 +3292,8 @@ def main() -> int:
                         facts["SMEAR: its own logo, and SAMP"] = same(pic("t9"), want["smear"]) and same(lbl("t9"), word("SAMP"))
                     if "contour" in GL.ORDER:           # RIFT v0.22 (owner: "a terrain synthesis logo"): CONTOUR's own, SYN's label
                         facts["CONTOUR: its own logo, and SYN's label"] = same(pic("t25"), want["contour"]) and same(lbl("t25"), lbl("s0"))
+                    if "spall" in GL.ORDER:             # RIFT v0.25: SPALL's own logo, SYN's label
+                        facts["SPALL: its own logo, and SYN's label"] = same(pic("t26"), want["spall"]) and same(lbl("t26"), lbl("s0"))
                     if "midi" in GL.ORDER:              # RIFT v0.25 (owner): the MIDI machine: a 5-pin DIN socket, MIDI
                         facts["MIDI: the DIN logo, and MIDI"] = same(pic("t4"), want["midi"]) and same(lbl("t4"), word("MIDI"))
                     facts["the synth logos keep SYN's label"] = all(same(lbl(f"t{t}"), lbl("s0")) for t in (18, 19, 20, 21))

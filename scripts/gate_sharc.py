@@ -50,6 +50,7 @@ GROUPS = (("wipe",), ("stock",), ("garbage",), ("stress",), ("chords",), ("smp",
           ("digidrum",),          # RIFT: DIGIDRUM (type 22) bit-exact, two at once, a machine switch, a negative control
           ("dstress",),           # RIFT: sixteen DIGIDRUM voices under the guard
           ("contour",),           # RIFT v0.20: CONTOUR (type 25) bit-exact, every surface, two at once, a switch, a negative control
+          ("spall",),             # RIFT v0.25: SPALL (type 26) bit-exact, every type and algorithm, two at once, a switch, a negative control
           # (RIFT v0.21: PLATEAU's parts out while it is off the DSP: plateau.machines.ON_DSP)
           # ("plateau",),           # RIFT v0.17: PLATEAU (type 24) bit-exact on the bus, the one instance, a negative control
           # ("pstress",),           # RIFT v0.17: a PLATEAU track beside fifteen FASCIA voices under the guard

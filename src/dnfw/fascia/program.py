@@ -3686,7 +3686,7 @@ def sanitize(p, L: "Layout") -> None:
     PP.half(p, 4, _GLP.FILTER_HDR, 10)
     p.iconst(3, 0)
     p.iconst(12, 18)
-    p.if_(2, "GE", 12, lambda: (p.iconst(12, 25), p.if_(2, "LE", 12, lambda: p.iconst(3, 1), kind="i")), kind="i")   # (v0.20: to CONTOUR's 25)
+    p.if_(2, "GE", 12, lambda: (p.iconst(12, 26), p.if_(2, "LE", 12, lambda: p.iconst(3, 1), kind="i")), kind="i")   # (v0.20: to CONTOUR's 25; v0.25: SPALL's 26)
     p.iconst(12, 9)
     p.if_(2, "EQ", 12, lambda: p.iconst(3, 1), kind="i")
     p.iconst(12, 6)
@@ -3745,6 +3745,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     from ..digidrum import program as DP
     from ..plateau import program as XP
     from ..contour import program as CP
+    from ..spall import program as SPP
     from ..glass import program as GLP
     from ..waverider import dsp as _dsp
     if organ_tables is None:
@@ -3808,6 +3809,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.sti(DP.VOICE["magic"], 2, 0)             # RIFT: and DIGIDRUM's
     p.sti(XP.VOICE["magic"], 2, 0)             # RIFT v0.17: and PLATEAU's (a fresh instance clears its lines)
     p.sti(CP.VOICE["magic"], 2, 0)             # RIFT v0.20: and CONTOUR's
+    p.sti(SPP.VOICE["magic"], 2, 0)            # RIFT v0.25: and SPALL's
     p.place(changed)
     PP.raw_type(p, 2)
     p.ipass(0, 2)
@@ -3838,6 +3840,10 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.iconst(12, CP.TYPE)
     p.e("COMP(R0, R12);")
     p.jump("EQ", ctr)
+    spl = p.label("spl")
+    p.iconst(12, SPP.TYPE)
+    p.e("COMP(R0, R12);")
+    p.jump("EQ", spl)
     p.iconst(12, TYPE)
     p.e("COMP(R0, R12);")
     p.jump("NE", other)
@@ -3885,6 +3891,12 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2,
              expect=CP.guard_expect(L.C["t"]), grow=2)
     p.jump("", nxt)
+    p.place(spl)                               # RIFT v0.25: SPALL (type 26, dnfw.spall.program)
+    SL2_ = SPP.Layout(L, _dsp.SPALL_TABLES_DDR)
+    sg2 = []
+    G.around(p, L.C["t"], L.cost, BUFFERS, lambda: sg2.append(SPP.voice(p, SL2_)),
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
+    p.jump("", nxt)
     p.place(notready)                          # RIFT v0.16: before the link's tables: silence
     p.ld(9, L.C["t"])
     p.lsh(12, 9, 2)
@@ -3924,6 +3936,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     if xg:
         xg[0].emit_rts()                       # PLATEAU's (p_render, p_ap, p_apf)
     cg[0].emit_rts()                           # CONTOUR's (c_render, the surfaces)
+    sg2[0].emit_rts()                          # SPALL's (s_render, s_tick, s_event, s_tonal)
     gg.emit_rts()                              # GLASS's (g_slot, g_bend)
     p.emit_subs()
     p.scr_on = False

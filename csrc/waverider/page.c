@@ -281,6 +281,7 @@ static int lg_logo_of(int t, int *label)
     case 24: *label = 4; return LOGO_PLATEAU;           /* RIFT v0.18: its own logo, FX (owner) */
     case 9: *label = 1; return LOGO_SMEAR;              /* RIFT v0.18: SMEAR's own logo, SAMP */
     case 25: return LOGO_CONTOUR;
+    case 26: return LOGO_SPALL;                         /* RIFT v0.25: chips thrown off a struck surface */
     case 4: *label = 5; return LOGO_MIDI;               /* RIFT v0.25: a 5-pin DIN socket, MIDI (owner) */                       /* RIFT v0.22: a terrain's contour lines (owner) */
     case 8: case 10: case 11: case 12: case 13:
         *label = 1; return LOGO_DT2;

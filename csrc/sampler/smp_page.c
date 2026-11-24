@@ -860,6 +860,51 @@ static void line_glyph(void *c, int g, int x, int r, int v)
         shl(c, x, x + 16, r + 6, 0);
         sline(c, x + 2, r + 1 + v * 2 / 127, x + 14, r + 9 - v * 2 / 127);
         break;
+    case LG_GAP: {                              /* RIFT v0.25 SPALL: pairs of dots, the space between them growing */
+        int gap = 1 + v * 6 / 127;
+        for (i = 0; i <= 16; i += 2 + gap) {
+            sp(c, x + i, r + 6);
+            if (i + 1 <= 16) sp(c, x + i + 1, r + 6);
+        }
+        shl(c, x, x + 16, r + 11, 4);
+        break;
+    }
+    case LG_CLMP: {                             /* ... eight dots, even, gathering into two tight clumps */
+        static const signed char ev[8] = {1, 3, 5, 7, 9, 11, 13, 15}, cl[8] = {3, 4, 5, 6, 10, 11, 12, 13};
+        for (k = 0; k < 8; k++)
+            sp(c, x + ev[k] + (cl[k] - ev[k]) * v / 127, r + 4 + (k & 1) * 3);
+        shl(c, x, x + 16, r + 11, 4);
+        break;
+    }
+    case LG_MEM: {                              /* ... a phrase and its repeat: a loop bracket as long as MEM */
+        int L = 3 + v * 13 / 127;
+        static const unsigned char ph[8] = {0, 2, 3, 6, 8, 11, 12, 15};
+        for (k = 0; k < 8; k++)
+            svl(c, x + ph[k], r + 7, r + 9, 0);
+        svl(c, x, r + 2, r + 4, 0);
+        svl(c, x + L, r + 2, r + 4, 0);
+        shl(c, x, x + L, r + 2, 0);
+        break;
+    }
+    case LG_SIZE: {                             /* ... one particle, wider with SIZE */
+        int w = v * 7 / 127;
+        shl(c, x + 8 - w, x + 8 + w, r + 5, 0);
+        shl(c, x + 8 - w, x + 8 + w, r + 6, 0);
+        sp(c, x + 8 - w - 1, r + 4); sp(c, x + 8 + w + 1, r + 4);
+        sp(c, x + 8 - w - 1, r + 7); sp(c, x + 8 + w + 1, r + 7);
+        shl(c, x, x + 16, r + 11, 4);
+        break;
+    }
+    case LG_PEAK: {                             /* ... a resonance: a narrow peak sliding along the spectrum */
+        int pk = v * 16 / 127;
+        for (i = 0; i <= 16; i++) {
+            int d = i - pk, h = 36 / (4 + d * d);
+            int rr = r + 10 - h;
+            if (px >= 0) sline(c, px, pr, x + i, rr);
+            px = x + i; pr = rr;
+        }
+        break;
+    }
     default: {                                  /* LG_ARC: a thin 270-degree arc, a pointer */
         /* RIFT v0.23 (owner, 2026-11-24: the knob looked shaded, "go back to the clean circle
          * line"): drawn at the page's own size, one pixel wide, not scaled up from the 17 x 12

@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src/dnfw/waverider/logos"
 OUT = ROOT / "csrc/waverider/logos.h"
 W, H = 46, 32
-ORDER = ("organ", "fascia", "silt", "ligature", "digidrum", "dt2", "flex", "plateau", "smear", "contour", "midi")   # RIFT v0.18: PLATEAU and SMEAR (owner); v0.22: CONTOUR's (owner: "a terrain synthesis logo"); v0.23: a ridge, its orbit and a crosshair (the owner's pick, #19)
+ORDER = ("organ", "fascia", "silt", "ligature", "digidrum", "dt2", "flex", "plateau", "smear", "contour", "midi", "spall")   # RIFT v0.18: PLATEAU and SMEAR (owner); v0.22: CONTOUR's (owner: "a terrain synthesis logo"); v0.23: a ridge, its orbit and a crosshair (the owner's pick, #19)
 # the label's letters, 5 x 8, as the stock SYN's (rows top to bottom)
 GLYPHS = {
     " ": (".....",) * 8,
