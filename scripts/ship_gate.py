@@ -3119,7 +3119,7 @@ def main() -> int:
             from PIL import Image                   # noqa: PLC0415
             lgf = lay["lg_force"]
             ls_ = ["func-src", "wait:20", "png:s0"]
-            for t in (18, 19, 20, 21, 22, 17, 23, *((24, 9) if "plateau" in GL.ORDER else ()), *((25,) if "contour" in GL.ORDER else ())):
+            for t in (18, 19, 20, 21, 22, 17, 23, *((24, 9) if "plateau" in GL.ORDER else ()), *((25,) if "contour" in GL.ORDER else ()), *((4,) if "midi" in GL.ORDER else ())):
                 ls_ += [f"poke:{lgf:#x}:{t:08x}", "down", "wait:4", "up", "wait:5", f"png:t{t}"]
             ls_ += [f"poke:{lgf:#x}:ffffffff", "down", "wait:4", "up", "wait:5", "png:back",
                     "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:4", "down", "wait:5", "png:one",
@@ -3162,6 +3162,8 @@ def main() -> int:
                         facts["SMEAR: its own logo, and SAMP"] = same(pic("t9"), want["smear"]) and same(lbl("t9"), word("SAMP"))
                     if "contour" in GL.ORDER:           # RIFT v0.22 (owner: "a terrain synthesis logo"): CONTOUR's own, SYN's label
                         facts["CONTOUR: its own logo, and SYN's label"] = same(pic("t25"), want["contour"]) and same(lbl("t25"), lbl("s0"))
+                    if "midi" in GL.ORDER:              # RIFT v0.25 (owner): the MIDI machine: a 5-pin DIN socket, MIDI
+                        facts["MIDI: the DIN logo, and MIDI"] = same(pic("t4"), want["midi"]) and same(lbl("t4"), word("MIDI"))
                     facts["the synth logos keep SYN's label"] = all(same(lbl(f"t{t}"), lbl("s0")) for t in (18, 19, 20, 21))
                     facts["ONESHOT under the cursor: the DT2 logo and SAMP"] = same(pic("one"), want["dt2"]) and same(lbl("one"), word("SAMP"))
                     facts["type 23 (no machine of ours): stock's picture, pixel for pixel"] = same(sh.get("t23"), sh.get("s0"))
