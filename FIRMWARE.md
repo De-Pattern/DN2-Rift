@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.21** | 2026-11-23 | The master reverb is a plate (Dattorro's tank in stereo behind the stock REVERB page); the new start-up logo (RIFT in block letters that drip and decompose); PLATEAU withdrawn for rework; FLEX levels from the DN2 mk2 mod's v0.71 | `builds/v0.21-PLATE/` | yes |
+| **v0.22** | 2026-11-24 | GLASS's overload fixed (the same sound at well under two thirds of the DSP time, inside the guard's budget); SMEAR: TUNE moves PLAY, FRZ (Freeze), page 2 redrawn; CONTOUR's own logo; the manual brought up to date | `builds/v0.22-FROST/` | yes |
+| v0.21 | 2026-11-23 | The master reverb is a plate (Dattorro's tank in stereo behind the stock REVERB page); the new start-up logo (RIFT in block letters that drip and decompose); PLATEAU withdrawn for rework; FLEX levels from the DN2 mk2 mod's v0.71 | `builds/v0.21-PLATE/` | yes |
 | v0.20 | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
 | v0.19 | 2026-11-22 | CONTOUR, a wave-terrain synth (8 surfaces, 2 pages); RIFT's machine pages at stock's size; SMEAR's page 2 shows the sample, its read point and a grain cloud | `builds/v0.19-CONTOUR/` | yes |
 | v0.18 | 2026-11-22 | The silent-unit fix (SMEAR's VOC off, the guard expects a voice's peak, an output guard on every RIFT machine); PLATEAU no longer dropped beside other tracks; GLASS, a VCFQ-style filter on every machine; MACHINE SEL: PLATEAU's own section, SMEAR first of the samples, their logos | `builds/v0.18-GLASS/` | yes |
@@ -48,6 +49,37 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.22 · FROST
+
+- **File:** `RIFT_v0.22_FROST_OS1.11.syx` (`builds/v0.22-FROST/`)
+- **sha256:** `9b6d4c0d4f8cca2f9b0b43e3de3f55dbe0feb9c79ed5c1ca2fee36a5e1e7e0ac`
+- **Gated:** 2026-11-24, `CLEARED TO FLASH`
+- **Source:** `49e85dd` (this repository)
+
+**Changes**
+
+- **GLASS's overload** (owner, 2026-11-23: "a weird cpu issue ... weirdly bitcrushed like the monomachine overload sound"). Measured on the unit's cost model (rcost): GLASS took about 7,200 cycles a slot a block, as sample() loaded and stored every intermediate; fifteen WaveTone tracks on GLASS were 279k cycles over an idle frame's 415k, past the 667k frame. And GLASS ran after our voices' end mark, so the guard's limit (guard.tail_limit) never counted it: voices filled the frame to the limit and GLASS ran past it. Now:
+  - `glass.program.samples_fast`: the filter's state, coefficients and level in registers, the same operations on the same operands in the same order (bit-exact to v0.18's sample() and to live.Voice): about 4,200 cycles a slot (`FAST`, False: the old loop).
+  - The voices' end mark (`G.end_mark`) before GLASS and the sanitizer, so their time is measured with the stock's tail and the voices' limit leaves room for it.
+- **SMEAR TUNE** (owner: "get TUNE working"): PLAY read at SPD x RATE, so TUNE and the note moved only the grains: at BLND 0 nothing. PLAY now reads at SPD x tr (tape).
+- **SMEAR FRZ** (owner: "a FREEZE param"): page 2's E on OFS1 (record 246; WaveTone's default 50 reads OFF, so earlier tracks open unfrozen), OFF / ON. ON holds the read point (SPD kept) and gives PLAY's share of BLND to the grains. smp.asm grew past its L2 room; pvmix.asm moved to the span's last 768 bytes.
+- **SMEAR page 2** (owner: "crammed in with the top row knobs ... closer to what WERP or slice does"): ONESHOT's page-2 layout; OVLP, SPRY, PRND and WIN as small pictures of what they do; the strip at the waveform's place; FRZ's label with a bar while on.
+- **CONTOUR's MACHINE SEL logo** (owner: "a terrain synthesis logo"): two hills' contour lines.
+- **The manual** (owner: "still mentions tholet and doesnt have every new feature"): THOLET gone from every section and entry; KEYBOARD HOLD back in Performance (it showed only with THOLET); the FLEX levels as v0.21 has them (4 dB, not 12); SMEAR's VOC said off; FRZ, TUNE and page 2; GLASS's CPU note.
+- Gate: rcost's GLASS case (a slot within 5,000 cycles: v0.21's is 7,200), the runner's `smear` case "v0.22 FRZ", unit tests `test_v022_*` (GLASS fast = v0.18 path = live in the knee's three regions and both morph halves; SMEAR TUNE on PLAY, FRZ), test_sampler's FRZ detents.
+
+**Known issues**
+
+- SMEAR's VOC is still off (v0.18).
+
+**Tests**
+
+0. GLASS on six or more busy tracks (high RES, ENV, LPG) beside FASCIA or SMEAR: no crushed sound; GLASS sounds as in v0.21.
+1. SMEAR at BLND 0: TUNE and notes transpose PLAY.
+2. SMEAR FRZ ON / OFF, and p-locked on trigs.
+3. SMEAR page 2: the four pictures move with OVLP, SPRY, PRND, WIN; the sample view clear; FRZ's bar.
+4. MACHINE SEL: CONTOUR's logo.
 
 ## v0.21 · PLATE
 
