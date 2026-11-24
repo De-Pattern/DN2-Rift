@@ -258,8 +258,8 @@ PAGES = [
     dict(id="smear", title="SMEAR", tag="SAMPLING", logo="smear",
          sub="Continuously morph a sample from traditional tape playback into granular fragments.",
          panels=[("knobs", "SYN1 / TAPE + CLOUD", "START AT BLND 0", K(
-             ("TUNE", "Transpose: PLAY as tape (speed + pitch) and the grains."), ("SPD", "Playback rate -4..+4; center freezes the read point."),
-             ("BLND", "0 = tape; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
+             ("TUNE", "Pitch only (PLAY and the grains); SPD stays the speed."), ("SPD", "Speed only, -4..+4; center freezes the read point."),
+             ("BLND", "0 = PLAY; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
              ("STRT", "Where the loop begins in the sample."), ("SIZE", "Loop length / sampled region size."),
              ("DENS", "How many grains play each second."), ("LEV", "Output volume of the machine."))),
              ("knobs", "SYN2 / GRAINS", "MORE = CLOUD-LIKE", K(
@@ -268,8 +268,8 @@ PAGES = [
                  ("FRZ", "Hold current position as a grain cloud."), ("-", "Not assigned on this page."),
                  ("-", "Not assigned on this page."), ("-", "Not assigned on this page."))),
              ("concept", "WHAT YOU HEAR", "PLAY <-> GRANULAR", K(
-                 ("PLAY", "A continuous, tape-style loop."), ("GRAIN", "Many tiny snippets overlap."),
-                 ("BLND", "Crossfade between tape and cloud."), ("SPRY", "Fragments scatter through the buffer."),
+                 ("PLAY", "A continuous loop; pitch and speed apart."), ("GRAIN", "Many tiny snippets overlap."),
+                 ("BLND", "Crossfade between PLAY and cloud."), ("SPRY", "Fragments scatter through the buffer."),
                  ("PRND", "Individual fragments bend in pitch."), ("OVLP", "Small flecks -> longer smear."),
                  ("FRZ", "Stays on the captured moment."), ("WIN", "Smooth / sharp grain edges."))),
              ("concept", "SAMPLE WORKFLOW", "SAMPLE HANDLING", K(

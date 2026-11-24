@@ -257,8 +257,8 @@ THOLET = {
 }
 
 SMEAR = [
-    ("TUNE", "Tune", "Tune, in semitones (as every sample machine's). The note and TUNE set the pitch of every reader: the grains are pitched without changing the speed; PLAY, as tape, plays faster or slower with them (v0.22: before, PLAY ignored TUNE and the note)."),
-    ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: the read point stops; +1.00 and -1.00 have wide detents). Negative reads backwards. The grains keep their pitch whatever the speed; PLAY (tape) changes pitch with it."),
+    ("TUNE", "Tune", "Tune, in semitones (as every sample machine's). The note and TUNE set the pitch of every reader and never the speed, as on the Nebulae: PLAY and the grains both transpose while the read point keeps moving at SPD (v0.24; v0.22 and v0.23 played PLAY as tape)."),
+    ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: the read point stops; +1.00 and -1.00 have wide detents). Negative reads backwards. Speed only: PLAY and the grains keep their pitch whatever the speed (v0.24)."),
     ("BLND", "Blend", "Crossfades the readers at constant power: PLAY (a plain tape-like read) at 0 and in the middle, GRN (the grains) at 127. (VOC, the phase vocoder, is off since v0.18: its share of BLND plays PLAY.)"),
     ("SAMP", "Sample Slot", "The sample (or FLEX buffer B1..B8) SMEAR plays, as on every sample machine. Taken at the note."),
     ("STRT", "Start", "Where the loop starts in the sample."),
@@ -648,7 +648,7 @@ def build() -> str:
 
     if HAS_SMEAR:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
-        s.append(p("A granular looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through readers of one loop: <b>PLAY</b>, a plain tape-like read, and <b>GRN</b>, a cloud of grains; BLND moves between them. A note restarts the read at STRT and plays at its pitch (TUNE too), so SMEAR plays chromatically.",
+        s.append(p("A granular looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through readers of one loop: <b>PLAY</b>, a continuous read whose pitch and speed are apart (two crossfading read heads, v0.24), and <b>GRN</b>, a cloud of grains; BLND moves between them. A note restarts the read at STRT and plays at its pitch (TUNE too), so SMEAR plays chromatically.",
                    "<b>How to approach it:</b> load a sample and play it at BLND 0 (PLAY). Turn BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece; STRT scans. <b>FRZ</b> (page 2) holds the moment as a grain cloud while you play notes over it. LFO SPD, STRT or BLND for motion.",
                    "<b>The phase vocoder (VOC) is off.</b> Since v0.18 it has been switched off: on the unit it needed more DSP time than a frame has, and a VOC note silenced the instrument. BLND's VOC end plays PLAY. A cheaper stretch is being designed to bring it back.",
                    "<b>Page 2</b> (v0.22: laid out as ONESHOT's page 2) shows the sample across the screen, with the loop (STRT, SIZE) marked, the read point moving through it and a grain cloud round it (more grains with DENS, wider with SPRY, longer with OVLP). Above the sample, four small pictures for knobs A-D: <b>OVLP</b> two grains that overlap more as it rises; <b>SPRY</b> grains scattered round the read point; <b>PRND</b> grains at random pitches; <b>WIN</b> the window's own shape. Knob E is <b>FRZ</b>, a bar over its label while frozen. Values show as you turn, as on every page."))
@@ -713,6 +713,9 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.24", "APART", ["SMEAR: pitch and speed apart, as on the Nebulae. TUNE and the note set PLAY's pitch only, through two crossfading read heads; SPD sets the speed only (v0.22 and v0.23 played PLAY as tape). With no transposition at speed 1, PLAY reads exactly as before.",
+                       "The knob icons on RIFT's pages: a clean one-pixel ring and pointer (the scaled-up ring looked shaded).",
+                       "Includes v0.23."]),
     ("0.23", "STEADY", ["FASCIA's crackle (v0.21, even with one note), its likely cause: the DSP's time guard expected a FASCIA voice to cost one and a half times its last block and, with the master plate's few thousand cycles in the stock's share, left a lone voice out on some blocks. It now expects one and a quarter times (FASCIA, ORGAN, SILT, LIGATURE, DIGIDRUM and CONTOUR); the reserve at the frame's end is unchanged.",
                         "CPU on RIFT's machine pages: shown while the DSP has just left a voice out for time.",
                         "CONTOUR's MACHINE SEL logo: a ridge over a grid, its orbit, a crosshair and the moon.",

@@ -637,12 +637,15 @@ class VLayout:
         names = [f"KN{k}" for k in range(len(KNOBS))] + ["TR", "RATE", "TRIG", "SIZE", "BASE", "FMT",
                                                   "CLOCK", "LANE", "VSTATE", "LSTART", "LEND",
                                                   "LSIZE", "SI", "SF", "VG", "PG", "GG", "JOB",
-                                                  "LW2", "LWD", "LST", "TMP", "CNT2"]
+                                                  "LW2", "LWD", "LST", "TMP", "CNT2",
+                                                  "TI", "TF", "HEADS", "HVA"]   # RIFT v0.24: PLAY's heads
         for k, n in enumerate(names):
             setattr(self, n, a + 4 * k)
         a += 4 * len(names)
         a = (a + 63) & ~63
         self.MAGIC, self.PI, self.PF = a, a + 4, a + 8
+        # RIFT v0.24: PLAY's two heads and their cycle, in the state's free words before the grains
+        self.QA, self.QAF, self.QB, self.QBF, self.PH = a + 12, a + 16, a + 20, a + 24, a + 28
         self.G = GLayout(a + 64)
         # the state copied in and out: MAGIC .. the grains' end (the grains' inputs ride along)
         self.STATE_WORDS = (self.G.G + 32 * LV.GRAINS - self.MAGIC) // 4
@@ -741,7 +744,7 @@ def emit_voice(p: Prog, V: VLayout) -> None:
     p.st(V.LEND, 5)
     # -- the speed
     _tab(p, 0, V, "SPD", "SPD")
-    p.ld(1, V.TR)                                    # RIFT v0.22: the speed times tr (TUNE, the note, the rate): PLAY as tape
+    p.ld(1, V.RATE)                                  # RIFT v0.24: the read point at SPD x the rate alone (v0.22: x tr)
     p.fop(0, 0, "*", 1)
     p.trunc(2, 0)
     p.iconst(12, 0)
@@ -751,6 +754,24 @@ def emit_voice(p: Prog, V: VLayout) -> None:
     p.st(V.SI, 2)
     p.fop(0, 0, "-", 3)
     p.st(V.SF, 0)
+    # RIFT v0.24: the heads' step, tr split as the speed is; HEADS = 1 unless they would step as the read point
+    p.ld(0, V.TR)
+    p.trunc(2, 0)
+    p.iconst(12, 0)
+    p.float_(3, 2, 12)
+    p.if_(3, "GT", 0, lambda: (p.iconst(12, 1), p.iop(2, 2, "-", 12), p.iconst(12, 0),
+                               p.float_(3, 2, 12)))
+    p.st(V.TI, 2)
+    p.fop(0, 0, "-", 3)
+    p.st(V.TF, 0)
+    p.iconst(4, 1)
+    p.ld(5, V.SI)
+    p.ld(1, V.SF)
+
+    def same_i():
+        p.if_(0, "EQ", 1, lambda: p.iconst(4, 0))
+    p.if_(2, "EQ", 5, same_i, kind="i")
+    p.st(V.HEADS, 4)
     for n in ("VG", "PG", "GG"):
         _tab(p, 0, V, n, "BLND")
         p.st(getattr(V, n), 0)
@@ -773,8 +794,13 @@ def emit_voice(p: Prog, V: VLayout) -> None:
     def trig():
         p.ld(0, V.LSTART)
         p.st(V.PI, 0)
+        p.st(V.QA, 0)                                # RIFT v0.24: the heads at the read point, their cycle at 0
+        p.st(V.QB, 0)
         p.iconst(0, 0)
         p.st(V.PF, 0)
+        p.st(V.QAF, 0)
+        p.st(V.QBF, 0)
+        p.st(V.PH, 0)
 
         def clear_lane():
             _lane_bases(p, V)
@@ -951,10 +977,8 @@ def emit_voice(p: Prog, V: VLayout) -> None:
         p.ld(0, V.PG)
         p.iconst(1, 0)
 
-        def play():
-            p.ld(10, V.PI)
+        def at(qi, qf):                              # F7 = the buffer at (qi, qf), live.Voice.block's at()
             p.ld(13, V.SIZE)
-            wrap(p, 10, 13)
             p.ld(14, V.BASE)
             fetch(p, 6, 10, 14, V.FMT, 9, 0)
             p.iconst(12, 1)
@@ -962,14 +986,62 @@ def emit_voice(p: Prog, V: VLayout) -> None:
             p.if_(3, "GE", 13, lambda: p.iconst(3, 0), kind="i")
             fetch(p, 7, 3, 14, V.FMT, 9, 0)
             p.fop(7, 7, "-", 6)
-            p.ld(5, V.PF)
+            p.ld(5, qf)
             p.fop(7, 5, "*", 7)
             p.fop(7, 6, "+", 7)
+
+        def plain():
+            p.ld(10, V.PI)
+            p.ld(13, V.SIZE)
+            wrap(p, 10, 13)
+            at(V.PI, V.PF)
             p.ld(0, V.PG)
             p.fop(7, 0, "*", 7)
             p.ldi(1, 0, 5)
             p.fop(1, 1, "+", 7)
             p.sti(0, 5, 1)
+
+        def step(qi, qf):                            # live's step(): (qi, qf) += (TI, TF), wrapped at the size
+            p.ld(0, qf)
+            p.ld(1, V.TF)
+            p.fop(0, 0, "+", 1)
+            p.ld(10, qi)
+            p.ld(2, V.TI)
+            p.iop(10, 10, "+", 2)
+            p.fconst(1, 1.0)
+            p.if_(0, "GE", 1, lambda: (p.fop(0, 0, "-", 1), p.iconst(12, 1), p.iop(10, 10, "+", 12)))
+            p.st(qf, 0)
+            p.ld(13, V.SIZE)
+            p.if_(10, "GE", 13, lambda: p.iop(10, 10, "-", 13), kind="i")
+            p.st(qi, 10)
+
+        def heads():
+            p.ld(10, V.QA)
+            at(V.QA, V.QAF)
+            p.st(V.HVA, 7)                           # va
+            p.ld(10, V.QB)
+            at(V.QB, V.QBF)                          # F7 = vb
+            p.ld(0, V.PH)
+            p.fop(2, 0, "+", 0)                      # ph + ph
+            p.fconst(1, 0.5)
+            p.if_(0, "LT", 1, lambda: None, lambda: (p.fconst(3, 2.0), p.fop(2, 3, "-", 2)))   # wa
+            p.fconst(3, 1.0)
+            p.fop(3, 3, "-", 2)                      # wb = 1 - wa
+            p.ld(4, V.HVA)
+            p.fop(4, 2, "*", 4)                      # wa va
+            p.fop(7, 3, "*", 7)                      # wb vb
+            p.fop(7, 4, "+", 7)
+            p.ld(0, V.PG)
+            p.fop(7, 0, "*", 7)
+            p.ldi(1, 0, 5)
+            p.fop(1, 1, "+", 7)
+            p.sti(0, 5, 1)
+            step(V.QA, V.QAF)
+            step(V.QB, V.QBF)
+
+        def play():
+            p.ld(0, V.HEADS)
+            p.ifz(0, "NE", heads, plain)
         p.if_(0, "GT", 1, play)
         # pf += sf; pi += si; carry; wrap into [lstart, lend)
         p.ld(0, V.PF)
@@ -986,6 +1058,46 @@ def emit_voice(p: Prog, V: VLayout) -> None:
         p.ld(14, V.LSTART)
         _wrap_loop(p, 10, 11, 13, 14)
         p.st(V.PI, 10)
+        # RIFT v0.24: the heads' cycle (live.Voice.block): each restarts at the read point where its
+        # triangle is 0; not reading through them, they follow the read point (R10, F0: pi, pf)
+        p.st(V.TMP, 0)
+
+        def cycle():
+            p.ld(1, V.PH)
+            p.fconst(2, LV.HEAD_INC)
+            p.fop(2, 1, "+", 2)                      # ph
+            p.fconst(3, 1.0)
+
+            def wrapped():
+                p.fop(2, 2, "-", 3)
+                p.st(V.QA, 10)
+                p.ld(0, V.TMP)
+                p.st(V.QAF, 0)
+
+            def half():
+                p.fconst(3, 0.5)
+
+                def crossed():
+                    p.st(V.QB, 10)
+                    p.ld(0, V.TMP)
+                    p.st(V.QBF, 0)
+                p.if_(1, "LT", 3, lambda: p.if_(2, "GE", 3, crossed))
+            p.if_(2, "GE", 3, wrapped, half)
+            p.st(V.PH, 2)
+
+        def follow():
+            p.st(V.QA, 10)
+            p.st(V.QB, 10)
+            p.ld(0, V.TMP)
+            p.st(V.QAF, 0)
+            p.st(V.QBF, 0)
+
+        def by_heads():
+            p.ld(0, V.HEADS)
+            p.ifz(0, "NE", cycle, follow)
+        p.ld(0, V.PG)
+        p.iconst(1, 0)
+        p.if_(0, "GT", 1, by_heads, follow)
         p.iconst(9, 1)
         p.ldi(0, 0, 5)
         p.stpost(5, 0)                               # on to the next sample
