@@ -154,6 +154,8 @@ static int continuous(int type, u32 slot, u32 v)
         return (sl_plt[slot >> 5] >> (slot & 31)) & 1;
     if (type == SL_CTR_TYPE)                        /* RIFT v0.20: CONTOUR's knobs (not SURF) */
         return (sl_ctr[slot >> 5] >> (slot & 31)) & 1;
+    if (type == SL_SPL_TYPE)                        /* RIFT v0.25: SPALL's knobs (not TYPE, ALG) */
+        return (sl_spl[slot >> 5] >> (slot & 31)) & 1;
     if (type == SL_PERC_TYPE) {
         if ((sl_perc_fx[slot >> 5] >> (slot & 31)) & 1)
             return 1;

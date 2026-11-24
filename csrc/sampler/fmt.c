@@ -725,6 +725,12 @@ CTR_F(8) CTR_F(9) CTR_F(10) CTR_F(11) CTR_F(12) CTR_F(13) CTR_F(14) CTR_F(15)
 static void (*const ctr_fns[])(int, char *) = {ctr_f0, ctr_f1, ctr_f2, ctr_f3, ctr_f4, ctr_f5, ctr_f6, ctr_f7,
     ctr_f8, ctr_f9, ctr_f10, ctr_f11, ctr_f12, ctr_f13, ctr_f14, ctr_f15};
 _Static_assert(sizeof ctr_fns / sizeof ctr_fns[0] == CTR_N, "one formatter a CONTOUR control");
+#define SPL_F(j) static void spl_f##j(int v, char *b) { fsc_text(&wr_mach_spl, j, v, b); }
+SPL_F(0) SPL_F(1) SPL_F(2) SPL_F(3) SPL_F(4) SPL_F(5) SPL_F(6) SPL_F(7)   /* RIFT v0.25: SPALL's 16 */
+SPL_F(8) SPL_F(9) SPL_F(10) SPL_F(11) SPL_F(12) SPL_F(13) SPL_F(14) SPL_F(15)
+static void (*const spl_fns[])(int, char *) = {spl_f0, spl_f1, spl_f2, spl_f3, spl_f4, spl_f5, spl_f6, spl_f7,
+    spl_f8, spl_f9, spl_f10, spl_f11, spl_f12, spl_f13, spl_f14, spl_f15};
+_Static_assert(sizeof spl_fns / sizeof spl_fns[0] == SPL_N, "one formatter a SPALL control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -806,6 +812,9 @@ void smp_formats(int kind)
     if (kind == CTR_KIND)                       /* RIFT v0.20: CONTOUR's (FASCIA's records too) */
         for (int j = 0; j < CTR_N; j++)
             RECORD_FMT(ctr_rid[j]) = (void *)ctr_fns[j];
+    if (kind == SPL_KIND)                       /* RIFT v0.25: SPALL's (FASCIA's records too) */
+        for (int j = 0; j < SPL_N; j++)
+            RECORD_FMT(spl_rid[j]) = (void *)spl_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.
