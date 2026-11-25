@@ -71,7 +71,7 @@ def test_the_stage_is_the_contract():
             assert mem.get(S.mb(t, ST.MB_ON)) == 0
             peaks[t] = max(peaks.get(t, 0.0), float(np.abs(got).max()))
         assert [mem.get(S.LOWN0), mem.get(S.LOWN1)] == model.own, (n, model.own)
-    assert model.own[0] or model.own[1]
+    assert (model.own[0] or model.own[1]) if LV.VOC_ON else model.own == [0, 0]   # RIFT v0.26: no lanes without the FFT vocoder
     assert peaks[0] > 0.01 and peaks[3] > 0.01 and peaks[5] == 0.0, peaks
 
 

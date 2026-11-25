@@ -265,11 +265,11 @@ SMEAR_SW = 0xB80000 + (SMEAR_L2_LOAD - 0x20000000) // 2
 SMEAR_LANE0_L2 = 0x200B7800                  # WF, WB (16 KB) to 0x200bb800
 SMEAR_L2_SPAN = SMEAR_LANE0_L2 - SMEAR_L2_LOAD   # the code's room: 26 KB
 # RIFT v0.21 (owner, 2026-11-23: "replace the stock master reverb with Plateau"): mverb.asm (wr_mv,
-# dnfw.mverb.program) in SMEAR's L2 room, SMEAR_CODE_ROOM (10 KB since v0.26) after smear.asm's start; its register save area at the
+# dnfw.mverb.program) in SMEAR's L2 room, SMEAR_CODE_ROOM (8 KB) after smear.asm's start; its register save area at the
 # room's end; its state and lines in DDR after GLASS's states (THOLET's former ring). The stock reverb's
 # core call (`CALL 0xb82d1a (DB)` and its two delay-slot pushes, 18 bytes at sw 0xb8370c, in the FX
 # function) becomes `JUMP MVERB_SW`; wr_mv jumps back to sw 0xb83715, past the call.
-SMEAR_CODE_ROOM = 0x2800                       # RIFT v0.26: 10 KB (VOC's keyframe stretch: smear.asm 8.0 KB; 8 KB until v0.25)
+SMEAR_CODE_ROOM = 0x2000                       # 8 KB (RIFT v0.26: the stretch's helpers are leaf subroutines, so smear.asm fits it)
 MVERB_L2_LOAD = SMEAR_L2_LOAD + SMEAR_CODE_ROOM
 MVERB_SW = 0xB80000 + (MVERB_L2_LOAD - 0x20000000) // 2
 MVERB_SAVE_DM = SMEAR_LANE0_L2 - 0x100          # 29 words
@@ -475,13 +475,20 @@ def link_tables() -> bytes:
     _tables): ORGAN's at +0, SMEAR's voice tables at +0x5000, its quarter sine at +0x7000, its swap
     pairs at +0x8000 (dnfw.waverider.dsp's *_DDR; RIFT v0.17: THOLET's +0x5000 gone, SMEAR's moved down)"""
     from ..smear import ddr as SD               # (the committed words: the build needs no numpy)
-    out = bytearray(LINK_TABLES_BYTES)
-    for at, data in ((ORGAN_TABLES_DDR, _organ_tables()),
-                     (SMEAR_VTABLES_DDR, SD.table_bytes("vtables")), (SMEAR_QSIN_DDR, SD.table_bytes("qsin")),
-                     (SMEAR_PAIRS_DDR, SD.table_bytes("pairs"))):
+    from ..smear import live as SL
+    tabs = [(ORGAN_TABLES_DDR, _organ_tables()), (SMEAR_VTABLES_DDR, SD.table_bytes("vtables"))]
+    size = LINK_TABLES_BYTES
+    if SL.VOC_ON:
+        tabs += [(SMEAR_QSIN_DDR, SD.table_bytes("qsin")), (SMEAR_PAIRS_DDR, SD.table_bytes("pairs"))]
+    else:
+        # RIFT v0.26: the FFT vocoder off: its quarter sine and swap pairs are never read, so they are
+        # not sent; the tables end with SMEAR's voice tables (the image's room: 8.5 KB back)
+        size = (SMEAR_VTABLES_DDR - LINK_TABLES_DDR + len(tabs[1][1]) + 63) & ~63
+    out = bytearray(size)
+    for at, data in tabs:
         off = at - LINK_TABLES_DDR
         nxt = min([x - LINK_TABLES_DDR for x in (SMEAR_VTABLES_DDR, SMEAR_QSIN_DDR,
-                                                 SMEAR_PAIRS_DDR) if x > at] + [LINK_TABLES_BYTES])
+                                                 SMEAR_PAIRS_DDR) if x > at] + [size])
         if off + len(data) > nxt:
             raise DspError(f"the link's tables: {len(data)} bytes at +{off:#x} run into +{nxt:#x}")
         out[off:off + len(data)] = data
