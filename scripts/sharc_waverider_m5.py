@@ -1965,7 +1965,12 @@ def _count_memory():
             if h is not None:
                 h[a >> 12] = h.get(a >> 12, 0) + 1
             return "DDR"
-        return "L2" if 0x20000000 <= a < 0x20200000 else "L1"
+        if 0x20000000 <= a < 0x20200000:
+            h = counts.get("hist2")
+            if h is not None:
+                h[a >> 8] = h.get(a >> 8, 0) + 1
+            return "L2"
+        return "L1"
     import sys as _s
     orig_r, orig_w = fx._dm_read, fx._dm_write
 
@@ -5244,7 +5249,10 @@ def step_rprof(init, sound, machines) -> dict:
                 return None
             st = rr["state"]
             out.append(rr.get("instructions", 0) + 0.95 * (4 * counts["L2"] + 10 * counts["DDR"]))
+            parts.append((rr.get("instructions", 0), counts["L2"], counts["DDR"]))
         return out
+    parts = []
+    only = os.environ.get("RPROF_ONLY", "").split(",") if os.environ.get("RPROF_ONLY") else None
     res = {}
     try:
         idle = rows(lambda b: fsc_frame(sound, machines, {}, trig=()), 60)
@@ -5262,9 +5270,27 @@ def step_rprof(init, sound, machines) -> dict:
             "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
             "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
         }
+        ibase = parts[-1]
+        print(f"    rprof idle frame parts (instructions, L2, DDR): {ibase}", flush=True)
+        if only and "IDLES" in only:                                    # idle FASCIA slots, by how many
+            for n in ():
+                rows(lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(n)}, trig=()), 16)
+                print(f"    rprof {n} idle FASCIA slots less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(parts[-1], ibase))}", flush=True)
+            hist = {}
+            counts["hist2"] = hist
+            rows(lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(2)}, trig=()), 3)
+            h15 = dict(hist); hist.clear()
+            rows(lambda b: fsc_frame(sound, machines, {}, trig=()), 3)
+            d = {k: (h15.get(k, 0) - hist.get(k, 0)) // 3 for k in set(h15) | set(hist)}
+            counts["hist2"] = None
+            print("    rprof L2 256-byte pages, 2 idle FASCIA less none, a block:", sorted(((hex(k << 8), v) for k, v in d.items() if v), key=lambda kv: kv[0]), flush=True)
         for name, fb in cases.items():
+            if only and name not in only:
+                continue
             r_idle = rows(lambda b: fb(()), 40)                      # the machine on slot 0, no note
             print(f"    rprof {name} no note: first {[round(x - base) for x in r_idle[:3]]}, last {[round(x - idle[min(k, 59)]) for k, x in list(enumerate(r_idle))[-3:]]} (against the idle frame's same block)", flush=True)
+            pi = parts[-1]
+            print(f"    rprof {name} no note parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(pi, ibase))}", flush=True)
             r = rows(lambda b: fb((0,) if b == 1 else ()), 40)
             res[name] = {"idle": round(max(r_idle[:3]) - base) if r_idle else None,
                          "strike": round(r[1] - base) if r else None,
