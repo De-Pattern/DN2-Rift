@@ -831,7 +831,8 @@ td,th{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-alig
 .credit{font-size:13px;color:var(--dim)}.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0}
 ul{padding-left:20px}li{margin:4px 0}
 :target{scroll-margin-top:56px}
-</style></head><body><main>
+.pdfbtn{position:fixed;top:10px;right:14px;z-index:20;font:600 13px/1 'Space Grotesk',ui-sans-serif,system-ui,sans-serif;letter-spacing:.04em;color:#fff;background:#8a2a3c;border:1px solid #b04a5c;border-radius:8px;padding:9px 13px;text-decoration:none}.pdfbtn:hover{background:#a0344a}@media print{.pdfbtn{display:none}}
+</style></head><body><a class="pdfbtn" href="rift-manual.pdf" download title="The manual as one PDF">Download PDF</a><main>
 """
 
 
