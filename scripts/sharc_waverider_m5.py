@@ -859,6 +859,8 @@ def main(argv=None):
                                 lambda: step_mverb(warm, sound, machines)),
                                ("rcost", "each RIFT machine's worst block on the unit's cost model; SMEAR's VOC within its guard's peak (RIFT v0.18)",
                                 lambda: step_rcost(warm(), sound, machines)),
+                               ("rprof", "RIFT v0.27 (a probe, not a gate step): every RIFT machine's cost a block, idle, struck and ringing",
+                                lambda: step_rprof(warm(), sound, machines)),
                                ("sanitize", "no block leaves our code not finite or past 64: zeroed, the voice afresh (RIFT v0.18)",
                                 lambda: step_sanitize(warm(), sound, machines)),
                                ("smear", "SMEAR (smear.asm) bit-exact to its program, lanes, notes, an empty slot (RIFT v0.16)",
@@ -5219,6 +5221,57 @@ def step_rcost(init, sound, machines) -> dict:
               # Fifteen busy tracks on GLASS are past the frame by design: the guard's limit leaves them room
               f"v0.22: GLASS's cost a slot within {GLASS_SLOT:,}": glass_slot <= GLASS_SLOT}
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, "glass_slot": glass_slot, **out}}
+
+
+def step_rprof(init, sound, machines) -> dict:
+    """RIFT v0.27 (the optimization pass): a probe, not a gate step. Each RIFT machine's cost a block on the
+    unit's cost model (rcost's), less an idle frame's: a slot of the machine with no note (idle), its strike
+    block, and its blocks after (ringing). What the time guard's FLOOR should be for each machine."""
+    from dnfw.silt import bench as SB            # noqa: PLC0415
+    from dnfw.ligature import bench as LB        # noqa: PLC0415
+    from dnfw.digidrum import bench as DB        # noqa: PLC0415
+    counts, undo = _count_memory()
+
+    def rows(fb, n):
+        st, out = init, []
+        for b in range(n):
+            for k in ("L1", "L2", "DDR"):
+                counts[k] = 0
+            counts["on"] = True
+            rr = run_blocks(st, lambda _b, b=b: fb(b), 1)
+            counts["on"] = False
+            if not rr["ok"]:
+                return None
+            st = rr["state"]
+            out.append(rr.get("instructions", 0) + 0.95 * (4 * counts["L2"] + 10 * counts["DDR"]))
+        return out
+    res = {}
+    try:
+        idle = rows(lambda b: fsc_frame(sound, machines, {}, trig=()), 3)
+        base = max(idle)
+        fp = fsc_audition()["01_tubular_bell"][0]
+        organ_full = {"STOP": 4, "R16": 127, "R8": 127, "R4": 127, "CELESTE": 80, "TREM": 60}
+        cases = {
+            "FASCIA": lambda tr: plt_frame(sound, machines, {}, {0: (fp, 60, 1.0)}, trig=tr),
+            "ORGAN": lambda tr: og_frame(sound, machines, {0: (organ_full, 60.0)}, trig=tr),
+            "SILT": lambda tr: sl_frame(sound, machines, {0: (SB.panel_knobs(), 55.0, 110)}, trig=tr),
+            "LIGATURE": lambda tr: lg_frame(sound, machines, {0: (LB.panel_knobs(PATCH="INIT"), 55.0, 110)}, trig=tr),
+            "DIGIDRUM": lambda tr: dd_frame(sound, machines, {0: (DB.panel_knobs(), 55.0)}, trig=tr),
+            "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
+            "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
+        }
+        for name, fb in cases.items():
+            r_idle = rows(lambda b: fb(()), 3)                       # the machine on slot 0, no note
+            r = rows(lambda b: fb((0,) if b == 1 else ()), 40)
+            res[name] = {"idle": round(max(r_idle) - base) if r_idle else None,
+                         "strike": round(r[1] - base) if r else None,
+                         "after": [round(x - base) for x in r[2:]] if r else None,
+                         "worst": round(max(r) - base) if r else None}
+            print(f"    rprof {name}: idle {res[name]['idle']}, strike {res[name]['strike']}, worst {res[name]['worst']}, "
+                  f"after {res[name]['after'][:6] if r else None} ... {res[name]['after'][-3:] if r else None}", flush=True)
+    finally:
+        undo()
+    return {"ok": True, "checks": {"measured": True}, "numbers": res}
 
 
 def mv_frame(sound, machines, words) -> bytes:
