@@ -198,6 +198,7 @@ def test_ddr_spans_are_clear_of_the_stock_image_and_the_engine():
                                           dsp.DIGIDRUM_TABLES_DDR,                           # RIFT: DIGIDRUM's
                                           *((dsp.PLATEAU_TABLES_DDR,) if __import__("dnfw.plateau.machines", fromlist=["x"]).ON_DSP else ()),
                                           dsp.CONTOUR_TABLES_DDR,   # RIFT v0.17: PLATEAU's (v0.21: while on the DSP); v0.20: CONTOUR's
+                                          dsp.SPALL_TABLES_DDR,     # RIFT v0.25: SPALL's
                                           dsp.SMP_POOL_DDR, dsp.SMP_POOL_DDR + 8]
         sp = sorted((a, a + len(pl)) for _, a, pl in ddr)            # none overlaps another, all past the
         assert all(e <= a2 for (_a, e), (a2, _e) in zip(sp, sp[1:]))  # stock's DDR (its ceiling, 16 MB in)
