@@ -1,4 +1,4 @@
-"""GLASS's DSP program (RIFT v0.18: the FLTR type 6, on every machine): `dnfw.glass.live.Voice` on the
+"""RUBBER's DSP program (RIFT v0.24, in GLASS's place: the FLTR type 6, on every machine): `dnfw.glass.live.Voice` on the
 SHARC, in FASCIA's expression compiler with ORGAN's leaves (exp2f, expf, sin_turns, recip). The same
 calls are the assembly text and, run in Python, its exact model; test_glass_program holds the run mode
 to live.Voice bit for bit.
@@ -9,7 +9,7 @@ whose frame filter type is 6 (the frame's word 180 + 2 t; the DSP's own filter n
 filter", so the chain skips its filter stage), the slot's buffer is filtered in place.
 
 **Its settings** are the stock filter fields the unpack writes into the slot's record as floats
-(`voice.TRACKS + 0x234 t`, live.FIELDS); its state (the filter's, the envelope's, the vactrol's) is in
+(`voice.TRACKS + 0x234 t`, live.FIELDS); its state (the four stages', the coefficient's, the envelope's) is in
 DDR at GLASS_STATE + 64 t (16 words a slot), loaded and stored once a block.
 """
 from __future__ import annotations
@@ -30,18 +30,18 @@ from . import live as LV
 
 F = np.float32
 assert BLOCK == LV.SUB
-FAST = True                            # RIFT v0.22: the samples in registers (samples_fast); False: v0.18..v0.21's sample()
+FAST = True                            # RIFT v0.24: RUBBER's samples in registers (samples_fast); False: sample()
 FILTER_HDR = 180                       # the frame's filter type a slot (dnfw.waverider.frame.FILTER)
 REC_STRIDE = WV.TRACK_STRIDE
 
 # -- a slot's state (DDR, 16 words) -----------------------------------------------------------------
-ST = St().w("s1", "s2", "lowz", "stage", "u", "env", "vac", "vtarget")
+ST = St().w("s1", "s2", "s3", "s4", "gp", "stage", "u", "env")
 assert ST.n <= 16
 
 _SRC = pathlib.Path(__file__).read_text(encoding="utf-8")
-FIELD_WORDS = ("r_typ", "r_freq", "r_res", "r_lpg", "r_atk", "r_dec", "r_abnd", "r_dbnd", "r_depth", "r_keyt")
+FIELD_WORDS = ("r_typ", "r_freq", "r_res", "r_atk", "r_dec", "r_abnd", "r_dbnd", "r_depth", "r_keyt")
 WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC))
-                     | {"trig", "nn", "gt", "gcnt", "rb", "sb", "bp", "icnt", "ocnt"} | set(FIELD_WORDS)))
+                     | {"trig", "nn", "gt", "gcnt", "rb", "sb", "bp", "icnt", "ocnt", "y1", "y2", "y3", "y4"} | set(FIELD_WORDS)))
 
 
 def k(x) -> Kc:
@@ -142,7 +142,6 @@ class GG(OP.OG):
             self.ptr(3, "sb")
             self.iset(self.Si("stage"), 1)
             self.fz(S("u"))
-            self.set(S("vtarget"), k(1.0))
         p.ifz(0, "NE", trig)
         self.ptr(3, "sb")
         self.set(c("atk"), k(0.0001) * exp2f(c("r_atk") * k(12.0)))
@@ -186,69 +185,32 @@ class GG(OP.OG):
         self.icmp(self.Si("stage"), "EQ", 1, attack,
                   lambda: (self.ptr(3, "sb"), self.icmp(self.Si("stage"), "EQ", 2, decay,
                                                         lambda: (self.ptr(3, "sb"), self.fz(S("env"))))))
-        # LPG's vactrol
-        self.ptr(3, "sb")
-        self.set(c("v0"), S("vac"))
-
-        def lpg_on():
-            def rise():
-                self.ptr(3, "sb")
-                self.set(S("vac"), S("vac") + k(LV.LPG_STEP) * (S("vtarget") - S("vac")))
-                self.ptr(3, "sb")
-                self.cmp(S("vac"), "GT", k(0.98) * S("vtarget"), lambda: (self.ptr(3, "sb"), self.fz(S("vtarget"))))
-
-            def fall():
-                self.ptr(3, "sb")
-                self.set(c("cl"), k(1.0) - S("vac"))
-                self.set(c("vtau"), c("dec") * (k(0.15) + k(0.85) * (c("cl") * c("cl"))))
-                self.ptr(3, "sb")
-                self.set(S("vac"), S("vac") * expf(k(0.0) - k(LV.BLK) * FP_.recip(c("vtau"))))
-            self.ptr(3, "sb")
-            self.cmp(S("vtarget"), "GT", S("vac"), rise, fall)
-
-        def lpg_off():
-            self.ptr(3, "sb")
-            self.set(S("vac"), k(1.0))
-            self.fz(S("vtarget"))
-        self.cmp(c("r_lpg"), "GE", k(0.5), lpg_on, lpg_off)
         # the cutoff
-        self.ptr(3, "sb")
         self.set(c("note"), c("r_freq") * k(128.0) + c("r_keyt") * (c("nn") - k(60.0)))
+        self.ptr(3, "sb")
         self.set(c("note"), c("note") + ((c("r_depth") - k(0.5)) * k(144.0)) * S("env"))
-        self.cmp(c("r_lpg"), "GE", k(0.5),
-                 lambda: (self.ptr(3, "sb"), self.set(c("note"), k(20.0) + (c("note") - k(20.0)) * S("vac"))))
         self.set(c("hz"), note_hz(c("note")))
         self.set(c("hz"), mn(mx(c("hz"), k(LV.F_MIN)), k(LV.F_MAX)))
-        self.set(c("wt"), c("hz") * k(float(F(LV.PI_2FS * LV.INV_PI * F(0.5)))))
+        self.set(c("wt"), c("hz") * k(float(F(LV.PI_2FS * LV.INV_PI))))
         self.set(c("g"), sin_turns(c("wt")) * FP_.recip(sin_turns(c("wt") + k(0.25))))
-        self.set(c("rs"), c("r_res") * (k(0.7) + k(0.3) * c("r_res")))
-        self.set(c("tau"), k(0.004) * exp2f(c("rs") * k(9.96578428)))
-        self.set(c("q"), mx((k(3.14159265) * c("hz")) * c("tau"), k(0.5)))
-        self.set(c("kk"), FP_.recip(c("q")))
-        self.set(c("a1"), FP_.recip(k(1.0) + c("g") * (c("g") + c("kk"))))
-        self.set(c("drive"), k(1.0) - k(0.45) * (c("r_res") * c("r_res")))
-        self.set(c("idrive"), FP_.recip(c("drive")))
-        self.set(c("lp1"), k(1.0) - expf(k(0.0) - k(LV.TWOPI_FS) * c("hz")))
-        self.set(c("keep"), k(0.5) * c("r_res"))
-        self.cmp(c("r_res"), "LT", k(0.3), lambda: self.set(c("keep"), c("keep") * (c("r_res") * k(float(F(1.0 / 0.3))))))
-        self.set(c("kb"), c("kk") * k(LV.SQRT2))
-
-        def lev_lpg():
-            self.ptr(3, "sb")
-            self.set(c("lev0"), c("v0"))
-            self.set(c("lev1"), S("vac"))
-
-        def lev_flat():
-            self.set(c("lev0"), k(1.0))
-            self.set(c("lev1"), k(1.0))
-        self.cmp(c("r_lpg"), "GE", k(0.5), lev_lpg, lev_flat)
-        self.set(c("dlev"), (c("lev1") - c("lev0")) * k(LV.INV_SUB))
-        self.set(c("lev"), c("lev0"))
+        self.set(c("g1"), c("g") * FP_.recip(k(1.0) + c("g")))
+        self.ptr(3, "sb")
+        self.cmp(S("gp"), "GT", k(0.0), lambda: (self.ptr(3, "sb"), self.set(c("g0"), S("gp"))),
+                 lambda: self.set(c("g0"), c("g1")))
+        self.set(c("dg"), (c("g1") - c("g0")) * k(LV.INV_SUB))
+        self.ptr(3, "sb")
+        self.set(S("gp"), c("g1"))
+        self.set(c("kq"), (c("r_res") * (k(0.7) + k(0.3) * c("r_res"))) * k(LV.K_MAX))
+        self.set(c("g2"), c("g1") * c("g1"))
+        self.set(c("den"), FP_.recip(k(1.0) + c("kq") * (c("g2") * c("g2"))))
+        self.set(c("drive"), k(1.0) + c("r_typ") * k(LV.DRIVE_SPAN))
+        self.set(c("ing"), c("drive") * (k(1.0) + c("kq") * k(LV.COMP)))
+        self.set(c("outg"), FP_.recip(k(0.6) + k(0.4) * c("drive")))
         # the state into words, the samples, the state back
         self.ptr(3, "sb")
-        self.set(c("s1"), S("s1"))
-        self.set(c("s2"), S("s2"))
-        self.set(c("lowz"), S("lowz"))
+        for n in ("s1", "s2", "s3", "s4"):
+            self.set(c(n), S(n))
+        self.set(c("gg"), c("g0"))
         p.ld(9, L.t_word)
         p.lsh(12, 9, 2)
         p.iconst(11, BUFFERS)
@@ -258,125 +220,73 @@ class GG(OP.OG):
         p.st(C["bp"], 0)
         if FAST:
             self.samples_fast()
-            return
-        p.loop(C["icnt"], BLOCK, self.sample)
+        else:
+            p.loop(C["icnt"], BLOCK, lambda: self.rt("g_tick", self.sample))
         self.ptr(3, "sb")
-        self.set(S("s1"), c("s1"))
-        self.set(S("s2"), c("s2"))
-        self.set(S("lowz"), c("lowz"))
+        for n in ("s1", "s2", "s3", "s4"):
+            self.set(S(n), c(n))
 
     def samples_fast(self) -> None:
-        """RIFT v0.22 (the owner, 2026-11-23: GLASS "weirdly bitcrushed, like the Monomachine's overload"):
-        sample()'s 32 samples with the filter's state, the cutoff's coefficients and the level in registers.
-        The same operations on the same operands in the same order as sample() (float32 after each, the
-        core's RND32): the same bits, at about a quarter of the cost (sample() loaded and stored every
-        intermediate; on fifteen tracks GLASS took 108k cycles a block and ran the frame over).
-
-        R2 s1, R3 s2, R13 lowz, R14 lev, R7 g, R8 a1, R9 2.0, R10 KNEE, R11 the abs mask; R4 xin (then hp),
-        R5 v1 (then bp), R6 v2 (then lp); R0 R1 R12 scratch; R15 the count; I4 the buffer, I3 the state."""
+        """sample()'s 32 samples with the stages, the coefficient and the block's constants in registers: the
+        same operations on the same operands in the same order (the same bits), a third of the cost.
+        R2..R5 s1..s4, R6 gg, R7 dg, R8 kq, R9 den, R10 ing, R11 outg; R0 R1 R12 R13 R14 scratch; R15 the
+        count; I4 the buffer."""
         p, C = self.p, self.L.C
-        self.ptr(3, "sb")
-        p.ldi(2, ST["s1"], 3)
-        p.ldi(3, ST["s2"], 3)
-        p.ldi(13, ST["lowz"], 3)
-        p.ld(14, C["lev"])
-        p.ld(7, C["g"])
-        p.ld(8, C["a1"])
-        p.fconst(9, 2.0)
-        p.fconst(10, float(LV.KNEE))
-        p.iconst(11, 0x7FFFFFFF)
+        for r, n in ((2, "s1"), (3, "s2"), (4, "s3"), (5, "s4"), (6, "gg"), (7, "dg"), (8, "kq"), (9, "den"),
+                     (10, "ing"), (11, "outg")):
+            p.ld(r, C[n])
         self.ptr(4, "bp")
 
-        def knee():                                  # R2 = live.knee(R2); R0 = |R2|
-            p.iop(0, 2, "AND", 11)
-
-            def over():
-                p.fconst(1, float(LV.KNEE3))
-
-                def top():
-                    p.fconst(12, 0.0)
-                    p.if_(2, "GT", 12, lambda: p.fconst(2, float(LV.KNEE2)),
-                          lambda: p.fconst(2, float(F(F(0.0) - LV.KNEE2))))
-
-                def bend_():
-                    p.fop(1, 0, "-", 10)             # kd = ka - KNEE
-                    p.fop(1, 1, "*", 1)              # kd kd
-                    p.fconst(12, float(LV.INV4K))
-                    p.fop(1, 1, "*", 12)             # (kd kd) INV4K
-                    p.fop(1, 0, "-", 1)              # ky = ka - that
-                    p.fconst(12, 0.0)
-                    p.if_(2, "GT", 12, lambda: p.fpass(2, 1), lambda: p.fop(2, 12, "-", 1))
-                p.if_(0, "GE", 1, top, bend_)
-            p.if_(0, "LE", 10, lambda: None, over)
-
-        def step():
-            p.fop(0, 4, "-", 3)                      # v3 = xin - s2
-            p.fop(0, 7, "*", 0)                      # g v3
-            p.fop(0, 2, "+", 0)                      # s1 + g v3
-            p.fop(5, 8, "*", 0)                      # v1 = a1 (..)
-            p.fop(0, 7, "*", 5)                      # g v1
-            p.fop(6, 3, "+", 0)                      # v2 = s2 + g v1
-            p.fop(0, 9, "*", 5)                      # 2 v1
-            p.fop(2, 0, "-", 2)                      # s1 = 2 v1 - s1
-            knee()
-            p.fop(0, 9, "*", 6)                      # 2 v2
-            p.fop(3, 0, "-", 3)                      # s2 = 2 v2 - s2
-
-        def one():
-            p.ldi(0, 0, 4)                           # xi
-            p.st(C["xi"], 0)
-            p.ld(1, C["drive"])
-            p.fop(4, 0, "*", 1)                      # xin = xi drive
-            step()
-            step()
-            p.ld(1, C["kk"])
-            p.fop(0, 1, "*", 5)                      # kk v1
-            p.fop(0, 4, "-", 0)                      # xin - kk v1
-            p.fop(0, 0, "-", 6)                      # .. - v2
-            p.ld(1, C["idrive"])
-            p.fop(4, 0, "*", 1)                      # hp
-            p.fop(5, 5, "*", 1)                      # bp
-            p.fop(6, 6, "*", 1)                      # lp
-            p.ld(0, C["xi"])
-            p.fop(0, 0, "-", 13)                     # xi - lowz
-            p.ld(1, C["lp1"])
-            p.fop(0, 1, "*", 0)
-            p.fop(13, 13, "+", 0)                    # lowz
-            p.fop(0, 13, "-", 6)                     # lowz - lp
-            p.ld(1, C["keep"])
-            p.fop(0, 1, "*", 0)
-            p.fop(6, 6, "+", 0)                      # lp + keep (lowz - lp)
-            p.ld(12, C["kb"])
-            p.fop(5, 5, "*", 12)                     # bp kb
-            p.ld(0, C["r_typ"])
-            p.fconst(1, 0.5)
+        def sat0():                                  # R0 = live.sat(R0)
+            def mid():
+                p.fop(1, 0, "*", 0)                  # x2
+                p.fconst(13, 27.0)
+                p.fop(13, 13, "+", 1)                # 27 + x2
+                p.fop(13, 0, "*", 13)                # x (27 + x2)
+                p.fconst(14, 9.0)
+                p.fop(14, 14, "*", 1)                # 9 x2
+                p.fconst(12, 27.0)
+                p.fop(14, 12, "+", 14)               # 27 + 9 x2
+                FP_._recip_body(p, 14, 1, 0)         # R1 = recip(R14)
+                p.fop(0, 13, "*", 1)
+            p.fconst(1, float(LV.SAT3))
 
             def low():
-                p.fop(0, 0, "*", 9)                  # tt = typ 2
-                p.fconst(1, 1.0)
-                p.fop(1, 1, "-", 0)                  # 1 - tt
-                p.fop(1, 1, "*", 6)                  # (1 - tt) lp
-                p.fop(0, 0, "*", 5)                  # tt (bp kb)
-                p.fop(0, 1, "+", 0)
+                p.fconst(1, -3.0)
+                p.if_(0, "LE", 1, lambda: p.fconst(0, -1.0), mid)
+            p.if_(0, "GE", 1, lambda: p.fconst(0, 1.0), low)
 
-            def high():
-                p.fop(0, 0, "-", 1)                  # typ - 0.5
-                p.fop(0, 0, "*", 9)                  # tt
-                p.fconst(1, 1.0)
-                p.fop(1, 1, "-", 0)                  # 1 - tt
-                p.fop(1, 1, "*", 5)                  # (1 - tt) (bp kb)
-                p.fop(0, 0, "*", 4)                  # tt hp
-                p.fop(0, 1, "+", 0)
-            p.if_(0, "LE", 1, low, high)
-            p.fop(0, 0, "*", 14)                     # o lev
+        def one():
+            p.fop(6, 6, "+", 7)                      # gg += dg
+            p.fconst(1, 1.0)
+            p.fop(1, 1, "-", 6)                      # om
+            p.fop(12, 6, "*", 6)                     # q2
+            p.fop(13, 12, "*", 6)                    # q3
+            p.fop(13, 13, "*", 2)                    # q3 s1
+            p.fop(12, 12, "*", 3)                    # q2 s2
+            p.fop(13, 13, "+", 12)
+            p.fop(12, 6, "*", 4)                     # gg s3
+            p.fop(13, 13, "+", 12)
+            p.fop(13, 13, "+", 5)                    # + s4
+            p.fop(13, 13, "*", 1)                    # sm
+            p.ldi(0, 0, 4)                           # x
+            p.fop(0, 0, "*", 10)                     # x ing
+            p.fop(13, 8, "*", 13)                    # kq sm
+            p.fop(0, 0, "-", 13)
+            p.fop(0, 0, "*", 9)                      # u
+            sat0()
+            for s in (2, 3, 4, 5):
+                p.fop(12, 0, "-", s)                 # prev - s
+                p.fop(12, 6, "*", 12)                # gg (..)
+                p.fop(0, s, "+", 12)                 # y
+                p.fconst(13, 2.0)
+                p.fop(13, 13, "*", 0)                # 2 y
+                p.fop(s, 13, "-", s)                 # s = 2 y - s
+            p.fop(0, 0, "*", 11)                     # y4 outg
             p.stpost(4, 0)
-            p.ld(1, C["dlev"])
-            p.fop(14, 14, "+", 1)                    # lev + dlev
         p.loop_r(15, BLOCK, one)
-        self.ptr(3, "sb")
-        p.sti(ST["s1"], 3, 2)
-        p.sti(ST["s2"], 3, 3)
-        p.sti(ST["lowz"], 3, 13)
+        for r, n in ((2, "s1"), (3, "s2"), (4, "s3"), (5, "s4")):
+            p.st(C[n], r)
 
     def bend(self, dst: str, u: Mv, b: Mv) -> None:
         """c(dst) = live.bend(u, b): one routine (g_bend) on bu, bc, into bd"""
@@ -414,36 +324,35 @@ class GG(OP.OG):
             self.cmp(c("ka"), "GE", k(LV.KNEE3), top, bend_)
         self.cmp(c("ka"), "LE", k(LV.KNEE), lambda: None, over)
 
+    def sat(self, m: Mv) -> None:
+        """m = live.sat(m)"""
+        c = self.c
+
+        def mid():
+            self.set(c("x2"), m * m)
+            self.set(m, (m * (k(27.0) + c("x2"))) * FP_.recip(k(27.0) + k(9.0) * c("x2")))
+        self.cmp(m, "GE", k(LV.SAT3), lambda: self.set(m, k(1.0)),
+                 lambda: self.cmp(m, "LE", k(-3.0), lambda: self.set(m, k(-1.0)), mid))
+
     def sample(self) -> None:
         p, c = self.p, self.c
         self.ptr(4, "bp")
         self.set(c("xi"), Mv("i", 4, 0))
-        self.set(c("xin"), c("xi") * c("drive"))
-        def step():                              # twice the rate, the input held
-            self.set(c("v3"), c("xin") - c("s2"))
-            self.set(c("v1"), c("a1") * (c("s1") + c("g") * c("v3")))
-            self.set(c("v2"), c("s2") + c("g") * c("v1"))
-            self.set(c("s1"), k(2.0) * c("v1") - c("s1"))
-            self.knee(c("s1"))
-            self.set(c("s2"), k(2.0) * c("v2") - c("s2"))
-        p.loop(self.L.C["ocnt"], 2, step)
-        self.set(c("lp"), c("v2") * c("idrive"))
-        self.set(c("bpo"), c("v1") * c("idrive"))
-        self.set(c("hp"), ((c("xin") - c("kk") * c("v1")) - c("v2")) * c("idrive"))
-        self.set(c("lowz"), c("lowz") + c("lp1") * (c("xi") - c("lowz")))
-        self.set(c("lp"), c("lp") + c("keep") * (c("lowz") - c("lp")))
-
-        def low():
-            self.set(c("tt"), c("r_typ") * k(2.0))
-            self.set(c("o"), (k(1.0) - c("tt")) * c("lp") + c("tt") * (c("bpo") * c("kb")))
-
-        def high():
-            self.set(c("tt"), (c("r_typ") - k(0.5)) * k(2.0))
-            self.set(c("o"), (k(1.0) - c("tt")) * (c("bpo") * c("kb")) + c("tt") * c("hp"))
-        self.cmp(c("r_typ"), "LE", k(0.5), low, high)
+        self.set(c("gg"), c("gg") + c("dg"))
+        self.set(c("om"), k(1.0) - c("gg"))
+        self.set(c("q2"), c("gg") * c("gg"))
+        self.set(c("q3"), c("q2") * c("gg"))
+        self.set(c("sm"), ((((c("q3") * c("s1")) + c("q2") * c("s2")) + c("gg") * c("s3")) + c("s4")) * c("om"))
+        self.set(c("uu"), ((c("xi") * c("ing")) - c("kq") * c("sm")) * c("den"))
+        self.sat(c("uu"))
+        prev = "uu"
+        for n in ("s1", "s2", "s3", "s4"):
+            yn = "y" + n[1]
+            self.set(c(yn), c(n) + c("gg") * (c(prev) - c(n)))
+            self.set(c(n), k(2.0) * c(yn) - c(n))
+            prev = yn
         self.ptr(4, "bp")
-        self.set(Mv("i", 4, 0), c("o") * c("lev"))
-        self.set(c("lev"), c("lev") + c("dlev"))
+        self.set(Mv("i", 4, 0), c("y4") * c("outg"))
         self.bump("bp", 4)
 
 

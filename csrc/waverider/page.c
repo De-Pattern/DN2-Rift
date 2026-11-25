@@ -196,6 +196,30 @@ static int glass_active(void)                   /* which of glass_filters the ac
     return -1;
 }
 
+/* RIFT v0.24 (owner, 2026-11-24): RUBBER's FLTR pages. Page 1 (Multi-Mode's row, which filter 6 reads) loses
+ * SUS and REL, so turning a curve no longer moves the envelope's picture; page 2 (one row for every filter)
+ * gains them in its two empty places, as ABND and DBND, and loses Env. Delay (GLASS's LPG; RUBBER has none).
+ * The rows are the stock's, in RAM (built at start-up), written only while the active track is on RUBBER
+ * and only when they hold what this expects (stock's, or ours), and put back as soon as it is not. */
+#define FL_ROW1 ((volatile u32 *)0x424329D4u)   /* page 1, Multi-Mode: ATK DEC SUS REL / FREQ RES TYPE ENV */
+#define FL_ROW2 ((volatile u32 *)0x42432E44u)   /* page 2: DLY . . KEYT / BASE WDTH .. .. */
+static void rubber_cells(int on)
+{
+    static const u32 p1_stock[2] = {0x2F, 0x30}, p2_stock[3] = {0x2C, 0, 0};
+    static const u32 p1_ours[2] = {0, 0}, p2_ours[3] = {0, 0x2F, 0x30};
+    const u32 *p1_from = on ? p1_stock : p1_ours, *p1_to = on ? p1_ours : p1_stock;
+    const u32 *p2_from = on ? p2_stock : p2_ours, *p2_to = on ? p2_ours : p2_stock;
+    if (FL_ROW1[2] == p1_from[0] && FL_ROW1[3] == p1_from[1] && FL_ROW1[0] == 0x2D && FL_ROW1[4] == 0x24) {
+        FL_ROW1[2] = p1_to[0];
+        FL_ROW1[3] = p1_to[1];
+    }
+    if (FL_ROW2[0] == p2_from[0] && FL_ROW2[1] == p2_from[1] && FL_ROW2[2] == p2_from[2] && FL_ROW2[3] == 0x33) {
+        FL_ROW2[0] = p2_to[0];
+        FL_ROW2[1] = p2_to[1];
+        FL_ROW2[2] = p2_to[2];
+    }
+}
+
 void glass_names(void)
 {
     int on = glass_active();
@@ -212,6 +236,7 @@ void glass_names(void)
         NAME_LONG(id) = l ? l : glass_stock_long[k];
         NAME_SHORT(id) = sh ? sh : glass_stock_short[k];
     }
+    rubber_cells(on >= 0);
     glass_on = on;
 }
 
@@ -651,6 +676,13 @@ void wr_cell(void *view, void *canvas, int x0, int y0, u32 id)
 {
     extern void sl_cell(void *view, void *canvas, int x, int y, u32 id);
     sl_cell(view, canvas, x0, y0, id);          /* parameter slides: SLD/SLEN on TRIG page 2 */
+    if (glass_on >= 0 && (id == 0x2F || id == 0x30)) {   /* RIFT v0.24: RUBBER's ABND, DBND on FLTR page 2: a knob */
+        extern void rub_knob(void *c, int x, int y, int v);
+        u8 fl;
+        const int *r = RECORD(id);
+        int span = r[3] - r[2], v = GET_VALUE(view, id, &fl) - r[2];
+        rub_knob(canvas, x0, y0, span > 0 ? v * 127 / span : 0);
+    }
 }
 
 void wr_page_draw(void *view, void *canvas)

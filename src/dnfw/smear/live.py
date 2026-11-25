@@ -315,6 +315,14 @@ DEFAULTS = dict(TUNE=64, SPD=80, BLND=0, SAMP=0, STRT=0, SIZE=127, DENS=64, OVLP
 FRZ_ON = 64                                    # RIFT v0.22: FRZ at 64 and over: frozen (its two choices are 0 and 127)
 WIN_NAMES = ("GAUS", "BHAR", "EXPO", "TRI", "RAMP", "SINC", "RECT")
 MIN_LOOP = 64
+# RIFT v0.24 (owner, 2026-11-24: "the point of nebulae is that it decouples pitch from speed ... make
+# that strictly pitch and keep speed for speed only"): PLAY's read point moves at SPD (x the sample's
+# rate) alone; TUNE and the note set the pitch through two read heads, each starting at the read
+# point and reading on at the pitch ratio, crossfaded with triangles half a cycle apart (their sum is
+# 1), each restarting where its triangle is 0. HEAD_LEN samples a cycle. When the heads would step
+# exactly as the read point does (no transposition, speed 1), PLAY reads the read point as before.
+HEAD_LEN = 2048
+HEAD_INC = 1.0 / HEAD_LEN
 
 
 def _speed(k: int) -> float:
@@ -390,6 +398,7 @@ class Voice:
         self.voc = Voc(self.buf)
         self.grn = Grn(self.buf, TABLES["WIN"][3])
         self.pi, self.pf = 0, f32(0)
+        self.qa, self.qaf, self.qb, self.qbf, self.ph = 0, f32(0), 0, f32(0), f32(0)
 
     def loop(self, k):
         size = len(self.buf)
@@ -399,6 +408,7 @@ class Voice:
 
     def trig(self, k):
         self.pi, self.pf = self.loop(k)[0], f32(0)
+        self.qa, self.qaf, self.qb, self.qbf, self.ph = self.pi, f32(0), self.pi, f32(0), f32(0)
         self.voc.reset()
 
     def block(self, k: dict, tr: float = 1.0, trig: bool = False, clock: int = 0,
@@ -407,9 +417,12 @@ class Voice:
             self.trig(k)
         T = TABLES
         pitch = f32(tr)
-        spd = f32(T["SPD"][k["SPD"]] * pitch)          # RIFT v0.22 (owner: "get TUNE working"): PLAY as tape, TUNE and the note with it (tr holds the rate)
+        spd = f32(T["SPD"][k["SPD"]] * self.rate)      # RIFT v0.24: the read point at SPD alone (v0.22: x tr, as tape)
         si = int(np.floor(spd))
         sf = f32(spd - f32(si))
+        ti = int(np.floor(pitch))                     # RIFT v0.24: the heads step at the pitch ratio
+        tf = f32(pitch - f32(ti))
+        heads = not (ti == si and tf == sf)
         lstart, lsize = self.loop(k)
         lend = lstart + lsize
         vg, pg, gg = T["VG"][k["BLND"]], T["PG"][k["BLND"]], T["GG"][k["BLND"]]
@@ -429,12 +442,31 @@ class Voice:
             y = y + gg * self.grn.block(self.pi, pitch, T["GINC"][k["DENS"]], envinc,
                                         T["SQ"][k["SPRY"]], T["SQ"][k["PRND"]])
         size = len(self.buf)
+        def at(i0, fr):
+            i1 = i0 + 1 if i0 + 1 < size else 0
+            s0 = self.buf[i0]
+            return f32(s0 + f32(fr * f32(self.buf[i1] - s0)))
+
+        def step(q, qf):
+            qf = f32(qf + tf)
+            q = q + ti
+            if qf >= f32(1):
+                qf = f32(qf - f32(1))
+                q += 1
+            if q >= size:
+                q -= size
+            return q, qf
         for s in range(32):
-            if pg > 0:
-                i0 = self.pi % size
-                i1 = i0 + 1 if i0 + 1 < size else 0
-                s0 = self.buf[i0]
-                y[s] = f32(y[s] + f32(pg * f32(s0 + f32(self.pf * f32(self.buf[i1] - s0)))))
+            if pg > 0 and not heads:
+                y[s] = f32(y[s] + f32(pg * at(self.pi % size, self.pf)))
+            elif pg > 0:
+                ph = self.ph
+                wa = f32(ph + ph) if ph < f32(0.5) else f32(f32(2) - f32(ph + ph))
+                wb = f32(f32(1) - wa)
+                va, vb = at(self.qa, self.qaf), at(self.qb, self.qbf)
+                y[s] = f32(y[s] + f32(pg * f32(f32(wa * va) + f32(wb * vb))))
+                self.qa, self.qaf = step(self.qa, self.qaf)
+                self.qb, self.qbf = step(self.qb, self.qbf)
             pf = f32(self.pf + sf)
             pi = self.pi + si
             if pf >= f32(1):
@@ -445,6 +477,17 @@ class Voice:
             while pi < lstart:
                 pi += lsize
             self.pi, self.pf = pi, pf
+            if pg > 0 and heads:                      # the heads' cycle; each restarts at the read point where its triangle is 0
+                ph0 = self.ph
+                ph = f32(ph0 + f32(HEAD_INC))
+                if ph >= f32(1):
+                    ph = f32(ph - f32(1))
+                    self.qa, self.qaf = pi, pf
+                elif ph0 < f32(0.5) <= ph:
+                    self.qb, self.qbf = pi, pf
+                self.ph = ph
+            else:                                     # not reading through the heads: they follow the read point
+                self.qa, self.qaf, self.qb, self.qbf = pi, pf, pi, pf
         return (y * TABLES["LEV"][k["LEV"]]).astype(f32)
 
 

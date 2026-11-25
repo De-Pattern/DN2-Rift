@@ -71,18 +71,35 @@ def test_lanes_steal_the_oldest():
     assert ln.take(a) == 1
 
 
-def test_v022_tune_moves_play():
-    """v0.22 (owner: "get TUNE working"): PLAY reads at SPD x tr, so TUNE (and the note) transpose it as
-    tape does: an octave up reads the loop twice as fast"""
+def test_v024_tune_is_pitch_and_spd_is_speed():
+    """v0.24 (owner: "the point of nebulae is that it decouples pitch from speed"): at BLND 0 TUNE (tr)
+    transposes PLAY (an octave up: the heads read the ramp twice as fast) while the read point moves at
+    SPD alone (the same after the same blocks, whatever the pitch)"""
     buf = np.arange(48000, dtype=np.float32) / 48000.0
     k = dict(L.DEFAULTS, BLND=0)
-    outs = {}
+    slope, where = {}, {}
     for tr in (1.0, 2.0):
         v = L.Voice(buf)
         v.block(k, tr=tr, trig=True)
         y = np.concatenate([v.block(k, tr=tr) for _ in range(10)])
-        outs[tr] = np.diff(y)[5:300].mean()
-    assert abs(outs[2.0] / outs[1.0] - 2.0) < 0.01
+        d = np.diff(y)[5:300]
+        slope[tr] = np.median(d)
+        where[tr] = (v.pi, v.pf)
+    assert abs(slope[2.0] / slope[1.0] - 2.0) < 0.01
+    assert where[1.0] == where[2.0]
+
+
+def test_v024_untransposed_play_reads_the_read_point():
+    """v0.24: no transposition at speed 1 (the heads would step as the read point): PLAY is the plain read,
+    bit for bit v0.21's"""
+    rng = np.random.default_rng(3)
+    buf = rng.standard_normal(30000).astype(np.float32) * 0.3
+    k = dict(L.DEFAULTS, BLND=0)
+    assert L.TABLES["SPD"][k["SPD"]] == np.float32(1)
+    v = L.Voice(buf)
+    y = np.concatenate([v.block(k, tr=1.0, trig=(n == 0)) for n in range(6)])
+    want = buf[:6 * 32] * L.TABLES["PG"][0] * L.TABLES["LEV"][k["LEV"]]
+    assert np.array_equal(y, want.astype(np.float32))
 
 
 def test_v022_freeze_holds_the_read_point_and_sounds():

@@ -258,8 +258,8 @@ PAGES = [
     dict(id="smear", title="SMEAR", tag="SAMPLING", logo="smear",
          sub="Continuously morph a sample from traditional tape playback into granular fragments.",
          panels=[("knobs", "SYN1 / TAPE + CLOUD", "START AT BLND 0", K(
-             ("TUNE", "Transpose: PLAY as tape (speed + pitch) and the grains."), ("SPD", "Playback rate -4..+4; center freezes the read point."),
-             ("BLND", "0 = tape; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
+             ("TUNE", "Pitch only (PLAY and the grains); SPD stays the speed."), ("SPD", "Speed only, -4..+4; center freezes the read point."),
+             ("BLND", "0 = PLAY; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
              ("STRT", "Where the loop begins in the sample."), ("SIZE", "Loop length / sampled region size."),
              ("DENS", "How many grains play each second."), ("LEV", "Output volume of the machine."))),
              ("knobs", "SYN2 / GRAINS", "MORE = CLOUD-LIKE", K(
@@ -268,8 +268,8 @@ PAGES = [
                  ("FRZ", "Hold current position as a grain cloud."), ("-", "Not assigned on this page."),
                  ("-", "Not assigned on this page."), ("-", "Not assigned on this page."))),
              ("concept", "WHAT YOU HEAR", "PLAY <-> GRANULAR", K(
-                 ("PLAY", "A continuous, tape-style loop."), ("GRAIN", "Many tiny snippets overlap."),
-                 ("BLND", "Crossfade between tape and cloud."), ("SPRY", "Fragments scatter through the buffer."),
+                 ("PLAY", "A continuous loop; pitch and speed apart."), ("GRAIN", "Many tiny snippets overlap."),
+                 ("BLND", "Crossfade between PLAY and cloud."), ("SPRY", "Fragments scatter through the buffer."),
                  ("PRND", "Individual fragments bend in pitch."), ("OVLP", "Small flecks -> longer smear."),
                  ("FRZ", "Stays on the captured moment."), ("WIN", "Smooth / sharp grain edges."))),
              ("concept", "SAMPLE WORKFLOW", "SAMPLE HANDLING", K(
@@ -304,11 +304,11 @@ PAGES = [
          first=("CPU SAVER", "Record a heavy track into B1 -> FLEX note trig on step 1 plays it -> MUTE SRC ON"), foot="RECORD / RESAMPLE"),
     dict(id="fx", title="EFFECTS / PERFORMANCE", tag="GLOBAL", logo=None,
          sub="The essential controls and shortcuts, with their audible result.",
-         panels=[("kv", "GLASS FILTER (FLTR: GLASS)", [("FREQ", "Filter cutoff / ringing pitch"), ("RES", "Ring duration: tiny -> several seconds"),
-                                                       ("TYPE", "Low-pass -> band-pass -> high-pass"), ("ENV", "Envelope amount +/-; centre = none"),
-                                                       ("ATK / DEC", "Filter envelope attack and decay"),
-                                                       ("ABND / DBND", "Attack / decay curve (on SUS / REL): exp <- straight -> log"),
-                                                       ("LPG", "Page 2, ENV DELAY's place, from 64: low-pass gate ping"), ("KEY.T", "Tracks played note pitch")]),
+         panels=[("kv", "RUBBER FILTER (FLTR: RUBBER)", [("FREQ", "Cutoff (24 dB ladder, SH-101 style)"), ("RES", "Resonance -> self-oscillation at top"),
+                                                       ("DRIV", "TYPE's place: clean -> thick, rubbery drive"), ("ENV", "Envelope amount +/-; centre = none"),
+                                                       ("ATK / DEC", "Filter envelope attack and decay (SUS/REL blank)"),
+                                                       ("ABND / DBND", "Page 2 knobs: attack / decay curve, exp <- straight -> log"),
+                                                       ("KEY.T", "Tracks played note pitch")]),
                  ("kv", "PLATE REVERB (FX: REVERB)", [("PRE", "Delay before tail (up to 0.3 s)"), ("DEC", "Small room -> long plate"),
                                                       ("FREQ", "Brightness shelf frequency"), ("GAIN", "Amount of treble surviving in tail"),
                                                       ("HPF / LPF", "Stock: filter the reverb"), ("MIX VOL", "Stock: reverb level")]),

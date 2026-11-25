@@ -256,17 +256,30 @@ def main() -> int:
             pt = machine.long(0x401F7F94 + 60 * rid + 0x28)
             return machine.read(pt, 16).split(b"\0")[0].decode("latin-1") if pt else ""
         stock_names = {rid: long_of(rid) for rid in GLP.ids()}
+        def rows():                                      # v0.24: RUBBER's FLTR cells (page.c rubber_cells)
+            return ([machine.long(0x424329D4 + 4 * j) for j in range(8)],
+                    [machine.long(0x42432E44 + 4 * j) for j in range(8)])
+        rows_before = rows()
         machine.write(snd_t + 0xDF, bytes([6]))
         pcs = [hex(call(lay["glass_names"])[1])]
         on_names = {rid: long_of(rid) for rid in GLP.ids()}
+        rows_on = rows()
         machine.write(snd_t + 0xDF, bytes([0]))
         pcs.append(hex(call(lay["glass_names"])[1]))
         off_names = {rid: long_of(rid) for rid in GLP.ids()}
+        rows_off = rows()
+        r1, r2 = rows_before
+        check("RIFT v0.24: on RUBBER, FLTR page 1 loses SUS and REL, page 2 gains them (ABND, DBND) in its empty "
+              "places and loses Env. Delay; on another filter both rows are stock's again",
+              r1 == [0x2D, 0x2E, 0x2F, 0x30, 0x24, 0x25, 0x26, 0x31] and r2[:4] == [0x2C, 0, 0, 0x33]
+              and rows_on[0] == [0x2D, 0x2E, 0, 0, 0x24, 0x25, 0x26, 0x31] and rows_on[1][:4] == [0, 0x2F, 0x30, 0x33]
+              and rows_on[1][4:] == r2[4:] and rows_off == rows_before,
+              f"before {rows_before}, on {rows_on}, off {rows_off}")
         machine.write(snd_t + 0xDF, f_was)
         machine.write(UI_T, ui_was)
         call(lay["glass_names"])
         want = {rid: GLP.SETS[6][rid][0] for rid in GLP.ids()}
-        check("RIFT v0.18: a GLASS track's FLTR records carry GLASS's names (LPG, ATK/DEC BEND, Ring Time); "
+        check("RIFT v0.18/v0.24: a RUBBER track's FLTR records carry its names (ATK/DEC BEND, DRIVE); "
               "Multi-Mode's own names come back on another filter", on_names == want and off_names == stock_names,
               f"on {on_names}, off {off_names}, returns {pcs}, kit {kit:#x} ptr {machine.long(0x800052A0):#x}")
 
