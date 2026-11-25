@@ -3732,6 +3732,17 @@ def _sanitize_slot(p, L: "Layout") -> None:
         p.seti(1, 12)
         p.iconst(0, -1)
         p.sti(0, 1, 0)
+        # RIFT v0.26 (fiddly_digits: a RUBBER track silent for good): RUBBER's state for this slot
+        # starts afresh too (its magic cleared), so a runaway or a NaN never stays in its stages
+        from ..glass import program as _GLP2
+        from ..waverider import dsp as _dsp2
+        p.ld(9, L.order_i)
+        p.lsh(12, 9, 6)
+        p.iconst(11, _dsp2.GLASS_STATE_DDR + 4 * _GLP2.ST["magic"])
+        p.iop(12, 11, "+", 12)
+        p.seti(1, 12)
+        p.iconst(0, 0)
+        p.sti(0, 1, 0)
     p.if_(8, "GE", 14, bad, kind="i")
 
 

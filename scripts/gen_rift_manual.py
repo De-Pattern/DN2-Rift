@@ -743,7 +743,8 @@ def build() -> str:
 
 
 VERSIONS = [
-    ("0.26", "VOC", ["CONTOUR: FDBK's original range is back (v0.20's curve taken out): the feedback exactly as it first was.",
+    ("0.26", "VOC", ["RUBBER: a track could go silent for good when RUBBER was put on it (its state was never cleared at power-on, so leftover memory could fill it with NaN). Fixed: it starts clean, and a block the safety check zeroes resets it.",
+                     "CONTOUR: FDBK's original range is back (v0.20's curve taken out): the feedback exactly as it first was.",
                      "SMEAR's VOC is back: BLND 0 plays a keyframe time stretch after heavylight's Capicola / dt2-keyframer (credit and thanks to heavylight): pitch and time apart, peaks spliced onto peaks, 20 ms fades, a few thousand DSP cycles a voice. PLAY is now at BLND's middle."]),
     ("0.25", "SPALL", ["SPALL, a new synth machine: sound from tiny events (clicks, dust, tonal grains, chips) on a stochastic clock, rung through two resonators; two pages, 16 controls, its own icons and logo.",
                        "MACHINE SEL: the MIDI machine shows a 5-pin DIN socket and MIDI under it.",
