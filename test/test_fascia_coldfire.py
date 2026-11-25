@@ -98,7 +98,7 @@ def test_coldfire_type_18():
     from dnfw.waverider import coldfire as CF
     from dnfw.waverider import pages as P
     from dnfw.mnm import machines as MM
-    assert F.TYPE == 18 and F.TYPE in CF.NEW_TYPES and CF.TYPES_LAST == P.TYPES_LAST == 25   # v0.20: CONTOUR 25; RIFT: ORGAN, SILT, LIGATURE, DIGIDRUM after FASCIA; v0.17: THOLET's 23 gone, PLATEAU 24
+    assert F.TYPE == 18 and F.TYPE in CF.NEW_TYPES and CF.TYPES_LAST == P.TYPES_LAST == 26   # v0.25: SPALL 26; v0.20: CONTOUR 25; RIFT: ORGAN, SILT, LIGATURE, DIGIDRUM after FASCIA; v0.17: THOLET's 23 gone, PLATEAU 24
     assert CF.MACHINE_NAMES[F.TYPE] == ("Fascia", "FSC")
     lst = list(CF.LIST_NEW)
     if not F.LISTED:
