@@ -265,11 +265,11 @@ SMEAR_SW = 0xB80000 + (SMEAR_L2_LOAD - 0x20000000) // 2
 SMEAR_LANE0_L2 = 0x200B7800                  # WF, WB (16 KB) to 0x200bb800
 SMEAR_L2_SPAN = SMEAR_LANE0_L2 - SMEAR_L2_LOAD   # the code's room: 26 KB
 # RIFT v0.21 (owner, 2026-11-23: "replace the stock master reverb with Plateau"): mverb.asm (wr_mv,
-# dnfw.mverb.program) in SMEAR's L2 room, 8 KB after smear.asm's start; its register save area at the
+# dnfw.mverb.program) in SMEAR's L2 room, SMEAR_CODE_ROOM (10 KB since v0.26) after smear.asm's start; its register save area at the
 # room's end; its state and lines in DDR after GLASS's states (THOLET's former ring). The stock reverb's
 # core call (`CALL 0xb82d1a (DB)` and its two delay-slot pushes, 18 bytes at sw 0xb8370c, in the FX
 # function) becomes `JUMP MVERB_SW`; wr_mv jumps back to sw 0xb83715, past the call.
-SMEAR_CODE_ROOM = 0x2000
+SMEAR_CODE_ROOM = 0x2800                       # RIFT v0.26: 10 KB (VOC's keyframe stretch: smear.asm 8.0 KB; 8 KB until v0.25)
 MVERB_L2_LOAD = SMEAR_L2_LOAD + SMEAR_CODE_ROOM
 MVERB_SW = 0xB80000 + (MVERB_L2_LOAD - 0x20000000) // 2
 MVERB_SAVE_DM = SMEAR_LANE0_L2 - 0x100          # 29 words
