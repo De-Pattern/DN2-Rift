@@ -219,7 +219,7 @@ class SG(OP.OG):
                 self.fz(V(wd))
         p.ld(0, C["trig"])
         p.ifz(0, "NE", note_on)
-        self.icmp(V("on"), "EQ", 0, self.zeros, lambda: self.rt("s_render", self.render))
+        self.icmp(V("on"), "EQ", 0, self.zeros, lambda: self.rt("sp_render", self.render))
 
     def vbase(self) -> None:
         OP.OG.vbase(self)
@@ -379,7 +379,7 @@ class SG(OP.OG):
         p.seti(1, 12)
         p.ldi(0, 0, 1)
         p.st(C["outp"], 0)
-        p.loop(C["cnt0"], BLOCK, lambda: self.rt("s_tick", self.tick))
+        p.loop(C["cnt0"], BLOCK, lambda: self.rt("sp_tick", self.tick))
 
     def tick(self) -> None:
         p, C, L = self.p, self.L.C, self.L
@@ -391,7 +391,7 @@ class SG(OP.OG):
             def fire():
                 self.set(V("clock"), V("clock") - k(1.0))
                 self.set(V("burst"), V("burst") - k(1.0))
-                self.rt("s_event", self.event)
+                self.rt("sp_event", self.event)
             self.cmp(V("clock"), "GE", k(1.0), fire)
 
         def free():
@@ -413,7 +413,7 @@ class SG(OP.OG):
                     self.set(c("u"), self.u01())
 
                     def sound():
-                        self.rt("s_event", self.event)
+                        self.rt("sp_event", self.event)
                         self.set(V("burst"), c("nclump"))
                     self.cmp(c("u"), "GE", c("gap"), sound)
                 self.cmp(V("clock"), "GE", k(1.0), tick)
@@ -468,7 +468,7 @@ class SG(OP.OG):
             self.icmp(self.ci("ty"), "EQ", 3, chip, tone)
             self.set(c("x"), (c("s") * k(LV.TONE_GAIN)) * V("env"))
         self.icmp(self.ci("ty"), "EQ", 0, imp,
-                  lambda: self.icmp(self.ci("ty"), "EQ", 1, dust, lambda: self.rt("s_tonal", tonal)))
+                  lambda: self.icmp(self.ci("ty"), "EQ", 1, dust, lambda: self.rt("sp_tonal", tonal)))
         self.set(V("env"), V("env") * V("ek"))
         self.set(V("age"), V("age") + k(1.0))
         # EDGE, the rings, the mix

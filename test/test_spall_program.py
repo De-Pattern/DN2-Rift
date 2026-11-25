@@ -90,3 +90,14 @@ def test_emits():
     p.scr = (L_.scratch, L_.scratch_end, L_.base5)
     g = P.voice(p, L_)
     g.emit_rts()
+
+
+def test_fascia_asm_has_no_label_twice():
+    """RIFT v0.25 (the gate's silt part): SPALL's routines were named as SILT's (s_render), so fascia.asm
+    had the label twice and SILT's calls reached one of them only. Every label once."""
+    import collections
+    import pathlib
+    asm = (pathlib.Path(__file__).resolve().parent.parent / "csrc/waverider/sharc/fascia.asm").read_text(encoding="utf-8")
+    labels = [ln[:-1] for ln in asm.splitlines() if ln.endswith(":") and not ln.startswith(" ")]
+    twice = [k for k, n in collections.Counter(labels).items() if n > 1]
+    assert not twice, twice
