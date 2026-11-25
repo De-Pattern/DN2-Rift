@@ -18,7 +18,7 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
-COVERS = "0.22"            # the release the guide describes (not VERSION: the tree may be ahead)
+COVERS = "0.24"            # the release the guide describes (not VERSION: the tree may be ahead)
 LOGO_REF = "v22"           # logos as the released firmware draws them (v0.23's CONTOUR is newer)
 TEAL = (111, 199, 180)
 
@@ -481,7 +481,7 @@ def build() -> str:
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RIFT quick guide</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;700;800&display=swap" rel="stylesheet">
-<style>{CSS}</style></head><body><main>{body}
+<style>{CSS}.pdfbtn{{position:fixed;top:10px;right:14px;z-index:20;font:600 13px/1 'Space Grotesk',ui-sans-serif,system-ui,sans-serif;letter-spacing:.04em;color:#fff;background:#8a2a3c;border:1px solid #b04a5c;border-radius:8px;padding:9px 13px;text-decoration:none}}.pdfbtn:hover{{background:#a0344a}}@media print{{.pdfbtn{{display:none}}}}</style></head><body><a class="pdfbtn" href="rift-quick.pdf" download title="The quick guide as one PDF">Download PDF</a><main>{body}
 <p class="sub" style="text-align:center">Unofficial: not made or supported by Elektron. Everything else (p-locks, LFOs, kits, MIDI) works as on the stock Digitone II. <a href="rift-manual.html">Full manual</a>.</p>
 </main>{JS}</body></html>
 """
