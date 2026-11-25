@@ -421,7 +421,7 @@ def _around_shared(p, t_word: int, cost: int, voice, limit: int, expect, grow: i
     p.iconst(13, floor)                        # R13: the least on a trigger block
     p.call(f"gbefore{grow}", absolute(before))
     if expect is not None:
-        expect(p)                              # may raise R9 (keeps R8)
+        expect(p)                              # may raise R9 (keeps R8); R10 is not 0 on a trigger block
     p.iop(8, 8, "+", 9)
     p.ld(10, limit)
     p.e("COMP(R8, R10);")

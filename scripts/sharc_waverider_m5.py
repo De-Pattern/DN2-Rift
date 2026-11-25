@@ -5269,6 +5269,8 @@ def step_rprof(init, sound, machines) -> dict:
             "DIGIDRUM": lambda tr: dd_frame(sound, machines, {0: (DB.panel_knobs(), 55.0)}, trig=tr),
             "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
             "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
+            "CONTOUR2": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 66.0)}, trig=tr),    # FDBK up, 2 steps
+            "CONTOUR4": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 84.0)}, trig=tr),    # 4 steps
         }
         ibase = parts[-1]
         print(f"    rprof idle frame parts (instructions, L2, DDR): {ibase}", flush=True)
