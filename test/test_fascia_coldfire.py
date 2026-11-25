@@ -109,7 +109,7 @@ def test_coldfire_type_18():
         from dnfw.ligature import machines as LGM
         from dnfw.digidrum import machines as RSM
         from dnfw.plateau import machines as PLM
-        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(9) - (4 + LGM.LISTED + RSM.LISTED + PLM.LISTED)   # RIFT: then ORGAN, SILT, (LIGATURE,) (DIGIDRUM,) (PLATEAU,) the samples (v0.18: SMEAR first)
+        assert lst.index(F.TYPE) == lst.index(3) + 1 == lst.index(9) - (5 + LGM.LISTED + RSM.LISTED + PLM.LISTED)   # RIFT: then ORGAN, SILT, (LIGATURE,) (DIGIDRUM,) (PLATEAU,) the samples (v0.18: SMEAR first)
         assert 23 not in lst                    # RIFT v0.17: THOLET's 23 never listed (a saved one loads as FM Tone)
     else:
         assert lst.index(F.TYPE) == lst.index(MM.TYPES[-1]) + 1 == lst.index(8) - 1   # after the MnM's, before the samples
@@ -120,7 +120,7 @@ def test_coldfire_type_18():
 def test_header_kinds_names_and_tables():
     from dnfw.waverider import pages as P
     hdr = P.c_header()
-    assert "#define WR_KINDS 21" in hdr and f"#define FSC_KIND {F.KIND}" in hdr   # RIFT v0.17: THOLET's kind 19 kept empty, PLATEAU's 20, CONTOUR's 21
+    assert "#define WR_KINDS 22" in hdr and f"#define FSC_KIND {F.KIND}" in hdr   # RIFT v0.17: THOLET's kind 19 kept empty, PLATEAU's 20, CONTOUR's 21; v0.25: SPALL's 22
     assert "#define WR_NAMED_LO 208" in hdr and "#define WR_NAMED_HI 262" in hdr
     named = P.fsc_named()
     for c in F.CONTROLS:
