@@ -197,12 +197,13 @@ def _track(p: Prog, S: SLayout) -> None:
             # holding a VOC lane is expected to cost VOC's measured peak, whatever its last block
             # cost. Its light blocks (the hop's other jobs) no longer hide the heavy ones, so a VOC
             # job that does not fit is left out, never run past the frame
-            P._tab(p, 10, V, "VG", "BLND")            # VOC heard (its gain > 0) ...
+            if LV.VOC_ON:                           # RIFT v0.26: not for the keyframe stretch (a few thousand cycles)
+                P._tab(p, 10, V, "VG", "BLND")        # VOC heard (its gain > 0) ...
 
-            def lane_held():                        # ... and a lane held: VOC runs this block
-                p.ld(10, V.LANE)
-                p.ifz(10, "GE", lambda: (p.iconst(10, VOC_PEAK), p.iop(9, 9, "MAX", 10)))
-            p.ifz(10, "GT", lane_held, kind="f")
+                def lane_held():                    # ... and a lane held: VOC runs this block
+                    p.ld(10, V.LANE)
+                    p.ifz(10, "GE", lambda: (p.iconst(10, VOC_PEAK), p.iop(9, 9, "MAX", 10)))
+                p.ifz(10, "GT", lane_held, kind="f")
             p.iop(8, 8, "+", 9)
             p.ld(10, G.LIMIT)
             p.e("COMP(R8, R10);")

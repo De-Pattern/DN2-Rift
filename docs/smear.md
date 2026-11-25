@@ -345,3 +345,19 @@ SMEAR becomes a stage of its own between them, `smear.asm` at its own address:
 - **Page 2** as ONESHOT's: the top row's OVLP SPRY PRND WIN as small pictures (`smr_icon`), the strip
   at cy 21, the bottom row's labels (FRZ with a bar while ON).
 - **Gate**: test_smear_live (`test_v022_*`), the runner's `smear` case "v0.22 FRZ", test_sampler's detents.
+
+## v0.26: VOC on a keyframe stretch (2026-11-24)
+
+The owner asked for SMEAR's vocoder back on heavylight's keyframe stretch, with credit. BLND's VOC
+share is played by a keyframe time stretch after heavylight's Capicola and dt2-keyframer
+(heavylight-industries; DAFx26, *Keyframe Time Stretching via Extrema Sampling*), written again in
+FASCIA's DSL for SMEAR, its rules cut down (Claude's): keyframes are the PCM's extrema (a turn of
+the slope at least KF_EPS = 0.01 from the last keyframe's value), found by each head as it moves
+(no stored list). The reference is PLAY's read point (SPD x the sample's rate); the play head reads
+at the pitch ratio. KC counts the keyframes between them. At a keyframe of its own the play head
+splices onto the reference's last keyframe of the same kind once |KC| > KF_K (64) or KF_GRAIN
+(3,072) samples have passed; the old place fades out linearly over min(960, max(grain / 2, 32))
+samples (heavylight's 20 ms longest). Silence: a splice onto the read point after 2 KF_GRAIN.
+The FFT vocoder stays out (VOC_ON False); the guard's VOC peak applies only to it.
+live.Voice and program.emit_voice agree bit for bit (test_smear_voice: 700 blocks, int16, splices,
+transposed up and down, frozen, reversed).

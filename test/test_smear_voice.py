@@ -57,6 +57,48 @@ def test_voice_is_the_contract():
     assert np.max(np.abs(y)) > 0
 
 
+def test_v026_stretch_is_the_contract():
+    """v0.26 VOC: the keyframe stretch (BLND 0, and in a mix) in run mode equals live.Voice bit for bit over
+    many splices and fades: transposed up and down, frozen, reversed, a retrig; an int16 buffer"""
+    sr = 48000
+    i = np.arange(24000)
+    buf = (0.4 * np.sin(2 * np.pi * 180 * i / sr) + 0.25 * np.sin(2 * np.pi * 950 * i / sr)
+           * np.exp(-((i % 5000) / 1500.0))).astype(np.float32)
+    q = np.round(buf * 32767).astype(np.int16)
+    buf = (q.astype(np.float32) / np.float32(32768)).astype(np.float32)
+    mem = Mem()
+    for k, w in enumerate(q.view(np.uint32)):
+        mem.put(BUFA + 4 * k, int(w))
+    for k, w in enumerate(P.tables_words()):
+        mem.put(TAB + 4 * k, w)
+    for k, w in enumerate(P.voice_tables_words()):
+        mem.put(VTAB + 4 * k, w)
+    V = P.VLayout(VB, TAB, VTAB, LANES)
+    voice = LV.Voice(buf, 1.0)
+    script = {0: dict(BLND=0, SPD=80), 150: dict(SPD=64), 300: dict(SPD=40, BLND=12),
+              420: dict(SPD=90, BLND=0), 520: dict(FRZ=127), 600: dict(FRZ=0, BLND=127), 640: dict(BLND=0)}
+    trs = {0: 1.5, 200: 0.5, 450: 2.0}
+    trigs = (0, 450)
+    k = dict(LV.DEFAULTS)
+    tr = 1.0
+    for n in range(700):
+        k.update(script.get(n, {}))
+        tr = float(np.float32(trs.get(n, tr)))
+        trig = n in trigs
+        y = voice.block(k, tr, trig, n, None)
+        for c, name in enumerate(LV.CONTROLS):
+            mem.put(V.KN0 + 4 * c, k[name])
+        for w, val in (("TR", u32(tr)), ("RATE", u32(np.float32(1.0))), ("TRIG", int(trig)),
+                       ("SIZE", len(buf)), ("BASE", BUFA), ("FMT", 1), ("CLOCK", n),
+                       ("LANE", -1), ("VSTATE", VST)):
+            mem.put(getattr(V, w), val)
+        p = Prog("run", mem=mem)
+        P.emit_voice(p, V)
+        out = np.array([mem.get(V.OUT + 4 * s) for s in range(32)], np.uint32).view(np.float32)
+        assert out.tobytes() == y.tobytes(), (n, out[:4], y[:4])
+    assert voice.n_splice >= 5
+
+
 def test_emits():
     p = Prog("emit", prefix="smx")
     P.emit_voice(p, P.VLayout(VB, TAB, VTAB, LANES))

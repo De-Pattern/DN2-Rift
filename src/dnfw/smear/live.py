@@ -337,6 +337,24 @@ def _speed(k: int) -> float:
 # 200..260k cycles a block on the unit's cost model (instructions + memory stalls, sharc_waverider_m5
 # step rcost) beside an idle frame's 416k of 667k: a VOC note overran the frame and silenced the unit
 VOC_ON = False
+# RIFT v0.26 VOC (owner, 2026-11-24: "SMEAR's phase vocoder back ... on heavylight's keyframe stretch,
+# with credit"): BLND's VOC share is played by a keyframe stretch after heavylight's Capicola /
+# dt2-keyframer (heavylight-industries; DAFx26, "Keyframe Time Stretching via Extrema Sampling"),
+# written again for SMEAR, its rules cut down (Claude's): the keyframes are the PCM's extrema
+# (a turn of the slope, at least KF_EPS from the last keyframe's value), found by each head as it
+# moves on, never stored as a list. The reference is PLAY's read point (SPD); the play head reads
+# at the pitch ratio (TUNE, the note). KC counts the keyframes between them (the play head's less
+# the reference's). At a keyframe of its own, the play head splices onto the reference's last
+# keyframe of the same kind (a peak onto a peak, a trough onto a trough) once KC passes KF_K or
+# KF_GRAIN samples have passed; the old place fades out linearly over at most KF_FADE samples
+# (heavylight's 20 ms), half the grain if that is shorter. With no keyframes (silence) it splices
+# onto the read point itself after 2 KF_GRAIN.
+KF_ON = True
+KF_K = 64
+KF_GRAIN = 3072
+KF_FADE = 960
+KF_FADE_MIN = 32
+KF_EPS = 0.01
 
 
 def _tables():
@@ -345,7 +363,7 @@ def _tables():
     t["SPD"] = np.array([_speed(k) for k in range(128)], f32)
     b = np.array([M.law_blend(k / 127) for k in range(128)], f32)
     t["VG"], t["PG"], t["GG"] = b[:, 0].copy(), b[:, 1].copy(), b[:, 2].copy()
-    if not VOC_ON:     # RIFT v0.18 (owner): VOC off: its share of BLND played by PLAY, VOC never runs
+    if not VOC_ON and not KF_ON:     # RIFT v0.18 (owner): VOC off: its share of BLND played by PLAY, VOC never runs
         t["PG"] = (b[:, 0] + b[:, 1]).astype(f32)
         t["VG"] = np.zeros(128, f32)
     gf = np.array([M.law_density(k / 127) for k in range(128)])
@@ -399,6 +417,46 @@ class Voice:
         self.grn = Grn(self.buf, TABLES["WIN"][3])
         self.pi, self.pf = 0, f32(0)
         self.qa, self.qaf, self.qb, self.qbf, self.ph = 0, f32(0), 0, f32(0), f32(0)
+        self.kf_reset(0)
+
+    def kf_reset(self, pos):
+        """RIFT v0.26: the keyframe stretch at POS, nothing found yet."""
+        self.kp, self.kpf, self.ko, self.kof = pos, f32(0), pos, f32(0)
+        self.kw, self.kfi, self.kfd, self.kc, self.ks = f32(0), f32(0), 0, 0, 0
+        self.rkx, self.rkn = -1, -1
+        self.det = {"P": [f32(0), 0, f32(0), -1], "R": [f32(0), 0, f32(0), -1]}   # XL DS VK LI
+
+    def detect(self, h, x, pos):
+        """A head's keyframe finder at POS (its sample X): (+1 a peak, -1 a trough, 0 none), where."""
+        d = self.det[h]
+        xl, ds, vk, li = d
+        if pos == li:
+            return 0, 0
+        df = f32(x - xl)
+        sg = 1 if df > f32(0) else -1 if df < f32(0) else 0
+        if sg == 0:
+            d[3] = pos
+            return 0, 0
+        key = 0
+        if sg != ds and ds != 0 and abs(f32(xl - vk)) >= f32(KF_EPS):
+            key = ds
+            d[2] = xl
+        d[0], d[1], d[3] = f32(x), sg, pos
+        return key, li
+
+    def splice(self, pos, frac):
+        size = len(self.buf)
+        self.ko, self.kof = self.kp, self.kpf
+        while pos >= size:
+            pos -= size
+        while pos < 0:
+            pos += size
+        self.kp, self.kpf = pos, f32(frac)
+        n = min(KF_FADE, max(self.ks >> 1, KF_FADE_MIN))
+        self.kfi = recip(f32(n))
+        self.kw, self.kfd, self.kc, self.ks = f32(0), 1, 0, 0
+        self.det["P"][3] = pos
+        self.n_splice = getattr(self, "n_splice", 0) + 1      # (host statistics: the tests)
 
     def loop(self, k):
         size = len(self.buf)
@@ -409,6 +467,7 @@ class Voice:
     def trig(self, k):
         self.pi, self.pf = self.loop(k)[0], f32(0)
         self.qa, self.qaf, self.qb, self.qbf, self.ph = self.pi, f32(0), self.pi, f32(0), f32(0)
+        self.kf_reset(self.pi)
         self.voc.reset()
 
     def block(self, k: dict, tr: float = 1.0, trig: bool = False, clock: int = 0,
@@ -432,7 +491,7 @@ class Voice:
             si, sf = 0, f32(0)
             gg, pg = f32(gg + pg), f32(0)
         y = np.zeros(32, f32)                         # y = 0, + vg voc, + gg grn, + pg play, x lev
-        if vg > 0 and lane is not None:
+        if VOC_ON and vg > 0 and lane is not None:      # RIFT v0.26: (VG is now the stretch's share)
             y = y + vg * self.voc.block(float(self.pi), float(pitch), (clock + 8 * lane) & 15)
         if gg > 0:
             ov = T["SQ"][k["OVLP"]]
@@ -456,7 +515,40 @@ class Voice:
             if q >= size:
                 q -= size
             return q, qf
+        kf = KF_ON and vg > 0
         for s in range(32):
+            if kf:                                    # RIFT v0.26: VOC's share through the keyframe stretch
+                pi0 = self.pi % size
+                if pi0 != self.det["R"][3]:
+                    key, kp = self.detect("R", self.buf[pi0], pi0)
+                    if key:
+                        if key > 0:
+                            self.rkx = kp
+                        else:
+                            self.rkn = kp
+                        self.kc -= 1
+                v = at(self.kp, self.kpf)
+                x0 = self.buf[self.kp]
+                if self.kfd:
+                    vo = at(self.ko, self.kof)
+                    v = f32(vo + f32(self.kw * f32(v - vo)))
+                y[s] = f32(y[s] + f32(vg * v))
+                if self.kp != self.det["P"][3]:
+                    key, kp = self.detect("P", x0, self.kp)
+                    if key:
+                        self.kc += 1
+                        rk = self.rkx if key > 0 else self.rkn
+                        if not self.kfd and rk >= 0 and (abs(self.kc) > KF_K or self.ks >= KF_GRAIN):
+                            self.splice(rk + (self.kp - kp), self.kpf)
+                if not self.kfd and self.ks >= 2 * KF_GRAIN:
+                    self.splice(pi0, self.pf)
+                self.ks += 1
+                if self.kfd:
+                    self.kw = f32(self.kw + self.kfi)
+                    self.ko, self.kof = step(self.ko, self.kof)
+                    if self.kw >= f32(1):
+                        self.kfd = 0
+                self.kp, self.kpf = step(self.kp, self.kpf)
             if pg > 0 and not heads:
                 y[s] = f32(y[s] + f32(pg * at(self.pi % size, self.pf)))
             elif pg > 0:
@@ -488,6 +580,9 @@ class Voice:
                 self.ph = ph
             else:                                     # not reading through the heads: they follow the read point
                 self.qa, self.qaf, self.qb, self.qbf = pi, pf, pi, pf
+            if not kf:                                # RIFT v0.26: no VOC share: the stretch follows the read point
+                self.kp, self.kpf, self.kfd, self.kc, self.ks = pi, pf, 0, 0, 0
+                self.det["P"][3] = -1
         return (y * TABLES["LEV"][k["LEV"]]).astype(f32)
 
 
