@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.23** | 2026-11-24 | FASCIA's crackle (the guard's budget for RIFT's synths: x 1.25, the reserve kept); CPU on RIFT's machine pages when the DSP drops a voice; CONTOUR's crosshair logo; the quick guide | `builds/v0.23-STEADY/` | yes |
+| **v0.24** | 2026-11-25 | RUBBER (an SH-101-style ladder) in GLASS's place, its curves as FLTR page 2 knobs; SMEAR: pitch and speed apart; clean knob icons | `builds/v0.24-APART/` | yes |
+| v0.23 | 2026-11-24 | FASCIA's crackle (the guard's budget for RIFT's synths: x 1.25, the reserve kept); CPU on RIFT's machine pages when the DSP drops a voice; CONTOUR's crosshair logo; the quick guide | `builds/v0.23-STEADY/` | yes |
 | v0.22 | 2026-11-24 | GLASS's overload fixed (the same sound at well under two thirds of the DSP time, inside the guard's budget); SMEAR: TUNE moves PLAY, FRZ (Freeze), page 2 redrawn; CONTOUR's own logo; the manual brought up to date | `builds/v0.22-FROST/` | yes |
 | v0.21 | 2026-11-23 | The master reverb is a plate (Dattorro's tank in stereo behind the stock REVERB page); the new start-up logo (RIFT in block letters that drip and decompose); PLATEAU withdrawn for rework; FLEX levels from the DN2 mk2 mod's v0.71 | `builds/v0.21-PLATE/` | yes |
 | v0.20 | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
@@ -50,6 +51,32 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.24 · APART
+
+- **File:** `RIFT_v0.24_APART_OS1.11.syx` (`builds/v0.24-APART/`)
+- **sha256:** `8debdc360d978560ae7004d6aba232cb683ce9c9c88491ea9822136a28dffafc`
+- **Gated:** 2026-11-25T02:23, `CLEARED TO FLASH`
+- **Source:** `61248f5` (this repository)
+
+**Changes**
+
+- **RUBBER in GLASS's place** (owner, 2026-11-24: "replace glass with a RUBBER roland sh-101 style filter ... mono basslines sound liquid and rubbery"): the FLTR type 6. A four-pole low-pass after the SH-101's IR3109: four one-pole TPT stages solved with zero-delay feedback, Pade's tanh (DIGIDRUM's `sat`) at the input and in the resonance loop, part of the resonance's bass loss made up at the input, the stages' coefficient ramped across each block. RES to self-oscillation (K_MAX 4.4); TYPE's record is DRIVE (1..4); ATK/DEC and their bends as GLASS's; no LPG. `glass.program.samples_fast`: the 32 samples in registers, bit-exact to `sample()` and to `live.Voice` (about 3,200 cycles a slot a block on the unit's model; GLASS's was 4,200).
+- **RUBBER's FLTR pages** (owner: the curves "should be knobs on the second page ... make it so they don't move sustain and release"): while the active track's filter is RUBBER, `rubber_cells` (page.c) blanks SUS and REL on page 1 (Multi-Mode's descriptor row, which filter 6 reads) and puts them on page 2's two empty places (ABND, DBND), Env. Delay's place blank; the stock rows come back on any other filter. The two are drawn as knobs (`rub_knob`). The flexcore gate step checks the rows both ways.
+- **SMEAR: pitch and speed apart** (owner: "the point of nebulae is that it decouples pitch from speed"): PLAY's read point moves at SPD x the sample's rate; TUNE and the note set the pitch only, through two read heads at the pitch ratio crossfaded with triangles half a cycle apart (HEAD_LEN 2048). With no transposition at speed 1 PLAY is v0.21's plain read, bit for bit.
+- **Knob icons** (owner: the ring "meant to resemble more skeuomorphic shadows ... make it much cleaner"): LG_ARC drawn at the page's size, one pixel wide (the 17 x 12 design scaled up had doubled dots).
+- The manual and the quick guide: RUBBER, SMEAR's TUNE and SPD.
+
+**Tests**
+
+1. A mono bassline on RUBBER: short DEC, ENV up, RES 60-90: snappy, squelchy; DRIV up thickens it; RES at the top self-oscillates (KEY.T up plays it in tune).
+2. FLTR page 2 on RUBBER: ABND and DBND as knobs; page 1 SUS/REL blank and the envelope picture still while turning them. Another filter: stock pages.
+3. SMEAR at BLND 0: TUNE and the keyboard change the pitch only; SPD changes the speed only. TUNE 64 at SPD 1: as before.
+4. RIFT machine pages: clean knob rings.
+
+**Known issues**
+
+- Sounds saved with GLASS open with RUBBER (the same filter type).
 
 ## v0.23 · STEADY
 
