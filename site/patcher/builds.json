@@ -1,5 +1,57 @@
 [
  {
+  "version": "0.24",
+  "name": "APART",
+  "sha256": "8debdc360d978560ae7004d6aba232cb683ce9c9c88491ea9822136a28dffafc",
+  "zip": "dnfw-v0.24.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "e21b4b823ddb9215dce80c1394260b78700f3da94fe0e7ee9fa878a1fc4f3678",
+  "file": "RIFT_v0.24_APART_OS1.11.syx"
+ },
+ {
+  "version": "0.23",
+  "name": "STEADY",
+  "sha256": "ac090a3cd3db877ad781cb3f63e62a12ea64161f4a7d1182301bc8439fd9465a",
+  "zip": "dnfw-v0.23.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "2ed287230b1fb05e40fff26af5a4c593bb6f25cd86e6cfe3fe2dbb2ada49201a",
+  "file": "RIFT_v0.23_STEADY_OS1.11.syx"
+ },
+ {
+  "version": "0.22",
+  "name": "FROST",
+  "sha256": "f6db98f05b2d4a2ed1eef12f4b29821fc87f3af595f61fa14ce8ee5f691f4824",
+  "zip": "dnfw-v0.22.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "547f15ef64c723da224969d78bcf0bc2f0aea6d1bf928f72de37151387d21151",
+  "file": "RIFT_v0.22_FROST_OS1.11.syx"
+ },
+ {
+  "version": "0.21",
+  "name": "PLATE",
+  "sha256": "fb49af0aad953c1b778e67c7f29ac0652e6c6fc1508b892f675a651ae773c7bc",
+  "zip": "dnfw-v0.21.zip",
+  "inputs": [
+   "dn2",
+   "dt2",
+   "md"
+  ],
+  "zip_sha256": "55f8a79d941916addf230d4ca355e4f18af6ee897a069bb471cff39199d88de6",
+  "file": "RIFT_v0.21_PLATE_OS1.11.syx"
+ },
+ {
   "version": "0.20",
   "name": "NXT",
   "sha256": "201ad11135fcc2b5ad56303449d6768152b31a0ebff92c8a6ce4e8aedfa3f4f8",

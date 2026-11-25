@@ -28,7 +28,11 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.20** | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
+| **v0.24** | 2026-11-25 | RUBBER (an SH-101-style ladder) in GLASS's place, its curves as FLTR page 2 knobs; SMEAR: pitch and speed apart; clean knob icons | `builds/v0.24-APART/` | yes |
+| v0.23 | 2026-11-24 | FASCIA's crackle (the guard's budget for RIFT's synths: x 1.25, the reserve kept); CPU on RIFT's machine pages when the DSP drops a voice; CONTOUR's crosshair logo; the quick guide | `builds/v0.23-STEADY/` | yes |
+| v0.22 | 2026-11-24 | GLASS's overload fixed (the same sound at well under two thirds of the DSP time, inside the guard's budget); SMEAR: TUNE moves PLAY, FRZ (Freeze), page 2 redrawn; CONTOUR's own logo; the manual brought up to date | `builds/v0.22-FROST/` | yes |
+| v0.21 | 2026-11-23 | The master reverb is a plate (Dattorro's tank in stereo behind the stock REVERB page); the new start-up logo (RIFT in block letters that drip and decompose); PLATEAU withdrawn for rework; FLEX levels from the DN2 mk2 mod's v0.71 | `builds/v0.21-PLATE/` | yes |
+| v0.20 | 2026-11-23 | SLEN NXT (a slide lasts until the next trig, from the DN2 mk2 mod); CONTOUR: FDBK rescaled, FDBK and FM in key on high notes | `builds/v0.20-NXT/` | yes |
 | v0.19 | 2026-11-22 | CONTOUR, a wave-terrain synth (8 surfaces, 2 pages); RIFT's machine pages at stock's size; SMEAR's page 2 shows the sample, its read point and a grain cloud | `builds/v0.19-CONTOUR/` | yes |
 | v0.18 | 2026-11-22 | The silent-unit fix (SMEAR's VOC off, the guard expects a voice's peak, an output guard on every RIFT machine); PLATEAU no longer dropped beside other tracks; GLASS, a VCFQ-style filter on every machine; MACHINE SEL: PLATEAU's own section, SMEAR first of the samples, their logos | `builds/v0.18-GLASS/` | yes |
 | v0.17 | 2026-11-21 | PLATEAU, RIFT's first FX machine: a Dattorro plate reverb on a track, fed by a BUS of chosen tracks (FUNC + VOICE picks them); BUS for FLEX (SRC BUS, REC BUS); THOLET removed; DIGIDRUM's new logo | `builds/v0.17-PLATEAU/` | yes |
@@ -47,6 +51,119 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.24 · APART
+
+- **File:** `RIFT_v0.24_APART_OS1.11.syx` (`builds/v0.24-APART/`)
+- **sha256:** `8debdc360d978560ae7004d6aba232cb683ce9c9c88491ea9822136a28dffafc`
+- **Gated:** 2026-11-25T02:23, `CLEARED TO FLASH`
+- **Source:** `61248f5` (this repository)
+
+**Changes**
+
+- **RUBBER in GLASS's place** (owner, 2026-11-24: "replace glass with a RUBBER roland sh-101 style filter ... mono basslines sound liquid and rubbery"): the FLTR type 6. A four-pole low-pass after the SH-101's IR3109: four one-pole TPT stages solved with zero-delay feedback, Pade's tanh (DIGIDRUM's `sat`) at the input and in the resonance loop, part of the resonance's bass loss made up at the input, the stages' coefficient ramped across each block. RES to self-oscillation (K_MAX 4.4); TYPE's record is DRIVE (1..4); ATK/DEC and their bends as GLASS's; no LPG. `glass.program.samples_fast`: the 32 samples in registers, bit-exact to `sample()` and to `live.Voice` (about 3,200 cycles a slot a block on the unit's model; GLASS's was 4,200).
+- **RUBBER's FLTR pages** (owner: the curves "should be knobs on the second page ... make it so they don't move sustain and release"): while the active track's filter is RUBBER, `rubber_cells` (page.c) blanks SUS and REL on page 1 (Multi-Mode's descriptor row, which filter 6 reads) and puts them on page 2's two empty places (ABND, DBND), Env. Delay's place blank; the stock rows come back on any other filter. The two are drawn as knobs (`rub_knob`). The flexcore gate step checks the rows both ways.
+- **SMEAR: pitch and speed apart** (owner: "the point of nebulae is that it decouples pitch from speed"): PLAY's read point moves at SPD x the sample's rate; TUNE and the note set the pitch only, through two read heads at the pitch ratio crossfaded with triangles half a cycle apart (HEAD_LEN 2048). With no transposition at speed 1 PLAY is v0.21's plain read, bit for bit.
+- **Knob icons** (owner: the ring "meant to resemble more skeuomorphic shadows ... make it much cleaner"): LG_ARC drawn at the page's size, one pixel wide (the 17 x 12 design scaled up had doubled dots).
+- The manual and the quick guide: RUBBER, SMEAR's TUNE and SPD.
+
+**Tests**
+
+1. A mono bassline on RUBBER: short DEC, ENV up, RES 60-90: snappy, squelchy; DRIV up thickens it; RES at the top self-oscillates (KEY.T up plays it in tune).
+2. FLTR page 2 on RUBBER: ABND and DBND as knobs; page 1 SUS/REL blank and the envelope picture still while turning them. Another filter: stock pages.
+3. SMEAR at BLND 0: TUNE and the keyboard change the pitch only; SPD changes the speed only. TUNE 64 at SPD 1: as before.
+4. RIFT machine pages: clean knob rings.
+
+**Known issues**
+
+- Sounds saved with GLASS open with RUBBER (the same filter type).
+
+## v0.23 · STEADY
+
+- **File:** `RIFT_v0.23_STEADY_OS1.11.syx` (`builds/v0.23-STEADY/`)
+- **sha256:** `ac090a3cd3db877ad781cb3f63e62a12ea64161f4a7d1182301bc8439fd9465a`
+- **Gated:** 2026-11-24, `CLEARED TO FLASH`
+- **Source:** `5839eea` (this repository)
+
+**Changes**
+
+- **FASCIA's crackle** (owner, 2026-11-24, v0.21: "crackling in fascia ... it does crackle with one note"; takton: "crackling and noise in some synths"). FASCIA's sound code is the same as v0.19's, and the master plate's scratch words were ruled out (FASCIA scrambled at those words between blocks renders bit for bit the same). The likely cause is the DSP's time guard: it expected a voice to cost 1.5 x its last block and kept 1/8 of the frame in reserve; FASCIA's voice is RIFT's costliest (about 113k cycles at its peak on the unit's model), and v0.21's plate lengthened the stock's tail by a few thousand cycles, so a lone voice was left out on some blocks: clicks. `perc.guard.around` gains `grow`: FASCIA's dispatch (FASCIA, ORGAN, SILT, LIGATURE, DIGIDRUM, CONTOUR) expects x 1.25 (GROW 2). The reserve is unchanged.
+- **CPU on RIFT's machine pages** (owner: "i dont see any cpu indicators"): while the DSP has left a voice out for time in the last half second (`smp_skipped_any`, the idle packets' SKIPMASK), "CPU" stands in the strip between the D/H column and the page dots (columns 121..123); the page is redrawn as it comes and goes.
+- **CONTOUR's MACHINE SEL logo:** the owner's pick (a ridge over a grid, its orbit, a crosshair, the moon).
+- **The quick guide** (`site/rift-quick.html`), linked from the manual and beside MANUAL on the patcher.
+
+**Tests**
+
+1. FASCIA, one note, then busy patterns: no clicks. If a click comes, look for CPU on the page: CPU showing means time; no CPU means something else (report it).
+2. Heavy patterns (FASCIA chords, CONTOUR FDBK high notes): CPU shows when a tail is dropped, and goes away.
+3. MACHINE SEL: CONTOUR's new logo.
+
+**Known issues**
+
+- Unverified on hardware: whether x 1.25 removes every click on the unit (the reserve keeps the frame safe either way).
+
+## v0.22 · FROST
+
+- **File:** `RIFT_v0.22_FROST_OS1.11.syx` (`builds/v0.22-FROST/`)
+- **sha256:** `9b6d4c0d4f8cca2f9b0b43e3de3f55dbe0feb9c79ed5c1ca2fee36a5e1e7e0ac`
+- **Gated:** 2026-11-24, `CLEARED TO FLASH`
+- **Source:** `49e85dd` (this repository)
+
+**Changes**
+
+- **GLASS's overload** (owner, 2026-11-23: "a weird cpu issue ... weirdly bitcrushed like the monomachine overload sound"). Measured on the unit's cost model (rcost): GLASS took about 7,200 cycles a slot a block, as sample() loaded and stored every intermediate; fifteen WaveTone tracks on GLASS were 279k cycles over an idle frame's 415k, past the 667k frame. And GLASS ran after our voices' end mark, so the guard's limit (guard.tail_limit) never counted it: voices filled the frame to the limit and GLASS ran past it. Now:
+  - `glass.program.samples_fast`: the filter's state, coefficients and level in registers, the same operations on the same operands in the same order (bit-exact to v0.18's sample() and to live.Voice): about 4,200 cycles a slot (`FAST`, False: the old loop).
+  - The voices' end mark (`G.end_mark`) before GLASS and the sanitizer, so their time is measured with the stock's tail and the voices' limit leaves room for it.
+- **SMEAR TUNE** (owner: "get TUNE working"): PLAY read at SPD x RATE, so TUNE and the note moved only the grains: at BLND 0 nothing. PLAY now reads at SPD x tr (tape).
+- **SMEAR FRZ** (owner: "a FREEZE param"): page 2's E on OFS1 (record 246; WaveTone's default 50 reads OFF, so earlier tracks open unfrozen), OFF / ON. ON holds the read point (SPD kept) and gives PLAY's share of BLND to the grains. smp.asm grew past its L2 room; pvmix.asm moved to the span's last 768 bytes.
+- **SMEAR page 2** (owner: "crammed in with the top row knobs ... closer to what WERP or slice does"): ONESHOT's page-2 layout; OVLP, SPRY, PRND and WIN as small pictures of what they do; the strip at the waveform's place; FRZ's label with a bar while on.
+- **CONTOUR's MACHINE SEL logo** (owner: "a terrain synthesis logo"): two hills' contour lines.
+- **The manual** (owner: "still mentions tholet and doesnt have every new feature"): THOLET gone from every section and entry; KEYBOARD HOLD back in Performance (it showed only with THOLET); the FLEX levels as v0.21 has them (4 dB, not 12); SMEAR's VOC said off; FRZ, TUNE and page 2; GLASS's CPU note.
+- Gate: rcost's GLASS case (a slot within 5,000 cycles: v0.21's is 7,200), the runner's `smear` case "v0.22 FRZ", unit tests `test_v022_*` (GLASS fast = v0.18 path = live in the knee's three regions and both morph halves; SMEAR TUNE on PLAY, FRZ), test_sampler's FRZ detents.
+
+**Known issues**
+
+- SMEAR's VOC is still off (v0.18).
+
+**Tests**
+
+0. GLASS on six or more busy tracks (high RES, ENV, LPG) beside FASCIA or SMEAR: no crushed sound; GLASS sounds as in v0.21.
+1. SMEAR at BLND 0: TUNE and notes transpose PLAY.
+2. SMEAR FRZ ON / OFF, and p-locked on trigs.
+3. SMEAR page 2: the four pictures move with OVLP, SPRY, PRND, WIN; the sample view clear; FRZ's bar.
+4. MACHINE SEL: CONTOUR's logo.
+
+## v0.21 · PLATE
+
+- **File:** `RIFT_v0.21_PLATE_OS1.11.syx` (`builds/v0.21-PLATE/`)
+- **sha256:** `fb49af0aad953c1b778e67c7f29ac0652e6c6fc1508b892f675a651ae773c7bc`
+- **Gated:** 2026-11-23, `CLEARED TO FLASH`
+- **Source:** `72382c7` (this repository)
+
+**Changes**
+
+- **The master reverb is a plate** (owner, 2026-11-23: "replace the stock master reverb with Plateau", the UI left as it is): Dattorro's tank (PLATEAU's, `dnfw.mverb`) in stereo (Table 2's first seven taps the left, the last seven the right) in the stock reverb core's place. The stock FX function's call of the core (sw 0xb8370c, `CALL 0xb82d1a (DB)`) becomes `JUMP wr_mv` (mverb.asm, in L2 after smear.asm); wr_mv reads the stock input stage's 32 samples (after the sends, HPF and LPF) and writes the 64 the stock mix stage takes (MIX VOL, routing), then resumes past the call. Its controls are the frame's reverb words (the FX slot at 2554: PRE 2586, DEC 2588, FREQ 2590, GAIN 2592): PRE the pre-delay (0..0.3 s), DEC the tank's decay, FREQ and GAIN a high shelf in the tank's loop. Its state and lines in DDR (0x82690000, 270 KB), cleared by itself after power-on (17 silent blocks).
+
+- **A new start-up logo** (owner, 2026-11-23, after the GRAINS block-letter reference): the smoke gathers into RIFT in block letters (solid blocks, a one-pixel seam, a thin shadow line), then over the last 0.7 s the letters drip (one-pixel trickles from their lower edges) and decompose (the top first, in clumps, a little grit falling). 80 frames as before; the logo forms 3 % sooner. `tools/anim/rift_anim3d.py --json` writes `bootanim_rift.json`.
+- **Rounder skeletons and real drums** (owner): a rounded cranium with brow, cheekbones, muzzle, teeth and a tapering jaw; round joints; djembe goblets; a steel pan's dish on a tripod. Pre-rendered: no run-time cost (6 bytes more).
+- **PLATEAU withdrawn** (owner: "plateau is awful ... pull it, save it for later work"): out of MACHINE SEL (`plateau.machines.LISTED`) and its DSP program out of the build (`ON_DSP`: its 9 KB of the DSP's 1 MiB upload are the master reverb's room); a saved PLATEAU track opens as FM Tone. The source stays for its rework.
+
+- **FLEX levels from the DN2 mk2 mod's v0.71** (owner: "the one we need finally"; NiKo's measurements on the mod's v0.67, a slate tone at -24 dBFS over USB): a take of a track `TRK_HW_DB` 6 (was 24), MAIN and IN takes played `MAIN_PLAY_DB` 4 louder (was 12). Takes recorded on earlier versions keep their level (a track's take 18 dB hot: GAIN -18 brings one back).
+
+- Gate: runner part `mverb` (the stock FX path, bit-exact to `live.Verb` with noise in, the controls moving, the longest pre-delay; silence in, silence out; a negative control); rcost's master-reverb case; unit tests `test_mverb_program`.
+
+**Known issues**
+
+- As v0.20: CONTOUR has no MACHINE SEL logo; the page icons are the old ones scaled up; SMEAR's VOC is off.
+- GLASS on several busy tracks can run the DSP past its frame (a crushed, crackly sound): fixed in v0.22. SMEAR's TUNE does nothing at BLND 0: fixed in v0.22.
+
+**Tests**
+
+0. The master reverb: a track's reverb send up, DEC, PRE, FREQ and GAIN round their ranges: a plate; sends at 0: nothing from the reverb. MIX VOL, HPF and LPF as before.
+1. Power on: the campfire, the camera to the sky, the smoke forming RIFT in block letters, then dripping and crumbling; "RIFT 0.21" bottom right.
+2. MACHINE SEL: no PLATEAU, no empty FX section; SMEAR first of the sample machines.
+3. A project saved with a PLATEAU track: that track opens as FM Tone.
+4. FLEX: record a track at GAIN 0: the take plays at the track's own level. Record MAIN and IN: their takes play at their sources' level.
 
 ## v0.20 · NXT
 

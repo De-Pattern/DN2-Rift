@@ -216,7 +216,7 @@ CONTOUR = {
     "WARP": "Warp: distorts the orbit's coordinates before the surface is read.",
     "FOLD": "Fold: a wavefolder after the surface.",
     "FM": "FM: the output modulates the orbit's speed (through-zero-ish growl at the top).",
-    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Curved since v0.20: the low end is finely spread, and the top stays usable. Above B3 it follows the pitch, so high notes keep the low notes' character and stay in key.",
+    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Its original range (v0.26: v0.20's curve taken out); high settings turn wild on some surfaces and sizes, part of its character. Above B3 it follows the pitch, so high notes keep the low notes' character and stay in key.",
     "GRIT": "Grit: sample-and-bit crush.",
     "LEV": "Level.",
 }
@@ -743,7 +743,9 @@ def build() -> str:
 
 
 VERSIONS = [
-    ("0.26", "VOC", ["SMEAR's VOC is back: BLND 0 plays a keyframe time stretch after heavylight's Capicola / dt2-keyframer (credit and thanks to heavylight): pitch and time apart, peaks spliced onto peaks, 20 ms fades, a few thousand DSP cycles a voice. PLAY is now at BLND's middle."]),
+    ("0.26", "VOC", ["RUBBER: a track could go silent for good when RUBBER was put on it (its state was never cleared at power-on, so leftover memory could fill it with NaN). Fixed: it starts clean, and a block the safety check zeroes resets it.",
+                     "CONTOUR: FDBK's original range is back (v0.20's curve taken out): the feedback exactly as it first was.",
+                     "SMEAR's VOC is back: BLND 0 plays a keyframe time stretch after heavylight's Capicola / dt2-keyframer (credit and thanks to heavylight): pitch and time apart, peaks spliced onto peaks, 20 ms fades, a few thousand DSP cycles a voice. PLAY is now at BLND's middle."]),
     ("0.25", "SPALL", ["SPALL, a new synth machine: sound from tiny events (clicks, dust, tonal grains, chips) on a stochastic clock, rung through two resonators; two pages, 16 controls, its own icons and logo.",
                        "MACHINE SEL: the MIDI machine shows a 5-pin DIN socket and MIDI under it.",
                        "Includes v0.24."]),
@@ -830,7 +832,8 @@ td,th{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-alig
 .credit{font-size:13px;color:var(--dim)}.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0}
 ul{padding-left:20px}li{margin:4px 0}
 :target{scroll-margin-top:56px}
-</style></head><body><main>
+.pdfbtn{position:fixed;top:10px;right:14px;z-index:20;font:600 13px/1 'Space Grotesk',ui-sans-serif,system-ui,sans-serif;letter-spacing:.04em;color:#fff;background:#8a2a3c;border:1px solid #b04a5c;border-radius:8px;padding:9px 13px;text-decoration:none}.pdfbtn:hover{background:#a0344a}@media print{.pdfbtn{display:none}}
+</style></head><body><a class="pdfbtn" href="rift-manual.pdf" download title="The manual as one PDF">Download PDF</a><main>
 """
 
 
