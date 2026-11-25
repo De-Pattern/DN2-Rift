@@ -3936,7 +3936,7 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     if xg:
         xg[0].emit_rts()                       # PLATEAU's (p_render, p_ap, p_apf)
     cg[0].emit_rts()                           # CONTOUR's (c_render, the surfaces)
-    sg2[0].emit_rts()                          # SPALL's (s_render, s_tick, s_event, s_tonal)
+    sg2[0].emit_rts()                          # SPALL's (sp_render, sp_tick, sp_event, sp_tonal: v0.25, apart from SILT's s_render)
     gg.emit_rts()                              # GLASS's (g_slot, g_bend)
     p.emit_subs()
     p.scr_on = False
