@@ -55,7 +55,11 @@ def k(x) -> Kc:
 _SRC = pathlib.Path(__file__).read_text(encoding="utf-8")
 WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC))
                      | {"wi", "dw", "lb", "lm", "apx", "apg", "z", "v", "apo", "di", "fr", "b0", "b1", "dd",
-                        "cnt0", "cnt1", "pred", "ip", "op_l", "op_r", "yl", "yr", "na", "nb", "ma", "mb"}))
+                        "cnt0", "cnt1", "pred", "ip", "op_l", "op_r", "yl", "yr", "na", "nb", "ma", "mb",
+                        "hshA", "hshB", "hendA", "hendB"}))   # RIFT v0.27: the state words a sample reads, in L1 for the block
+
+
+HOT = ("shA", "shB", "endA", "endB")
 
 
 class Layout:
@@ -210,7 +214,13 @@ class MG(PLP.PG):
         for word, at in (("ip", IN_BUF), ("op_l", OUT_L), ("op_r", OUT_R)):
             p.iconst(0, at)
             p.st(C[word], 0)
+        # RIFT v0.27 LEAN: the shelves' and the tank's end words in L1 for the block (copied in and out:
+        # the same values, no DDR access a sample)
+        for n in HOT:
+            self.set(c("h" + n), s(n))
         p.loop(C["cnt0"], BLOCK, self.sample)
+        for n in HOT:
+            self.set(s(n), c("h" + n))
         self.set(s("ph"), c("ph1"))
         p.ld(0, C["wi"])
         self.st(self.si("w"), 0)
@@ -238,7 +248,7 @@ class MG(PLP.PG):
             self.ld(1, c("m" + side))
             p.fop(0, 0, "+", 1)
             self.st(c("dd"), 0)
-            self.set(c("apx"), c("x") + c("gdec") * s(other))
+            self.set(c("apx"), c("x") + c("gdec") * c("h" + other))
             self.set(c("apg"), k(LV.GD1))
             p.iconst(0, self.L.line(side + "_ap"))
             p.st(C["lb"], 0)
@@ -248,14 +258,15 @@ class MG(PLP.PG):
             self.wr_c(side + "_d1", c("apo"))
             self.rd_c(side + "_d1", LV.LEN[side + "_d1"])
             self.st(c("t1"), 0)
-            self.set(s(sh), s(sh) + c("c_sh") * (c("t1") - s(sh)))
-            self.set(c("t1"), (s(sh) + c("g_sh") * (c("t1") - s(sh))) * c("gdec"))
+            hs = c("h" + sh)
+            self.set(hs, hs + c("c_sh") * (c("t1") - hs))
+            self.set(c("t1"), (hs + c("g_sh") * (c("t1") - hs)) * c("gdec"))
             self.ap_c(side + "_ap2", c("t1"), LV.LEN[side + "_ap2"], c("gd2"))
             self.wr_c(side + "_d2", c("apo"))
             self.rd_c(side + "_d2", LV.LEN[side + "_d2"])
             self.st(c(end), 0)
-        self.set(s("endA"), c("na"))
-        self.set(s("endB"), c("nb"))
+        self.set(c("hendA"), c("na"))
+        self.set(c("hendB"), c("nb"))
         for j, out in ((0, "yl"), (1, "yr")):
             self.fz(c(out))
             for kk in range(7 * j, 7 * j + 7):
