@@ -5247,8 +5247,10 @@ def step_rprof(init, sound, machines) -> dict:
         return out
     res = {}
     try:
-        idle = rows(lambda b: fsc_frame(sound, machines, {}, trig=()), 3)
-        base = max(idle)
+        idle = rows(lambda b: fsc_frame(sound, machines, {}, trig=()), 60)
+        base = max(idle[:3])
+        print(f"    rprof idle frame: first {round(idle[0])}, blocks 1..3 {[round(x) for x in idle[1:4]]}, "
+              f"last {[round(x) for x in idle[-3:]]}; changes at {[(k, round(idle[k])) for k in range(1, 60) if abs(idle[k] - idle[k - 1]) > 500]}", flush=True)
         fp = fsc_audition()["01_tubular_bell"][0]
         organ_full = {"STOP": 4, "R16": 127, "R8": 127, "R4": 127, "CELESTE": 80, "TREM": 60}
         cases = {
@@ -5261,11 +5263,12 @@ def step_rprof(init, sound, machines) -> dict:
             "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
         }
         for name, fb in cases.items():
-            r_idle = rows(lambda b: fb(()), 3)                       # the machine on slot 0, no note
+            r_idle = rows(lambda b: fb(()), 40)                      # the machine on slot 0, no note
+            print(f"    rprof {name} no note: first {[round(x - base) for x in r_idle[:3]]}, last {[round(x - idle[min(k, 59)]) for k, x in list(enumerate(r_idle))[-3:]]} (against the idle frame's same block)", flush=True)
             r = rows(lambda b: fb((0,) if b == 1 else ()), 40)
-            res[name] = {"idle": round(max(r_idle) - base) if r_idle else None,
+            res[name] = {"idle": round(max(r_idle[:3]) - base) if r_idle else None,
                          "strike": round(r[1] - base) if r else None,
-                         "after": [round(x - base) for x in r[2:]] if r else None,
+                         "after": [round(x - idle[min(k + 2, 59)]) for k, x in enumerate(r[2:])] if r else None,
                          "worst": round(max(r) - base) if r else None}
             print(f"    rprof {name}: idle {res[name]['idle']}, strike {res[name]['strike']}, worst {res[name]['worst']}, "
                   f"after {res[name]['after'][:6] if r else None} ... {res[name]['after'][-3:] if r else None}", flush=True)
