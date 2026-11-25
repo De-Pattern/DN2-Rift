@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.24** | 2026-11-25 | RUBBER (an SH-101-style ladder) in GLASS's place, its curves as FLTR page 2 knobs; SMEAR: pitch and speed apart; clean knob icons | `builds/v0.24-APART/` | yes |
+| **v0.25** | 2026-11-25 | SPALL, a new synth machine (tiny events rung through two resonators), its logo; the MIDI machine's DIN logo; Download PDF on the manual and the quick guide | `builds/v0.25-SPALL/` | yes |
+| v0.24 | 2026-11-25 | RUBBER (an SH-101-style ladder) in GLASS's place, its curves as FLTR page 2 knobs; SMEAR: pitch and speed apart; clean knob icons | `builds/v0.24-APART/` | yes |
 | v0.23 | 2026-11-24 | FASCIA's crackle (the guard's budget for RIFT's synths: x 1.25, the reserve kept); CPU on RIFT's machine pages when the DSP drops a voice; CONTOUR's crosshair logo; the quick guide | `builds/v0.23-STEADY/` | yes |
 | v0.22 | 2026-11-24 | GLASS's overload fixed (the same sound at well under two thirds of the DSP time, inside the guard's budget); SMEAR: TUNE moves PLAY, FRZ (Freeze), page 2 redrawn; CONTOUR's own logo; the manual brought up to date | `builds/v0.22-FROST/` | yes |
 | v0.21 | 2026-11-23 | The master reverb is a plate (Dattorro's tank in stereo behind the stock REVERB page); the new start-up logo (RIFT in block letters that drip and decompose); PLATEAU withdrawn for rework; FLEX levels from the DN2 mk2 mod's v0.71 | `builds/v0.21-PLATE/` | yes |
@@ -51,6 +52,33 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.25 · SPALL
+
+- **File:** `RIFT_v0.25_SPALL_OS1.11.syx` (`builds/v0.25-SPALL/`)
+- **sha256:** `fb10496c9132c51dd0d294fd846b21099ba6fc4d9db90daf3b5f0624045e83ab`
+- **Gated:** 2026-11-25T13:53, `CLEARED TO FLASH`
+- **Source:** `13c29ef` (this repository)
+
+**Changes**
+
+- **SPALL**, a new synth machine (type 26, owner 2026-11-24: "i am in love with these spall sounds"): sound from tiny events on a stochastic clock (TYPE: IMP clicks, DUST, TONE grains, CHIP), DENS, GAP, EDGE, CLMP (clumps), MEM (how much the clock remembers), SIZE, rung through two resonators (FRQA, FRQB, RING) with ALG SUM / RING / SCAN, COUP, SPRD, TUNE and MIX. Two LINE pages with its own glyphs (SIZE GAP CLMP MEM PEAK), formatters, slides, LFO names, its logo (chips off a struck surface). In FASCIA's walk under the guard (x 1.25), MACHINE SEL after CONTOUR. Bit-exact to its model (23 unit tests; the runner's spall part: every type with every algorithm, knobs moving, extremes, two voices, a FASCIA track switched to SPALL).
+- **SPALL's logo** is the owner's drawing (chips and crosses scattered), 40 x 24 in the 46 x 32 frame.
+- **The manual and the quick guide** have a Download PDF button (top right).
+- **Fixed on the way to the gate:** SPALL's DSP routines had SILT's names (fascia.asm had the label twice: SILT would have jumped into SPALL's code); perc.asm's type range reaches 26. A unit test now fails any label twice.
+- **The MIDI machine's logo**: a 5-pin DIN socket, its label MIDI (was SYN).
+- The manual's SPALL section; the quick guide's SPALL page.
+
+**Tests**
+
+1. MACHINE SEL: SPALL after CONTOUR, its logo; MIDI's DIN logo and label.
+2. A SPALL note at the defaults (TONE), then each TYPE; DENS and GAP for busy and sparse; CLMP up for bursts.
+3. FRQA / FRQB and RING: the resonators; ALG RING and SCAN.
+4. Both LINE pages: the icons, the values while turning.
+
+**Known issues**
+
+- RUBBER can stay silent on a track after a power-on (its state was never cleared): fixed in v0.26.
 
 ## v0.24 · APART
 
