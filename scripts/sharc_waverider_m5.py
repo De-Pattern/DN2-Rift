@@ -111,6 +111,7 @@ LG_L = LGP.layout()             # RIFT: LIGATURE (type 21), in FASCIA's walk
 DD_L = DDP.layout()             # RIFT: DIGIDRUM (type 22), in FASCIA's walk
 PL_L = PLP.layout()             # RIFT v0.17: PLATEAU (type 24), in FASCIA's walk
 CT_L = CTP.layout()             # RIFT v0.20: CONTOUR (type 25), in FASCIA's walk
+SP_L = SPLP.layout()            # RIFT v0.25: SPALL (type 26), in FASCIA's walk
 GL_L = GLP.layout()             # RIFT v0.18: GLASS (filter 6), at FASCIA's walk's end
 
 
@@ -375,7 +376,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 lt = FSC_L.lasttype + 4 * t
                 if mem.get(lt) != ty:
                     mem.put(lt, ty)
-                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], PLP.VOICE["magic"], CTP.VOICE["magic"]):
+                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], PLP.VOICE["magic"], CTP.VOICE["magic"], SPLP.VOICE["magic"]):
                         mem.put(fsc_base(t) + 4 * k_, 0)
                 if ty == FSM.TYPE:
                     p_, mem = FSP.run_voice(FSC_L, None, t, mem)
@@ -395,6 +396,9 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 elif ty == CTP.TYPE:                 # RIFT v0.20: CONTOUR (dnfw.contour.program), in the same walk
                     p_, mem = CTP.run_voice(CT_L, None, t, mem)
                     nw = CTP.VOICE_WORDS
+                elif ty == SPLP.TYPE:                # RIFT v0.25: SPALL (dnfw.spall.program), in the same walk
+                    p_, mem = SPLP.run_voice(SP_L, None, t, mem)
+                    nw = SPLP.VOICE_WORDS
                 elif ty == PLP.TYPE:                 # RIFT v0.17: PLATEAU (dnfw.plateau.program), in the same walk;
                     # its input, the tracks' blocks as it reads them (TRK_BUF), kept for live
                     tap["trk"] = [[m2.word(st, SM.TRK_BUF + SM.TRK_STRIDE * k + 4 * i) or 0 for i in range(64)]
