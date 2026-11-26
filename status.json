@@ -1,19 +1,21 @@
 {
- "updated": "2026-11-26T16:26:54+00:00",
+ "updated": "2026-11-26T16:29:57+00:00",
  "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: full gate restarted 11:27 with the QA fixes in (about 5 to 6 hours).",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 2,
+   "done": 16,
    "total": 74,
-   "frac": 0.027,
-   "status": "running: $ /usr/local/bin/python3 -c from dnfw.cli.main import main; ",
+   "frac": 0.216,
+   "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "preflight: bootstrap/updater/meta/Outbox untouched, signature, DSP size",
-    "ColdFire code current: src/dnfw/mods/waverider_code.json matches csrc/ and the composer ()"
+    "ColdFire: MAIN OS: 224 hit(s), all in appended data that never executes",
+    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
+    "unit tests: 952 passed, 2 skipped, 12 warnings in 783.64s (0:13:03) [reused: no input changed]",
+    "DSP load meter (ColdFire): the DSP load meter: the half second's peak in percent, none when the DSP is "
    ],
-   "log_written": "11:26"
+   "log_written": "11:29"
   }
  ]
 }
