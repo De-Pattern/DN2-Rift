@@ -84,6 +84,17 @@ up needs no word from the owner and pauses nothing:
 `docs/QA.md` has the rest, including the owner's rule that an optimization may change an
 engine's model within a measured likeness (the DSP still equals its model bit for bit).
 
+**QA proposes, the build session decides (owner, 2026-11-26).** QA (the release review) bounces
+ideas back; the build session judges every one by these rules and takes, defers or declines it on
+its own, without stopping for the owner. Sound and behaviour stay as close to today's as the
+measured likeness allows; bit-exact is preferred wherever it costs little.
+
+**Backups (owner, 2026-11-26).** At every release, push its source as `baseline/engines-vX.Y`
+(the engines as they shipped, to compare or roll back to), and keep every working tree's branch on
+the remote as `archive/<branch>`. An engine whose model changes for an optimization keeps its
+previous model beside the new one behind a switch (as `mverb.program.FAST`) until a later release
+retires it. The bench (DN2-Rift-bench) pins the emulators and the released source in `setup.sh`.
+
 ## Every cleared build is published
 
 When a build prints `CLEARED TO FLASH`, in the same session:
