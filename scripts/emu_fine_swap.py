@@ -43,7 +43,7 @@ IDS = (239, 258, 257)                           # STRT, LEN, LOOP
 SLOTS = {239: 26, 258: 45, 257: 44}
 FREQ = 36
 ONESHOT, WERP, STRETCH, REPITCH, GRID, SLICE, BOUNCE = 8, 9, 10, 11, 12, 13, 17
-MASK = {ONESHOT: 7, STRETCH: 3, REPITCH: 3, BOUNCE: 3}
+MASK = {ONESHOT: 7, STRETCH: 3, REPITCH: 3, BOUNCE: 3, WERP: 3}   # RIFT v0.29: SMEAR's STRT and SIZE fine too
 
 
 def main() -> int:
