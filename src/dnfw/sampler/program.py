@@ -645,6 +645,10 @@ def entry_check(p: Prog, L: Layout) -> None:
     p.ifz(13, "NE", lambda: (p.iconst(5, 0), p.iconst(6, 0), p.iconst(8, 0)))
 
 
+# RIFT: what the guard expects a SMEAR slot's glue to cost (smear_glue and, at a note, smear_latch):
+# a few times its instruction count, far under a voice's FLOOR. To be measured in the runner (rprof)
+SMEAR_GLUE = 6_000
+
 MIN_REGION = 32                                # v0.22: the shortest ONESHOT region, frames
 
 
@@ -3267,15 +3271,34 @@ def program(L: Layout, next_sw: int, prefix: str = "sm") -> str:
     p.place(body)
     from ..perc import guard as G
     def stop():                              # v0.49: left out twice in a note: ended until the next
-        p.ld(9, L.C["t"])
-        p.lsh(12, 9, 7)
-        p.iconst(11, L.state)
-        p.iop(12, 11, "+", 12)
-        p.seti(2, 12)
-        p.iconst(0, 0)
-        vs(p, "on", 0)
+        def end():
+            p.ld(9, L.C["t"])
+            p.lsh(12, 9, 7)
+            p.iconst(11, L.state)
+            p.iop(12, 11, "+", 12)
+            p.seti(2, 12)
+            p.iconst(0, 0)
+            vs(p, "on", 0)
+        # RIFT (the owner, 2026-11-26, v0.27: SMEAR "cuts out completely" for 30 to 50 s and comes back
+        # only with more triggers): never a SMEAR slot. Here a SMEAR slot is only its glue (the mailbox
+        # for smear.asm, which renders it under its own guard), and a SMEAR note has no end: one note
+        # loops for minutes, so two blocks left out anywhere in it ended the voice (on 0: its mailbox
+        # says no frames) until a later note's block happened to fit
+        p.ld(0, L.C["type"])
+        p.iconst(12, SM.TYPE_OF["WERP"])
+        p.if_(0, "NE", 12, end, kind="i")
+
+    def expect(p):
+        # RIFT (the same report): the glue is expected to cost SMEAR_GLUE, not a voice's FLOOR. It was
+        # held to 60,000 free cycles for about a thousand instructions (the latch and fifteen words),
+        # so with the frame short it was left out: its block zeroed, and a note on that block lost
+        # (the trigger is only in that block's frame), with smear.asm's own guard never asked.
+        # Keeps R8; R9 the expected cost
+        p.ld(10, L.C["type"])
+        p.iconst(11, SM.TYPE_OF["WERP"])
+        p.if_(10, "EQ", 11, lambda: p.iconst(9, SMEAR_GLUE), kind="i")
     G.around(p, L.C["t"], G.COST_SMP, PP.BUFFERS, lambda: voice(p, L),   # v0.27: if it fits in the frame
-             struck=G.STRUCK, stop=stop)
+             struck=G.STRUCK, stop=stop, expect=expect)
     p.jump("", nxt)
     if FASCIA_MUTE:
         p.place(fmute)
