@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T21:34:00+00:00",
+ "updated": "2026-11-26T21:37:03+00:00",
  "note": "v0.28 STABLE: full gate running (45 steps passed, none failed). v0.29 in test: SMEAR mono, SMEAR SIZE fix, DIGIDRUM guard by drum type.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 55,
+   "done": 58,
    "total": 75,
-   "frac": 0.733,
-   "status": "running: waverider_menu",
+   "frac": 0.773,
+   "status": "running: coupled_thres",
    "state": "run",
    "last": [
-    "KEYBOARD kept through grid recording (ColdFire): KEYBOARD on; RECORD (grid recording): off as stock; RE",
-    "KEYBOARD HOLD: PTN + KEYBOARD, held notes, chords, release (ColdFire): PTN + KEYBOARD turns stock's sus",
-    "the arp on MIDI tracks (ColdFire): the arp on a MIDI track: menu-free routing checked on the key forks ",
-    "the arp's offsets and the track's transpose in key: arpscale, degreetranspose (ColdFire): arp offsets m"
+    "the arp's offsets and the track's transpose in key: arpscale, degreetranspose (ColdFire): arp offsets m",
+    "microtuning: KB SETUP's TUNE, the TUNING page, the frame's retune (ColdFire): tn_retune tunes only tune",
+    "microtuning: each project's tuning record (ColdFire): each project's tuning: written after two seconds ",
+    "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire): the slice ed"
    ],
-   "log_written": "16:32"
+   "log_written": "16:35"
   }
  ]
 }
