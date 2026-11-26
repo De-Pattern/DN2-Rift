@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T17:15:34+00:00",
- "note": "v0.27 FLOW is out.\nv0.28 STABLE: QA found why SMEAR cut out for 30-50 s (the guard ended a looping SMEAR note after two tight blocks). Fix taken in; step checks, then the full gate restarts.",
+ "updated": "2026-11-26T17:18:36+00:00",
+ "note": "v0.27 FLOW is out.\nv0.28 STABLE: full gate started 12:17 with the SMEAR cutout fix (about 6 hours).",
  "gates": [
   {
-   "label": "v0.28 STABLE \u00b7 step runs",
+   "label": "v0.28 STABLE \u00b7 full gate",
    "done": 15,
-   "total": null,
-   "frac": 0.5,
-   "status": "running: SHARC runner: smear",
+   "total": 75,
+   "frac": 0.2,
+   "status": "running: waverider_menu",
    "state": "run",
    "last": [
     "ColdFire: code 0x467b8000..0x467b8684: no scale-8 addressing",
     "ColdFire: MAIN OS: 224 hit(s), all in appended data that never executes",
     "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
-    "unit tests: 952 passed, 2 skipped, 12 warnings in 792.22s (0:13:12)"
+    "unit tests: 952 passed, 2 skipped, 12 warnings in 792.22s (0:13:12) [reused: no input changed]"
    ],
-   "log_written": "12:15"
+   "log_written": "12:18"
   }
  ]
 }
