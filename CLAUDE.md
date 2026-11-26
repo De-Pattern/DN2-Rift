@@ -61,6 +61,18 @@ reused, ties its pass to the build.)
 
 See `docs/SAFETY.md` for the risks each gate covers.
 
+## The release review (owner, 2026-11-26)
+
+When a release is frozen and its gate starts: push the frozen source as the branch `rc/vX.Y`
+(source only, never firmware), and fire the scheduled task **RIFT release review**
+(`trig_01Vfv7Qs4M76ZvouHHi53GdV`) with one line: the version, the branch, the commit and the
+last released tag. With no tool to fire it, tell the owner in one line that `rc/vX.Y` is ready
+for review. **Then carry on: the review is advisory and never holds a gate or a release.** Its
+report and commits arrive on `qa/vX.Y`; take what is worth taking into the next release's tree
+and gate it there as any other change. `docs/QA.md` has the rest, including the owner's rule
+that an optimization may change an engine's model within a measured likeness (the DSP still
+equals its model bit for bit).
+
 ## Every cleared build is published
 
 When a build prints `CLEARED TO FLASH`, in the same session:
