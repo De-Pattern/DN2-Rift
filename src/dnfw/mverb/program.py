@@ -301,20 +301,21 @@ class MG(PLP.PG):
     # address's; I1 a line's word, I4 the input and output words. Every float operation is live.Verb's, in its
     # order, on the same operands (the products' and sums' operand order only where IEEE gives the same bits).
     def _at(self, line: str, d=None, ireg: int = 1) -> None:
-        """I<ireg> = line's word at (wi - d) & mask: D None (d 0), an int, or ("r", n) (d in Rn)"""
+        """I<ireg> = line's word at (wi - d) & mask, as bytes: base + ((4 wi - 4 d) & (4 size - 1)) (R15 = 4 wi);
+        D None (d 0), an int, or ("r", n) (d in Rn). The mask in R13, the base in R12: repeated, their loads
+        are left out (Prog's known registers)"""
         p = self.p
         if d is None or (not isinstance(d, tuple) and d == 0):
-            p.iconst(12, LV.SIZE[line] - 1)
-            p.iop(9, 14, "AND", 12)
+            p.iconst(13, 4 * LV.SIZE[line] - 1)
+            p.iop(9, 15, "AND", 13)
         else:
             if isinstance(d, tuple):
-                p.iop(9, 14, "-", d[1])
+                p.lsh(10, d[1], 2)
             else:
-                p.iconst(10, d)
-                p.iop(9, 14, "-", 10)
-            p.iconst(12, LV.SIZE[line] - 1)
-            p.iop(9, 9, "AND", 12)
-        p.lsh(9, 9, 2)
+                p.iconst(10, 4 * d)
+            p.iop(9, 15, "-", 10)
+            p.iconst(13, 4 * LV.SIZE[line] - 1)
+            p.iop(9, 9, "AND", 13)
         p.iconst(12, self.L.line(line))
         p.iop(9, 9, "+", 12)
         p.seti(ireg, 9)
@@ -341,12 +342,12 @@ class MG(PLP.PG):
         p.fop(6, 5, "-", 6)                     # fr = d - di
         self._at(line, ("r", 11))
         p.ldi(1, 0, 1)                          # b0
-        p.iop(9, 14, "-", 11)
-        p.iconst(12, 1)
-        p.iop(9, 9, "-", 12)                    # wi - di - 1
-        p.iconst(12, LV.SIZE[line] - 1)
-        p.iop(9, 9, "AND", 12)
-        p.lsh(9, 9, 2)
+        p.lsh(10, 11, 2)
+        p.iop(9, 15, "-", 10)
+        p.iconst(10, 4)
+        p.iop(9, 9, "-", 10)                    # 4 (wi - di - 1)
+        p.iconst(13, 4 * LV.SIZE[line] - 1)
+        p.iop(9, 9, "AND", 13)
         p.iconst(12, self.L.line(line))
         p.iop(9, 9, "+", 12)
         p.seti(1, 9)
@@ -364,6 +365,7 @@ class MG(PLP.PG):
     def sample_fast(self) -> None:
         p, C = self.p, self.L.C
         p.ld(14, C["wi"])
+        p.lsh(15, 14, 2)                        # 4 wi: the lines' byte offsets
         p.ld(12, C["ip"])
         p.seti(4, 12)
         p.ldi(0, 0, 4)                          # x
