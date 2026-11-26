@@ -24,5 +24,9 @@ morph, an LPG). More engines and effects follow, each added only when it fits an
 - **THOLET** (the piano, v0.15) is **Error Kit**'s concept. Its hammer transients are from the
   Versilian Community Sample Library's Kawai grand (CC0).
 - MON, MICROTUNING, KEYBOARD HOLD, the SLICE editor and FLEX's levels come from the DN2 mk2 mod.
+- The arpeggiator on MIDI tracks is **Angel Linares**'s (upstream, angellinares/dn2_firmware_explore);
+  ARP OFS IN SCALE and in-key transpose are **w-winter**'s (upstream, the same repository), both
+  applied as DN2 mk2 applies them (docs/midiarp.md, docs/inkey.md; AGPL-3.0, THIRD-PARTY.md).
+- SMEAR's VOC is built on **heavylight**'s keyframe time stretching (Capicola, dt2-keyframer).
 
 Licence: AGPL-3.0 (LICENSE); third-party notices in THIRD-PARTY.md.

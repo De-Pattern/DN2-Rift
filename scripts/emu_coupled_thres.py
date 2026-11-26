@@ -60,6 +60,19 @@ def main() -> int:
         c.put32(lay["rec_src"], 0)                              # IN
         if "rec_rstrt" in lay:                                  # (v0.47 did not export it: 0 there)
             c.put32(lay["rec_rstrt"], 0)                        # R.STRT THRES
+        # v0.73: the RECORDER's own MONITOR (sent as it opens, SRC set) is taken by the DSP before
+        # the ARM, as a person's turn comes long after the screen opens. Without this the ARM raced
+        # that MONITOR in one settle: on 1.11 it went first, on 1.12 second, and the DSP takes one
+        # queued command every few periods, so the count after the ARM measured the queue
+        # (the link takes one queued command each 8 periods: the queue is empty once every command
+        # sent has its echo, and stays so for longer than that)
+        quiet = 0
+        for _ in range(60):
+            if not c.period():
+                break
+            quiet = quiet + 1 if c.last_status[1] == (c.long(lay["smp_cmds"]) & 0xFFFF) else 0
+            if quiet >= 10:
+                break
         return c
 
     def state(c):

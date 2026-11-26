@@ -859,6 +859,8 @@ def main(argv=None):
                                 lambda: step_mverb(warm, sound, machines)),
                                ("rcost", "each RIFT machine's worst block on the unit's cost model; SMEAR's VOC within its guard's peak (RIFT v0.18)",
                                 lambda: step_rcost(warm(), sound, machines)),
+                               ("rprof", "RIFT v0.27 (a probe, not a gate step): every RIFT machine's cost a block, idle, struck and ringing",
+                                lambda: step_rprof(warm(), sound, machines)),
                                ("sanitize", "no block leaves our code not finite or past 64: zeroed, the voice afresh (RIFT v0.18)",
                                 lambda: step_sanitize(warm(), sound, machines)),
                                ("smear", "SMEAR (smear.asm) bit-exact to its program, lanes, notes, an empty slot (RIFT v0.16)",
@@ -1963,7 +1965,12 @@ def _count_memory():
             if h is not None:
                 h[a >> 12] = h.get(a >> 12, 0) + 1
             return "DDR"
-        return "L2" if 0x20000000 <= a < 0x20200000 else "L1"
+        if 0x20000000 <= a < 0x20200000:
+            h = counts.get("hist2")
+            if h is not None:
+                h[a >> 8] = h.get(a >> 8, 0) + 1
+            return "L2"
+        return "L1"
     import sys as _s
     orig_r, orig_w = fx._dm_read, fx._dm_write
 
@@ -2956,13 +2963,13 @@ def step_flexlevel(init, sound, machines) -> dict:
     def rms(x):
         return _m.sqrt(sum(v * v for v in x) / max(1, len(x)))
 
-    def run(gidx):
+    def run(gidx, src=2):
         state = {"b": 0}
 
         def at_dispatch(r):
             b = state["b"]
             if b == 0:
-                command(r, 1, SM.CMD_NOW, src=2, chan=gidx << 24, dest=0)
+                command(r, 1, SM.CMD_NOW, src=src, chan=gidx << 24, dest=0)
             if b == n:
                 command(r, 2, SM.CMD_STOP)
             state["b"] += 1
@@ -3003,14 +3010,20 @@ def step_flexlevel(init, sound, machines) -> dict:
     low = SM.GAIN_ZERO - SM.TRK_HW_DB
     unity, recorder, zero = run(low), run(0), run(SM.GAIN_ZERO)
     want = 10.0 ** (SM.TRK_HW_DB / 20.0)
+    # v0.75: the source track's LEVEL in the source word (bits 8..14, bit 15 set), as rectrig.c
+    # sends it: x (LEVEL / 100)^2, stock's law after the track buffer; 100 as before
+    def lv(level):
+        return 2 | 0x8000 | level << 8
+    l100, l20, l127, rec20 = run(low, lv(100)), run(low, lv(20)), run(low, lv(127)), run(0, lv(20))
 
-    def ratio_ok(a, b, k):
+    def ratio_ok(a, b, k, least=200):
         """b's unclipped frames are a's x k within 1 % (at least 200 of them, a's at 0.01 or more:
         an int16 frame's step, 1 / 32768, is 0.3 % of that)"""
         if a is None or b is None:
             return False
-        pairs = [(x, y) for x, y in zip(a["take"], b["take"]) if abs(y) < 0.99 and abs(x) >= 0.01]
-        return len(pairs) >= 200 and all(abs(y / x - k) <= 0.01 * k for x, y in pairs)
+        pairs = [(x, y) for x, y in zip(a["take"], b["take"])       # (v0.75: and b's at 0.01 or more)
+                 if abs(y) < 0.99 and abs(x) >= max(0.01, 0.01 / k)]
+        return len(pairs) >= least and all(abs(y / x - k) <= 0.01 * k for x, y in pairs)
     checks = {
         "v0.50: a FLEX take of a track at v0.50's unity (GAIN -24 since v0.63) reaches its track's chain "
         "at its source's level: the take's render against the source's, within 0.5 dB (RMS)":
@@ -3029,12 +3042,23 @@ def step_flexlevel(init, sound, machines) -> dict:
             zero is not None and zero["render_db"] > SM.TRK_HW_DB / 2.0,
         "v0.63 negative control: the frame-for-frame comparison at 0 dB is refused":
             not ratio_ok(unity, zero, 1.0),
+        "v0.75: the source track at LEVEL 100 records the take as before, frame for frame (within 1 %)":
+            ratio_ok(unity, l100, 1.0),
+        "v0.75: at LEVEL 20, x (20/100)^2 = 0.04 frame for frame; at 127, x (127/100)^2 = 1.613":
+            # (RIFT: TRK_HW_DB is 6, so this take peaks at 0.86 and only 45 of its frames are 0.25 or more, the
+            # least LEVEL 20's int16 frames can be held to 1 % on; DN2 mk2's take has over 200. At least 40 here)
+            ratio_ok(l100, l20, 0.04, least=40) and ratio_ok(l100, l127, (127 / 100) ** 2),
+        "v0.75: the RECORDER's command (no GAIN) ignores the LEVEL bits: the same take as without them":
+            rec20 is not None and recorder is not None and rec20["take"] == recorder["take"],
+        "v0.75 negative control: LEVEL 20's take is not LEVEL 100's":
+            not ratio_ok(l100, l20, 1.0),
     }
-    for r in (unity, recorder, zero):
+    for r in (unity, recorder, zero, l100, l20, l127, rec20):
         if r:
             r.pop("take", None)
     return {"ok": all(checks.values()), "checks": checks,
-            "numbers": {"unity": unity, "recorder": recorder, "zero": zero}}
+            "numbers": {"unity": unity, "recorder": recorder, "zero": zero, "level100": l100,
+                        "level20": l20, "level127": l127}}
 
 
 def step_mainmark(init, sound, machines) -> dict:
@@ -5204,6 +5228,83 @@ def step_rcost(init, sound, machines) -> dict:
               # Fifteen busy tracks on GLASS are past the frame by design: the guard's limit leaves them room
               f"v0.22: GLASS's cost a slot within {GLASS_SLOT:,}": glass_slot <= GLASS_SLOT}
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, "glass_slot": glass_slot, **out}}
+
+
+def step_rprof(init, sound, machines) -> dict:
+    """RIFT v0.27 (the optimization pass): a probe, not a gate step. Each RIFT machine's cost a block on the
+    unit's cost model (rcost's), less an idle frame's: a slot of the machine with no note (idle), its strike
+    block, and its blocks after (ringing). What the time guard's FLOOR should be for each machine."""
+    from dnfw.silt import bench as SB            # noqa: PLC0415
+    from dnfw.ligature import bench as LB        # noqa: PLC0415
+    from dnfw.digidrum import bench as DB        # noqa: PLC0415
+    counts, undo = _count_memory()
+
+    def rows(fb, n):
+        st, out = init, []
+        for b in range(n):
+            for k in ("L1", "L2", "DDR"):
+                counts[k] = 0
+            counts["on"] = True
+            rr = run_blocks(st, lambda _b, b=b: fb(b), 1)
+            counts["on"] = False
+            if not rr["ok"]:
+                return None
+            st = rr["state"]
+            out.append(rr.get("instructions", 0) + 0.95 * (4 * counts["L2"] + 10 * counts["DDR"]))
+            parts.append((rr.get("instructions", 0), counts["L2"], counts["DDR"]))
+        return out
+    parts = []
+    only = os.environ.get("RPROF_ONLY", "").split(",") if os.environ.get("RPROF_ONLY") else None
+    res = {}
+    try:
+        idle = rows(lambda b: fsc_frame(sound, machines, {}, trig=()), 60)
+        base = max(idle[:3])
+        print(f"    rprof idle frame: first {round(idle[0])}, blocks 1..3 {[round(x) for x in idle[1:4]]}, "
+              f"last {[round(x) for x in idle[-3:]]}; changes at {[(k, round(idle[k])) for k in range(1, 60) if abs(idle[k] - idle[k - 1]) > 500]}", flush=True)
+        fp = fsc_audition()["01_tubular_bell"][0]
+        organ_full = {"STOP": 4, "R16": 127, "R8": 127, "R4": 127, "CELESTE": 80, "TREM": 60}
+        cases = {
+            "FASCIA": lambda tr: plt_frame(sound, machines, {}, {0: (fp, 60, 1.0)}, trig=tr),
+            "ORGAN": lambda tr: og_frame(sound, machines, {0: (organ_full, 60.0)}, trig=tr),
+            "SILT": lambda tr: sl_frame(sound, machines, {0: (SB.panel_knobs(), 55.0, 110)}, trig=tr),
+            "LIGATURE": lambda tr: lg_frame(sound, machines, {0: (LB.panel_knobs(PATCH="INIT"), 55.0, 110)}, trig=tr),
+            "DIGIDRUM": lambda tr: dd_frame(sound, machines, {0: (DB.panel_knobs(), 55.0)}, trig=tr),
+            "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
+            "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
+            "CONTOUR2": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 66.0)}, trig=tr),    # FDBK up, 2 steps
+            "CONTOUR4": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 84.0)}, trig=tr),    # 4 steps
+        }
+        ibase = parts[-1]
+        print(f"    rprof idle frame parts (instructions, L2, DDR): {ibase}", flush=True)
+        if only and "IDLES" in only:                                    # idle FASCIA slots, by how many
+            for n in ():
+                rows(lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(n)}, trig=()), 16)
+                print(f"    rprof {n} idle FASCIA slots less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(parts[-1], ibase))}", flush=True)
+            hist = {}
+            counts["hist2"] = hist
+            rows(lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(2)}, trig=()), 3)
+            h15 = dict(hist); hist.clear()
+            rows(lambda b: fsc_frame(sound, machines, {}, trig=()), 3)
+            d = {k: (h15.get(k, 0) - hist.get(k, 0)) // 3 for k in set(h15) | set(hist)}
+            counts["hist2"] = None
+            print("    rprof L2 256-byte pages, 2 idle FASCIA less none, a block:", sorted(((hex(k << 8), v) for k, v in d.items() if v), key=lambda kv: kv[0]), flush=True)
+        for name, fb in cases.items():
+            if only and name not in only:
+                continue
+            r_idle = rows(lambda b: fb(()), 40)                      # the machine on slot 0, no note
+            print(f"    rprof {name} no note: first {[round(x - base) for x in r_idle[:3]]}, last {[round(x - idle[min(k, 59)]) for k, x in list(enumerate(r_idle))[-3:]]} (against the idle frame's same block)", flush=True)
+            pi = parts[-1]
+            print(f"    rprof {name} no note parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(pi, ibase))}", flush=True)
+            r = rows(lambda b: fb((0,) if b == 1 else ()), 40)
+            res[name] = {"idle": round(max(r_idle[:3]) - base) if r_idle else None,
+                         "strike": round(r[1] - base) if r else None,
+                         "after": [round(x - idle[min(k + 2, 59)]) for k, x in enumerate(r[2:])] if r else None,
+                         "worst": round(max(r) - base) if r else None}
+            print(f"    rprof {name}: idle {res[name]['idle']}, strike {res[name]['strike']}, worst {res[name]['worst']}, "
+                  f"after {res[name]['after'][:6] if r else None} ... {res[name]['after'][-3:] if r else None}", flush=True)
+    finally:
+        undo()
+    return {"ok": True, "checks": {"measured": True}, "numbers": res}
 
 
 def mv_frame(sound, machines, words) -> bytes:

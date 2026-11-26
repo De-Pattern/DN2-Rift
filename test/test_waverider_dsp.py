@@ -66,7 +66,8 @@ def test_fascia_asm_is_the_programs_as_they_now_are():
 
     def norm(ln):
         ln = re.sub(r"(JUMP|CALL) 0x[0-9a-f]+;\s*", r"\1 T; ", ln)
-        return re.sub(r"I12 = 0x[0-9a-f]+;\s*(// return address)", r"I12 = T; \1", ln)
+        # (v0.27: and Prog.call's own form, R12 = the return address, the guard's leaves in the walk)
+        return re.sub(r"(I12|R12) = 0x[0-9a-f]+;\s*(// return address)", r"\1 = T; \2", ln)
     want = [norm(ln) for ln in G.build().splitlines()]
     have = [norm(ln) for ln in (SHARC / "fascia.asm").read_text().splitlines()]
     assert have == want, "run scripts/gen_fascia_asm.py, then gen_waverider_sharc.py --assemble"

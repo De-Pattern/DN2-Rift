@@ -443,24 +443,59 @@ def run_voice(L: Layout, read, t: int, mem=None):
     return p, mem
 
 
-# v0.20: a voice with feedback can take 4 steps a sample (above B3): its worst block on the unit, cycles
-# (instructions + 0.95 x (4 L2 + 10 DDR)), measured in the runner (rcost holds it to this). The guard
-# expects it whenever the slot's FDBK is up, so a high note's first block never overruns the frame.
+# v0.20: a voice with feedback can take 4 steps a sample (above B4): its worst block on the unit, cycles
+# (instructions + 0.95 x (4 L2 + 10 DDR)), measured in the runner (rcost holds it to this).
+# RIFT v0.27 (the owner, 2026-11-25: "contour is having a very hard time playing more than 1 voice"): the
+# guard expected CTR_PEAK on every block of every voice whose FDBK was up, whatever its note, so a second
+# CONTOUR voice with feedback seldom fitted beside the first. Now only on the block that triggers the voice
+# (the one block its last cost says nothing about), and by the steps its pitch will take: CTR_PEAK from half
+# a semitone under B4 (4 steps), CTR_MID from half a semitone under B3 (2 steps), the walk's floor below
+# (1 step, as a voice without feedback). On every other block the voice's own last cost x 1.25 speaks (a
+# bend or an LFO across B3 or B4 mid-note is under by one step's cost for one block: inside the limit's
+# P/8). The pitch here: the frame's note word and the TUNE record, never under the voice's own.
 CTR_PEAK = 110_000
+CTR_MID = 64_000
 
 
 def guard_expect(t_word: int):
-    """G.around's EXPECT for CONTOUR: R9 = max(R9, CTR_PEAK) when this slot's FDBK frame word is not 0.
-    Keeps R8; clobbers R0, R1, R4, R10..R13, I1."""
-    from ..fascia import machines as FM
+    """G.around's EXPECT for CONTOUR (the shared walk: R10 is not 0 on a block that triggers this slot):
+    R9 = max(R9, CTR_MID or CTR_PEAK) on a trigger block when this slot's FDBK frame word is not 0, by the
+    pitch. Keeps R8; clobbers R0, R1, R4, R10..R13, I1."""
+    from ..fascia import program as FP_
     from .machines import SLOTS
+    assert SLOTS["TUNE"][2] == 0 and SLOTS["TUNE"][3] == 120      # the record 0..120 is the knob 0..127
 
-    def expect(p):
+    def pitch(p):
+        PP.half(p, 13, 168 + 2 * SLOTS["TUNE"][1], 11)
+        p.lsh(13, 13, -8)                      # the record, 0..120: the knob is 127/120 of it, a knob step
+        p.lsh(10, 13, 6)                       # 0.375 semitones: 101.6 / 256 of a semitone a record step
+        p.lsh(4, 13, 5)                        # (102 here: never under)
+        p.iop(10, 10, "+", 4)
+        p.lsh(4, 13, 2)
+        p.iop(10, 10, "+", 4)
+        p.lsh(4, 13, 1)
+        p.iop(13, 10, "+", 4)                  # R13 = 102 x the record
+        p.ld(10, t_word)
+        p.iop(10, 10, "+", 10)
+        PP.half(p, 4, FP_.NOTE_OFFSET, 10)     # the note << 8 | fine
+        p.iop(13, 13, "+", 4)
+        p.iconst(12, 64 * 96)                  # the knob's middle
+        p.e("R13 = R13 - R12;", "the pitch, 1/256 semitones")
+        p.iconst(12, int(58.5 * 256))
+        p.iconst(10, CTR_MID)
+        p.if_(13, "GE", 12, lambda: p.iop(9, 9, "MAX", 10), kind="i")
+        p.iconst(12, int(70.5 * 256))
+        p.iconst(10, CTR_PEAK)
+        p.if_(13, "GE", 12, lambda: p.iop(9, 9, "MAX", 10), kind="i")
+
+    def triggered(p):
         p.ld(10, t_word)
         PP.t146(p, 11, 10)
         PP.half(p, 4, 168 + 2 * SLOTS["FDBK"][1], 11)
-        p.iconst(10, CTR_PEAK)
-        p.ifz(4, "NE", lambda: p.iop(9, 9, "MAX", 10))
+        p.ifz(4, "NE", lambda: pitch(p))
+
+    def expect(p):
+        p.ifz(10, "NE", lambda: triggered(p))
     return expect
 
 

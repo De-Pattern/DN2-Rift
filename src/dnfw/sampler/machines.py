@@ -221,6 +221,10 @@ TRK_UNITY = 0.1696 / 0.0725                # 2.339 (+7.4 dB): x the 1 / TRK_GAIN
 # GAIN -6 on a track's take to peak at -24 too: 12 - 6 = 6. (Applied when the take is made: takes
 # recorded before stay 18 dB hot; GAIN -18 brings one back)
 TRK_HW_DB = 6
+# v0.75 (DN2 mk2, ported to RIFT 2026-11-25): a FLEX take of a track follows the source track's
+# LEVEL, (LEVEL / TRK_LEVEL_UNITY)^2 (stock's own law after the track buffer; NiKo: "a src track at
+# level 100 will be at unity gain when recording with gain 0"): TRK_HW_DB holds at LEVEL 100
+TRK_LEVEL_UNITY = 100
 # RIFT v0.14 (the owner and Error Kit, 2026-11-20: a FLEX take of MAIN too quiet, and GAIN
 # +12 to make it up clips the take): a MAIN take is recorded as it is (never boosted into the
 # clamp) and played back MAIN_PLAY_DB louder; so is a take of IN (the owner, the same day: IN as

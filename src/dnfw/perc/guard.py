@@ -64,6 +64,7 @@ WHERE_NONE = 0xFFFF              # the voice's delay lines held nothing non-fini
 WHERE_DELAY = 0x8000             # | the first non-finite delay-line word's index (0..2047)
 LIMIT_DEFAULT = 400_000          # until a frame has been measured: 0.6 of 666,667 (1 GHz, 1,500 frames a second)
 FLOOR = 60_000                   # what a voice is expected to cost at least
+IDLE_FLOOR = 12_000              # RIFT v0.27: and a slot no note triggers this block (around()'s TRIG)
 COST_CAP = 200_000               # RIFT: a slot's cost word read as this at most (one voice's
                                  # measured worst is far below; 1.5 x this is under LIMIT_DEFAULT)
 PERIOD_MIN, PERIOD_MAX = 300_000, 3_000_000
@@ -289,7 +290,7 @@ def perc_limit(p, smp_types, smp_state: int, smp_stride: int, on_word: int, trig
 def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = None,
            rest_blocks: int = 0, strikes: int | None = None, steal_at: int = 1,
            limit: int = LIMIT, struck: int | None = None, stop=None, expect=None,
-           grow: int = 1) -> None:
+           grow: int = 1, trig: int | None = None, floor: int = FLOOR, shared: str | None = None) -> None:
     """VOICE() if it fits, else the slot's buffer zeroed and the skip counted. T_WORD:
     the scratch word holding the slot; COST: the slots' cost words; BUFFERS: the track
     buffers' pointers (0x254a60). v0.36: RESTS (the slots' rest counters) given, a voice
@@ -302,7 +303,18 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     RIFT v0.23 (the owner, 2026-11-24: FASCIA crackles on v0.21, one note): GROW 2 expects the last
     cost x 1.25, not x 1.5 (GROW 1): FASCIA's dispatch. A lone FASCIA voice, its expected cost
     over the limit by a few thousand cycles once the plate (v0.21) lengthened the stock's tail,
-    was left out on some blocks: clicks. The limit keeps its P/8 below the frame's end."""
+    was left out on some blocks: clicks. The limit keeps its P/8 below the frame's end.
+    RIFT v0.27 (the owner, 2026-11-25: CPU shown most of the time on SPALL and on ORGAN, nothing
+    heard): TRIG (the frame's trigger word, bit 16 + t a note on slot t this block) given, the
+    least a voice is expected to cost is FLOOR only on a block that triggers it (the one block
+    its last cost says nothing about); on any other block it is IDLE_FLOOR, and the last cost
+    x 1.25 speaks for a sounding voice. Before, every slot of the walk, idle ones too, had to
+    find 60,000 cycles under the limit: an idle slot costs about 1,000 to 3,000, an ORGAN or
+    SPALL voice under 30,000, so the walk's last slots were left out (silent already: nothing
+    heard) and flagged with a quarter of the frame still free."""
+    if shared is not None:
+        _around_shared(p, t_word, cost, voice, limit, expect, grow, trig, floor, shared)
+        return
     skip = p.label("gskip")
     done = p.label("gdone")
     p.e("R8 = EMUCLK;")
@@ -324,8 +336,21 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.iop(9, 9, "MIN", 10)
     p.lsh(10, 9, -grow)
     p.iop(9, 9, "+", 10)                       # x 1.5 (GROW 1); RIFT v0.23: x 1.25 (GROW 2)
-    p.iconst(10, FLOOR)
-    p.iop(9, 9, "MAX", 10)
+    if trig is None:
+        p.iconst(10, FLOOR)
+        p.iop(9, 9, "MAX", 10)
+    else:
+        p.ld(10, trig)
+        p.lsh(10, 10, -16)
+        p.ld(11, t_word)
+        p.iconst(12, 1)
+        p.e("R12 = LSHIFT R12 BY R11;")
+        if p.run:
+            p.setR(12, 1 << (p.r[11] & 31))
+        p.iop(10, 10, "AND", 12)               # this slot's note, this block
+        p.iconst(11, IDLE_FLOOR)
+        p.ifz(10, "NE", lambda: p.iconst(11, floor))
+        p.iop(9, 9, "MAX", 11)
     if expect is not None:
         expect(p)                              # RIFT v0.20: may raise R9 (keeps R8)
     p.iop(8, 8, "+", 9)
@@ -344,6 +369,82 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.sti(0, 5, 8)
     p.jump("", done)
     p.place(skip)
+    skipped(p, t_word, cost, buffers, rests, rest_blocks, strikes, steal_at, struck, stop)
+    p.place(done)
+
+
+def _around_shared(p, t_word: int, cost: int, voice, limit: int, expect, grow: int, trig: int,
+                   floor: int, shared: str) -> None:
+    """RIFT v0.27: around() for a walk whose slots all share the guard's words (FASCIA's: seven machines):
+    the test before the voice and the cost after it are leaf subroutines (one copy each), and a voice left
+    out goes to SHARED, the walk's one copy of skipped(), which the caller places (and which goes on to the
+    walk's next slot; its RESTS given, so it sets I5 itself). The same instructions as around()'s, in the
+    same order. Emit only, as the rest of the guard. Clobbers R8..R13, I5, I12."""
+    assert trig is not None and not p.run
+
+    def absolute(body):
+        # the walk's leaves are emitted with FASCIA's scratch addressing on (words as DM(k, I5)); these two
+        # run outside a voice, where I5 is not the scratch's base, and set I5 themselves
+        def run():
+            on = getattr(p, "scr_on", False)
+            p.scr_on = False
+            body()
+            p.scr_on = on
+        return run
+
+    def before():
+        p.e("R8 = EMUCLK;")
+        p.st(START, 8)
+        p.ld(9, MARK0)
+        p.e("R8 = R8 - R9;", "how far into the frame")
+        p.ld(9, t_word)
+        p.lsh(9, 9, 2)
+        p.iconst(10, cost)
+        p.iop(9, 10, "+", 9)
+        p.seti(5, 9)
+        p.ldi(9, 0, 5, "this slot's last cost")
+        p.iconst(10, 0)
+        p.iop(9, 9, "MAX", 10)
+        p.iconst(10, COST_CAP)
+        p.iop(9, 9, "MIN", 10)
+        p.lsh(10, 9, -grow)
+        p.iop(9, 9, "+", 10)
+        p.ld(10, trig)
+        p.lsh(10, 10, -16)
+        p.ld(11, t_word)
+        p.iconst(12, 1)
+        p.e("R12 = LSHIFT R12 BY R11;")
+        p.iop(10, 10, "AND", 12)               # this slot's note, this block
+        p.iconst(11, IDLE_FLOOR)
+        p.ifz(10, "NE", lambda: p.e("R11 = PASS R13;"))
+        p.iop(9, 9, "MAX", 11)
+    p.iconst(13, floor)                        # R13: the least on a trigger block
+    p.call(f"gbefore{grow}", absolute(before))
+    if expect is not None:
+        expect(p)                              # may raise R9 (keeps R8); R10 is not 0 on a trigger block
+    p.iop(8, 8, "+", 9)
+    p.ld(10, limit)
+    p.e("COMP(R8, R10);")
+    p.jump("GT", shared)
+    voice()
+
+    def after():
+        p.e("R8 = EMUCLK;")
+        p.ld(9, START)
+        p.e("R8 = R8 - R9;", "what the voice cost")
+        p.ld(9, t_word)
+        p.lsh(9, 9, 2)
+        p.iconst(10, cost)
+        p.iop(9, 10, "+", 9)
+        p.seti(5, 9)
+        p.sti(0, 5, 8)
+    p.call("gafter", absolute(after))
+
+
+def skipped(p, t_word: int, cost: int, buffers: int, rests: int | None = None, rest_blocks: int = 0,
+            strikes: int | None = None, steal_at: int = 1, struck: int | None = None, stop=None) -> None:
+    """around()'s voice left out: stolen or struck, its cost eased, counted, flagged, its buffer zeroed.
+    On entry I5 is the slot's cost word (around()'s), unless RESTS or STRUCK is given (they set it again)."""
     p.comment("no time left in this frame: the voice is silent this block (its state kept),")
     p.comment("and its expected cost eased by a quarter, so it is tried again")
     if rests is not None:
@@ -418,4 +519,3 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.seti(4, 9, "the slot's buffer")
     p.iconst(8, 0)
     p.loop(COUNT, 8, lambda: [p.stpost(4, 8) for _ in range(4)])
-    p.place(done)

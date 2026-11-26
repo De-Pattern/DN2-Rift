@@ -743,6 +743,10 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.27", "FLOW", ["Smoother under load: the DSP's time guard no longer asks every track for a large reserve on every block. The CPU marker stood most of the time on SPALL and ORGAN with nothing wrong, and tracks could be left out with a quarter of the frame free. A voice is now expected to cost what it cost last block; the reserve is asked only on the block that starts a note.",
+                      "CONTOUR: several voices with FDBK up play together. The guard reserved the cost of the highest notes (four steps a sample) for every CONTOUR voice with feedback, on every block, so a second voice seldom fitted. It now reserves by the note, and only on the block the note starts.",
+                      "From DN2 mk2: live recording no longer lags (v0.74); a FLEX take follows its source track's LEVEL (v0.75); the arpeggiator on MIDI tracks (Angel Linares's, upstream); ARP OFS IN SCALE (SETTINGS > PERSONALIZE) and in-key transpose, [KEYBOARD] + [FUNC] + [+]/[-] (w-winter's, upstream).",
+                      "The DSP program is 2 KB smaller: the seven RIFT machines share one copy of the guard's code."]),
     ("0.26", "VOC", ["RUBBER: a track could go silent for good when RUBBER was put on it (its state was never cleared at power-on, so leftover memory could fill it with NaN). Fixed: it starts clean, and a block the safety check zeroes resets it.",
                      "CONTOUR: FDBK's original range is back (v0.20's curve taken out): the feedback exactly as it first was.",
                      "SMEAR's VOC is back: BLND 0 plays a keyframe time stretch after heavylight's Capicola / dt2-keyframer (credit and thanks to heavylight): pitch and time apart, peaks spliced onto peaks, 20 ms fades, a few thousand DSP cycles a voice. PLAY is now at BLND's middle."]),

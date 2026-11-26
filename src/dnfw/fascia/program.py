@@ -127,6 +127,11 @@ VOICE.w("lv", n=7).w("par", n=7).w("parok", n=7).w("obp", n=BLOCK)
 VOICE.sub("A", BODY).sub("B", BODY).sub("EA", EXC).sub("EB", EXC).sub("CK", CLK) \
     .sub("SH", SHF).sub("FO", FORM).sub("WA", WAT)
 VOICE_WORDS = VOICE.n
+# RIFT v0.27: the guard's least cost on a trigger block for ORGAN, CONTOUR and SPALL (perc.guard.around's
+# FLOOR; the others keep 60,000): the runner's rprof, each at its heaviest (ORGAN every rank, celeste and
+# tremulant; CONTOUR every land control, MORPH into EDGE; SPALL TONE, SUM, dense clumps), measures
+# 26,641, 25,400 and 28,125 cycles a block at most, the tap's own reads counted in
+LIGHT_FLOOR = 36_000
 STRIDE = 0xF80                                   # 3,968 bytes a slot: 4096 - 128 (shifts, no multiply)
 assert 4 * VOICE_WORDS <= STRIDE, VOICE_WORDS
 
@@ -3858,34 +3863,36 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     p.iconst(12, TYPE)
     p.e("COMP(R0, R12);")
     p.jump("NE", other)
+    gskip = p.label("gskipped")
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: _voice(g, None),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip)
     p.jump("", nxt)
     p.place(organ)
     tables_in(p, notready)                     # RIFT v0.16: ORGAN's tables come over the link
     OL = OP.Layout(L, organ_tables)
     og = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: og.append(OP.voice(p, OL)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip,
+             floor=LIGHT_FLOOR)
     p.jump("", nxt)
     p.place(silt)                              # RIFT: SILT (type 20, dnfw.silt.program)
     SL_ = SP.Layout(L, _dsp.SILT_TABLES_DDR, _dsp.SILT_DELAY_DDR)
     sg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: sg.append(SP.voice(p, SL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip)
     p.jump("", nxt)
     p.place(lig)                               # RIFT: LIGATURE (type 21, dnfw.ligature.program)
     from ..sampler import machines as _SMw     # v0.12: LIGATURE's wirings, in the pool's WIRE area
     LL_ = LP.Layout(L, _dsp.LIG_TABLES_DDR, _dsp.SMP_POOL_DDR + _SMw.WIRE_AREA)
     lg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: lg.append(LP.voice(p, LL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip)
     p.jump("", nxt)
     p.place(res)                               # RIFT: DIGIDRUM (type 22, dnfw.digidrum.program)
     DL_ = DP.Layout(L, _dsp.DIGIDRUM_TABLES_DDR)
     rg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: rg.append(DP.voice(p, DL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip)
     p.jump("", nxt)
     xg = []
     if _XM.ON_DSP:
@@ -3900,13 +3907,18 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     cg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: cg.append(CP.voice(p, CL_)),
              rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2,
-             expect=CP.guard_expect(L.C["t"]), grow=2)
+             expect=CP.guard_expect(L.C["t"]), grow=2, trig=TRIG_WORD, shared=gskip, floor=LIGHT_FLOOR)
     p.jump("", nxt)
     p.place(spl)                               # RIFT v0.25: SPALL (type 26, dnfw.spall.program)
     SL2_ = SPP.Layout(L, _dsp.SPALL_TABLES_DDR)
     sg2 = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: sg2.append(SPP.voice(p, SL2_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip,
+             floor=LIGHT_FLOOR)
+    p.jump("", nxt)
+    # RIFT v0.27: the walk's one copy of the guard's "left out" (perc.guard.skipped), for all seven machines
+    p.place(gskip)
+    G.skipped(p, L.C["t"], L.cost, BUFFERS, rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2)
     p.jump("", nxt)
     p.place(notready)                          # RIFT v0.16: before the link's tables: silence
     p.ld(9, L.C["t"])

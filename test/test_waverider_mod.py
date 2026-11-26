@@ -70,7 +70,8 @@ def test_applies_to_both_sections(applied, dn2_111):
     kinds = [kind for kind, _ in chunks]
     from dnfw.mods import waverider as W
     anim = [b"ANIZ", b"ANZL"] if W.BOOTANIM else []        # RIFT: the stock start-up (no stamp, no frames)
-    assert sorted(kinds) == sorted([platform.area.CODE] * (want + int(W.BOOTANIM)) + anim)
+    from dnfw.mods import inkey                             # RIFT v0.27 (DN2 mk2 v0.70): arpscale, degreetranspose, a CODE chunk each
+    assert sorted(kinds) == sorted([platform.area.CODE] * (want + int(W.BOOTANIM) + len(inkey.chunks())) + anim)
     assert len(applied.payloads[7]) > len(dn2_111.container.find(7).unpack())
 
 
