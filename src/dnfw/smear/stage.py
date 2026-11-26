@@ -54,6 +54,7 @@ class SLayout:
             scr + 4 * k for k in range(9))
         self.ISTEP = scr + 36                   # the power-on work's next part (while INIT is INIT_BUSY)
         self.LSAVE = scr + 40                   # L0, L3, L5 as found (3 words)
+        self.FADE, self.MT, self.MU = scr + 52, scr + 56, scr + 60   # RIFT v0.29: mono (_mono)
         self.scr_end = scr + 64
         self.MBOX, self.STATE, self.QSIN, self.BUFFERS = mbox, state, qsin, buffers
         n = 4 * P.N                             # WIN at TABLES, then the transform's tables; PAIRS apart (loaded)
@@ -267,7 +268,35 @@ def _track(p: Prog, S: SLayout) -> None:
         def cp():
             p.ldpost(0, 1)
             p.stpost(4, 0)
-        p.loop_r(15, 32, cp)
+
+        def faded():
+            # RIFT v0.29: a voice another note of its track replaces fades out over this block, then rests
+            p.fconst(5, 31.0 / 32.0)
+            p.fconst(6, 1.0 / 32.0)
+
+            def cpf():
+                p.ldpost(0, 1)
+                p.fop(0, 0, "*", 5)
+                p.fop(5, 5, "-", 6)
+                p.stpost(4, 0)
+            p.loop_r(15, 32, cpf)
+            from ..sampler import program as _SPm
+            p.ld(9, S.T)
+            p.lsh(9, 9, 7)                      # 128 bytes a sample voice
+            p.iconst(12, S.SMP_POS + 4 * _SPm.V["on"])
+            p.iop(9, 12, "+", 9)
+            p.seti(1, 9)
+            p.iconst(0, 0)
+            p.sti(0, 1, 0)                      # its sample voice off: its glue sends no frames from the next block
+        if S.SMP_POS is not None and MONO:
+            p.ld(0, S.FADE)
+            p.iconst(1, 1)
+            p.ld(9, S.T)
+            _shl_by(p, 1, 9)
+            p.iop(0, 0, "AND", 1)
+            p.ifz(0, "NE", faded, lambda: p.loop_r(15, 32, cp))
+        else:
+            p.loop_r(15, 32, cp)
         # RIFT v0.19 (owner: a granular display on SMEAR's page): the read point to the sample
         # machines' voice state's "pos" (what the idle packet sends the ColdFire as the playhead),
         # so the page draws SMEAR's own playhead and its grain cloud around it
@@ -287,6 +316,90 @@ def _track(p: Prog, S: SLayout) -> None:
 # accesses, measured in the runner over a hop (scripts/sharc_waverider_m5.py step smrcost holds it)
 SMR_FLOOR = 74_000                 # RIFT v0.28: a SMEAR voice's least cost on its trigger block: GRN at DENS and OVLP 127, 70,438 (rcost), and 5 % (QA's review, C3)
 VOC_PEAK = 270_000
+
+
+# RIFT v0.29 (the owner, 2026-11-26: "we should limit smear to one voice ... this shouldn't be a polyphonic
+# voice"): a SMEAR note loops until another replaces it, so on a track with several voices each note kept a
+# whole SMEAR running and the frame filled (the crackles and cutouts, gone with one voice locked). Now one
+# voice a track: a note on voice t fades out (over its block) and ends every other SMEAR voice of the same
+# track (the ColdFire's voice -> track map, TRK_ROUTE). Two SMEAR tracks never touch each other.
+MONO = True
+
+
+def _route(p: Prog, d: int, v: int) -> None:
+    """Rd = the track DSP voice Rv plays (the s16 at TRK_ROUTE + 2v; 0x7fff bits only). d, v in R8..R15;
+    clobbers R11..R13, I1"""
+    from ..sampler import machines as SM
+    p.lsh(12, v, 1)
+    p.iconst(11, SM.TRK_ROUTE)
+    p.iop(12, 11, "+", 12)
+    p.iconst(11, 2)
+    p.iop(13, 12, "AND", 11)
+    p.iconst(11, -4)
+    p.iop(12, 12, "AND", 11)
+    p.seti(1, 12)
+    p.ldi(d, 0, 1)
+    p.ifz(13, "NE", lambda: p.lsh(d, d, -16))
+    p.iconst(11, 0xFFFF)
+    p.iop(d, d, "AND", 11)
+
+
+def _mono(p: Prog, S: SLayout) -> None:
+    """FADE = the SMEAR voices to fade out this block: for each mailbox t on, triggered and playing (frames > 0),
+    every other mailbox u on and not triggered whose voice plays the same track"""
+    def mb_word(d: int, t_reg: int, w: int) -> None:   # Rd = mailbox (Rt)'s word W; clobbers R12, I4
+        p.lsh(12, t_reg, 7)
+        p.iconst(11, S.MBOX)
+        p.iop(12, 11, "+", 12)
+        p.seti(4, 12)
+        p.ldi(d, w, 4)
+
+    def per_t():
+        p.ld(9, S.MT)
+        p.iconst(12, 1)
+        p.iop(9, 9, "-", 12)                    # t
+        mb_word(0, 9, MB_ON)
+        p.iconst(1, MB_MAGIC)
+        mb_word(2, 9, MB_TRIG)
+        mb_word(3, 9, MB_FRAMES)
+
+        def trig_t():
+            p.ld(9, S.MT)
+            p.iconst(12, 1)
+            p.iop(9, 9, "-", 12)
+            _route(p, 14, 9)                    # R14: t's track
+
+            def per_u():
+                p.ld(10, S.MU)
+                p.iconst(12, 1)
+                p.iop(10, 10, "-", 12)          # u
+                p.ld(9, S.MT)
+                p.iconst(12, 1)
+                p.iop(9, 9, "-", 12)
+
+                def other():
+                    mb_word(0, 10, MB_ON)
+                    p.iconst(1, MB_MAGIC)
+                    mb_word(2, 10, MB_TRIG)
+
+                    def same():
+                        _route(p, 15, 10)
+
+                        def fade_u():
+                            p.ld(10, S.MU)
+                            p.iconst(12, 1)
+                            p.iop(10, 10, "-", 12)
+                            p.iconst(8, 1)
+                            _shl_by(p, 8, 10)
+                            p.ld(0, S.FADE)
+                            p.iop(0, 0, "OR", 8)
+                            p.st(S.FADE, 0)
+                        p.if_(15, "EQ", 14, fade_u, kind="i")
+                    p.if_(0, "EQ", 1, lambda: p.ifz(2, "EQ", same), kind="i")
+                p.if_(10, "NE", 9, other, kind="i")
+            p.loop(S.MU, NTRACKS, per_u)
+        p.if_(0, "EQ", 1, lambda: p.ifz(2, "NE", lambda: p.ifz(3, "GT", trig_t)), kind="i")
+    p.loop(S.MT, NTRACKS, per_t)
 
 
 def _zero_out(p: Prog, V) -> None:
@@ -353,6 +466,10 @@ def stage(p: Prog, S: SLayout) -> None:
         p.iconst(3, SM.TABLE_MAGIC)
         p.if_(2, "EQ", 3, go, kind="i")
     p.if_(0, "NE", 1, init, kind="i")
+    p.iconst(0, 0)
+    p.st(S.FADE, 0)
+    if S.SMP_POS is not None and MONO:
+        _mono(p, S)
     p.iconst(0, 0)
     p.st(S.SEEN, 0)
     p.st(S.T, 0)
