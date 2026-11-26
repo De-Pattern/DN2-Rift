@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T16:05:39+00:00",
+ "updated": "2026-11-26T16:08:41+00:00",
  "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: QA findings taken in (CONTOUR feedback mid-note, sample/SMEAR retrigger floors); step checks running, then the full gate.",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 15,
    "total": null,
    "frac": 0.5,
-   "status": "running: SHARC runner: fkeep",
+   "status": "running: SHARC runner: contour",
    "state": "run",
    "last": [
     "ColdFire: code 0x467b8000..0x467b8684: no scale-8 addressing",
@@ -15,7 +15,7 @@
     "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
     "unit tests: 952 passed, 2 skipped, 12 warnings in 783.64s (0:13:03)"
    ],
-   "log_written": "11:04"
+   "log_written": "11:06"
   }
  ]
 }
