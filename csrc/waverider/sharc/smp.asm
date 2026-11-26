@@ -2132,7 +2132,7 @@ wr_sm_body_144.:
       R11 = 0x2ee0;
       R10 = PASS R10;
       IF EQ JUMP 0xbf28ce;                   // -> wr_sm_else_147.
-      R11 = 0x9c40;
+      R11 = 0xfa00;
 .GLOBAL wr_sm_else_147.;
 wr_sm_else_147.:
       R9 = MAX(R9, R11);

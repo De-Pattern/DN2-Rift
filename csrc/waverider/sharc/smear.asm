@@ -155,7 +155,7 @@ wr_smr_else_7.:
       R11 = 0x2ee0;
       R10 = PASS R10;
       IF EQ JUMP 0xbd8957;                   // -> wr_smr_else_11.
-      R11 = 0x9c40;
+      R11 = 0x12110;
 .GLOBAL wr_smr_else_11.;
 wr_smr_else_11.:
       R9 = MAX(R9, R11);
