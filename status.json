@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T21:18:49+00:00",
+ "updated": "2026-11-26T21:21:51+00:00",
  "note": "v0.28 STABLE: full gate running (45 steps passed, none failed). v0.29 in test: SMEAR mono, SMEAR SIZE fix, DIGIDRUM guard by drum type.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 52,
+   "done": 54,
    "total": 75,
-   "frac": 0.693,
+   "frac": 0.72,
    "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "parameter slides (ColdFire): SLIDE on: FREQ and FDBK ramp over 278 frames (1 step at 81 BPM), exact, la",
-    "FLEX on the ColdFire: recorder trigs, ARM, the panel, an older BOUNCE track's trigs (ColdFire): 38/38 c",
     "RECORDER text inside its places, every state and R.LEN value (ColdFire): 7/7 checks: every centre-box m",
-    "KEYBOARD kept through grid recording (ColdFire): KEYBOARD on; RECORD (grid recording): off as stock; RE"
+    "KEYBOARD kept through grid recording (ColdFire): KEYBOARD on; RECORD (grid recording): off as stock; RE",
+    "KEYBOARD HOLD: PTN + KEYBOARD, held notes, chords, release (ColdFire): PTN + KEYBOARD turns stock's sus",
+    "the arp on MIDI tracks (ColdFire): the arp on a MIDI track: menu-free routing checked on the key forks "
    ],
-   "log_written": "16:15"
+   "log_written": "16:21"
   }
  ]
 }
