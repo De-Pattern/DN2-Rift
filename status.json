@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T19:11:08+00:00",
+ "updated": "2026-11-26T19:14:10+00:00",
  "note": "v0.28 full gate running (31 steps passed). v0.29: SMEAR mono committed; tracing FLEX buffers on sample machines in the emulator.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 41,
+   "done": 42,
    "total": 75,
-   "frac": 0.547,
+   "frac": 0.56,
    "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "SELECT UNUSED (ColdFire): SELECT UNUSED marks the loaded slots no pattern's kit or SAMP lock uses (5 of",
     "overlays let go (ColdFire): the sample list lets go when another track is active; YES on a SLICE page a",
     "recorder flow (ColdFire): SAVING on to TRIM; TRIM's ends move; FUNC + YES previews while held, its play",
-    "stock NAME screen: NO, and its fallback (ColdFire): the stock NAME screen opens on TRIM's YES and its N"
+    "stock NAME screen: NO, and its fallback (ColdFire): the stock NAME screen opens on TRIM's YES and its N",
+    "SLICE menus and SLICES keys (ColdFire): menu, grid dialog and editor drawn; RIGHT picks slice 2, E move"
    ],
-   "log_written": "14:07"
+   "log_written": "14:12"
   }
  ]
 }
