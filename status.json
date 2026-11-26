@@ -1,6 +1,6 @@
 {
- "updated": "2026-11-26T20:15:00+00:00",
- "note": "v0.28 full gate running (31 steps passed). v0.29: SMEAR mono committed; tracing FLEX buffers on sample machines in the emulator.",
+ "updated": "2026-11-26T20:18:02+00:00",
+ "note": "v0.28 STABLE: full gate running (45 steps passed, none failed). v0.29 in test: SMEAR mono, SMEAR SIZE fix, DIGIDRUM guard by drum type.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
