@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T21:15:47+00:00",
+ "updated": "2026-11-26T21:18:49+00:00",
  "note": "v0.28 STABLE: full gate running (45 steps passed, none failed). v0.29 in test: SMEAR mono, SMEAR SIZE fix, DIGIDRUM guard by drum type.",
  "gates": [
   {
