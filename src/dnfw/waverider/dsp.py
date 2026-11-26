@@ -108,7 +108,7 @@ MD_DELAY_DDR = 0x82200000                    # 16 slots x core.PI_DELAY_STRIDE
 # the sample machines (v0.13, docs/sampler.md): code in L2 after PERC's span, voices and
 # scratch in L1 (Waverider's former loop room), the sample pool in DDR from 64 MB in
 SMP_L2_LOAD = PERC_L2_LOAD + PERC_L2_SPAN    # 0x200e3000 (v0.24; 0x200d4000 v0.17..v0.23, 0x200d0000 until v0.16)
-PVMIX_ROOM_ = 0x2D0                          # RIFT v0.29: 720 bytes (656 used + 64 of NOPs; 768 v0.22..v0.28): SMEAR's STRT/SIZE clamp
+PVMIX_ROOM_ = 0x2E8                          # RIFT v0.29: 744 bytes, 124 instructions (656 used + 88 of NOPs: hwrules BRANCH-12 wants 72 after its last jump; 768 v0.22..v0.28): SMEAR's STRT/SIZE clamp
 SMP_L2_SPAN = 0x6000                         # v0.28: 24 KB (the re-latch took the code past 19 KB; 20 KB v0.18..v0.27, 32 KB until v0.16)
 SMP_SW = 0xB80000 + (SMP_L2_LOAD - 0x20000000) // 2          # 0xbf1800 (v0.24; 0xbea000 v0.17..v0.23)
 PVMIX_L2_LOAD = SMP_L2_LOAD + SMP_L2_SPAN - PVMIX_ROOM_      # v0.25: pvmix.asm (wr_pvmix); RIFT v0.22: its last 768 bytes (656 used; 1 KB until v0.21: SMEAR's FRZ took smp.asm past its room)
