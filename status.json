@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T23:20:22+00:00",
+ "updated": "2026-11-26T23:23:24+00:00",
  "note": "v0.28 STABLE: full gate running (45 steps passed, none failed). v0.29 in test: SMEAR mono, SMEAR SIZE fix, DIGIDRUM guard by drum type.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 60,
+   "done": 61,
    "total": 75,
-   "frac": 0.8,
-   "status": "running: coupled_flex",
+   "frac": 0.813,
+   "status": "running: coupled_mute",
    "state": "run",
    "last": [
-    "microtuning: each project's tuning record (ColdFire): each project's tuning: written after two seconds ",
     "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire): the slice ed",
     "THRES on both processors (coupled): 2/2 checks: on the ColdFire and the DSP together, a -34 dB tone on ",
-    "FLEX: a recorder trig's take played by a note, on both processors (coupled): on the ColdFire and the DS"
+    "FLEX: a recorder trig's take played by a note, on both processors (coupled): on the ColdFire and the DS",
+    "FLEX buffers played by a ONESHOT track, on both processors (coupled): on the ColdFire and the DSP toget"
    ],
-   "log_written": "17:08"
+   "log_written": "18:22"
   }
  ]
 }
