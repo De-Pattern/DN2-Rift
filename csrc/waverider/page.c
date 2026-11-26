@@ -201,6 +201,7 @@ static void wr_names(void)
     names_on = key;
 }
 
+#if GLASS_ON   /* RIFT v0.29 (QA's review of v0.28, C5): RUBBER's page code only while it is in the build */
 /* RIFT v0.18: GLASS (src/dnfw/glass/pages.py; the DN2 mk2 mod's PING mechanism): while the active
  * track's filter is GLASS (type 6, the byte at sound+0xDF), the records whose meaning GLASS changes
  * carry its names; the stock pointers go back when it is not. The same mechanism as wr_names, on
@@ -265,6 +266,7 @@ void glass_names(void)
     rubber_cells(on >= 0);
     glass_on = on;
 }
+#endif
 
 /* RIFT v0.16 (owner, 2026-11-21): MACHINE SEL's picture is the logo of the machine under the
  * cursor when it is one of RIFT's (scripts/gen_logos.py); the sample machines' label reads SAMP
@@ -418,7 +420,9 @@ int wr_poll(void *screen)
     jmp_poll();                                 /* DIRECT JUMP's setting, read and written (csrc/jump) */
     rec_poll();
     wr_names();
+#if GLASS_ON
     glass_names();                              /* RIFT v0.18: GLASS's names on the FLTR page */
+#endif
     /* the RECORDER's meter and state move: a redraw asked for as stock asks (the dirty
      * byte), 25 times a second. v0.15..v0.19 answered 1 here without setting the byte:
      * the loop then pushed its other buffer undrawn (0x4011d32a draws only when the byte
@@ -704,6 +708,7 @@ void wr_cell(void *view, void *canvas, int x0, int y0, u32 id)
 {
     extern void sl_cell(void *view, void *canvas, int x, int y, u32 id);
     sl_cell(view, canvas, x0, y0, id);          /* parameter slides: SLD/SLEN on TRIG page 2 */
+#if GLASS_ON
     if (glass_on >= 0 && (id == 0x2F || id == 0x30)) {   /* RIFT v0.24: RUBBER's ABND, DBND on FLTR page 2: a knob */
         extern void rub_knob(void *c, int x, int y, int v);
         u8 fl;
@@ -711,6 +716,7 @@ void wr_cell(void *view, void *canvas, int x0, int y0, u32 id)
         int span = r[3] - r[2], v = GET_VALUE(view, id, &fl) - r[2];
         rub_knob(canvas, x0, y0, span > 0 ? v * 127 / span : 0);
     }
+#endif
 }
 
 void wr_page_draw(void *view, void *canvas)
