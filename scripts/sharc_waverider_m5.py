@@ -5087,11 +5087,11 @@ def step_glass(init, sound, machines) -> dict:
         ex = fsc_exact(rr)
         asm = (ROOT / "csrc/waverider/sharc/fascia.asm").read_text()
         fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
-        heard = rr["ok"] and any(V.peak(blk[3]) > 1e-4 for blk in rr["buffers"])
+        heard = rr["ok"] and any(3 in b_ and V.peak(b_[3]["out"]) > 1e-4 for b_ in rr["fsc"])   # (FASCIA's output, at its walk's end)
         checks = {"v0.28: RUBBER pulled: no GLASS routine in fascia.asm": "wr_fs_rt_g_slot" not in asm,
                   "v0.28: tracks with filter 6 in the frame: every block returns, every buffer finite": fin,
                   "v0.28: a FASCIA track on filter 6 sounds, bit-exact to its model": heard and ex[1:] == (0, 0)}
-        print(f"    glass (pulled): {checks}", flush=True)
+        print(f"    glass (pulled): {checks} walk_model={ex}", flush=True)
         return {"ok": all(checks.values()), "checks": checks, "numbers": {"walk_model": ex}}
     res = {}
     fp = fsc_audition()["01_tubular_bell"][0]
