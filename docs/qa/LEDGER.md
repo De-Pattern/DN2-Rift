@@ -20,7 +20,8 @@ A slot with no note, same run: FASCIA 900, ORGAN 860, CONTOUR 1,570, SPALL 1,640
 | release | DSP upload (of 1,048,575 unpacked) | 2 MiB image | source |
 |---|---|---|---|
 | v0.27 tree (not released) | about 181 before FASCIA's walk shared the guard code, which gave about 2 KB back | reported as about 3.2 KB and as about 800 bytes the same day | the build session's notes, 2026-11-25; to be measured at the first review |
-| v0.28 (frozen 66bffc8) | not measured | not measured | the review of v0.28, 2026-11-26 (no bench) |
+| v0.27 (3118908) | 1,951 (1,046,624 unpacked) | not measured | the v0.28 review's addendum, 2026-11-26: `dnfw mods apply` on the stock OS 1.11 gave the released file (sha256 3b987e6c...); `safety.preflight`'s DSP size line |
+| v0.28 (frozen 66bffc8) | 5,949 (1,042,626 unpacked) | not measured | the same, on this tree's build (sha256 a69ae35d..., not gated here). MAIN OS unpacks to 3,495,576 bytes, 660 more than v0.27's |
 
 ## Our DSP code as assembled
 
