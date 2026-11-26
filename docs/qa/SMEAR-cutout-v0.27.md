@@ -36,6 +36,33 @@ before it reads the pool, so a note that arrives while the pool's header is not 
 whose entry fails `entry_check`, plays nothing until the next note. If the link rewrites the pool
 while playing, that is the same symptom.
 
+## The owner's answers (2026-11-26, after the first three commits)
+
+Nothing else was running, and **the silence starts on a trigger, not in the middle of a note.**
+That moves the weight from the stop rule (which silences mid-note) to the note's latch:
+
+- `smear_latch` zeroes `on` and `frames`, then sets them only if the pool's header is POOL_MAGIC,
+  SAMP is inside the directory's count (or a buffer), and the entry passes `entry_check`. A note
+  whose latch fails is silent until the next note whose latch succeeds. A held note is never
+  affected (it latches only at its trigger), which is what he sees.
+- When the directory is not whole on the DSP: `smp_load()` sends the page with every entry empty
+  (K_BLANK), then each slot's frames and its entry, the whole page last. It runs at power-on, at
+  a project switch (`pools.c`) and after the import tool's LOAD or END; the page shows LOADING n%.
+  A SMEAR note in that window, on a slot not yet in, plays nothing. For a large pool that window
+  is tens of seconds, the length he reports.
+- Also rewritten while playing: the head (K_HEAD: the magic and the count, after every live entry
+  and when a recording starts) and single entries (K_ENTRY).
+
+**Not established:** that a load was running when he heard it, or whether SAMP's value in the
+frame is always right on the trigger's own block (SLICE and GRID needed v0.28's relatch because
+the key's note reaches the DSP a block after its trigger). To find out, in the coupled emulator:
+a SMEAR note on every block for a minute after `smp_load()`, and on the blocks around a K_HEAD,
+logging the latch's `on`. On the unit: what SMEAR's page shows for the sample while it is silent.
+
+A change to weigh once the cause is known (not written): a note whose latch fails tries the latch
+again on the following blocks for a short while, so a slot that arrives, or a header rewritten,
+costs a few milliseconds instead of the whole note.
+
 ## The changes (each one commit, emit only: no model, sound or saved data changes)
 
 1. **The glue is never struck out, and is expected to cost SMEAR_GLUE (6,000).** `stop()` does
