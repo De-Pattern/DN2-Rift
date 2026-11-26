@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T17:03:24+00:00",
+ "updated": "2026-11-26T17:06:27+00:00",
  "note": "v0.27 FLOW is out.\nv0.28 STABLE: QA found why SMEAR cut out for 30-50 s (the guard ended a looping SMEAR note after two tight blocks). Fix taken in; step checks, then the full gate restarts.",
  "gates": [
   {
