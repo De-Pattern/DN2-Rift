@@ -336,7 +336,7 @@ def _speed(k: int) -> float:
 # RIFT v0.18 (the owner, 2026-11-22): VOC is off until it is redesigned to fit the unit. Its jobs cost
 # 200..260k cycles a block on the unit's cost model (instructions + memory stalls, sharc_waverider_m5
 # step rcost) beside an idle frame's 416k of 667k: a VOC note overran the frame and silenced the unit
-VOC_ON = False
+from .ddr import VOC_ON  # noqa: E402  (False; defined where the build can read it without numpy)
 # RIFT v0.26 VOC (owner, 2026-11-24: "SMEAR's phase vocoder back ... on heavylight's keyframe stretch,
 # with credit"): BLND's VOC share is played by a keyframe stretch after heavylight's Capicola /
 # dt2-keyframer (heavylight-industries; DAFx26, "Keyframe Time Stretching via Extrema Sampling"),
