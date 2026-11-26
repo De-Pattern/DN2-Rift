@@ -242,6 +242,14 @@ def _track(p: Prog, S: SLayout) -> None:
             p.iconst(9, 1)
             p.iop(8, 8, "+", 9)
             p.st(G.SKIPS, 8)
+            # RIFT (the owner on v0.27: SMEAR cuts out, no CPU on its page): the slot flagged for the
+            # pages' CPU marker, as guard.skipped() does for every other machine
+            p.ld(9, S.T)
+            p.iconst(10, 1)
+            _shl_by(p, 10, 9)
+            p.ld(8, G.SKIPMASK)
+            p.iop(8, 8, "OR", 10)
+            p.st(G.SKIPMASK, 8)
             _zero_out(p, V)
             p.place(done)
         p.ifz(0, "GT", play, lambda: _zero_out(p, V))
