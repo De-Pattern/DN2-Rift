@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.25** | 2026-11-25 | SPALL, a new synth machine (tiny events rung through two resonators), its logo; the MIDI machine's DIN logo; Download PDF on the manual and the quick guide | `builds/v0.25-SPALL/` | yes |
+| **v0.26** | 2026-11-25 | SMEAR's VOC back, on a keyframe time stretch after heavylight's (credited); CONTOUR's FDBK as it first was; RUBBER's silent track fixed | `builds/v0.26-VOC/` | yes |
+| v0.25 | 2026-11-25 | SPALL, a new synth machine (tiny events rung through two resonators), its logo; the MIDI machine's DIN logo; Download PDF on the manual and the quick guide | `builds/v0.25-SPALL/` | yes |
 | v0.24 | 2026-11-25 | RUBBER (an SH-101-style ladder) in GLASS's place, its curves as FLTR page 2 knobs; SMEAR: pitch and speed apart; clean knob icons | `builds/v0.24-APART/` | yes |
 | v0.23 | 2026-11-24 | FASCIA's crackle (the guard's budget for RIFT's synths: x 1.25, the reserve kept); CPU on RIFT's machine pages when the DSP drops a voice; CONTOUR's crosshair logo; the quick guide | `builds/v0.23-STEADY/` | yes |
 | v0.22 | 2026-11-24 | GLASS's overload fixed (the same sound at well under two thirds of the DSP time, inside the guard's budget); SMEAR: TUNE moves PLAY, FRZ (Freeze), page 2 redrawn; CONTOUR's own logo; the manual brought up to date | `builds/v0.22-FROST/` | yes |
@@ -52,6 +53,35 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.26 · VOC
+
+- **File:** `RIFT_v0.26_VOC_OS1.11.syx` (`builds/v0.26-VOC/`)
+- **sha256:** `b83513d37aed76ff973a43942853a6ef23cad65fa66ce4531927ea0e89ef65df`
+- **Gated:** 2026-11-25, `CLEARED TO FLASH`
+- **Source:** `0ae025b` (this repository); the patcher's bundle is from the commit after it (an import moved so the browser's build needs no numpy), which rebuilds this file byte for byte
+
+**Changes**
+
+- **CONTOUR's FDBK back to its original range, exactly** (owner, 2026-11-25: "the feedback on Contour is where the magic is ... put it back to the way it was before"): fb = 0.25 x the knob again, in live and the DSP program; v0.20's curve (u (0.0175 + 0.0525 u)) taken out. The in-key behaviour above B3 (v0.20) stays.
+- **SMEAR's VOC back, on a keyframe time stretch** (owner, 2026-11-24: the vocoder back "on heavylight's keyframe stretch, with credit"). After heavylight's Capicola and dt2-keyframer (heavylight-industries; the DAFx26 paper *Keyframe Time Stretching via Extrema Sampling*), written again in RIFT's DSP language for SMEAR, its rules cut down (Claude's): the keyframes are the sample's extrema (a turn of the slope at least 0.01 from the last keyframe's value), found by each head as it moves; the reference is PLAY's read point (SPD); the play head reads at the pitch (TUNE, the note); when more than 64 keyframes or 3,072 samples lie between them, the play head splices at one of its peaks (troughs) onto the reference's last peak (trough), the old place faded out linearly over at most 960 samples (heavylight's 20 ms), half the grain if shorter. Silence: onto the read point after 6,144 samples. About 5,000 cycles a voice a block on the unit's cost model (the FFT vocoder needed 200,000 to 270,000, and was switched off in v0.18). Bit-exact to its model (a 700-block int16 test with splices up and down, frozen, reversed).
+- BLND: VOC at 0 again, PLAY at the middle, GRN at 127 (since v0.18 BLND's VOC end played PLAY).
+- **RUBBER's silent track** (fiddly_digits, 2026-11-25: "My track goes silent when I put RUBBER on it"): RUBBER's state in DDR was never cleared at power-on, so leftover memory (NaN) stayed in its stages and the safety check zeroed the slot every block. Its state now carries a magic word and starts clean without it; a block the safety check zeroes clears that slot's magic too. `test_v026_garbage_state_starts_afresh`.
+- Room for it: the stretch's reads, steps, keyframe finder, splice and reset are leaf subroutines; without the FFT vocoder, no VOC lanes, lane clears, quarter-sine or swap-pair tables (the image 8.6 KB lighter).
+- The manual's SMEAR section and the quick guide.
+
+**Tests**
+
+0. CONTOUR: FDBK with FM and the ratios, as on v0.19/v0.20 before the curve.
+1. SMEAR at BLND 0, SPD 80 (1x): plays as the sample. TUNE up and down: pitch moves, time does not.
+2. SPD slower (72, 0.5x) and faster: time stretches, pitch stays.
+3. SPD 64, or FRZ on: a held moment, looping a short grain.
+4. Drums and speech at extreme stretches: do the splices click?
+5. BLND from 0 to 127: VOC, PLAY, grains.
+
+**Known issues**
+
+- The grain length (64 keyframes, 3,072 samples at most) is fixed for now; it may get a knob.
 
 ## v0.25 · SPALL
 
