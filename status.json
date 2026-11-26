@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T18:25:32+00:00",
+ "updated": "2026-11-26T18:28:34+00:00",
  "note": "v0.28 full gate running (31 steps passed). v0.29: SMEAR mono committed; tracing FLEX buffers on sample machines in the emulator.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 32,
+   "done": 33,
    "total": 75,
-   "frac": 0.427,
-   "status": "running: SHARC runner: contour",
+   "frac": 0.44,
+   "status": "running: SHARC runner: spall",
    "state": "run",
    "last": [
-    "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): LIGATURE (on FASCIA's records",
     "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire): LIGATURE's PATCH screen:",
     "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)",
-    "CONTOUR: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): CONTOUR (on FASCIA's records):"
+    "CONTOUR: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): CONTOUR (on FASCIA's records):",
+    "SPALL: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SPALL (on FASCIA's records): MAC"
    ],
-   "log_written": "13:20"
+   "log_written": "13:27"
   }
  ]
 }
