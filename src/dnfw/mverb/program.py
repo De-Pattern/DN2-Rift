@@ -65,13 +65,24 @@ HOT = ("shA", "shB", "endA", "endB")
 # the same operations in the same order: bit for bit live.Verb, as v0.21..v0.27's loop (MG.sample, kept: False
 # puts it back). The runner's rprof MVERB: 27,284 instructions and 43,263 cycles a block before.
 FAST = True
+# RIFT v0.29: the short lines in L2 (4 cycles an access on the cost model, not DDR's 10): the four input diffusers and
+# the A side's modulated allpass, 16 KB, in SMEAR's unused VOC lane (SMEAR_LANE0_L2: the FFT vocoder is off). The
+# same arithmetic on the same values: bit for bit live.Verb. Cleared with the DDR lines while a fresh instance starts
+L2_LINES = ("i0", "i1", "i2", "i3", "a_ap")
 
 
 class Layout:
-    def __init__(self, fascia: FP_.Layout, state: int, save: int):
+    def __init__(self, fascia: FP_.Layout, state: int, save: int, l2: int | None = None):
         self.fl = fascia
         self.state = state
         self.save = save                       # SAVE's words (L1)
+        self.l2 = l2                           # RIFT v0.29: L2_LINES' home (None: all in DDR, as v0.21..v0.28)
+        self.l2_off = {}
+        at2 = 0
+        for n in L2_LINES:
+            self.l2_off[n] = at2
+            at2 += LV.SIZE[n]
+        self.l2_words = at2
         at = fascia.arrays
         self.C = {}
         for name in WORDS:
@@ -84,6 +95,8 @@ class Layout:
         self.rets = fascia.rets
 
     def line(self, name: str) -> int:
+        if self.l2 is not None and name in self.l2_off:
+            return self.l2 + 4 * self.l2_off[name]
         return self.state + LINES_AT + 4 * LV.OFF[name]
 
     def st(self, name: str) -> int:
@@ -167,6 +180,13 @@ class MG(PLP.PG):
 
     def clearing(self) -> None:
         p, L = self.p, self.L
+        if L.l2 is not None:                   # RIFT v0.29: the L2 lines too, on the clearing's first block
+            def l2clear():
+                p.iconst(9, L.l2)
+                p.seti(4, 9)
+                p.iconst(5, 0)
+                p.loop_r(10, L.l2_words, lambda: p.stpost(4, 5), one=11)
+            self.icmp(self.si("clr"), "EQ", 0, l2clear)
         self.ld(9, self.si("clr"))
         p.lsh(9, 9, 2)
         p.iconst(12, L.state + LINES_AT)
@@ -494,4 +514,8 @@ def run_block(L: Layout, read, mem=None):
 
 def layout() -> Layout:
     from ..waverider import dsp
-    return Layout(FP_.layout(), dsp.MVERB_DDR, dsp.MVERB_SAVE_DM)
+    from ..smear import ddr as SD
+    l2 = dsp.SMEAR_LANE0_L2 if not SD.VOC_ON else None      # the lane is SMEAR's while its FFT vocoder is in
+    L = Layout(FP_.layout(), dsp.MVERB_DDR, dsp.MVERB_SAVE_DM, l2)
+    assert l2 is None or L.l2_words * 4 <= 0x4000           # the lane's 16 KB
+    return L

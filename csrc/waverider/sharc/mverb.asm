@@ -56,7 +56,22 @@ wr_mv_else_1.:
       R0 = DM(-0x7d96fffc);
       R1 = 0x10800;
       COMP(R0, R1);
-      IF GE JUMP 0xbd98cf;                   // -> wr_mv_else_2.
+      IF GE JUMP 0xbd98e5;                   // -> wr_mv_else_2.
+      R0 = DM(-0x7d96fffc);
+      R0 = PASS R0;
+      IF NE JUMP 0xbd98a5;                   // -> wr_mv_else_3.
+      R9 = 0x200b7800;
+      I4 = R9;
+      R5 = R5 - R5;                     // 0
+      R10 = 0x1000;
+.GLOBAL wr_mv_loop_4.;
+wr_mv_loop_4.:
+      DM(I4, M6) = F5;
+      R11 = 0x1;
+      R10 = R10 - R11;
+      IF NE JUMP 0xbd989e;                   // -> wr_mv_loop_4.
+.GLOBAL wr_mv_else_3.;
+wr_mv_else_3.:
       R9 = DM(-0x7d96fffc);
       R9 = LSHIFT R9 BY 2;
       R12 = -0x7d96ff00;
@@ -64,12 +79,12 @@ wr_mv_else_1.:
       I4 = R9;
       R5 = R5 - R5;                     // 0
       R10 = 0x1000;
-.GLOBAL wr_mv_loop_3.;
-wr_mv_loop_3.:
+.GLOBAL wr_mv_loop_5.;
+wr_mv_loop_5.:
       DM(I4, M6) = F5;
       R11 = 0x1;
       R10 = R10 - R11;
-      IF NE JUMP 0xbd989e;                   // -> wr_mv_loop_3.
+      IF NE JUMP 0xbd98b4;                   // -> wr_mv_loop_5.
       R9 = DM(-0x7d96fffc);
       R12 = 0x1000;
       R9 = R9 + R12;
@@ -78,23 +93,23 @@ wr_mv_loop_3.:
       I4 = R9;
       R5 = R5 - R5;                     // 0
       R10 = 0x20;
-.GLOBAL wr_mv_loop_4.;
-wr_mv_loop_4.:
+.GLOBAL wr_mv_loop_6.;
+wr_mv_loop_6.:
       DM(I4, M6) = F5;
       R11 = 0x1;
       R10 = R10 - R11;
-      IF NE JUMP 0xbd98b6;                   // -> wr_mv_loop_4.
+      IF NE JUMP 0xbd98cc;                   // -> wr_mv_loop_6.
       R9 = -0x7ffa7788;
       I4 = R9;
       R5 = R5 - R5;                     // 0
       R10 = 0x20;
-.GLOBAL wr_mv_loop_5.;
-wr_mv_loop_5.:
+.GLOBAL wr_mv_loop_7.;
+wr_mv_loop_7.:
       DM(I4, M6) = F5;
       R11 = 0x1;
       R10 = R10 - R11;
-      IF NE JUMP 0xbd98c5;                   // -> wr_mv_loop_5.
-      JUMP 0xbd9e2b;                         // -> wr_mv_fi_6.
+      IF NE JUMP 0xbd98db;                   // -> wr_mv_loop_7.
+      JUMP 0xbd9e41;                         // -> wr_mv_fi_8.
 .GLOBAL wr_mv_else_2.;
 wr_mv_else_2.:
       R10 = R10 - R10;                  // 0
@@ -107,10 +122,10 @@ wr_mv_else_2.:
       I1 = R0;
       R4 = DM(0, I1);
       R1 = PASS R1;
-      IF EQ JUMP 0xbd98e7;                   // -> wr_mv_else_7.
+      IF EQ JUMP 0xbd98fd;                   // -> wr_mv_else_9.
       R4 = LSHIFT R4 BY -16;
-.GLOBAL wr_mv_else_7.;
-wr_mv_else_7.:
+.GLOBAL wr_mv_else_9.;
+wr_mv_else_9.:
       R12 = 0xffff;
       R4 = R4 AND R12;
       R12 = R12 - R12;                  // 0
@@ -126,10 +141,10 @@ wr_mv_else_7.:
       I1 = R0;
       R4 = DM(0, I1);
       R1 = PASS R1;
-      IF EQ JUMP 0xbd9909;                   // -> wr_mv_else_8.
+      IF EQ JUMP 0xbd991f;                   // -> wr_mv_else_10.
       R4 = LSHIFT R4 BY -16;
-.GLOBAL wr_mv_else_8.;
-wr_mv_else_8.:
+.GLOBAL wr_mv_else_10.;
+wr_mv_else_10.:
       R12 = 0xffff;
       R4 = R4 AND R12;
       R12 = R12 - R12;                  // 0
@@ -145,10 +160,10 @@ wr_mv_else_8.:
       I1 = R0;
       R4 = DM(0, I1);
       R1 = PASS R1;
-      IF EQ JUMP 0xbd992b;                   // -> wr_mv_else_9.
+      IF EQ JUMP 0xbd9941;                   // -> wr_mv_else_11.
       R4 = LSHIFT R4 BY -16;
-.GLOBAL wr_mv_else_9.;
-wr_mv_else_9.:
+.GLOBAL wr_mv_else_11.;
+wr_mv_else_11.:
       R12 = 0xffff;
       R4 = R4 AND R12;
       R12 = R12 - R12;                  // 0
@@ -164,10 +179,10 @@ wr_mv_else_9.:
       I1 = R0;
       R4 = DM(0, I1);
       R1 = PASS R1;
-      IF EQ JUMP 0xbd994d;                   // -> wr_mv_else_10.
+      IF EQ JUMP 0xbd9963;                   // -> wr_mv_else_12.
       R4 = LSHIFT R4 BY -16;
-.GLOBAL wr_mv_else_10.;
-wr_mv_else_10.:
+.GLOBAL wr_mv_else_12.;
+wr_mv_else_12.:
       R12 = 0xffff;
       R4 = R4 AND R12;
       R12 = R12 - R12;                  // 0
@@ -217,10 +232,10 @@ wr_mv_else_10.:
       R0 = DM(123, I5);
       R1 = 0x40a80000;                  // 5.25
       F0 = F0 * F1;
-      I12 = 0xbd99c7;                        // return address - 1: wr_mv_ret_11. - 1
-      JUMP 0xbd9e85;                         // -> wr_mv_sub_o_exp2.
-.GLOBAL wr_mv_ret_11.;
-wr_mv_ret_11.:
+      I12 = 0xbd99dd;                        // return address - 1: wr_mv_ret_13. - 1
+      JUMP 0xbd9e9b;                         // -> wr_mv_sub_o_exp2.
+.GLOBAL wr_mv_ret_13.;
+wr_mv_ret_13.:
       R1 = 0x43fa0000;                  // 500.0
       F0 = F1 * F0;
       R1 = 0x46a8c000;                  // 21600.0
@@ -231,10 +246,10 @@ wr_mv_ret_11.:
       F0 = F1 - F0;
       R1 = 0x3fb8aa3b;                  // 1.4426950216293335
       F0 = F0 * F1;
-      I12 = 0xbd99e3;                        // return address - 1: wr_mv_ret_12. - 1
-      JUMP 0xbd9e85;                         // -> wr_mv_sub_o_exp2.
-.GLOBAL wr_mv_ret_12.;
-wr_mv_ret_12.:
+      I12 = 0xbd99f9;                        // return address - 1: wr_mv_ret_14. - 1
+      JUMP 0xbd9e9b;                         // -> wr_mv_sub_o_exp2.
+.GLOBAL wr_mv_ret_14.;
+wr_mv_ret_14.:
       R1 = 0x3f800000;                  // 1.0
       F0 = F1 - F0;
       DM(113, I5) = R0;
@@ -245,18 +260,18 @@ wr_mv_ret_12.:
       DM(145, I5) = R0;
       R1 = 0x3f800000;                  // 1.0
       COMP(F0, F1);
-      IF LT JUMP 0xbd9a0a;                   // -> wr_mv_else_13.
+      IF LT JUMP 0xbd9a20;                   // -> wr_mv_else_15.
       R0 = DM(145, I5);
       R1 = 0x3f800000;                  // 1.0
       F0 = F0 - F1;
       DM(145, I5) = R0;
-.GLOBAL wr_mv_else_13.;
-wr_mv_else_13.:
+.GLOBAL wr_mv_else_15.;
+wr_mv_else_15.:
       R0 = DM(144, I5);
-      I12 = 0xbd9a12;                        // return address - 1: wr_mv_ret_14. - 1
-      JUMP 0xbd9ed5;                         // -> wr_mv_sub_o_sint.
-.GLOBAL wr_mv_ret_14.;
-wr_mv_ret_14.:
+      I12 = 0xbd9a28;                        // return address - 1: wr_mv_ret_16. - 1
+      JUMP 0xbd9eeb;                         // -> wr_mv_sub_o_sint.
+.GLOBAL wr_mv_ret_16.;
+wr_mv_ret_16.:
       R1 = 0x3f800000;                  // 1.0
       F0 = F1 + F0;
       R1 = 0x41ce71d6;                  // 25.805583953857422
@@ -265,20 +280,20 @@ wr_mv_ret_14.:
       R0 = DM(144, I5);
       R1 = 0x3e800000;                  // 0.25
       F0 = F0 + F1;
-      I12 = 0xbd9a2c;                        // return address - 1: wr_mv_ret_15. - 1
-      JUMP 0xbd9ed5;                         // -> wr_mv_sub_o_sint.
-.GLOBAL wr_mv_ret_15.;
-wr_mv_ret_15.:
+      I12 = 0xbd9a42;                        // return address - 1: wr_mv_ret_17. - 1
+      JUMP 0xbd9eeb;                         // -> wr_mv_sub_o_sint.
+.GLOBAL wr_mv_ret_17.;
+wr_mv_ret_17.:
       R1 = 0x3f800000;                  // 1.0
       F0 = F1 + F0;
       R1 = 0x41ce71d6;                  // 25.805583953857422
       F0 = F1 * F0;
       DM(138, I5) = R0;
       R0 = DM(145, I5);
-      I12 = 0xbd9a42;                        // return address - 1: wr_mv_ret_16. - 1
-      JUMP 0xbd9ed5;                         // -> wr_mv_sub_o_sint.
-.GLOBAL wr_mv_ret_16.;
-wr_mv_ret_16.:
+      I12 = 0xbd9a58;                        // return address - 1: wr_mv_ret_18. - 1
+      JUMP 0xbd9eeb;                         // -> wr_mv_sub_o_sint.
+.GLOBAL wr_mv_ret_18.;
+wr_mv_ret_18.:
       R1 = 0x3f800000;                  // 1.0
       F0 = F1 + F0;
       R1 = 0x41ce71d6;                  // 25.805583953857422
@@ -291,10 +306,10 @@ wr_mv_ret_16.:
       R0 = DM(145, I5);
       R1 = 0x3e800000;                  // 0.25
       F0 = F0 + F1;
-      I12 = 0xbd9a64;                        // return address - 1: wr_mv_ret_17. - 1
-      JUMP 0xbd9ed5;                         // -> wr_mv_sub_o_sint.
-.GLOBAL wr_mv_ret_17.;
-wr_mv_ret_17.:
+      I12 = 0xbd9a7a;                        // return address - 1: wr_mv_ret_19. - 1
+      JUMP 0xbd9eeb;                         // -> wr_mv_sub_o_sint.
+.GLOBAL wr_mv_ret_19.;
+wr_mv_ret_19.:
       R1 = 0x3f800000;                  // 1.0
       F0 = F1 + F0;
       R1 = 0x41ce71d6;                  // 25.805583953857422
@@ -322,8 +337,8 @@ wr_mv_ret_17.:
       DM(131, I5) = R0;
       R0 = 0x20;
       DM(114, I5) = R0;
-.GLOBAL wr_mv_loop_18.;
-wr_mv_loop_18.:
+.GLOBAL wr_mv_loop_20.;
+wr_mv_loop_20.:
       R14 = DM(151, I5);
       R15 = LSHIFT R14 BY 2;
       R12 = DM(134, I5);
@@ -333,13 +348,13 @@ wr_mv_loop_18.:
       R1 = R0 AND R12;
       R2 = 0x42800000;                  // 64.0
       COMP(F1, F2);
-      IF GE JUMP 0xbd9acb;                   // -> wr_mv_else_19.
-      JUMP 0xbd9acc;                         // -> wr_mv_fi_20.
-.GLOBAL wr_mv_else_19.;
-wr_mv_else_19.:
+      IF GE JUMP 0xbd9ae1;                   // -> wr_mv_else_21.
+      JUMP 0xbd9ae2;                         // -> wr_mv_fi_22.
+.GLOBAL wr_mv_else_21.;
+wr_mv_else_21.:
       R0 = R0 - R0;                     // 0.0
-.GLOBAL wr_mv_fi_20.;
-wr_mv_fi_20.:
+.GLOBAL wr_mv_fi_22.;
+wr_mv_fi_22.:
       R13 = 0xffff;
       R9 = R15 AND R13;
       R12 = -0x7d93df00;
@@ -348,7 +363,7 @@ wr_mv_fi_20.:
       DM(0, I1) = R0;
       R11 = DM(146, I5);
       R11 = PASS R11;
-      IF LE JUMP 0xbd9af1;                   // -> wr_mv_else_21.
+      IF LE JUMP 0xbd9b07;                   // -> wr_mv_else_23.
       R10 = LSHIFT R11 BY 2;
       R9 = R15 - R10;
       R13 = 0xffff;
@@ -357,14 +372,14 @@ wr_mv_fi_20.:
       R9 = R9 + R12;
       I1 = R9;
       R0 = DM(0, I1);
-.GLOBAL wr_mv_else_21.;
-wr_mv_else_21.:
+.GLOBAL wr_mv_else_23.;
+wr_mv_else_23.:
       R6 = 0x3f400000;                  // 0.75
       R10 = 0x394;
       R9 = R15 - R10;
       R13 = 0x3ff;
       R9 = R9 AND R13;
-      R12 = -0x7d93ff00;
+      R12 = 0x200b7800;
       R9 = R9 + R12;
       I1 = R9;
       R1 = DM(0, I1);
@@ -379,7 +394,7 @@ wr_mv_else_21.:
       R10 = 0x2b0;
       R9 = R15 - R10;
       R9 = R9 AND R13;
-      R12 = -0x7d93fb00;
+      R12 = 0x200b7c00;
       R9 = R9 + R12;
       I1 = R9;
       R1 = DM(0, I1);
@@ -396,7 +411,7 @@ wr_mv_else_21.:
       R9 = R15 - R10;
       R13 = 0xfff;
       R9 = R9 AND R13;
-      R12 = -0x7d93f700;
+      R12 = 0x200b8000;
       R9 = R9 + R12;
       I1 = R9;
       R1 = DM(0, I1);
@@ -412,7 +427,7 @@ wr_mv_else_21.:
       R9 = R15 - R10;
       R13 = 0x7ff;
       R9 = R9 AND R13;
-      R12 = -0x7d93e700;
+      R12 = 0x200b9000;
       R9 = R9 + R12;
       I1 = R9;
       R1 = DM(0, I1);
@@ -442,7 +457,7 @@ wr_mv_else_21.:
       R9 = R15 - R10;
       R13 = 0x1fff;
       R9 = R9 AND R13;
-      R12 = -0x7d96ff00;
+      R12 = 0x200b9800;
       R9 = R9 + R12;
       I1 = R9;
       R1 = DM(0, I1);
@@ -769,7 +784,7 @@ wr_mv_else_21.:
       R12 = 0x1;
       R0 = R0 - R12;
       DM(114, I5) = R0;
-      IF NE JUMP 0xbd9aaf;                   // -> wr_mv_loop_18.
+      IF NE JUMP 0xbd9ac5;                   // -> wr_mv_loop_20.
       R0 = DM(132, I5);
       DM(-0x7d96fff0) = R0;
       R0 = DM(133, I5);
@@ -782,8 +797,8 @@ wr_mv_else_21.:
       DM(-0x7d96fff4) = R0;
       R0 = DM(151, I5);
       DM(-0x7d96fff8) = R0;
-.GLOBAL wr_mv_fi_6.;
-wr_mv_fi_6.:
+.GLOBAL wr_mv_fi_8.;
+wr_mv_fi_8.:
       R0 = DM(0x200b7700);
       R1 = DM(0x200b7704);
       R2 = DM(0x200b7708);
@@ -819,24 +834,24 @@ wr_mv_sub_o_exp2.:
       F15 = PASS F0;
       R12 = -0x3d040000;                // -126.0
       COMP(F15, F12);
-      IF GE JUMP 0xbd9e92;                   // -> wr_mv_else_22.
+      IF GE JUMP 0xbd9ea8;                   // -> wr_mv_else_24.
       R15 = R15 - R15;                  // 0.0
-      JUMP 0xbd9ed1;                         // -> wr_mv_fi_23.
-.GLOBAL wr_mv_else_22.;
-wr_mv_else_22.:
+      JUMP 0xbd9ee7;                         // -> wr_mv_fi_25.
+.GLOBAL wr_mv_else_24.;
+wr_mv_else_24.:
       R12 = 0x42fe0000;                 // 127.0
       F15 = MIN(F15, F12);
       R13 = TRUNC F15;
       R12 = R12 - R12;                  // 0
       F14 = FLOAT R13 BY R12;
       COMP(F15, F14);
-      IF GE JUMP 0xbd9ea7;                   // -> wr_mv_else_24.
+      IF GE JUMP 0xbd9ebd;                   // -> wr_mv_else_26.
       R12 = 0x3f800000;                 // 1.0
       F14 = F14 - F12;
       R12 = 0x1;
       R13 = R13 - R12;
-.GLOBAL wr_mv_else_24.;
-wr_mv_else_24.:
+.GLOBAL wr_mv_else_26.;
+wr_mv_else_26.:
       F15 = F15 - F14;
       R14 = 0x396566fb;                 // 0.00021877505059819669
       F14 = F14 * F15;
@@ -861,8 +876,8 @@ wr_mv_else_24.:
       R13 = R13 + R12;
       R13 = LSHIFT R13 BY 23;
       F15 = F14 * F13;
-.GLOBAL wr_mv_fi_23.;
-wr_mv_fi_23.:
+.GLOBAL wr_mv_fi_25.;
+wr_mv_fi_25.:
       F0 = PASS F15;
       JUMP (M14, I12);
 .GLOBAL wr_mv_sub_o_sint.;
@@ -874,29 +889,29 @@ wr_mv_sub_o_sint.:
       R13 = R13 - R13;                  // 0
       F13 = FLOAT R12 BY R13;
       COMP(F14, F13);
-      IF GE JUMP 0xbd9ee9;                   // -> wr_mv_else_25.
+      IF GE JUMP 0xbd9eff;                   // -> wr_mv_else_27.
       R12 = 0x3f800000;                 // 1.0
       F13 = F13 - F12;
-.GLOBAL wr_mv_else_25.;
-wr_mv_else_25.:
+.GLOBAL wr_mv_else_27.;
+wr_mv_else_27.:
       F15 = F15 - F13;
       R12 = 0x3e800000;                 // 0.25
       COMP(F15, F12);
-      IF LE JUMP 0xbd9ef9;                   // -> wr_mv_else_26.
+      IF LE JUMP 0xbd9f0f;                   // -> wr_mv_else_28.
       R12 = 0x3f000000;                 // 0.5
       F15 = F12 - F15;
-      JUMP 0xbd9f05;                         // -> wr_mv_fi_27.
-.GLOBAL wr_mv_else_26.;
-wr_mv_else_26.:
-      R12 = -0x41800000;                // -0.25
-      COMP(F15, F12);
-      IF GE JUMP 0xbd9f05;                   // -> wr_mv_else_28.
-      R12 = -0x41000000;                // -0.5
-      F15 = F12 - F15;
+      JUMP 0xbd9f1b;                         // -> wr_mv_fi_29.
 .GLOBAL wr_mv_else_28.;
 wr_mv_else_28.:
-.GLOBAL wr_mv_fi_27.;
-wr_mv_fi_27.:
+      R12 = -0x41800000;                // -0.25
+      COMP(F15, F12);
+      IF GE JUMP 0xbd9f1b;                   // -> wr_mv_else_30.
+      R12 = -0x41000000;                // -0.5
+      F15 = F12 - F15;
+.GLOBAL wr_mv_else_30.;
+wr_mv_else_30.:
+.GLOBAL wr_mv_fi_29.;
+wr_mv_fi_29.:
       R12 = 0x40c90fdb;                 // 6.2831854820251465
       F15 = F15 * F12;
       F14 = F15 * F15;
