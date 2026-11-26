@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T17:42:55+00:00",
+ "updated": "2026-11-26T17:45:57+00:00",
  "note": "v0.27 FLOW is out.\nv0.28 STABLE: full gate started 12:17 with the SMEAR cutout fix (about 6 hours).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 26,
    "total": 75,
    "frac": 0.347,
-   "status": "running: waverider_menu",
+   "status": "running: SHARC runner: recwhole",
    "state": "run",
    "last": [
     "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S",
