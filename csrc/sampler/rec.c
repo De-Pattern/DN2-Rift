@@ -755,11 +755,15 @@ void rec_poll(void)
         if (rec_rt_take && sent_seq && rec_link == 0)
             rec_link = 1;
         rt_manual = (!rec_rt_take && (rec_state == 1 || rec_state == 2)) || rt_q_waiting();
-        if (rec_rt_take && rec_state == 2) {    /* RIFT v0.30: a buffer take's overview, as it records */
-            extern int rt_cur_ix;
+        /* RIFT v0.30: a buffer take's overview, as it records. While a buffer take runs (rectrig.c's
+         * rt_cur, until rt_cur_end), not by the echo's bit 15: the echo is the last command the DSP
+         * took, and the link's own commands follow the take's while it records */
+        extern int rt_cur, rt_cur_ix;
+        extern u32 rt_cur_end;
+        if (rec_state == 2 && rt_cur >= 0 && rt_cur_ix >= 0 && (int)(FRAMES - rt_cur_end) < 0) {
             extern u32 rt_rbytes[];
             extern u8 *smp_buf_overview(u32 ix);
-            if (rt_cur_ix >= 0 && rt_rbytes[rt_cur_ix]) {
+            if (rt_rbytes[rt_cur_ix]) {
                 u32 total = rt_rbytes[rt_cur_ix] / 2u, fr = rec_frames < total ? rec_frames : total - 1u;
                 u32 col = fr * 100u / total;           /* (a take is at most REC_FRAMES_MAX frames: no overflow) */
                 u8 v = (u8)(rec_peak >> 7);
