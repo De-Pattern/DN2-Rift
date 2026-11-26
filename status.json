@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T20:02:51+00:00",
+ "updated": "2026-11-26T20:05:53+00:00",
  "note": "v0.28 full gate running (31 steps passed). v0.29: SMEAR mono committed; tracing FLEX buffers on sample machines in the emulator.",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 45,
    "total": 75,
    "frac": 0.6,
-   "status": "running: waverider_menu",
+   "status": "running: drive_nest",
    "state": "run",
    "last": [
     "SLICE menus and SLICES keys (ColdFire): menu, grid dialog and editor drawn; RIGHT picks slice 2, E move",
@@ -15,7 +15,7 @@
     "MACHINE SEL columns, SYN held (ColdFire): MACHINE SEL: RIGHT from GRID shows the FLTR column from its t",
     "every machine through MACHINE SEL's own list; a power-on with ours on the tracks (ColdFire): a power-on"
    ],
-   "log_written": "14:59"
+   "log_written": "15:05"
   }
  ]
 }
