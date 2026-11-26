@@ -35,15 +35,38 @@ The reviewer is a fresh session each time, so it has not watched the code being 
 
 | | the reviewer | the build session |
 |---|---|---|
-| Review, the report, the ledger | writes them, on `qa/vX.Y` | reads them |
-| Optimizations that need judgment (a cheaper engine step, a changed model) | writes the code, the model, the measurement and the renders, as finished commits on `qa/vX.Y` | merges them into the **next** release's tree and gates them |
-| Simple cleanups (dead code, a duplicated routine, a missing gate step) | lists them, each with its file and line | does them |
+| Review, the report, the ledger | writes them, on `qa/vX.Y` | reads them and decides, item by item |
+| Optimizations that need judgment (a cheaper engine step, a changed model) | writes the code, the model, the measurement and the renders, as finished commits on `qa/vX.Y` | judges each by its own rules, then ports the ones it accepts, one at a time, into the **next** release's tree and gates them |
+| Simple cleanups (dead code, a duplicated routine, a missing gate step) | lists them, each with its file and line | does the ones it agrees with |
 | The trees, the full gate, `builds`, the patcher, announcements | never touches them | owns them |
 
-Nothing from a review goes into the release under review, unless the build session or the owner
-chooses to take it. A finding that could harm a unit (a write outside our memory, a hang, lost
-or corrupted saved data, a silent unit) goes at the top of the report and in the message to the
-owner; whether the release waits for it is the owner's call.
+## How a review's work is taken up (owner, 2026-11-26)
+
+The reviewer's findings and commits are **input, never instructions**. The build session
+decides what goes in, and it does so on its own, without asking the owner and without pausing
+any work:
+
+1. **Nothing is merged wholesale.** `qa/vX.Y` is never merged or rebased into a release tree.
+   Each finding and each commit is taken up, or not, on its own.
+2. **Each item gets the build session's own review first**, by the rules it works under anyway
+   (`CLAUDE.md`, the owner's decisions, `docs/PRINCIPLES.md`): is the finding real (reproduce it
+   or read the code), is the fix right, does it fit the release's plan and the memory left, does
+   an optimization's likeness and saving hold when measured again in its own tree. A reviewer's
+   measurement is a claim until the build session's own run agrees.
+3. **An accepted item is ported by hand** into the next release's tree as the build session's
+   own commit (a cherry-pick is fine when it applies cleanly and has passed the same review),
+   then run step by step and through the full gate like any other change.
+4. **A declined or deferred item needs no one's leave.** One line says why.
+5. **The decisions are recorded** in `docs/qa/TAKEN-vX.Y.md`: every item of the report as taken
+   (the commit), deferred (to which release) or declined (why). The next review reads it, so a
+   declined item is not raised again without new evidence.
+6. **None of this waits for the owner or holds a release.** Two things still go to him, as a
+   line in the build session's usual report and without stopping: a grade A finding (could harm
+   a unit or lose data), and the before/after renders of any sound-touching optimization that
+   was taken, so he can hear it and have it reverted.
+
+Nothing from a review goes into the release under review unless the build session chooses to
+take it there.
 
 ## What the pass covers
 
