@@ -693,7 +693,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,spall,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,gstress,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,spall,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -828,6 +828,8 @@ def main(argv=None):
                                 lambda: step_fsilence(warm(), sound, machines)),
                                ("fstress", "sixteen FASCIA voices, the clock made to move (v0.45)",
                                 lambda: step_fstress(warm(), sound, machines)),
+                               ("gstress", "sixteen sample voices retriggered together over ringing notes, the clock made to move (RIFT v0.29)",
+                                lambda: step_gstress(warm(), sound, machines)),
                                ("fkeep", "a held chord kept under a melody, the clock made to move (v0.11)",
                                 lambda: step_fkeep(warm(), sound, machines)),
                                ("fcost", "a FASCIA voice's cost, each audition patch (v0.45)",
@@ -5807,6 +5809,64 @@ def step_fkeep(init, sound, machines, K: float = 1.0) -> dict:
         "the two held notes sound to the end (REUSE re-strikes)": out["reuse"]["held_to_the_end"],
         "the newest note heard in most blocks": all(o["newest_heard"] >= 0.8 for o in out.values()),
         "every buffer finite": all(o["finite"] for o in out.values()),
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+def step_gstress(init, sound, machines) -> dict:
+    """RIFT v0.29 (QA's reviews of v0.27 and v0.28, C1 / C2 / addendum B1: the guard's floors had no case that fails
+    if they are wrong): sixteen ONESHOT tracks, all struck together every fourth block while the last notes still
+    ring (a retrigger renders twice: the old note's fade, then the new), the clock made to move as fstress's (every
+    read of EMUCLK gets the block's start plus K x the instructions so far). Every block returns, our voices done by
+    0.8 of the frame (the limit holds with the new floors), every buffer finite, most tracks heard between the
+    downbeats"""
+    from dnfw.perc import guard as G
+    K, P = 3, 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia")) | set(_after_emuclk("smear"))
+    ONE = SM.TYPE_OF["ONESHOT"]
+    b_now = {"b": 0}
+
+    def clock(r):
+        base = (b_now["b"] + 1) * P
+        r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const((base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+    def at_perc(r):
+        base = (b_now["b"] + 1) * P
+        m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+        m2.poke(r.state, G.MARK, (base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+    hooks = {dsp.PERC_SW: at_perc}
+    hooks.update({s_: clock for s_ in sites})
+    nb = 18
+
+    def fb(b):
+        b_now["b"] = b
+        f = base_frame(sound, machines, t0=ONE, overrides=smp_words(), others={t: ONE for t in range(1, 16)},
+                       trigger=b % 4 == 1, trigger_others=True)
+        for t in range(1, 16):
+            for slot, w in smp_words().items():
+                f.param(t, slot, w)
+        return f.to_bytes()
+    rr = run_blocks(init, fb, nb, extra_hooks=hooks)
+    st = rr.get("state")
+    skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+    end = m2.word(st.state, G.OURS_END) if rr["ok"] else None
+    mark0 = m2.word(st.state, G.MARK0) if rr["ok"] else None
+    rr.pop("state", None)
+    fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    heard = []
+    for b in range(2, nb):
+        blk = rr["smp"][b] if b < len(rr["smp"]) else {}
+        heard.append(sum(1 for t in range(16) if t in blk and V.peak(blk[t]["out"]) > 1e-4))
+    out = {"ok": rr["ok"], "skips": skips, "finite": fin, "heard_per_block": heard,
+           "our_end_over_P": round(((end - mark0) & 0xFFFFFFFF) / P, 3) if end is not None else None,
+           "instructions_per_block": rr.get("instructions", 0) // nb}
+    print(f"    gstress: {out}", flush=True)
+    checks = {
+        "every block returns": out["ok"],
+        "our voices done by 0.8 of the frame (the guard's limit holds with the new floors)":
+            out["our_end_over_P"] is not None and out["our_end_over_P"] <= 0.8,
+        "every buffer finite": fin,
+        "between the downbeats, at least six of the sixteen tracks heard (the clock at three times the instructions)": bool(heard) and sorted(heard)[len(heard) // 2] >= 6,   # (v0.29: 8 of 16 at K = 3, three times the instructions)
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 
