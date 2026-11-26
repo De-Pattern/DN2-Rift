@@ -288,8 +288,8 @@ SMEAR = [
     ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: the read point stops; +1.00 and -1.00 have wide detents). Negative reads backwards. Speed only: PLAY and the grains keep their pitch whatever the speed (v0.24)."),
     ("BLND", "Blend", "Crossfades the readers at constant power: VOC (the keyframe stretch, v0.26) at 0, PLAY (the read heads) in the middle, GRN (the grains) at 127."),
     ("SAMP", "Sample Slot", "The sample (or FLEX buffer B1..B8) SMEAR plays, as on every sample machine. Taken at the note."),
-    ("STRT", "Start", "Where the loop starts in the sample."),
-    ("SIZE", "Loop Size", "How long the loop is, from STRT toward the sample's end (squared, as on the Nebulae: fine control at small sizes)."),
+    ("STRT", "Start", "Where the loop starts in the sample: 0.00 to 120.00, as ONESHOT's STRT (v0.29)."),
+    ("SIZE", "Loop Size", "How long the loop is, from STRT toward the sample's end: 0.00 to 120.00, where 120.00 is all of it (squared, as on the Nebulae: fine control at small sizes). Before v0.29 the knob went on to 127, and 121 to 127 read garbage loop sizes."),
     ("DENS", "Grain Density", "Grains a second, 0.12 to 2,500 (up to 10 at once)."),
     ("LEV", "Sample Level", "Level."),
     ("OVLP", "Grain Overlap", "Each grain's length against the density: short separate grains to long overlapping ones."),
@@ -687,7 +687,7 @@ def build() -> str:
     if HAS_SMEAR:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
         s.append(p("A granular looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through readers of one loop: <b>VOC</b>, a keyframe time stretch (v0.26), <b>PLAY</b>, a continuous read whose pitch and speed are apart (two crossfading read heads, v0.24), and <b>GRN</b>, a cloud of grains; BLND moves between them. A note restarts the read at STRT and plays at its pitch (TUNE too), so SMEAR plays chromatically.",
-                   "<b>How to approach it:</b> load a sample and play it at BLND 0 (VOC) or 64 (PLAY). Turn BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece; STRT scans. <b>FRZ</b> (page 2) holds the moment as a grain cloud while you play notes over it. LFO SPD, STRT or BLND for motion.",
+                   "<b>One voice a track (v0.29):</b> a new note fades the sounding one out and takes over, as a mono synth. <b>How to approach it:</b> load a sample and play it at BLND 0 (VOC) or 64 (PLAY). Turn BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece; STRT scans. <b>FRZ</b> (page 2) holds the moment as a grain cloud while you play notes over it. LFO SPD, STRT or BLND for motion.",
                    "<b>VOC, the keyframe stretch (v0.26).</b> BLND's VOC end is back, rebuilt on heavylight's keyframe time stretching (Capicola and dt2-keyframer, heavylight-industries; the DAFx26 paper <i>Keyframe Time Stretching via Extrema Sampling</i>), written again for SMEAR with credit and permission. The sample's peaks and troughs are its keyframes. One head moves at SPD (the read point), the other reads at the pitch (TUNE and the note); when they drift apart, the playing head jumps onto the read point's last peak or trough of the same kind with a short crossfade (at most 20 ms, heavylight's). So SPD stretches time without changing pitch, TUNE changes pitch without changing time, and SPD 64 or FRZ holds a moment as a looping grain. It costs a few thousand DSP cycles a voice (the old phase vocoder needed 200,000 and more, and was switched off in v0.18).",
                    "<b>Page 2</b> (v0.22: laid out as ONESHOT's page 2) shows the sample across the screen, with the loop (STRT, SIZE) marked, the read point moving through it and a grain cloud round it (more grains with DENS, wider with SPRY, longer with OVLP). Above the sample, four small pictures for knobs A-D: <b>OVLP</b> two grains that overlap more as it rises; <b>SPRY</b> grains scattered round the read point; <b>PRND</b> grains at random pitches; <b>WIN</b> the window's own shape. Knob E is <b>FRZ</b>, a bar over its label while frozen. Values show as you turn, as on every page."))
         s.append(p("<span class=\"credit\">Concept: De-Pattern, after the Qu-Bit Nebulae v2 (its granular-looper instrument, MIT).</span>"))
@@ -753,8 +753,13 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.29", "MONO", ["SMEAR plays one voice a track: a new note fades the one before it out (in under a millisecond) and takes its place. Held or overlapping notes no longer pile up into the drop-outs and crackle of v0.25 to v0.28.",
+                      "SMEAR's STRT and SIZE run 0.00 to 120.00, as ONESHOT's. SIZE went on to 127 before, and 121 to 127 read past the end of its table: odd loop lengths (thanks InductiveOne). A project saved with SIZE above 120 plays the whole loop.",
+                      "DIGIDRUM: the DSP's time guard expects what each drum type really costs (BD, SD BASIC and PC about half of before). A kick beside SPALL and other busy tracks is left out far less (thanks InductiveOne).",
+                      "The master reverb: its short lines in fast memory, the same sound bit for bit, a little less DSP time."]),
     ("0.28", "STABLE", ["RUBBER is pulled. It made voices go quiet after a few notes, crackled on FM Tone and could drop out even in an empty project. A sound saved with it loads as Multi-Mode.",
                         "The sample machines (ONESHOT, GRID, SLICE and the rest) and SMEAR drop out far less: the DSP's time guard asked every sample voice for twice what it costs, on every block. It now asks a voice for what it cost last block, and for more only on the block that starts its note (as v0.27 did for RIFT's machines).",
+                        "SMEAR no longer cuts out after 30 to 50 seconds: the guard could stop its sample glue and leave it stopped. CONTOUR with FDBK raised during a note no longer goes silent.",
                         "DIGIDRUM: the bottom row's long names follow the drum type in the header and the LFO lists (Sweep, Square Mod, ...), not \"Type Control 1..4\".",
                         "The LINE pages: a choice's word now scrolls in smoothly (it moved only when the page happened to redraw), and every redraw of the page is cheaper.",
                         "The master reverb: the same plate, rewritten to use much less of the DSP's time; its tail a little shorter (at DEC 127 about a quarter: 42 s to 32 s; at 96 about a tenth).",
