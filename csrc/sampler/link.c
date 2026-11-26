@@ -114,8 +114,13 @@ _Static_assert(LIBID_OFFSET >= META_PTR + 12u && LIBID_OFFSET % 4u == 0 && LIBID
 /* our RAM (the mirror's 5 MB, laid out anew in v0.16) */
 #define DIR ((u8 *)SMP_MIRROR)                                      /* the image's directory page */
 #define OVERVIEW ((u8 *)(SMP_MIRROR + 0x1000u))                     /* 128 x 100 column peaks */
+/* RIFT v0.30 (owner: a FLEX buffer on a sample machine "doesnt show any waveform"): the sixteen
+ * buffer halves' overviews, after the pool's (rec.c fills them from the recorder's peaks as a take
+ * records; rectrig.c rt_clear empties a buffer's) */
+#define BUFOV ((u8 *)(SMP_MIRROR + 0x1000u + 128u * OVERVIEW_W))
 #define SLICE_MAX 64                                                /* v0.19, SLICE: a slot's slices */
 #define SLICECOL ((u8 *)(SMP_MIRROR + 0x5000u))                     /* 128 x 64 slice starts, columns */
+_Static_assert(0x1000u + (128u + 16u) * OVERVIEW_W <= 0x5000u && POOL_SLOTS <= 128u, "the buffer halves' overviews fit before the slice columns");
 _Static_assert(0x1000u + POOL_SLOTS * OVERVIEW_W <= 0x5000u && 0x5000u + POOL_SLOTS * SLICE_MAX <= 0x10000u,
                "the overview and the slice columns fit below the stages");
 #define STAGE(k) ((u8 *)(SMP_MIRROR + 0x10000u + (u32)(k) * CHUNK))   /* 0: loading, 1: saving, 2: upload, 3: analysis */
@@ -603,8 +608,24 @@ const char *smp_name(int k)
 }
 
 /* slot K's waveform, OVERVIEW_W column peaks 0..255, or 0 if none has been seen */
+u8 *smp_buf_overview(u32 ix)                    /* RIFT v0.30: buffer half IX's (0..15) */
+{
+    return BUFOV + OVERVIEW_W * (ix & 15u);
+}
+
 const u8 *smp_overview(int k)
 {
+    if (k >= 128 && k < 128 + 16) {             /* RIFT v0.30: a FLEX buffer's SAMP - 1: its playing half's */
+        extern u32 rt_buf_samp(u32 b);
+        u32 h = rt_buf_samp((u32)(k - 128) / 2u);
+        if (h < 129u)
+            return 0;                           /* nothing recorded */
+        const u8 *o = BUFOV + OVERVIEW_W * (h - 129u);
+        for (int j = 0; j < OVERVIEW_W; j++)
+            if (o[j])
+                return o;
+        return 0;
+    }
     if (k < 0 || k >= POOL_SLOTS)
         return 0;
     const u8 *o = OVERVIEW + OVERVIEW_W * k;

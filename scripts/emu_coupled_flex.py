@@ -309,6 +309,11 @@ def main() -> int:
     link("4b. the take is the input", corr > 0.99, f"{frames} frames, corr {corr:.4f} at input sample {lag}")
     tv = c.call(lay["rt_trig_get"], table, T, 0)[0] & 0xFFFF
     link("4c. the one-shot is spent (3)", tv == 3, f"rt_trig_get {tv}")
+    if "smp_buf_overview" in lay:              # RIFT v0.30: the take's overview, filled as it recorded
+        ov = c.read(SM.MIRROR + 0x1000 + 128 * 100, 100)
+        lit = sum(1 for x in ov if x)
+        link("4e. v0.30: buffer 1's overview filled from the recorder's peaks as it recorded", lit >= 80,
+             f"{lit} of 100 columns, peak {max(ov)}")
     bpm120 = struct.unpack(">H", c.read(0x80005E60 + 2 * 108, 2))[0] or 14400
     one = 86400000 // bpm120
     link("4d. v0.51: settings changed mid-take (R.LEN 3, SRC MAIN): the take keeps its own R.LEN (one step) "

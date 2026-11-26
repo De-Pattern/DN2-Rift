@@ -96,6 +96,7 @@ u8 rt_pend[BUF_N] D;                    /* a take waiting for its QPLAY boundary
 u32 rt_pfrom[BUF_N] D, rt_plen[BUF_N] D;    /* .. the master steps seen when it began, its steps */
 u32 rt_pt0[BUF_N] D, rt_pfr[BUF_N] D;   /* .. FRAMES when it began, its length in FRAMES */
 int rt_cur D = -1;                      /* the buffer the recorder records into, -1 none */
+int rt_cur_ix D = -1;                   /* RIFT v0.30: .. and its half (HALF_IX), for the take's overview */
 u32 rt_cur_end D;                       /* .. FRAMES when its take is over */
 int rt_manual D = 0;                    /* rec.c: a manual take armed, recording or waiting */
 u8 rt_last_step[16] D;                  /* each track's step the last frame saw (0xFF: none) */
@@ -423,6 +424,13 @@ int rt_trig(u32 track, u32 step, u32 b)         /* -> 1: the take started */
     rt_last_bytes = frames * 2u;
     rt_last_steps = (u16)steps;
     rt_cur = (int)b;
+    rt_cur_ix = (int)ix;
+    {                                           /* RIFT v0.30: its overview starts empty (rec.c fills it) */
+        extern u8 *smp_buf_overview(u32 ix);
+        u8 *o = smp_buf_overview(ix);
+        for (int j = 0; j < 100; j++)
+            o[j] = 0;
+    }
     rt_cur_end = now + frames / 32u + 3u;
     rt_nx_room[b] = 0;                          /* used: rt_poll finds the next */
     rt_dirty = 1;
@@ -450,6 +458,14 @@ int rt_clear(u32 b)
     for (int h = 0; h < 2; h++) {
         rt_rbytes[HALF_IX(b, h)] = 0;
         rt_rsteps[HALF_IX(b, h)] = 0;
+    }
+    {                                           /* RIFT v0.30: its overviews too */
+        extern u8 *smp_buf_overview(u32 ix);
+        for (int h = 0; h < 2; h++) {
+            u8 *o = smp_buf_overview(HALF_IX(b, h));
+            for (int j = 0; j < 100; j++)
+                o[j] = 0;
+        }
     }
     rt_play[b] = 0;
     rt_pend[b] = 0;

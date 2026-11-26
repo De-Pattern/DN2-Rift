@@ -755,6 +755,25 @@ void rec_poll(void)
         if (rec_rt_take && sent_seq && rec_link == 0)
             rec_link = 1;
         rt_manual = (!rec_rt_take && (rec_state == 1 || rec_state == 2)) || rt_q_waiting();
+        if (rec_rt_take && rec_state == 2) {    /* RIFT v0.30: a buffer take's overview, as it records */
+            extern int rt_cur_ix;
+            extern u32 rt_rbytes[];
+            extern u8 *smp_buf_overview(u32 ix);
+            if (rt_cur_ix >= 0 && rt_rbytes[rt_cur_ix]) {
+                u32 total = rt_rbytes[rt_cur_ix] / 2u, fr = rec_frames < total ? rec_frames : total - 1u;
+                u32 col = fr * 100u / total;           /* (a take is at most REC_FRAMES_MAX frames: no overflow) */
+                u8 v = (u8)(rec_peak >> 7);
+                if (!v && rec_peak)
+                    v = 1;
+                u8 *o = smp_buf_overview((u32)rt_cur_ix);
+                u32 c0 = col;                   /* the columns since the last report: the same peak */
+                while (c0 > 0 && !o[c0 - 1])
+                    c0--;
+                for (u32 c = c0; c <= col && c < 100u; c++)
+                    if (v > o[c])
+                        o[c] = v;
+            }
+        }
         /* a recording has ended: it is kept on the +Drive, as the DT2 keeps its
          * recordings, and is there again after a power cycle; DEST moves on (v0.41: a
          * buffer's take is not one: a manual take before it ended, and is saved) */
