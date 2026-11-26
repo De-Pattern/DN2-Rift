@@ -1,36 +1,21 @@
 {
- "updated": "2026-11-26T14:46:36+00:00",
- "note": "Plan: v0.27 publishes as soon as its gate clears (est. 08:45\u201309:15).\nv0.28 then gets its full gate (the reverb 34% lighter, sample/SMEAR guard, RUBBER pulled, DIGIDRUM names, smoother pages).",
+ "updated": "2026-11-26T14:49:38+00:00",
+ "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: full gate started 09:48.",
  "gates": [
   {
-   "label": "v0.27 FLOW  \u00b7 full gate",
-   "done": 73,
-   "total": 71,
-   "frac": 1.0,
-   "status": "CLEARED TO FLASH",
-   "state": "ok",
+   "label": "v0.28 STABLE \u00b7 full gate",
+   "done": 16,
+   "total": 74,
+   "frac": 0.216,
+   "status": "running: waverider_menu",
+   "state": "run",
    "last": [
-    "boot from reset: booted and drew its UI, no fault; the start-up animation's first frame, his",
-    "UI fuzz, two seeds, the audio interrupt at its real rate (ColdFire): 3/3 runs pass (the arp scenario an",
-    "sample link, dead link (ColdFire): dead (nothing gets through): the RAM check gives up after four secon",
-    "SHARC runner: stock: all steps PASS, incl. types 0-4 bit-identical to stock; stress: all steps PASS, in"
+    "ColdFire: MAIN OS: 224 hit(s), all in appended data that never executes",
+    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
+    "unit tests: 951 passed, 2 skipped, 12 warnings in 1591.42s (0:26:31) [reused: no input changed]",
+    "DSP load meter (ColdFire): the DSP load meter: the half second's peak in percent, none when the DSP is "
    ],
-   "log_written": "08:51"
-  },
-  {
-   "label": "v0.28 STABLE \u00b7 step runs",
-   "done": 22,
-   "total": null,
-   "frac": 1.0,
-   "status": "finished (partial run: passes recorded)",
-   "state": "ok",
-   "last": [
-    "SHARC runner: glass: glass: all steps PASS, incl. types 0-4 bit-identical to stock",
-    "SHARC runner: sanitize: sanitize: all steps PASS, incl. types 0-4 bit-identical to stock",
-    "SHARC runner: smear: smear: all steps PASS, incl. types 0-4 bit-identical to stock",
-    "SHARC runner: mstress: mstress: all steps PASS, incl. types 0-4 bit-identical to stock"
-   ],
-   "log_written": "08:10"
+   "log_written": "09:49"
   }
  ]
 }
