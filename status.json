@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T20:30:12+00:00",
+ "updated": "2026-11-26T20:33:14+00:00",
  "note": "v0.28 STABLE: full gate running (45 steps passed, none failed). v0.29 in test: SMEAR mono, SMEAR SIZE fix, DIGIDRUM guard by drum type.",
  "gates": [
   {
@@ -15,7 +15,7 @@
     "+DRIVE browser (ColdFire): the two stores, +DRIVE's folders and samples, a tick, LOAD TO PROJECT queued",
     "+DRIVE keys and long names (ColdFire): held arrows repeat in the list and the action menu, FUNC + DOWN "
    ],
-   "log_written": "15:29"
+   "log_written": "15:30"
   }
  ]
 }
