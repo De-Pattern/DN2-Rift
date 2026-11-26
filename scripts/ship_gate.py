@@ -2050,11 +2050,12 @@ def main() -> int:
                    "up", "wait:8", f"mem:{samp0:#x}:2", "up", "wait:8", f"mem:{samp0:#x}:2",
                    "no", "wait:8", f"poke:{lay['smp_samp_turned']:#x}:80000000",   # (no turn: the list stays shut)
                    f"poke:{samp0:#x}:{b1:02x}00", f"poke:{lay['smp_overlay_dirty']:#x}:00000001",
-                   "wait:10", "png:page1_b1", "tap:2", "wait:10", "png:page2_b1_text",
-                   # RIFT v0.30: the take's overview (rec.c fills it as it records; here poked, a ramp):
-                   # page 2 draws buffer 1's waveform, not its name
+                   "wait:10", "png:page1_b1", "tap:2", "wait:10", "png:page2_b1",
+                   # RIFT v0.30: the take's overview (rec.c fills it as it records; here poked, a ramp): the
+                   # waveform page (page1_b1's, which named FLEX BUF 1) draws buffer 1's waveform
+                   "tap:2", "wait:10",
                    f"poke:{SMp.MIRROR + 0x1000 + 128 * 100:#x}:" + "".join(f"{(8 + 2 * j) % 256:02x}" for j in range(100)),
-                   f"poke:{lay['smp_overlay_dirty']:#x}:00000001", "wait:10", "png:page2_b1",
+                   f"poke:{lay['smp_overlay_dirty']:#x}:00000001", "wait:10", "png:wave_b1", "tap:2", "wait:10",
                    f"poke:{samp0:#x}:{b2:02x}00", f"poke:{lay['smp_overlay_dirty']:#x}:00000001", "wait:10",
                    "png:page2_b2", f"mem:{lay['rt_on']:#x}:4", f"mem:{lay['rt_rbytes']:#x}:4",
                    f"poke:{snd0 + 0xDE:#x}:01", "wait:4"]
@@ -2073,7 +2074,7 @@ def main() -> int:
                     m = r["memory"]
                     lo, sp = hex(lay["smp_lst_open"]), hex(samp0)
                     sh = {n: pathlib.Path(r["screens"][n]).read_bytes() if n in r["screens"] else b""
-                          for n in ("list_b1", "list_b2", "page1_b1", "page2_b1_text", "page2_b1", "page2_b2")}
+                          for n in ("list_b1", "list_b2", "page1_b1", "page2_b1", "page2_b2", "wave_b1")}
                     facts["knob D at 127, a detent right (the panel's encoder): B1, the list up on it"] = \
                         m.get(sp) == f"{b1:02x}00" and int(m.get(lo, "0"), 16) == 1
                     facts["DOWN: B2, UP: B1, UP: 127"] = [m.get(f"{sp}@2"), m.get(f"{sp}@3"), m.get(f"{sp}@4")] == \
@@ -2082,7 +2083,7 @@ def main() -> int:
                         all(sh.values()) and len(set(sh.values())) == 6 and \
                         m.get(hex(lay["rt_on"])) == "00000001" and m.get(hex(lay["rt_rbytes"])) == "00001000"
                     facts["v0.30: page 2 draws buffer 1's waveform once its take has an overview (not FLEX BUF 1's name)"] = \
-                        bool(sh["page2_b1"]) and sh["page2_b1"] != sh["page2_b1_text"]
+                        bool(sh["wave_b1"]) and sh["wave_b1"] != sh["page1_b1"]
                     good = len(got) == len(pcases) and all(facts.values())
                     why = f"{facts} got={[hex(g) for g in got]} mem={m}"
                 return good, ("SAMP past 127 to the FLEX buffers B1..B8 by the knob and in the list, as before "
