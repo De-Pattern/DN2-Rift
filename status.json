@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T16:42:06+00:00",
+ "updated": "2026-11-26T16:45:09+00:00",
  "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: full gate restarted 11:27 with the QA fixes in (about 5 to 6 hours).",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 23,
+   "done": 25,
    "total": 74,
-   "frac": 0.311,
-   "status": "running: SHARC runner: mainmark",
-   "state": "run",
+   "frac": 0.338,
+   "status": "FAILED: rc killed (QA's SMEAR guard fix taken in)",
+   "state": "bad",
    "last": [
-    "start-up animation, every frame: all 80 frames, each his, in order, to the intro's end; the panel showe",
-    "recorder screen (ColdFire): FUNC+VOICE opens it, knob A moves SRC four detents a choice (3: none, 12: t",
     "Monomachine pages and detents (ColdFire): the five Monomachine pages drawn, each its own; a two-choice ",
-    "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S"
+    "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S",
+    "stock questions and held keys (ColdFire): a stock question's YES is the question's; TRIG + YES is stock",
+    "Monomachine start values (ColdFire): MACHINE SEL to SID: its eight controls at its own start (PULS, PW "
    ],
-   "log_written": "11:40"
+   "log_written": "11:44"
   }
  ]
 }
