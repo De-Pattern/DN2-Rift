@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T17:49:00+00:00",
+ "updated": "2026-11-26T17:52:02+00:00",
  "note": "v0.27 FLOW is out.\nv0.28 STABLE: full gate started 12:17 with the SMEAR cutout fix (about 6 hours).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 27,
    "total": 75,
    "frac": 0.36,
-   "status": "running: waverider_menu",
+   "status": "running: SHARC runner: fascia",
    "state": "run",
    "last": [
     "stock questions and held keys (ColdFire): a stock question's YES is the question's; TRIG + YES is stock",
@@ -15,7 +15,7 @@
     "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire): FASCIA: MACHINE SEL's commit gives it its mo",
     "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire): ORGAN (on FASCIA's records): MACHINE SEL's co"
    ],
-   "log_written": "12:47"
+   "log_written": "12:49"
   }
  ]
 }
