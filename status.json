@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T19:53:43+00:00",
+ "updated": "2026-11-26T19:56:46+00:00",
  "note": "v0.28 full gate running (31 steps passed). v0.29: SMEAR mono committed; tracing FLEX buffers on sample machines in the emulator.",
  "gates": [
   {
