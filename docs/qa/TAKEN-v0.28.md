@@ -16,3 +16,12 @@ v0.28's gate was stopped 40 minutes in and restarted with these: two findings we
 | Addendum: a p-locked TYPE shows the locked type's names on the page, the kit's in the header | Deferred: stock's own behaviour for a locked choice's dependent names; revisit if a user meets it |
 | Proposal: the reverb's line addresses as pointers / circular buffers | Partly done in v0.28 (byte offsets, mask and base held in registers: 27,284 -> 14,548 instructions); the rest deferred |
 | Proposal: the short lines (i0..i3, a_ap, b_ap) in L2 | Deferred: needs an L2 map check; about 2,500 cycles a block |
+
+## QA's branch `qa/v0.27-smear-guard` (the owner's SMEAR cutouts on v0.27, 2026-11-26)
+
+| Commit | Decision |
+|---|---|
+| b8ebccb a SMEAR slot's glue expected at SMEAR_GLUE (6,000), never stopped by the left-out-twice rule | **Taken, v0.28** (merged by hand with v0.28's trigger-block floors) |
+| 02aae7e a block SMEAR's own guard leaves out sets the CPU marker | **Taken, v0.28** |
+| e686a17 SMEAR's render guard x 1.25, FLOOR on the trigger block, 30,000 otherwise | Declined: v0.28 already has its own measured version (x 1.5 kept for GRN's swings, SMR_FLOOR 74,000 on the trigger block, IDLE_FLOOR otherwise) |
+| docs/qa/SMEAR-cutout-v0.27.md's open question (30 to 50 s) | Open: the guard's left-out-twice stop explains silence until a later note; v0.28's gstress and the owner's test on v0.28 will say if anything else remains |
