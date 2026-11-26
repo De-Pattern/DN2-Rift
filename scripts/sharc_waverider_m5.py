@@ -3016,14 +3016,14 @@ def step_flexlevel(init, sound, machines) -> dict:
         return 2 | 0x8000 | level << 8
     l100, l20, l127, rec20 = run(low, lv(100)), run(low, lv(20)), run(low, lv(127)), run(0, lv(20))
 
-    def ratio_ok(a, b, k):
+    def ratio_ok(a, b, k, least=200):
         """b's unclipped frames are a's x k within 1 % (at least 200 of them, a's at 0.01 or more:
         an int16 frame's step, 1 / 32768, is 0.3 % of that)"""
         if a is None or b is None:
             return False
         pairs = [(x, y) for x, y in zip(a["take"], b["take"])       # (v0.75: and b's at 0.01 or more)
                  if abs(y) < 0.99 and abs(x) >= max(0.01, 0.01 / k)]
-        return len(pairs) >= 200 and all(abs(y / x - k) <= 0.01 * k for x, y in pairs)
+        return len(pairs) >= least and all(abs(y / x - k) <= 0.01 * k for x, y in pairs)
     checks = {
         "v0.50: a FLEX take of a track at v0.50's unity (GAIN -24 since v0.63) reaches its track's chain "
         "at its source's level: the take's render against the source's, within 0.5 dB (RMS)":
@@ -3045,7 +3045,9 @@ def step_flexlevel(init, sound, machines) -> dict:
         "v0.75: the source track at LEVEL 100 records the take as before, frame for frame (within 1 %)":
             ratio_ok(unity, l100, 1.0),
         "v0.75: at LEVEL 20, x (20/100)^2 = 0.04 frame for frame; at 127, x (127/100)^2 = 1.613":
-            ratio_ok(l100, l20, 0.04) and ratio_ok(l100, l127, (127 / 100) ** 2),
+            # (RIFT: TRK_HW_DB is 6, so this take peaks at 0.86 and only 45 of its frames are 0.25 or more, the
+            # least LEVEL 20's int16 frames can be held to 1 % on; DN2 mk2's take has over 200. At least 40 here)
+            ratio_ok(l100, l20, 0.04, least=40) and ratio_ok(l100, l127, (127 / 100) ** 2),
         "v0.75: the RECORDER's command (no GAIN) ignores the LEVEL bits: the same take as without them":
             rec20 is not None and recorder is not None and rec20["take"] == recorder["take"],
         "v0.75 negative control: LEVEL 20's take is not LEVEL 100's":
