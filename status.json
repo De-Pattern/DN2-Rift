@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T18:16:22+00:00",
- "note": "v0.27 FLOW is out.\nv0.28 STABLE: full gate started 12:17 with the SMEAR cutout fix (about 6 hours).",
+ "updated": "2026-11-26T18:19:26+00:00",
+ "note": "v0.28 full gate running (31 steps passed). v0.29: SMEAR mono committed; tracing FLEX buffers on sample machines in the emulator.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 31,
+   "done": 32,
    "total": 75,
-   "frac": 0.413,
-   "status": "running: SHARC runner: lstress",
+   "frac": 0.427,
+   "status": "running: SHARC runner: dstress",
    "state": "run",
    "last": [
-    "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SILT (on FASCIA's records): MACHI",
     "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): LIGATURE (on FASCIA's records",
     "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire): LIGATURE's PATCH screen:",
-    "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)"
+    "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)",
+    "CONTOUR: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): CONTOUR (on FASCIA's records):"
    ],
-   "log_written": "13:14"
+   "log_written": "13:19"
   }
  ]
 }
