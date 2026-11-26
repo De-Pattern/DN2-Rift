@@ -192,9 +192,15 @@ def _track(p: Prog, S: SLayout) -> None:
             p.iop(9, 9, "MAX", 10)
             p.iconst(10, G.COST_CAP)
             p.iop(9, 9, "MIN", 10)
-            p.lsh(10, 9, -1)
-            p.iop(9, 10, "+", 9)                # x 1.5
-            p.iconst(10, G.FLOOR)
+            # RIFT (the owner, 2026-11-26: "evaluate what the guard is really doing and ease up a
+            # little if we can"): as the walk's voices since v0.23 and v0.27: the last cost x 1.25
+            # (was x 1.5), and FLOOR only on the block that triggers the note; on any other block
+            # the last cost speaks, at least SMR_IDLE_FLOOR
+            p.lsh(10, 9, -2)
+            p.iop(9, 10, "+", 9)                # x 1.25
+            p.ld(11, V.TRIG)
+            p.iconst(10, SMR_IDLE_FLOOR)
+            p.ifz(11, "NE", lambda: p.iconst(10, G.FLOOR))
             p.iop(9, 9, "MAX", 10)
             # RIFT v0.18 (the owner's unit: a VOC note, a burst, then silence until a reboot): a voice
             # holding a VOC lane is expected to cost VOC's measured peak, whatever its last block
@@ -270,6 +276,12 @@ def _track(p: Prog, S: SLayout) -> None:
             p.ld(0, V.PI)
             p.sti(0, 1, 0)
     p.if_(0, "EQ", 1, on, kind="i")
+
+
+# RIFT: the least a sounding SMEAR voice is expected to cost on a block with no note. Higher than
+# the walk's IDLE_FLOOR (12,000): a grain's start makes SMEAR's cost jump from one block to the next.
+# To be set from the runner's measurement of that jump (rprof: SMEAR GRN, DENS and OVLP at 127)
+SMR_IDLE_FLOOR = 30_000
 
 
 # RIFT v0.18: a VOC lane's worst block on the unit, cycles: instructions + 0.95 x (4 L2 + 10 DDR)
