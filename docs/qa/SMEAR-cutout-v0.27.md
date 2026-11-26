@@ -63,6 +63,56 @@ A change to weigh once the cause is known (not written): a note whose latch fail
 again on the following blocks for a short while, so a slot that arrives, or a header rewritten,
 costs a few milliseconds instead of the whole note.
 
+## The owner's second answers (2026-11-26): it is polyphony
+
+While silent the page shows the sample's name; no load was running; SAMP is a normal slot. So the
+loading window above is **not** his case. The cut also happens mid-note, with a crackle, no
+indicator anywhere, and **"much less when I lock 1 voice. I don't notice any issue when I lock
+one voice."** His decision: **SMEAR is limited to one voice** ("this shouldn't be a polyphonic
+voice"), done elegantly.
+
+What the source says happens with more than one voice (read, not run):
+
+- The sixteen slots are voices, not tracks. Each chromatic key takes another voice, and each
+  voice's slot gets its own SMEAR note: its own mailbox, its own render in smear.asm.
+- **A SMEAR voice never ends on the DSP.** `on` is cleared only by a failed latch, by v0.49's
+  stop, or when the slot's type stops being a sample machine. Nothing tells smear.asm that the
+  stock voice behind a slot was released or stolen, so every slot that ever took a SMEAR note
+  goes on rendering, heard or not.
+- A sounding SMEAR voice costs tens of thousands of cycles a block (GRN about 70,000 on the cost
+  model). After a few keys the renders no longer fit: both guards leave slots out (the crackle),
+  the newest note's slot may be one of them (silence from a trigger), and v0.49's stop ends
+  voices mid-note. It comes back when a key lands on a slot that fits. No CPU marker, because
+  smear.asm's guard never set SKIPMASK (commit 2).
+
+**So commit 1 must not be taken alone.** With several SMEAR voices piled up, v0.49's stop is the
+only thing that ever ends one; taking it away for SMEAR without the one-voice rule would leave
+more of them rendering. Take commit 1 only together with the one-voice change below.
+
+### One voice for SMEAR: the design to build (the build session's: it needs the ColdFire)
+
+1. **The track's voices held to 1 while its machine is SMEAR** (preferred: it is exactly what the
+   owner did by hand, and stock's own allocator then does the stealing and the retrigger). Where
+   the ColdFire applies the track's voice setting, a SMEAR track reads as 1 whatever is stored;
+   the stored setting is not overwritten, so changing the machine gives the track its voices
+   back, and old projects need no migration. The voice setting's page shows 1 (or says SMEAR is
+   one voice) so the knob does not appear to do nothing.
+2. **The DSP's own rule, as the net under it:** a SMEAR note on a slot ends every other SMEAR
+   slot of the same track (their `on` to 0), the old one faded over its block as a retrigger's
+   first pass is (`kill`), so a key change does not click. This also ends the stale voices above
+   whatever the allocator did.
+3. A gate case: sixteen SMEAR notes in a row on one track, chromatic; one slot renders, the cost
+   on the runner's model stays one voice's, the last note is the one heard. Negative control:
+   v0.27 renders them all.
+
+### Also reported, not looked into: a FLEX buffer as a sample
+
+The owner: a FLEX buffer does not work as SMEAR's sample, "maybe it needs to be saved first",
+and "it's actually not working with any sample machine". The DSP side reads buffer halves
+(slots 128..143, `BUF_DIR`) in both `start()` and `smear_latch()`, so the place to look is what
+SAMP can be set to and what the buffer directory holds for a take that was never saved. Waiting
+for his steps.
+
 ## The changes (each one commit, emit only: no model, sound or saved data changes)
 
 1. **The glue is never struck out, and is expected to cost SMEAR_GLUE (6,000).** `stop()` does
