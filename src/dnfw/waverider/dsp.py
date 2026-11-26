@@ -475,10 +475,9 @@ def link_tables() -> bytes:
     _tables): ORGAN's at +0, SMEAR's voice tables at +0x5000, its quarter sine at +0x7000, its swap
     pairs at +0x8000 (dnfw.waverider.dsp's *_DDR; RIFT v0.17: THOLET's +0x5000 gone, SMEAR's moved down)"""
     from ..smear import ddr as SD               # (the committed words: the build needs no numpy)
-    from ..smear import live as SL
     tabs = [(ORGAN_TABLES_DDR, _organ_tables()), (SMEAR_VTABLES_DDR, SD.table_bytes("vtables"))]
     size = LINK_TABLES_BYTES
-    if SL.VOC_ON:
+    if SD.VOC_ON:                               # (ddr's, not live's: no numpy in the build)
         tabs += [(SMEAR_QSIN_DDR, SD.table_bytes("qsin")), (SMEAR_PAIRS_DDR, SD.table_bytes("pairs"))]
     else:
         # RIFT v0.26: the FFT vocoder off: its quarter sine and swap pairs are never read, so they are
