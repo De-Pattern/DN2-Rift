@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T13:15:24+00:00",
+ "updated": "2026-11-26T13:18:26+00:00",
  "note": "Plan: v0.27 publishes as soon as its gate clears (est. 08:45\u201309:15).\nv0.28 then gets its full gate (the reverb 34% lighter, sample/SMEAR guard, RUBBER pulled, DIGIDRUM names, smoother pages).",
  "gates": [
   {
    "label": "v0.27 FLOW  \u00b7 full gate",
-   "done": 69,
+   "done": 70,
    "total": 71,
-   "frac": 0.972,
-   "status": "running: boot_check",
+   "frac": 0.986,
+   "status": "running: fuzz_ui",
    "state": "run",
    "last": [
-    "sample link (ColdFire): save, fast (a lost packet resent); every byte loaded and saved; the frame's rou",
     "per-project pools (ColdFire): per-project pools: LOAD / NEW / SAVE AS through the OS's own code, each p",
     "ERASE MOD DATA (ColdFire): ERASE MOD DATA: NO at each question and LEFT erase nothing; three YES: 20458",
-    "engine + LOAD/SAVE: evaluator clean, CODE intact, machine and filter types round-trip"
+    "engine + LOAD/SAVE: evaluator clean, CODE intact, machine and filter types round-trip",
+    "boot from reset: booted and drew its UI, no fault; the start-up animation's first frame, his"
    ],
-   "log_written": "07:54"
+   "log_written": "08:17"
   },
   {
    "label": "v0.28 STABLE \u00b7 step runs",
