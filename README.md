@@ -59,7 +59,7 @@ Every flash, every version:
 - **File:** `RIFT_v0.26_VOC_OS1.11.syx` (`builds/v0.26-VOC/`)
 - **sha256:** `b83513d37aed76ff973a43942853a6ef23cad65fa66ce4531927ea0e89ef65df`
 - **Gated:** 2026-11-25, `CLEARED TO FLASH`
-- **Source:** `0ae025b` (this repository)
+- **Source:** `0ae025b` (this repository); the patcher's bundle is from the commit after it (an import moved so the browser's build needs no numpy), which rebuilds this file byte for byte
 
 **Changes**
 
