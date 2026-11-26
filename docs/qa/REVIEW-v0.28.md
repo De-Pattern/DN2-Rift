@@ -65,7 +65,7 @@ FREQ 64, GAIN 64, the seconds to fall 60 dB by the slope of the level:
 | 127 | 42.1 s | 31.6 s | 0.75 |
 
 DEC 96 ("about a tenth") and below agree with the text. At 127 the tail is still about half a
-minute. The script is `docs/qa/v0.28/mverb_tail.py`; the six renders went to the owner.
+minute. The script is `docs/qa/v0.28/mverb_tail.py`; the DEC 127 and DEC 96 renders went to the owner.
 
 **C7. The reverb's old loop is kept and never run.** *Read.* `src/dnfw/mverb/program.py:67`,
 `FAST = True`, keeps `MG.sample` as the way back. No test or step sets `mverb.program.FAST` to False
