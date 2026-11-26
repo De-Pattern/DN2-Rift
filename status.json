@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T17:12:32+00:00",
+ "updated": "2026-11-26T17:15:34+00:00",
  "note": "v0.27 FLOW is out.\nv0.28 STABLE: QA found why SMEAR cut out for 30-50 s (the guard ended a looping SMEAR note after two tight blocks). Fix taken in; step checks, then the full gate restarts.",
  "gates": [
   {
@@ -15,7 +15,7 @@
     "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
     "unit tests: 952 passed, 2 skipped, 12 warnings in 792.22s (0:13:12)"
    ],
-   "log_written": "12:09"
+   "log_written": "12:15"
   }
  ]
 }
