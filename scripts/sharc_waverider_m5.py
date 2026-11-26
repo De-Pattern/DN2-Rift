@@ -5304,6 +5304,29 @@ def step_rprof(init, sound, machines) -> dict:
         }
         ibase = parts[-1]
         print(f"    rprof idle frame parts (instructions, L2, DDR): {ibase}", flush=True)
+        if only and "MVERB" in only:                                    # RIFT v0.28: the master reverb's own cost
+            from dnfw.mverb import program as MVP_       # noqa: PLC0415
+            mark = {}
+
+            def at_in(r):
+                mark["in"] = (getattr(r, "steps_n", 0), counts["L2"], counts["DDR"])
+
+            def at_out(r):
+                a_ = mark.get("in")
+                if a_:
+                    mark.setdefault("d", []).append((getattr(r, "steps_n", 0) - a_[0], counts["L2"] - a_[1], counts["DDR"] - a_[2]))
+            st_ = init
+            for b in range(40):
+                for k_ in ("L1", "L2", "DDR"):
+                    counts[k_] = 0
+                counts["on"] = True
+                rr_ = run_blocks(st_, lambda _b: mv_frame(sound, machines, (0x2000, 0x6000, 0x4000, 0x4000)), 1,
+                                 extra_hooks={dsp.MVERB_SW: at_in, MVP_.RESUME_SW: at_out})
+                counts["on"] = False
+                st_ = rr_["state"]
+            d_ = mark.get("d", [])
+            print(f"    rprof MVERB a block (steps, L2, DDR), last 3 of {len(d_)}: {d_[-3:]}; rcost "
+                  f"{[round(x + 0.95 * (4 * y + 10 * z)) for x, y, z in d_[-3:]]}", flush=True)
         if only and "IDLES" in only:                                    # idle FASCIA slots, by how many
             for n in ():
                 rows(lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(n)}, trig=()), 16)

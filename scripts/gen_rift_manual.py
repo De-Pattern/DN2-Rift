@@ -36,7 +36,15 @@ def have(mod: str) -> bool:
 
 HAS_THOLET = False                      # v0.22 (owner: "it still mentions tholet"): THOLET (v0.15..v0.16) is gone from the manual
 HAS_PLATEAU = have("dnfw.plateau.machines")      # RIFT v0.17: the first FX machine
-HAS_GLASS = have("dnfw.glass.live")              # RIFT v0.18: the FLTR type GLASS
+def _glass_on() -> bool:
+    try:
+        from dnfw.glass import coldfire as _gc
+        return bool(_gc.ON)
+    except ImportError:
+        return False
+
+
+HAS_GLASS = _glass_on()                          # RIFT v0.18: the FLTR type GLASS (v0.24 RUBBER; v0.28: pulled)
 HAS_CONTOUR = have("dnfw.contour.machines")      # RIFT v0.19: wave terrain
 HAS_SPALL = have("dnfw.spall.machines")          # RIFT v0.25: particles
 
@@ -648,7 +656,7 @@ def build() -> str:
                    "<b>To use it:</b> MACHINE SEL: Plateau on a free track. Give it a long note: a trig with INF length (or hold it with KEYBOARD HOLD); "
                    "the reverb runs while that note sounds, so the track's AMP envelope is the reverb's gate. "
                    "To keep its voice, reserve one for the track in the stock voice allocation menu.",
-                   "<b>The BUS page:</b> on the PLATEAU track, <b>[FUNC] + [VOICE]</b> opens it: sixteen cells, one per track. "
+                   "<b>The BUS page:</b> on the PLATEAU track, <b>[FUNC] + [UNISON]</b> (the key marked UNISON, which on its own opens VOICE SETUP; older notes call it [VOICE]) opens it: sixteen cells, one per track. "
                    "[TRIG n] puts track n in or out; its LED is lit while it is in. YES or NO goes back. "
                    "A new PLATEAU track starts with every track in except FLEX tracks and FX tracks (drawn struck through); its own track can never be in. "
                    "The bus is saved with the sound, so it can differ per kit.",
@@ -706,6 +714,7 @@ def build() -> str:
 
     s.append("<h2 id=\"flex\">FLEX</h2>")
     s.append(p("FLEX is a live-buffer machine like the Octatrack's Flex: it records into one of eight buffers (B1..B8) and plays them back with ONESHOT's controls (BUF in SAMP's place). Every sample machine can also play a buffer."))
+    s.append(p("<b>Opening FLEX REC:</b> " + "<b>[FUNC] + [UNISON]</b> (the key marked UNISON, which on its own opens VOICE SETUP; older notes call it [VOICE])" + " on a FLEX track opens its recorder pages (REC TRIGS, REC SETUP, REC BUS; LEFT / RIGHT between them). The same keys again, or [NO], close it. RIFT takes that combination over from stock's unison toggle: the key alone still opens VOICE SETUP, where unison is set."))
     s.append(ul("<b>Sources</b> (REC SETUP's SRC): <b>TRK1..16</b> (one track's own sound, before its level and sends: a bounce), <b>IN</b> (the external inputs), <b>MAIN</b> (the whole mix as heard, effects included; a FLEX track sounding is recorded too, the Octatrack way: mute it, or record with TRK, for a clean bounce).",
                 *(["<b>BUS</b> (v0.17): the sum of the tracks you choose, each as TRK would record it. Pick them on <b>REC BUS</b>, FLEX REC's third page (RIGHT from REC SETUP): sixteen cells, [TRIG n] puts track n in or out, its LED lit while it is in. It starts with every track but the FLEX tracks (and FX tracks); one track always stays in. MUTE SRC mutes every track on the bus. A loud bus can clip: turn GAIN down."] if HAS_PLATEAU else []),
                 "<b>Three ways to record:</b> recorder trigs on their step for R.LEN steps (a one-shot trig records once, then is spent; [YES] [YES] re-arms); <b>Q.REC</b>, trigless: [YES] while playing waits for the next boundary (OFF, 1, 2, 4, 8, 16, 32, 64 steps, or the pattern length); and the recorder's own ARM / R.STRT.",
@@ -716,7 +725,7 @@ def build() -> str:
                 "Switching a track to FLEX sets its trig length to INF, so you hear the whole take. A BUF lock on a trig plays that buffer."))
 
     s.append("<h2 id=\"recorder\">Recorder</h2>")
-    s.append(ul("The recorder (the DN2 mk2 mod's) records IN, MAIN or a track into the sample list and the +Drive, with threshold arming, R.STRT on the transport and trimming.",
+    s.append(ul("The recorder (the DN2 mk2 mod's) records IN, MAIN or a track into the sample list and the +Drive, with threshold arming, R.STRT on the transport and trimming. Open it with " + "<b>[FUNC] + [UNISON]</b> (the key marked UNISON, which on its own opens VOICE SETUP; older notes call it [VOICE])" + " on any track's page; the same keys again, or [NO], close it.",
                 "<b>MON</b> (v0.14): knob C on the RECORDER turns monitoring on: with SRC IN, the input is heard through the main out while the recorder is armed or recording, at the level it records. \"MON\" shows in the corner while it is on. It starts OFF and is not saved."))
 
     s.append("<h2 id=\"tuning\">Microtuning</h2>")
@@ -743,6 +752,12 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.28", "STABLE", ["RUBBER is pulled. It made voices go quiet after a few notes, crackled on FM Tone and could drop out even in an empty project. A sound saved with it loads as Multi-Mode.",
+                        "The sample machines (ONESHOT, GRID, SLICE and the rest) and SMEAR drop out far less: the DSP's time guard asked every sample voice for twice what it costs, on every block. It now asks a voice for what it cost last block, and for more only on the block that starts its note (as v0.27 did for RIFT's machines).",
+                        "DIGIDRUM: the bottom row's long names follow the drum type in the header and the LFO lists (Sweep, Square Mod, ...), not \"Type Control 1..4\".",
+                        "The LINE pages: a choice's word now scrolls in smoothly (it moved only when the page happened to redraw), and every redraw of the page is cheaper.",
+                        "The master reverb: the same plate, rewritten to use much less of the DSP's time; its tail a little shorter (at DEC 127 about a third, at 96 about a tenth).",
+                        "The manual and quick guide: FLEX REC and the recorder open with [FUNC] + [UNISON], the key that opens VOICE SETUP."]),
     ("0.27", "FLOW", ["Smoother under load: the DSP's time guard no longer asks every track for a large reserve on every block. The CPU marker stood most of the time on SPALL and ORGAN with nothing wrong, and tracks could be left out with a quarter of the frame free. A voice is now expected to cost what it cost last block; the reserve is asked only on the block that starts a note.",
                       "CONTOUR: several voices with FDBK up play together. The guard reserved the cost of the highest notes (four steps a sample) for every CONTOUR voice with feedback, on every block, so a second voice seldom fitted. It now reserves by the note, and only on the block the note starts.",
                       "From DN2 mk2: live recording no longer lags (v0.74); a FLEX take follows its source track's LEVEL (v0.75); the arpeggiator on MIDI tracks (Angel Linares's, upstream); ARP OFS IN SCALE (SETTINGS > PERSONALIZE) and in-key transpose, [KEYBOARD] + [FUNC] + [+]/[-] (w-winter's, upstream).",

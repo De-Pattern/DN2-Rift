@@ -55,6 +55,12 @@ HMAX = F(F(0.45) * F(48000.0))
 TWOPI_FS = PL.TWOPI_FS
 GI1, GI2 = F(0.75), F(0.625)
 GD1 = F(-0.7)
+# the tank's decay: gdec = min(0.1 + GDEC_SPAN (1 - (1 - DEC)^2), GDEC_MAX). RIFT v0.28 (the owner, 2026-11-26:
+# "we should maybe shorten that reverb tail a little"): 0.87 and 0.97, v0.21..v0.27's 0.88 and 0.98 (put them back
+# to restore the longer tail). At DEC 127 the tail is about a third shorter (ln(1/0.97) / ln(1/0.98) = 1.5);
+# at DEC 96 about a tenth; below that a few percent
+GDEC_SPAN = F(0.87)
+GDEC_MAX = F(0.97)
 
 
 def onepole(hz):
@@ -75,7 +81,7 @@ def controls(pre: int, dec: int, freq: int, gain: int) -> dict:
     fq = F(F(freq) * INV_T)
     g = F(F(gain) * INV_T)
     u = F(F(1.0) - d)
-    gdec = F(min(F(F(0.1) + F(F(0.88) * F(F(1.0) - F(u * u)))), F(0.98)))
+    gdec = F(min(F(F(0.1) + F(GDEC_SPAN * F(F(1.0) - F(u * u)))), GDEC_MAX))
     return {"pred": trunc(F(p * PRED_K)), "gdec": gdec,
             "gd2": F(min(max(F(gdec + F(0.15)), F(0.25)), F(0.5))),
             "c_sh": onepole(F(F(500.0) * exp2f(F(fq * F(5.25))))), "g_sh": g}
