@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T18:13:20+00:00",
+ "updated": "2026-11-26T18:16:22+00:00",
  "note": "v0.27 FLOW is out.\nv0.28 STABLE: full gate started 12:17 with the SMEAR cutout fix (about 6 hours).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 31,
    "total": 75,
    "frac": 0.413,
-   "status": "running: waverider_menu",
+   "status": "running: SHARC runner: lstress",
    "state": "run",
    "last": [
     "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SILT (on FASCIA's records): MACHI",
@@ -15,7 +15,7 @@
     "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire): LIGATURE's PATCH screen:",
     "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)"
    ],
-   "log_written": "13:12"
+   "log_written": "13:14"
   }
  ]
 }
