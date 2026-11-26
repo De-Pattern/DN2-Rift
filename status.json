@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T17:36:50+00:00",
+ "updated": "2026-11-26T17:39:53+00:00",
  "note": "v0.27 FLOW is out.\nv0.28 STABLE: full gate started 12:17 with the SMEAR cutout fix (about 6 hours).",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 24,
+   "done": 25,
    "total": 75,
-   "frac": 0.32,
+   "frac": 0.333,
    "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "recorder screen (ColdFire): FUNC+VOICE opens it, knob A moves SRC four detents a choice (3: none, 12: t",
     "Monomachine pages and detents (ColdFire): the five Monomachine pages drawn, each its own; a two-choice ",
     "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S",
-    "stock questions and held keys (ColdFire): a stock question's YES is the question's; TRIG + YES is stock"
+    "stock questions and held keys (ColdFire): a stock question's YES is the question's; TRIG + YES is stock",
+    "Monomachine start values (ColdFire): MACHINE SEL to SID: its eight controls at its own start (PULS, PW "
    ],
-   "log_written": "12:34"
+   "log_written": "12:36"
   }
  ]
 }
