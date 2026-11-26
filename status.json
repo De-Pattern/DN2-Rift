@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T17:30:46+00:00",
+ "updated": "2026-11-26T17:33:48+00:00",
  "note": "v0.27 FLOW is out.\nv0.28 STABLE: full gate started 12:17 with the SMEAR cutout fix (about 6 hours).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 23,
    "total": 75,
    "frac": 0.307,
-   "status": "running: waverider_menu",
+   "status": "running: SHARC runner: flexlevel",
    "state": "run",
    "last": [
     "start-up animation, every frame: all 80 frames, each his, in order, to the intro's end; the panel showe",
@@ -15,7 +15,7 @@
     "Monomachine pages and detents (ColdFire): the five Monomachine pages drawn, each its own; a two-choice ",
     "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S"
    ],
-   "log_written": "12:28"
+   "log_written": "12:31"
   }
  ]
 }
