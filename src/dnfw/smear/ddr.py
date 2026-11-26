@@ -9,7 +9,7 @@ import pathlib
 import struct
 
 # RIFT v0.18 (the owner, 2026-11-22): the FFT vocoder is off (dnfw.smear.live's note). Here, not in live.py,
-# so the build reads it without numpy (v0.26: dnfw.waverider.dsp.link_tables; the browser's Python has none)
+# so the build reads it with no array library (v0.26: dnfw.waverider.dsp.link_tables; the browser's Python has none)
 VOC_ON = False
 
 DDR_JSON = pathlib.Path(__file__).with_name("ddr.json")

@@ -1934,6 +1934,7 @@ def werp_next(p: Prog, L: Layout) -> None:
 # at 0 it would start on any noise. Ours at 0 waits for sound above the source's own noise
 # instead (docs/sampler.md, "THRES 0"):
 REC_AUTO_BELOW = 64                       # a threshold word under this is THRES 0 (the ColdFire's floor, 33)
+SMP_FLOOR = 40_000                           # RIFT v0.28: a sample voice's least cost on its trigger block (rprof: ONESHOT, GRID 30,800 at worst)
 REC_AUTO_FLOOR = 33.0 / 32767.0           # never under -60 dB (v0.30's floor)
 REC_AUTO_MARGIN = 4.0                     # 12 dB over the quietest recent block's peak
 REC_AUTO_RISE = 1.0005                    # how fast the floor creeps up: +6.5 dB a second at 1500 blocks
@@ -3274,8 +3275,14 @@ def program(L: Layout, next_sw: int, prefix: str = "sm") -> str:
         p.seti(2, 12)
         p.iconst(0, 0)
         vs(p, "on", 0)
+    # RIFT v0.28 (franny, lumbre, 2026-11-25: the sample machines laggy, glitching, "sound quality isn't as
+    # before"): a sample voice was expected to cost at least 60,000 cycles on every block, twice what one
+    # costs (ONESHOT and GRID about 30,000, the runner's rprof), so with a few tracks playing and the plate's
+    # longer tail, voices were left out (and, twice in a note, stopped) with time to spare. As the RIFT
+    # machines' (v0.27): its last cost x 1.25, at least SMP_FLOOR on the block that triggers it and
+    # G.IDLE_FLOOR on any other
     G.around(p, L.C["t"], G.COST_SMP, PP.BUFFERS, lambda: voice(p, L),   # v0.27: if it fits in the frame
-             struck=G.STRUCK, stop=stop)
+             struck=G.STRUCK, stop=stop, grow=2, trig=PP.TRIG_WORD, floor=SMP_FLOOR)
     p.jump("", nxt)
     if FASCIA_MUTE:
         p.place(fmute)

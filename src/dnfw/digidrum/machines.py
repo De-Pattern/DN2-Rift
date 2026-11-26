@@ -113,6 +113,8 @@ def c_header() -> str:
         f"static const unsigned char dgd_bipolar[DGD_N] = {{{arr(int(c in BIPOLAR) for c in CONTROLS)}}};",
         f"static const char dgd_label[DGD_N][6] = {{{', '.join(q + LABELS[c] + q for c in CONTROLS)}}};",
         f"static const char dgd_own[{len(TYPES)}][4][6] = {{{', '.join('{' + ', '.join(q + o + q for o in OWN[t]) + '}' for t in TYPES)}}};",
+        # RIFT v0.28 (franny: O1..O4 read "Type Control 1".. in the header while turned): their long names by TYPE
+        f"static const char *const dgd_own_long[{len(TYPES)}][4] = {{{', '.join('{' + ', '.join(q + OWN_LONG[o] + q for o in OWN[t]) + '}' for t in TYPES)}}};",
         f"static const unsigned short dgd_default[DGD_N] = {{{arr(dw[c] for c in CONTROLS)}}};",
         f"#define DGD_NOLFO_N {len(nolfo)}",
         f"static const unsigned short dgd_nolfo[DGD_NOLFO_N] = {{{arr(nolfo)}}};",

@@ -413,7 +413,8 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                             "steps": p_.steps, "nw": nw, "type": ty}
             # RIFT v0.18: GLASS on every slot whose filter is 6, after the walk (its own pass): each such
             # slot's buffer, record and frame as GLASS reads them, kept for live; the walk's models re-read
-            gl = [t for t in range(16) if frame_word(st, FR.header_offset(FR.FILTER, t)) == 6]
+            from dnfw.glass import coldfire as _GLC       # noqa: PLC0415  (RIFT v0.28: RUBBER pulled: no pass)
+            gl = [t for t in range(16) if frame_word(st, FR.header_offset(FR.FILTER, t)) == 6] if _GLC.ON else []
             if gl:
                 tap["glass_in"] = {t: {"x": [mem.get((m2.word(st, PP.BUFFERS + 4 * t) or 0) + 4 * k) for k in range(BLOCK)],
                                        "rec": {o: mem.get(V.track_record(t) + o) for o in GLP.LV.FIELDS},
@@ -5072,7 +5073,26 @@ def step_glass(init, sound, machines) -> dict:
     """RIFT v0.18: GLASS's assembled code against live.Voice, bit for bit, on what it read: two WaveTone
     tracks (stock voices) and a FASCIA track on filter 6, each its own settings (RES high, the morph, ENV
     with bends, LPG); the walk's model of every FASCIA slot still exact; a track on Multi-Mode beside them
-    untouched by GLASS; a negative control (FREQ + 1/128 in live)."""
+    untouched by GLASS; a negative control (FREQ + 1/128 in live).
+    RIFT v0.28 (RUBBER pulled, glass.coldfire.ON False): filter 6 is the stock's (its unpack: no filter): no
+    GLASS code in fascia.asm, and the same frames (WaveTone and FASCIA on filter 6) play: every block returns,
+    every buffer finite, the FASCIA slot bit-exact to its model."""
+    from dnfw.glass import coldfire as _GLC      # noqa: PLC0415
+    if not _GLC.ON:
+        fp = fsc_audition()["01_tubular_bell"][0]
+        s0 = {67: 0x5800, 68: 0x7400, 66: 0x0000}
+        s3 = {67: 0x6000, 68: 0x5000, 66: 0x3F80, 70: 0x7F00, 72: 0x4000}
+        rr = run_blocks(init, lambda b: glass_frame(sound, machines, {1: s0, 2: s0}, {3: (fp, 60, 1.0, s3)},
+                                                    trig=(1, 2, 3) if b in (1, 12) else ()), 16)
+        ex = fsc_exact(rr)
+        asm = (ROOT / "csrc/waverider/sharc/fascia.asm").read_text()
+        fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+        heard = rr["ok"] and any(V.peak(blk[3]) > 1e-4 for blk in rr["buffers"])
+        checks = {"v0.28: RUBBER pulled: no GLASS routine in fascia.asm": "wr_fs_rt_g_slot" not in asm,
+                  "v0.28: tracks with filter 6 in the frame: every block returns, every buffer finite": fin,
+                  "v0.28: a FASCIA track on filter 6 sounds, bit-exact to its model": heard and ex[1:] == (0, 0)}
+        print(f"    glass (pulled): {checks}", flush=True)
+        return {"ok": all(checks.values()), "checks": checks, "numbers": {"walk_model": ex}}
     res = {}
     fp = fsc_audition()["01_tubular_bell"][0]
     s0 = {67: 0x5800, 68: 0x7400, 66: 0x0000}                          # LP, RES high
@@ -5213,8 +5233,9 @@ def step_rcost(init, sound, machines) -> dict:
     finally:
         undo()
     voc = out["SMEAR VOC (BLND 0)"]["worst_delta"] or 1e12
+    from dnfw.glass import coldfire as _GLC      # noqa: PLC0415  (RIFT v0.28: RUBBER pulled: filter 6 is the stock's)
     g15, m15 = out["15 WaveTone tracks on GLASS (RES high, ENV, LPG)"]["worst_delta"], out["15 WaveTone tracks, Multi-Mode"]["worst_delta"]
-    glass_slot = (g15 - m15) / 15 if g15 is not None and m15 is not None else 1e12
+    glass_slot = ((g15 - m15) / 15 if g15 is not None and m15 is not None else 1e12) if _GLC.ON else 0.0
     print(f"    rcost GLASS a slot: {glass_slot:,.0f}", flush=True)
     checks = {"an idle frame measured": base > 0,
               f"SMEAR's VOC worst block within the guard's VOC_PEAK ({SMS.VOC_PEAK:,})": voc <= SMS.VOC_PEAK,
@@ -5271,6 +5292,13 @@ def step_rprof(init, sound, machines) -> dict:
             "DIGIDRUM": lambda tr: dd_frame(sound, machines, {0: (DB.panel_knobs(), 55.0)}, trig=tr),
             "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
             "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
+            "ONESHOT": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["ONESHOT"], overrides=smp_words(),
+                                             trigger=bool(tr)).to_bytes(),
+            "GRID": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["GRID"], overrides=smp_words({SM.SAMP_REC: 4}),
+                                          trigger=bool(tr)).to_bytes(),
+            "SMEAR PLAY": lambda tr: smr_frame(sound, machines, {0: dict(BLND=64)}, trig=tr),
+            "SMEAR VOC": lambda tr: smr_frame(sound, machines, {0: dict(BLND=0)}, trig=tr),
+            "SMEAR GRN": lambda tr: smr_frame(sound, machines, {0: dict(BLND=127, DENS=127, OVLP=127)}, trig=tr),
             "CONTOUR2": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 66.0)}, trig=tr),    # FDBK up, 2 steps
             "CONTOUR4": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 84.0)}, trig=tr),    # 4 steps
         }

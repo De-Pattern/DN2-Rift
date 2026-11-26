@@ -187,7 +187,7 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_ligature_program.py", "test/test_ligature_machines.py", "test/test_ligature_live.py",
          "test/test_mon.py", "test/test_tunings.py",
          # RIFT v0.20: the v0.17..v0.19 machines' programs (run mode = live.py) and GLASS's ColdFire side
-         "test/test_plateau_program.py", "test/test_glass_program.py", "test/test_glass_coldfire.py",
+         "test/test_plateau_program.py", "test/test_glass_program.py", "test/test_glass_coldfire.py", "test/test_rubber_pulled.py",
          "test/test_contour_program.py", "test/test_spall_program.py",
          "test/test_mverb_program.py"]                  # RIFT v0.21: the master reverb (run mode = live.py)                                # RIFT v0.14: MON on the RECORDER (the mod's v0.59)                  # RIFT: DIGIDRUM (run mode = live.py)
 HIT = re.compile(r"^\s+([0-9a-f]{8}):", re.M)

@@ -147,10 +147,30 @@ static const char *stock_long[WR_NAMED] __attribute__((section(".data")));
 static const char *stock_short[WR_NAMED] __attribute__((section(".data")));
 static int names_on __attribute__((section(".data"))) = -1;
 
+/* RIFT v0.28 (franny: DIGIDRUM's O1..O4 read "Type Control 1".. in the header while turned): the active
+ * track's DIGIDRUM TYPE (0..5), from its sound in the kit as perc_type reads PERC's: the record's value
+ * (word >> 8, less its low end), the panel's 0..127 as smp_page.c's fsc_knob, then the option */
+static int dgd_type(void)
+{
+    u8 t = UI_TRACK;
+    unsigned char *kit = KIT_POINTER;
+    if (t > 15 || !kit)
+        return 0;
+    int v = ((int)*(volatile unsigned short *)(kit + 52u + 1163u * t + 0x14u + 2u * dgd_slot[0]) >> 8) - dgd_lo[0];
+    int top = dgd_top[0];
+    if (v < 0) v = 0;
+    if (v > top) v = top;
+    int k = top == 127 ? v : (v * 254 + top) / (2 * top);
+    int o = (k * 6) >> 7;
+    return o > 5 ? 5 : o;
+}
+
 static void wr_names(void)
 {
     int on = wr_active();
     int key = on == 1 ? 16 + perc_type() : on;   /* PERC: one set of names a machine */
+    if (on == DGD_KIND)
+        key = 128 + dgd_type();                 /* RIFT v0.28: DIGIDRUM: one set a drum type */
     if (key == names_on)
         return;
     extern void smp_formats(int kind);
@@ -168,6 +188,12 @@ static void wr_names(void)
                 if (perc_param_ids[j] == id) {
                     l = perc_longs[perc_long[key - 16][j]];
                     sh = perc_short[key - 16][j];
+                }
+        if (on == DGD_KIND)
+            for (int j = 4; j < 8; j++)
+                if (dgd_rid[j] == id) {
+                    l = dgd_own_long[key - 128][j - 4];
+                    sh = dgd_own[key - 128][j - 4];
                 }
         NAME_LONG(id) = l ? l : stock_long[k];
         NAME_SHORT(id) = sh ? sh : stock_short[k];
