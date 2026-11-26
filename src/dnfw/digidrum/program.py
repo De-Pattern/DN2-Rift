@@ -750,3 +750,35 @@ def run_voice(L: Layout, read, t: int, mem=None):
 def layout() -> Layout:
     from ..waverider import dsp
     return Layout(FP_.layout(), dsp.DIGIDRUM_TABLES_DDR)
+
+
+# RIFT v0.29 (InductiveOne: a default DIGIDRUM kick beside SPALL "dropped out 75% of the time"): the guard
+# expected every DIGIDRUM hit to cost FLOOR (60,000) on its trigger block; the runner's rprof, each type struck
+# (heaviest block): BD 27,977, SD BASIC 25,046, SD VINTAGE 48,798, CP 39,751, CY 39,711, PC 23,132. Now the
+# floor is LIGHT (36,000) and a trigger block of SD VINTAGE, CP or CY expects DGD_HEAVY
+DGD_HEAVY = 62_000
+
+
+def guard_expect(t_word: int):
+    """G.around's EXPECT for DIGIDRUM (the shared walk: R10 is not 0 on a block that triggers this slot):
+    R9 = max(R9, DGD_HEAVY) on a trigger block when the slot's TYPE frame word is SD VINTAGE, CP or CY
+    (the record 0..120: 50, 70, 91; BD 9, SD BASIC 30, PC 111). Keeps R8; clobbers R4, R10..R13."""
+    from .machines import SLOTS
+    assert SLOTS["TYPE"][2] == 0 and SLOTS["TYPE"][3] == 120
+
+    def heavy(p):
+        p.ld(10, t_word)
+        PP.t146(p, 11, 10)
+        PP.half(p, 4, 168 + 2 * SLOTS["TYPE"][1], 11)
+        p.lsh(4, 4, -8)                        # the record, 0..120
+        p.iconst(12, 40)
+        p.iconst(13, 100)
+
+        def mid():
+            p.iconst(10, DGD_HEAVY)
+            p.if_(4, "LT", 13, lambda: p.iop(9, 9, "MAX", 10), kind="i")
+        p.if_(4, "GE", 12, mid, kind="i")
+
+    def expect(p):
+        p.ifz(10, "NE", lambda: heavy(p))
+    return expect
