@@ -1,21 +1,19 @@
 {
- "updated": "2026-11-26T15:35:14+00:00",
- "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: gate stopped at 10:30 to take QA findings in (a SMEAR grain-mode floor, CONTOUR feedback raised mid-note). Restarting shortly.",
+ "updated": "2026-11-26T15:38:17+00:00",
+ "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: QA findings taken in (CONTOUR feedback mid-note, sample/SMEAR retrigger floors); step checks running, then the full gate.",
  "gates": [
   {
-   "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 41,
-   "total": 74,
-   "frac": 0.554,
-   "status": "FAILED: rc killed (restarting with QA's items)",
-   "state": "bad",
+   "label": "v0.28 STABLE \u00b7 step runs",
+   "done": 2,
+   "total": null,
+   "frac": 0.5,
+   "status": "running: $ /usr/local/bin/python3 -c from dnfw.cli.main import main; ",
+   "state": "run",
    "last": [
-    "SELECT UNUSED (ColdFire): SELECT UNUSED marks the loaded slots no pattern's kit or SAMP lock uses (5 of",
-    "overlays let go (ColdFire): the sample list lets go when another track is active; YES on a SLICE page a",
-    "recorder flow (ColdFire): SAVING on to TRIM; TRIM's ends move; FUNC + YES previews while held, its play",
-    "stock NAME screen: NO, and its fallback (ColdFire): the stock NAME screen opens on TRIM's YES and its N"
+    "preflight: bootstrap/updater/meta/Outbox untouched, signature, DSP size",
+    "ColdFire code current: src/dnfw/mods/waverider_code.json matches csrc/ and the composer ()"
    ],
-   "log_written": "10:28"
+   "log_written": "10:37"
   }
  ]
 }
