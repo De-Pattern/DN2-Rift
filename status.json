@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T15:50:27+00:00",
+ "updated": "2026-11-26T15:53:29+00:00",
  "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: QA findings taken in (CONTOUR feedback mid-note, sample/SMEAR retrigger floors); step checks running, then the full gate.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 step runs",
-   "done": 14,
+   "done": 15,
    "total": null,
    "frac": 0.5,
-   "status": "running: unit tests",
+   "status": "running: SHARC runner: chords",
    "state": "run",
    "last": [
-    "ColdFire: code 0x467a8000..0x467a8688: no scale-8 addressing",
     "ColdFire: code 0x467b8000..0x467b8684: no scale-8 addressing",
     "ColdFire: MAIN OS: 224 hit(s), all in appended data that never executes",
-    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec"
+    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
+    "unit tests: 952 passed, 2 skipped, 12 warnings in 783.64s (0:13:03)"
    ],
-   "log_written": "10:38"
+   "log_written": "10:52"
   }
  ]
 }
