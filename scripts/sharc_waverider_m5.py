@@ -5337,7 +5337,8 @@ def step_rprof(init, sound, machines) -> dict:
                     counts["on"] = False
                     st_ = rr_["state"]
                 order = sorted(marks.items(), key=lambda kv: kv[1][0])
-                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0]) for i in range(len(order) - 1)]
+                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0], order[i + 1][1][1] - order[i][1][1],
+                        order[i + 1][1][2] - order[i][1][2]) for i in range(len(order) - 1)]   # (steps, L2, DDR)
                 print(f"    rprof STAGES {sn}: entries {[(n_, v_[0]) for n_, v_ in order]}; from each to the next (steps) {seg}; "
                       f"block total {rr_.get('instructions')}", flush=True)
         if only and "MVERB" in only:                                    # RIFT v0.28: the master reverb's own cost
