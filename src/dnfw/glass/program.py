@@ -35,7 +35,12 @@ FILTER_HDR = 180                       # the frame's filter type a slot (dnfw.wa
 REC_STRIDE = WV.TRACK_STRIDE
 
 # -- a slot's state (DDR, 16 words) -----------------------------------------------------------------
-ST = St().w("s1", "s2", "s3", "s4", "gp", "stage", "u", "env")
+ST = St().w("s1", "s2", "s3", "s4", "gp", "stage", "u", "env", "magic")
+# RIFT v0.26 (fiddly_digits, 2026-11-25: "my track goes silent when I put RUBBER on it"): DDR is not
+# cleared at power-on and GLASS's state never was: whatever lay there (a NaN, a huge value) went into the
+# stages, the sanitizer zeroed the slot every block, and the state never recovered. A slot whose magic is
+# not MAGIC starts from zeros (live.Voice's start), and the sanitizer clears the magic of a slot it zeroes.
+MAGIC = 0x52554231                     # 'RUB1'
 assert ST.n <= 16
 
 _SRC = pathlib.Path(__file__).read_text(encoding="utf-8")
@@ -134,6 +139,19 @@ class GG(OP.OG):
         p.iconst(12, L.state)
         p.iop(9, 9, "+", 12)
         p.st(C["sb"], 9)
+        self.ptr(3, "sb")
+
+        def fresh():                           # RIFT v0.26: a fresh state (live.Voice()), its magic set
+            self.ptr(3, "sb")
+            for name in ST.off:
+                if name != "magic":
+                    p.iconst(0, 0)
+                    p.sti(ST[name], 3, 0)
+            p.iconst(0, MAGIC)
+            p.sti(ST["magic"], 3, 0)
+        p.ldi(0, ST["magic"], 3)
+        p.iconst(1, MAGIC)
+        p.if_(0, "NE", 1, fresh, kind="i")
         self.ptr(3, "sb")
         # the envelope
         p.ld(0, C["trig"])

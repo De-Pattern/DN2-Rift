@@ -498,7 +498,13 @@ def test_rift_link_tables():
     1 MiB): in the pool's table area, below READY, each where its program reads it"""
     from dnfw.sampler import machines as SM
     data = dsp.link_tables()
-    assert len(data) == dsp.LINK_TABLES_BYTES
+    from dnfw.smear import live as SL
+    from dnfw.smear import ddr as SD
+    # RIFT v0.26: without the FFT vocoder, its quarter sine and pairs are not sent
+    assert len(data) == (dsp.LINK_TABLES_BYTES if SL.VOC_ON else
+                         dsp.SMEAR_VTABLES_DDR - dsp.LINK_TABLES_DDR + ((len(SD.table_bytes("vtables")) + 63) & ~63))
+    voff = dsp.SMEAR_VTABLES_DDR - dsp.LINK_TABLES_DDR
+    assert data[voff:voff + len(SD.table_bytes("vtables"))] == SD.table_bytes("vtables")
     assert dsp.LINK_TABLES_DDR + len(data) <= dsp.LINK_READY_DDR
     assert dsp.LINK_TABLES_DDR + SM.TABLE_ROOM - 512 >= dsp.LINK_TABLES_DDR + len(data)
     from dnfw.organ import program as OP

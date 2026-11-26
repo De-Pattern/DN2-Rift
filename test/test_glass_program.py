@@ -135,3 +135,19 @@ def test_v024_registers_same_bits_as_words(amp, typ, res):
     assert f1 is None and f2 is None, (f1, f2)
     assert np.array_equal(a1.view(np.uint32), a2.view(np.uint32))
     assert np.abs(a1).max() > 1e-3
+
+
+@pytest.mark.parametrize("junk", [0x7FC00000, 0x7F7FFFFF, 0xDEADBEEF])
+def test_v026_garbage_state_starts_afresh(junk):
+    """v0.26 (fiddly_digits: "my track goes silent when I put RUBBER on it"): DDR is not cleared at power-on;
+    a slot's state full of whatever lay there (a NaN, a huge value, junk) without RUBBER's magic starts from
+    zeros: the output is live.Voice()'s, bit for bit, and sounds"""
+    from dnfw.glass import program as P
+    d = B.Dsp()
+    slot = 2
+    for k in range(16):
+        d.mem.put(B.STATE + 64 * slot + 4 * k, junk)
+    a, b, first = B.compare(lambda k: B.rec_floats(), {1: 60.0}, 30, slot=slot, dsp=d)
+    assert first is None, first
+    assert np.abs(a).max() > 0.05
+    assert d.mem.get(B.STATE + 64 * slot + 4 * P.ST["magic"]) == P.MAGIC

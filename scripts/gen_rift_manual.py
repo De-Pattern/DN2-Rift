@@ -216,7 +216,7 @@ CONTOUR = {
     "WARP": "Warp: distorts the orbit's coordinates before the surface is read.",
     "FOLD": "Fold: a wavefolder after the surface.",
     "FM": "FM: the output modulates the orbit's speed (through-zero-ish growl at the top).",
-    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Curved since v0.20: the low end is finely spread, and the top stays usable. Above B3 it follows the pitch, so high notes keep the low notes' character and stay in key.",
+    "FDBK": "Feedback: the output pushes the orbit's position: a growl that thickens as it rises. Its original range (v0.26: v0.20's curve taken out); high settings turn wild on some surfaces and sizes, part of its character. Above B3 it follows the pitch, so high notes keep the low notes' character and stay in key.",
     "GRIT": "Grit: sample-and-bit crush.",
     "LEV": "Level.",
 }
@@ -278,7 +278,7 @@ THOLET = {
 SMEAR = [
     ("TUNE", "Tune", "Tune, in semitones (as every sample machine's). The note and TUNE set the pitch of every reader and never the speed, as on the Nebulae: PLAY and the grains both transpose while the read point keeps moving at SPD (v0.24; v0.22 and v0.23 played PLAY as tape)."),
     ("SPD", "Speed", "How fast the read point moves through the loop: -4.00 to +4.00 (64 is FRZ: the read point stops; +1.00 and -1.00 have wide detents). Negative reads backwards. Speed only: PLAY and the grains keep their pitch whatever the speed (v0.24)."),
-    ("BLND", "Blend", "Crossfades the readers at constant power: PLAY (a plain tape-like read) at 0 and in the middle, GRN (the grains) at 127. (VOC, the phase vocoder, is off since v0.18: its share of BLND plays PLAY.)"),
+    ("BLND", "Blend", "Crossfades the readers at constant power: VOC (the keyframe stretch, v0.26) at 0, PLAY (the read heads) in the middle, GRN (the grains) at 127."),
     ("SAMP", "Sample Slot", "The sample (or FLEX buffer B1..B8) SMEAR plays, as on every sample machine. Taken at the note."),
     ("STRT", "Start", "Where the loop starts in the sample."),
     ("SIZE", "Loop Size", "How long the loop is, from STRT toward the sample's end (squared, as on the Nebulae: fine control at small sizes)."),
@@ -678,9 +678,9 @@ def build() -> str:
 
     if HAS_SMEAR:
         s.append("<h2 id=\"smear\">SMEAR</h2>")
-        s.append(p("A granular looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through readers of one loop: <b>PLAY</b>, a continuous read whose pitch and speed are apart (two crossfading read heads, v0.24), and <b>GRN</b>, a cloud of grains; BLND moves between them. A note restarts the read at STRT and plays at its pitch (TUNE too), so SMEAR plays chromatically.",
-                   "<b>How to approach it:</b> load a sample and play it at BLND 0 (PLAY). Turn BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece; STRT scans. <b>FRZ</b> (page 2) holds the moment as a grain cloud while you play notes over it. LFO SPD, STRT or BLND for motion.",
-                   "<b>The phase vocoder (VOC) is off.</b> Since v0.18 it has been switched off: on the unit it needed more DSP time than a frame has, and a VOC note silenced the instrument. BLND's VOC end plays PLAY. A cheaper stretch is being designed to bring it back.",
+        s.append(p("A granular looper after the Qu-Bit Nebulae, in WERP's place among the sample machines (MACHINE SEL: Smear). It plays a sample or a FLEX buffer through readers of one loop: <b>VOC</b>, a keyframe time stretch (v0.26), <b>PLAY</b>, a continuous read whose pitch and speed are apart (two crossfading read heads, v0.24), and <b>GRN</b>, a cloud of grains; BLND moves between them. A note restarts the read at STRT and plays at its pitch (TUNE too), so SMEAR plays chromatically.",
+                   "<b>How to approach it:</b> load a sample and play it at BLND 0 (VOC) or 64 (PLAY). Turn BLND up to 127 for grains: DENS, OVLP, SPRY and PRND make it a cloud. Short SIZE loops a small piece; STRT scans. <b>FRZ</b> (page 2) holds the moment as a grain cloud while you play notes over it. LFO SPD, STRT or BLND for motion.",
+                   "<b>VOC, the keyframe stretch (v0.26).</b> BLND's VOC end is back, rebuilt on heavylight's keyframe time stretching (Capicola and dt2-keyframer, heavylight-industries; the DAFx26 paper <i>Keyframe Time Stretching via Extrema Sampling</i>), written again for SMEAR with credit and permission. The sample's peaks and troughs are its keyframes. One head moves at SPD (the read point), the other reads at the pitch (TUNE and the note); when they drift apart, the playing head jumps onto the read point's last peak or trough of the same kind with a short crossfade (at most 20 ms, heavylight's). So SPD stretches time without changing pitch, TUNE changes pitch without changing time, and SPD 64 or FRZ holds a moment as a looping grain. It costs a few thousand DSP cycles a voice (the old phase vocoder needed 200,000 and more, and was switched off in v0.18).",
                    "<b>Page 2</b> (v0.22: laid out as ONESHOT's page 2) shows the sample across the screen, with the loop (STRT, SIZE) marked, the read point moving through it and a grain cloud round it (more grains with DENS, wider with SPRY, longer with OVLP). Above the sample, four small pictures for knobs A-D: <b>OVLP</b> two grains that overlap more as it rises; <b>SPRY</b> grains scattered round the read point; <b>PRND</b> grains at random pitches; <b>WIN</b> the window's own shape. Knob E is <b>FRZ</b>, a bar over its label while frozen. Values show as you turn, as on every page."))
         s.append(p("<span class=\"credit\">Concept: De-Pattern, after the Qu-Bit Nebulae v2 (its granular-looper instrument, MIT).</span>"))
         s.append("<h3>SRC page 1</h3><table class=\"ctl\">" + "".join(
@@ -743,6 +743,9 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.26", "VOC", ["RUBBER: a track could go silent for good when RUBBER was put on it (its state was never cleared at power-on, so leftover memory could fill it with NaN). Fixed: it starts clean, and a block the safety check zeroes resets it.",
+                     "CONTOUR: FDBK's original range is back (v0.20's curve taken out): the feedback exactly as it first was.",
+                     "SMEAR's VOC is back: BLND 0 plays a keyframe time stretch after heavylight's Capicola / dt2-keyframer (credit and thanks to heavylight): pitch and time apart, peaks spliced onto peaks, 20 ms fades, a few thousand DSP cycles a voice. PLAY is now at BLND's middle."]),
     ("0.25", "SPALL", ["SPALL, a new synth machine: sound from tiny events (clicks, dust, tonal grains, chips) on a stochastic clock, rung through two resonators; two pages, 16 controls, its own icons and logo.",
                        "MACHINE SEL: the MIDI machine shows a 5-pin DIN socket and MIDI under it.",
                        "Includes v0.24."]),

@@ -94,11 +94,11 @@ def test_v024_untransposed_play_reads_the_read_point():
     bit for bit v0.21's"""
     rng = np.random.default_rng(3)
     buf = rng.standard_normal(30000).astype(np.float32) * 0.3
-    k = dict(L.DEFAULTS, BLND=0)
+    k = dict(L.DEFAULTS, BLND=64)                    # v0.26: PLAY alone at BLND's middle (BLND 0: the stretch)
     assert L.TABLES["SPD"][k["SPD"]] == np.float32(1)
     v = L.Voice(buf)
     y = np.concatenate([v.block(k, tr=1.0, trig=(n == 0)) for n in range(6)])
-    want = buf[:6 * 32] * L.TABLES["PG"][0] * L.TABLES["LEV"][k["LEV"]]
+    want = buf[:6 * 32] * L.TABLES["PG"][64] * L.TABLES["LEV"][k["LEV"]]
     assert np.array_equal(y, want.astype(np.float32))
 
 
@@ -123,3 +123,24 @@ def test_v022_freeze_holds_the_read_point_and_sounds():
     v3 = L.Voice(buf)
     v3.block(k, trig=True)
     assert np.array_equal(a, v3.block(k))                          # under FRZ_ON: unchanged
+
+
+def test_v026_stretch_transposes_and_keeps_the_speed():
+    """v0.26 VOC (owner: SMEAR's vocoder back on heavylight's keyframe stretch): at BLND 0 the stretch plays
+    a tone transposed by tr while the read point moves at SPD alone; it splices (KS back under the grain)"""
+    sr = 48000
+    t = np.arange(sr) / sr
+    buf = (0.5 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
+    k = dict(L.DEFAULTS, BLND=0, SPD=72)
+    assert L.TABLES["VG"][0] == np.float32(1) and L.TABLES["PG"][0] == 0
+    where, freq = {}, {}
+    for tr in (1.0, 1.5):
+        v = L.Voice(buf)
+        y = np.concatenate([v.block(k, tr=tr, trig=(n == 0)) for n in range(1400)])
+        seg = y[4000:]
+        f = np.abs(np.fft.rfft(seg * np.hanning(len(seg))))
+        freq[tr] = np.argmax(f) * sr / len(seg)
+        where[tr] = (v.pi, v.pf)
+        assert np.all(np.isfinite(y)) and np.max(np.abs(y)) <= 0.5001
+    assert where[1.0] == where[1.5]
+    assert abs(freq[1.5] / freq[1.0] - 1.5) < 0.02

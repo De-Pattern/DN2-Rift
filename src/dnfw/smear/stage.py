@@ -156,8 +156,11 @@ def _track(p: Prog, S: SLayout) -> None:
         p.ldi(0, MB_TRIG, 4)
         p.ldi(1, MB_FRAMES, 4)                  # (an empty slot takes no lane)
         p.ifz(1, "LE", lambda: p.iconst(0, 0))
-        p.ifz(0, "NE", lambda: (_lane_of(p, S, 0), p.ifz(0, "LT", lambda: _take_lane(p, S))))
-        _lane_of(p, S, 0)
+        if LV.VOC_ON:
+            p.ifz(0, "NE", lambda: (_lane_of(p, S, 0), p.ifz(0, "LT", lambda: _take_lane(p, S))))
+            _lane_of(p, S, 0)
+        else:                                   # RIFT v0.26: no lanes without the FFT vocoder (the DSP's 1 MiB)
+            p.iconst(0, -1)
         p.st(V.LANE, 0)
         p.ld(0, S.T)
         p.lsh(0, 0, 9)                          # STATE_BYTES a voice
@@ -197,12 +200,13 @@ def _track(p: Prog, S: SLayout) -> None:
             # holding a VOC lane is expected to cost VOC's measured peak, whatever its last block
             # cost. Its light blocks (the hop's other jobs) no longer hide the heavy ones, so a VOC
             # job that does not fit is left out, never run past the frame
-            P._tab(p, 10, V, "VG", "BLND")            # VOC heard (its gain > 0) ...
+            if LV.VOC_ON:                           # RIFT v0.26: not for the keyframe stretch (a few thousand cycles)
+                P._tab(p, 10, V, "VG", "BLND")        # VOC heard (its gain > 0) ...
 
-            def lane_held():                        # ... and a lane held: VOC runs this block
-                p.ld(10, V.LANE)
-                p.ifz(10, "GE", lambda: (p.iconst(10, VOC_PEAK), p.iop(9, 9, "MAX", 10)))
-            p.ifz(10, "GT", lane_held, kind="f")
+                def lane_held():                    # ... and a lane held: VOC runs this block
+                    p.ld(10, V.LANE)
+                    p.ifz(10, "GE", lambda: (p.iconst(10, VOC_PEAK), p.iop(9, 9, "MAX", 10)))
+                p.ifz(10, "GT", lane_held, kind="f")
             p.iop(8, 8, "+", 9)
             p.ld(10, G.LIMIT)
             p.e("COMP(R8, R10);")
@@ -336,7 +340,7 @@ def stage(p: Prog, S: SLayout) -> None:
                                      p.st(S.T, 0)))
     # lanes whose owner was not seen: free
     p.ld(3, S.SEEN)
-    for own in (S.LOWN0, S.LOWN1):
+    for own in ((S.LOWN0, S.LOWN1) if LV.VOC_ON else ()):
         p.ld(0, own)
 
         def held(own=own):
@@ -421,7 +425,7 @@ class Model:
                 continue
             buf, rate, tr, trig, kn = mail[t]
             seen |= 1 << t
-            if trig and len(buf) and self._lane(t) is None:
+            if LV.VOC_ON and trig and len(buf) and self._lane(t) is None:   # RIFT v0.26: no lanes without it
                 if self.own[0] == 0:
                     self.own[0], self.age[0] = t + 1, self.clock
                 elif self.own[1] == 0:

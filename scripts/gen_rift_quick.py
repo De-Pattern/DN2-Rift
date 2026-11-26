@@ -18,8 +18,8 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
-COVERS = "0.25"            # the release the guide describes (not VERSION: the tree may be ahead)
-LOGO_REF = "v25"           # logos as this release draws them (SPALL's, MIDI's; CONTOUR's crosshair)
+COVERS = "0.26"            # the release the guide describes (not VERSION: the tree may be ahead)
+LOGO_REF = "v26"           # logos as this release draws them (SPALL's, MIDI's; CONTOUR's crosshair)
 TEAL = (111, 199, 180)
 
 def E(s: str) -> str:
@@ -276,8 +276,8 @@ PAGES = [
     dict(id="smear", title="SMEAR", tag="SAMPLING", logo="smear",
          sub="Continuously morph a sample from traditional tape playback into granular fragments.",
          panels=[("knobs", "SYN1 / TAPE + CLOUD", "START AT BLND 0", K(
-             ("TUNE", "Pitch only (PLAY and the grains); SPD stays the speed."), ("SPD", "Speed only, -4..+4; center freezes the read point."),
-             ("BLND", "0 = PLAY; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
+             ("TUNE", "Pitch only (VOC, PLAY, grains); SPD stays the speed."), ("SPD", "Speed only, -4..+4; center freezes the read point."),
+             ("BLND", "0 = VOC stretch; 64 = PLAY; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
              ("STRT", "Where the loop begins in the sample."), ("SIZE", "Loop length / sampled region size."),
              ("DENS", "How many grains play each second."), ("LEV", "Output volume of the machine."))),
              ("knobs", "SYN2 / GRAINS", "MORE = CLOUD-LIKE", K(
@@ -287,14 +287,14 @@ PAGES = [
                  ("-", "Not assigned on this page."), ("-", "Not assigned on this page."))),
              ("concept", "WHAT YOU HEAR", "PLAY <-> GRANULAR", K(
                  ("PLAY", "A continuous loop; pitch and speed apart."), ("GRAIN", "Many tiny snippets overlap."),
-                 ("BLND", "Crossfade between PLAY and cloud."), ("SPRY", "Fragments scatter through the buffer."),
+                 ("BLND", "Crossfade VOC, PLAY and cloud."), ("SPRY", "Fragments scatter through the buffer."),
                  ("PRND", "Individual fragments bend in pitch."), ("OVLP", "Small flecks -> longer smear."),
                  ("FRZ", "Stays on the captured moment."), ("WIN", "Smooth / sharp grain edges."))),
              ("concept", "SAMPLE WORKFLOW", "SAMPLE HANDLING", K(
                  ("SAMP", "Turn to open the project sample list."), ("[YES]", "Keep selected sample."),
                  ("[NO]", "Cancel selection."), ("[FUNC]+[YES]", "Open the +Drive browser."),
                  ("B1-B8", "FLEX buffers appear after 127."), ("LOOP", "Use STRT + SIZE to isolate a segment."),
-                 ("TRANS", "Notes and TUNE transpose the sound."), ("VOC", "Currently unavailable; its end plays PLAY.")))],
+                 ("TRANS", "Notes and TUNE transpose the sound."), ("VOC", "BLND 0: keyframe stretch (after heavylight). SPD = time, TUNE = pitch.")))],
          first=("FROZEN CLOUD", "SAMP choose sample -> BLND from 0 upward -> DENS -> SPRY -> FRZ ON"), foot="KNOB BY KNOB"),
     dict(id="samples", title="SAMPLE MACHINES", tag="SAMPLING", logo="dt2",
          sub="A visual chooser for Digitakt II playback modes and slicing.",

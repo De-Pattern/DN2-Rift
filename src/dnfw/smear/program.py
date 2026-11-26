@@ -617,7 +617,7 @@ def voice_tables_words() -> list[int]:
 
 KNOBS = LV.CONTROLS                       # TUNE SPD BLND SAMP STRT SIZE DENS OVLP SPRY PRND WIN LEV
 LANE_WORDS = 4                            # a lane's own words after its P and ring: POS, PITCH, R, ARMED
-STATE_MAGIC = 0x534D5231                  # 'SMR1'
+STATE_MAGIC = 0x534D5232                  # 'SMR2' (RIFT v0.26: the stretch's words; SMR1 before)
 
 
 class VLayout:
@@ -638,7 +638,8 @@ class VLayout:
                                                   "CLOCK", "LANE", "VSTATE", "LSTART", "LEND",
                                                   "LSIZE", "SI", "SF", "VG", "PG", "GG", "JOB",
                                                   "LW2", "LWD", "LST", "TMP", "CNT2",
-                                                  "TI", "TF", "HEADS", "HVA"]   # RIFT v0.24: PLAY's heads
+                                                  "TI", "TF", "HEADS", "HVA",   # RIFT v0.24: PLAY's heads
+                                                  "KX", "KPOS", "KKEY", "KKP", "KPI0", "KT"]   # RIFT v0.26: the stretch's scratch
         for k, n in enumerate(names):
             setattr(self, n, a + 4 * k)
         a += 4 * len(names)
@@ -646,7 +647,11 @@ class VLayout:
         self.MAGIC, self.PI, self.PF = a, a + 4, a + 8
         # RIFT v0.24: PLAY's two heads and their cycle, in the state's free words before the grains
         self.QA, self.QAF, self.QB, self.QBF, self.PH = a + 12, a + 16, a + 20, a + 24, a + 28
-        self.G = GLayout(a + 64)
+        # RIFT v0.26: the keyframe stretch's state (live.Voice.kf_reset), the grains moved on to make room
+        for k, n in enumerate(("KP", "KPF", "KO", "KOF", "KW", "KFI", "KFD", "KC", "KS", "RKX", "RKN",
+                               "PXL", "PDS", "PVK", "PLI", "RXL", "RDS", "RVK", "RLI")):
+            setattr(self, n, a + 32 + 4 * k)
+        self.G = GLayout(a + 128)
         # the state copied in and out: MAGIC .. the grains' end (the grains' inputs ride along)
         self.STATE_WORDS = (self.G.G + 32 * LV.GRAINS - self.MAGIC) // 4
         a = self.G.end
@@ -703,6 +708,115 @@ def _recip(p: Prog, d: int, x: int) -> None:
         p.fop(d, d, "*", 12)
 
 
+def _kf_reset(p: Prog, V: VLayout, pos: int | None) -> None:
+    """RIFT v0.26: live.Voice.kf_reset at PI (POS None) or 0 (one copy, a leaf subroutine)."""
+    if pos is None:
+        p.ld(0, V.PI)
+    else:
+        p.iconst(0, pos)
+    p.call("smr_kfr", lambda: _kf_reset_body(p, V))
+
+
+def _kf_reset_body(p: Prog, V: VLayout) -> None:
+    for w in ("KP", "KO"):
+        p.st(getattr(V, w), 0)
+    p.iconst(0, 0)
+    for w in ("KPF", "KOF", "KW", "KFI", "KFD", "KC", "KS", "PXL", "PDS", "PVK", "RXL", "RDS", "RVK"):
+        p.st(getattr(V, w), 0)
+    p.iconst(0, -1)
+    for w in ("RKX", "RKN", "PLI", "RLI"):
+        p.st(getattr(V, w), 0)
+
+
+def _kf_detect(p: Prog, V: VLayout, XL: int, DS: int, VK: int, LI: int) -> None:
+    """RIFT v0.26: live.Voice.detect at KPOS (not LI), its sample at KX: KKEY (+1, -1, 0), KKP.
+    One copy, a leaf subroutine (the DSP's 1 MiB): the head's four words XL DS VK LI at I1."""
+    assert (DS, VK, LI) == (XL + 4, XL + 8, XL + 12)
+    p.iconst(9, XL)
+    p.seti(1, 9)
+    p.call("smr_kfd", lambda: _kf_detect_body(p, V))
+
+
+def _kf_detect_body(p: Prog, V: VLayout) -> None:
+    XL, DS, VK, LI = 0, 1, 2, 3                      # word offsets from I1
+    p.iconst(0, 0)
+    p.st(V.KKEY, 0)
+    p.ld(1, V.KX)
+    p.ldi(2, XL, 1)
+    p.fop(3, 1, "-", 2)                              # df
+
+    def flat():
+        p.ld(0, V.KPOS)
+        p.sti(LI, 1, 0)
+
+    def moved():
+        p.iconst(4, 1)
+        p.ifz(3, "LT", lambda: p.iconst(4, -1), kind="f")   # sg
+        p.ldi(5, DS, 1)
+
+        def turned():
+            p.ldi(1, XL, 1)
+            p.ldi(2, VK, 1)
+            p.fop(3, 1, "-", 2)
+
+            def key():
+                p.ldi(5, DS, 1)
+                p.st(V.KKEY, 5)
+                p.ldi(1, XL, 1)
+                p.sti(VK, 1, 1)
+                p.ldi(0, LI, 1)
+                p.st(V.KKP, 0)
+            p.fconst(6, LV.KF_EPS)
+            p.fconst(7, -LV.KF_EPS)
+            p.iconst(8, 0)
+            p.if_(3, "GE", 6, lambda: p.iconst(8, 1))
+            p.if_(3, "LE", 7, lambda: p.iconst(8, 1))
+            p.ifz(8, "NE", key)
+        p.ifz(5, "NE", lambda: p.if_(4, "NE", 5, turned, kind="i"))
+        p.ld(1, V.KX)
+        p.sti(XL, 1, 1)
+        p.sti(DS, 1, 4)
+        p.ld(0, V.KPOS)
+        p.sti(LI, 1, 0)
+    p.ifz(3, "EQ", flat, moved, kind="f")
+
+
+def _kf_splice(p: Prog, V: VLayout, frac: int) -> None:
+    """RIFT v0.26: live.Voice.splice: the play head to R10 (unwrapped), its fraction the word FRAC
+    (one copy, a leaf subroutine)."""
+    p.ld(1, frac)
+    p.st(V.KT, 1)
+    p.call("smr_kfs", lambda: _kf_splice_body(p, V))
+
+
+def _kf_splice_body(p: Prog, V: VLayout) -> None:
+    p.ld(0, V.KP)
+    p.st(V.KO, 0)
+    p.ld(0, V.KPF)
+    p.st(V.KOF, 0)
+    p.ld(13, V.SIZE)
+    wrap(p, 10, 13)
+    p.st(V.KP, 10)
+    p.st(V.PLI, 10)
+    p.ld(1, V.KT)
+    p.st(V.KPF, 1)
+    p.ld(8, V.KS)
+    p.lsh(8, 8, -1)
+    p.iconst(12, LV.KF_FADE_MIN)
+    p.iop(8, 8, "MAX", 12)
+    p.iconst(12, LV.KF_FADE)
+    p.iop(8, 8, "MIN", 12)
+    p.iconst(12, 0)
+    p.float_(1, 8, 12)
+    _recip(p, 2, 1)
+    p.st(V.KFI, 2)
+    p.iconst(0, 0)
+    for w in ("KW", "KC", "KS"):
+        p.st(getattr(V, w), 0)
+    p.iconst(0, 1)
+    p.st(V.KFD, 0)
+
+
 def emit_voice(p: Prog, V: VLayout) -> None:
     """live.Voice.block for one voice: 32 samples into V.OUT."""
     G, L = V.G, V.L
@@ -718,6 +832,8 @@ def emit_voice(p: Prog, V: VLayout) -> None:
         p.loop_r(15, V.STATE_WORDS, lambda: p.stpost(1, 0))
         p.iconst(1, STATE_MAGIC)
         p.st(V.MAGIC, 1)
+        if LV.KF_ON:
+            _kf_reset(p, V, 0)                       # RIFT v0.26: as live.Voice() (no keyframes: -1)
     p.if_(0, "NE", 1, fresh, kind="i")
     # -- the loop
     p.ld(13, V.SIZE)
@@ -801,6 +917,8 @@ def emit_voice(p: Prog, V: VLayout) -> None:
         p.st(V.QAF, 0)
         p.st(V.QBF, 0)
         p.st(V.PH, 0)
+        if LV.KF_ON:
+            _kf_reset(p, V, None)                    # RIFT v0.26: the stretch at the read point
 
         def clear_lane():
             _lane_bases(p, V)
@@ -808,8 +926,9 @@ def emit_voice(p: Prog, V: VLayout) -> None:
             at_reg(p, 9, L.P)
             p.seti(1, 9)
             p.loop_r(15, N + 2 + N + LANE_WORDS, lambda: p.stpost(1, 0))   # P, the ring, POS PITCH R ARMED
-        p.ld(0, V.LANE)
-        p.ifz(0, "GE", clear_lane)
+        if LV.VOC_ON:                                # RIFT v0.26: no lane to clear without the FFT vocoder
+            p.ld(0, V.LANE)
+            p.ifz(0, "GE", clear_lane)
     p.ld(0, V.TRIG)
     p.ifz(0, "NE", trig)
 
@@ -974,10 +1093,11 @@ def emit_voice(p: Prog, V: VLayout) -> None:
     p.seti(5, 9)
 
     def sample():
-        p.ld(0, V.PG)
-        p.iconst(1, 0)
+        if not LV.KF_ON:                             # (RIFT v0.26: loaded again before PLAY's test)
+            p.ld(0, V.PG)
+            p.iconst(1, 0)
 
-        def at(qi, qf):                              # F7 = the buffer at (qi, qf), live.Voice.block's at()
+        def at_body():
             p.ld(13, V.SIZE)
             p.ld(14, V.BASE)
             fetch(p, 6, 10, 14, V.FMT, 9, 0)
@@ -986,9 +1106,12 @@ def emit_voice(p: Prog, V: VLayout) -> None:
             p.if_(3, "GE", 13, lambda: p.iconst(3, 0), kind="i")
             fetch(p, 7, 3, 14, V.FMT, 9, 0)
             p.fop(7, 7, "-", 6)
-            p.ld(5, qf)
             p.fop(7, 5, "*", 7)
             p.fop(7, 6, "+", 7)
+
+        def at(qi, qf):                              # F7 = the buffer at (R10 = qi, qf), live.Voice.block's at(); F6 its sample
+            p.ld(5, qf)                              # RIFT v0.26: one copy, a leaf subroutine (the DSP's 1 MiB)
+            p.call("smr_at", at_body)
 
         def plain():
             p.ld(10, V.PI)
@@ -1001,19 +1124,25 @@ def emit_voice(p: Prog, V: VLayout) -> None:
             p.fop(1, 1, "+", 7)
             p.sti(0, 5, 1)
 
-        def step(qi, qf):                            # live's step(): (qi, qf) += (TI, TF), wrapped at the size
-            p.ld(0, qf)
+        def step_body():                             # (qi, qf) at I1
+            p.ldi(0, 1, 1)
             p.ld(1, V.TF)
             p.fop(0, 0, "+", 1)
-            p.ld(10, qi)
+            p.ldi(10, 0, 1)
             p.ld(2, V.TI)
             p.iop(10, 10, "+", 2)
             p.fconst(1, 1.0)
             p.if_(0, "GE", 1, lambda: (p.fop(0, 0, "-", 1), p.iconst(12, 1), p.iop(10, 10, "+", 12)))
-            p.st(qf, 0)
+            p.sti(1, 1, 0)
             p.ld(13, V.SIZE)
             p.if_(10, "GE", 13, lambda: p.iop(10, 10, "-", 13), kind="i")
-            p.st(qi, 10)
+            p.sti(0, 1, 10)
+
+        def step(qi, qf):                            # live's step(): (qi, qf) += (TI, TF), wrapped at the size
+            assert qf == qi + 4                      # RIFT v0.26: one copy, a leaf subroutine (the DSP's 1 MiB)
+            p.iconst(9, qi)
+            p.seti(1, 9)
+            p.call("smr_step", step_body)
 
         def heads():
             p.ld(10, V.QA)
@@ -1042,6 +1171,122 @@ def emit_voice(p: Prog, V: VLayout) -> None:
         def play():
             p.ld(0, V.HEADS)
             p.ifz(0, "NE", heads, plain)
+
+        def kf():                                    # RIFT v0.26: VOC's share through the keyframe stretch (live.Voice.block)
+            p.ld(10, V.PI)
+            p.ld(13, V.SIZE)
+            wrap(p, 10, 13)
+            p.st(V.KPI0, 10)
+            p.ld(11, V.RLI)
+
+            def rdet():
+                p.st(V.KPOS, 10)
+                p.iconst(5, 0)
+                p.call("smr_at", at_body)            # F6 = the sample at R10 (the shared read; R10 kept)
+                p.st(V.KX, 6)
+                p.st(V.KPOS, 10)
+                _kf_detect(p, V, V.RXL, V.RDS, V.RVK, V.RLI)
+                p.ld(0, V.KKEY)
+
+                def found():
+                    p.ld(1, V.KKP)
+                    p.ifz(0, "GT", lambda: p.st(V.RKX, 1), lambda: p.st(V.RKN, 1))
+                    p.ld(8, V.KC)
+                    p.iconst(12, 1)
+                    p.iop(8, 8, "-", 12)
+                    p.st(V.KC, 8)
+                p.ifz(0, "NE", found)
+            p.if_(10, "NE", 11, rdet, kind="i")
+            p.ld(10, V.KP)
+            at(V.KP, V.KPF)                          # F7 = v, F6 = x0
+            p.st(V.KX, 6)
+            p.ld(0, V.KFD)
+
+            def fading():
+                p.st(V.HVA, 7)
+                p.ld(10, V.KO)
+                at(V.KO, V.KOF)                      # F7 = vo
+                p.ld(4, V.HVA)
+                p.fop(4, 4, "-", 7)
+                p.ld(5, V.KW)
+                p.fop(4, 5, "*", 4)
+                p.fop(7, 7, "+", 4)
+            p.ifz(0, "NE", fading)
+            p.ld(0, V.VG)
+            p.fop(7, 0, "*", 7)
+            p.ldi(1, 0, 5)
+            p.fop(1, 1, "+", 7)
+            p.sti(0, 5, 1)
+            p.ld(10, V.KP)
+            p.ld(11, V.PLI)
+
+            def pdet():
+                p.st(V.KPOS, 10)
+                _kf_detect(p, V, V.PXL, V.PDS, V.PVK, V.PLI)
+                p.ld(0, V.KKEY)
+
+                def found():
+                    p.ld(8, V.KC)
+                    p.iconst(12, 1)
+                    p.iop(8, 8, "+", 12)
+                    p.st(V.KC, 8)
+                    p.ld(11, V.RKX)
+                    p.ifz(0, "LT", lambda: p.ld(11, V.RKN))
+
+                    def free():
+                        def rk_ok():
+                            p.iconst(3, 0)
+                            p.ld(8, V.KC)
+                            p.iconst(12, LV.KF_K)
+                            p.if_(8, "GT", 12, lambda: p.iconst(3, 1), kind="i")
+                            p.iconst(12, -LV.KF_K)
+                            p.if_(8, "LT", 12, lambda: p.iconst(3, 1), kind="i")
+                            p.ld(8, V.KS)
+                            p.iconst(12, LV.KF_GRAIN)
+                            p.if_(8, "GE", 12, lambda: p.iconst(3, 1), kind="i")
+
+                            def go():
+                                p.ld(8, V.KP)
+                                p.ld(9, V.KKP)
+                                p.iop(9, 8, "-", 9)
+                                p.iop(10, 11, "+", 9)       # rk + (kp - kkp)
+                                _kf_splice(p, V, V.KPF)
+                            p.ifz(3, "NE", go)
+                        p.ifz(11, "GE", rk_ok)
+                    p.ld(2, V.KFD)
+                    p.ifz(2, "EQ", free)
+                p.ifz(0, "NE", found)
+            p.if_(10, "NE", 11, pdet, kind="i")
+            p.ld(0, V.KFD)
+
+            def forced():
+                p.ld(8, V.KS)
+                p.iconst(12, 2 * LV.KF_GRAIN)
+                p.if_(8, "GE", 12, lambda: (p.ld(10, V.KPI0), _kf_splice(p, V, V.PF)), kind="i")
+            p.ifz(0, "EQ", forced)
+            p.ld(8, V.KS)
+            p.iconst(12, 1)
+            p.iop(8, 8, "+", 12)
+            p.st(V.KS, 8)
+            p.ld(0, V.KFD)
+
+            def adv():
+                p.ld(1, V.KW)
+                p.ld(2, V.KFI)
+                p.fop(1, 1, "+", 2)
+                p.st(V.KW, 1)
+                step(V.KO, V.KOF)
+                p.ld(1, V.KW)
+                p.fconst(2, 1.0)
+                p.if_(1, "GE", 2, lambda: (p.iconst(0, 0), p.st(V.KFD, 0)))
+            p.ifz(0, "NE", adv)
+            step(V.KP, V.KPF)
+        if LV.KF_ON:
+            p.ld(0, V.VG)
+            p.iconst(1, 0)
+            p.if_(0, "GT", 1, kf)
+            p.ld(0, V.PG)
+            p.iconst(1, 0)
         p.if_(0, "GT", 1, play)
         # pf += sf; pi += si; carry; wrap into [lstart, lend)
         p.ld(0, V.PF)
@@ -1102,6 +1347,22 @@ def emit_voice(p: Prog, V: VLayout) -> None:
         p.ldi(0, 0, 5)
         p.stpost(5, 0)                               # on to the next sample
     p.loop(V.CNT2, 32, sample)
+    if LV.KF_ON:
+        # RIFT v0.26: no VOC share: the stretch follows the read point (live.Voice.block does it each
+        # sample; only its last matters, as the stretch does not run this block)
+        def kf_follow():
+            p.ld(0, V.PI)
+            p.st(V.KP, 0)
+            p.ld(0, V.PF)
+            p.st(V.KPF, 0)
+            p.iconst(0, 0)
+            for w in ("KFD", "KC", "KS"):
+                p.st(getattr(V, w), 0)
+            p.iconst(0, -1)
+            p.st(V.PLI, 0)
+        p.ld(0, V.VG)
+        p.iconst(1, 0)
+        p.if_(0, "LE", 1, kf_follow)
     # -- x LEV
     _tab(p, 2, V, "LEV", "LEV")
     p.iconst(9, V.OUT)
