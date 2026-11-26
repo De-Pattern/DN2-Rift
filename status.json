@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-26T15:32:12+00:00",
+ "updated": "2026-11-26T15:35:14+00:00",
  "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: gate stopped at 10:30 to take QA findings in (a SMEAR grain-mode floor, CONTOUR feedback raised mid-note). Restarting shortly.",
  "gates": [
   {
