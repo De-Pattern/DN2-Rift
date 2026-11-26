@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.26** | 2026-11-25 | SMEAR's VOC back, on a keyframe time stretch after heavylight's (credited); CONTOUR's FDBK as it first was; RUBBER's silent track fixed | `builds/v0.26-VOC/` | yes |
+| **v0.27** | 2026-11-26 | The time guard: no false CPU marker, several CONTOUR voices with FDBK; from DN2 mk2: live-record lag, FLEX level, the MIDI arp, arp in scale, in-key transpose | `builds/v0.27-FLOW/` | yes |
+| v0.26 | 2026-11-25 | SMEAR's VOC back, on a keyframe time stretch after heavylight's (credited); CONTOUR's FDBK as it first was; RUBBER's silent track fixed | `builds/v0.26-VOC/` | yes |
 | v0.25 | 2026-11-25 | SPALL, a new synth machine (tiny events rung through two resonators), its logo; the MIDI machine's DIN logo; Download PDF on the manual and the quick guide | `builds/v0.25-SPALL/` | yes |
 | v0.24 | 2026-11-25 | RUBBER (an SH-101-style ladder) in GLASS's place, its curves as FLTR page 2 knobs; SMEAR: pitch and speed apart; clean knob icons | `builds/v0.24-APART/` | yes |
 | v0.23 | 2026-11-24 | FASCIA's crackle (the guard's budget for RIFT's synths: x 1.25, the reserve kept); CPU on RIFT's machine pages when the DSP drops a voice; CONTOUR's crosshair logo; the quick guide | `builds/v0.23-STEADY/` | yes |
@@ -53,6 +54,38 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.27 · FLOW
+
+- **File:** `RIFT_v0.27_FLOW_OS1.11.syx` (`builds/v0.27-FLOW/`)
+- **sha256:** `3b987e6ceadef1ccd3e82578c846b58211c475becafc061d1fe956d48c6ae4c1`
+- **Gated:** 2026-11-26, `CLEARED TO FLASH`
+- **Source:** `3118908` (this repository)
+
+**Changes**
+
+- **The time guard's floor only on a trigger block** (owner, 2026-11-25: CPU shown most of the time on SPALL, a static CPU on ORGAN, nothing heard). `perc.guard.around` expected every slot of FASCIA's walk to cost at least 60,000 cycles on every block. A slot with no note costs about 900 to 2,600 instructions and an ORGAN or SPALL voice under 30,000, so the walk's last slots were left out (silent already) and flagged with time free, and sounding voices were struck and stolen early. Now: last cost x 1.25, at least 12,000; on a block that triggers the slot at least 60,000 (ORGAN, CONTOUR, SPALL: 36,000, from their heaviest measured blocks). Emit only; the runner's fkeep (the clock made to move): 93 voices left out where 244 were on the melody, 13 where 151 on REUSE.
+- **CONTOUR's reserve by the note, on the trigger block only** (owner, 2026-11-25: "contour is having a very hard time playing more than 1 voice"). Every voice with FDBK up was expected to cost CTR_PEAK (110,000) on every block. Measured: 25,400 at 1 step, 44,600 at 2 (B3 to B4), 82,000 at 4 (above B4). Now CTR_PEAK or CTR_MID (64,000) only on the block that triggers the voice, by the frame's note and TUNE (never under the voice's own pitch); otherwise its last cost x 1.25.
+- **FASCIA's walk shares the guard's code**: the test before a voice, the cost after it and the left-out path are one copy each for the seven machines. The DSP program 2 KB smaller (1,046,624 of 1,048,575 bytes unpacked).
+- **From DN2 mk2:** the live-record lag fix (v0.74, 8a00762), FLEX takes following the source track's LEVEL (v0.75, a3cd8d2, merged with RIFT's BUS source), the arp on MIDI tracks (v0.67, upstream Angel Linares), ARP OFS IN SCALE and in-key transpose (v0.70, upstream w-winter, AGPL-3.0, THIRD-PARTY.md), the coupled thres harness's wait (941aaed, b02a0b3). Gate steps `midiarp` and `inkey`.
+- The master plate's hot state in L1 for the block.
+- The runner's `rprof` probe (not a gate step): each machine's cost with no note, struck and ringing.
+- No machine's sound, UI or saved data changed.
+
+**Tests**
+
+1. SPALL alone, ORGAN alone: no CPU marker.
+2. Two or three CONTOUR tracks, FDBK up, notes below B3, B3 to B4, above B4.
+3. A project that showed CPU before: fewer drop-outs; FUNC held shows the load.
+4. Live recording: no lag (DN2 mk2 v0.74's test).
+5. FLEX: a take with the source track's LEVEL lowered follows it.
+6. The arp on a MIDI track.
+7. ARP OFS IN SCALE on (SETTINGS > PERSONALIZE): offsets in scale degrees. [KEYBOARD] + [FUNC] + [+]/[-]: transpose in key.
+
+**Known issues**
+
+- CONTOUR above B4 with FDBK costs about 82,000 cycles a voice (four steps a sample): three such voices beside a busy project can still run out of time.
+- PERFORM and the extra project RAM banks from DN2 mk2 are not in: the image has about 800 bytes spare.
 
 ## v0.26 · VOC
 
