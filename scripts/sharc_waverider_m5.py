@@ -5253,6 +5253,31 @@ def step_rcost(init, sound, machines) -> dict:
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, "glass_slot": glass_slot, **out}}
 
 
+def _print_hist(hist_pc: dict, name: str) -> None:
+    """RIFT v0.30: a PC histogram by fascia.asm's labels (the nearest label before each instruction)"""
+    src = (ROOT / "csrc/waverider/sharc/fascia.asm").read_text().splitlines()
+    meta = json.loads((ROOT / "csrc/waverider/sharc/fascia.json").read_text())
+    offs, base = meta["instruction_offsets"], int(str(meta["load_sw"]), 0)
+    lab, k, at = "?", 0, {}
+    for ln in src:
+        t = ln.strip()
+        if not t or t.startswith("//") or t.startswith("."):
+            continue
+        if t.endswith(":") and " " not in t:
+            if t.startswith(("wr_fs_rt_", "wr_fs_sub_")) or not t.startswith("wr_fs_"):
+                lab = t[:-1]                    # routines, leaves, entries: not the branches' labels
+            continue
+        if k < len(offs):
+            at[base + offs[k] // 2] = lab
+        k += 1
+    by = {}
+    for pc, n in hist_pc.items():
+        by[at.get(pc, "(not fascia.asm)")] = by.get(at.get(pc, "(not fascia.asm)"), 0) + n
+    tot = sum(by.values())
+    print(f"    rprof {name} PC histogram (12 blocks, {tot} steps): " +
+          ", ".join(f"{k} {v}" for k, v in sorted(by.items(), key=lambda kv: -kv[1])[:40]), flush=True)
+
+
 def step_rprof(init, sound, machines) -> dict:
     """RIFT v0.27 (the optimization pass): a probe, not a gate step. Each RIFT machine's cost a block on the
     unit's cost model (rcost's), less an idle frame's: a slot of the machine with no note (idle), its strike
@@ -5337,7 +5362,8 @@ def step_rprof(init, sound, machines) -> dict:
                     counts["on"] = False
                     st_ = rr_["state"]
                 order = sorted(marks.items(), key=lambda kv: kv[1][0])
-                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0]) for i in range(len(order) - 1)]
+                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0], order[i + 1][1][1] - order[i][1][1],
+                        order[i + 1][1][2] - order[i][1][2]) for i in range(len(order) - 1)]   # (steps, L2, DDR)
                 print(f"    rprof STAGES {sn}: entries {[(n_, v_[0]) for n_, v_ in order]}; from each to the next (steps) {seg}; "
                       f"block total {rr_.get('instructions')}", flush=True)
         if only and "MVERB" in only:                                    # RIFT v0.28: the master reverb's own cost
@@ -5383,6 +5409,15 @@ def step_rprof(init, sound, machines) -> dict:
             pi = parts[-1]
             print(f"    rprof {name} no note parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(pi, ibase))}", flush=True)
             r = rows(lambda b: fb((0,) if b == 1 else ()), 40)
+            if os.environ.get("RPROF_HIST"):          # RIFT v0.30: where the ringing block's instructions go
+                hist_pc = {}
+                fx.PCHIST = hist_pc
+                try:
+                    rows(lambda b: fb((0,) if b == 1 else ()), 12)
+                finally:
+                    fx.PCHIST = None
+                _print_hist(hist_pc, name)
+            print(f"    rprof {name} ringing (block 40) parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(parts[-1], ibase))}", flush=True)
             res[name] = {"idle": round(max(r_idle[:3]) - base) if r_idle else None,
                          "strike": round(r[1] - base) if r else None,
                          "after": [round(x - idle[min(k + 2, 59)]) for k, x in enumerate(r[2:])] if r else None,
