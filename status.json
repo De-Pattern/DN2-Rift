@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-26T16:32:59+00:00",
+ "updated": "2026-11-26T16:36:01+00:00",
  "note": "v0.27 FLOW is out (2026-11-26 08:51).\nv0.28 STABLE: full gate restarted 11:27 with the QA fixes in (about 5 to 6 hours).",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 18,
+   "done": 20,
    "total": 74,
-   "frac": 0.243,
+   "frac": 0.27,
    "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "unit tests: 952 passed, 2 skipped, 12 warnings in 783.64s (0:13:03) [reused: no input changed]",
-    "DSP load meter (ColdFire): the DSP load meter: the half second's peak in percent, none when the DSP is ",
     "SAMP kept across sample machines (ColdFire): MACHINE SEL from ONESHOT to the next sample machine keeps ",
-    "FUNC + turn (ColdFire): FUNC + turn: PERC's first control keeps stock's octave jumps; other controls of"
+    "FUNC + turn (ColdFire): FUNC + turn: PERC's first control keeps stock's octave jumps; other controls of",
+    "FLEX buffers in every sample machine's SAMP (ColdFire): SAMP past 127 to the FLEX buffers B1..B8 by the",
+    "start-up animation, every frame: all 80 frames, each his, in order, to the intro's end; the panel showe"
    ],
-   "log_written": "11:31"
+   "log_written": "11:35"
   }
  ]
 }
