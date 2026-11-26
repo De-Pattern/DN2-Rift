@@ -57,8 +57,8 @@ GI1, GI2 = F(0.75), F(0.625)
 GD1 = F(-0.7)
 # the tank's decay: gdec = min(0.1 + GDEC_SPAN (1 - (1 - DEC)^2), GDEC_MAX). RIFT v0.28 (the owner, 2026-11-26:
 # "we should maybe shorten that reverb tail a little"): 0.87 and 0.97, v0.21..v0.27's 0.88 and 0.98 (put them back
-# to restore the longer tail). At DEC 127 the tail is about a third shorter (ln(1/0.97) / ln(1/0.98) = 1.5);
-# at DEC 96 about a tenth; below that a few percent
+# to restore the longer tail). Measured from this model (QA's review of v0.28, C6: a noise burst, the time to
+# fall 60 dB): DEC 127 42.1 s -> 31.6 s (a quarter shorter), DEC 96 13.7 s -> 12.4 s (a tenth), DEC 64 4.2 s -> 4.05 s
 GDEC_SPAN = F(0.87)
 GDEC_MAX = F(0.97)
 

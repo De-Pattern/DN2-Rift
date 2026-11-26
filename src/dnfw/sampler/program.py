@@ -1934,7 +1934,9 @@ def werp_next(p: Prog, L: Layout) -> None:
 # at 0 it would start on any noise. Ours at 0 waits for sound above the source's own noise
 # instead (docs/sampler.md, "THRES 0"):
 REC_AUTO_BELOW = 64                       # a threshold word under this is THRES 0 (the ColdFire's floor, 33)
-SMP_FLOOR = 40_000                           # RIFT v0.28: a sample voice's least cost on its trigger block (rprof: ONESHOT, GRID 30,800 at worst)
+SMP_FLOOR = 64_000                           # RIFT v0.28: a sample voice's least cost on its trigger block. rprof's worst single render:
+                                             # ONESHOT 30,827, GRID 30,711, REPITCH 31,094, SLICE 30,719, STRETCH 12,411; a note on a
+                                             # voice still sounding renders twice (the old note's fade, then the new: QA's addendum, B1)
 REC_AUTO_FLOOR = 33.0 / 32767.0           # never under -60 dB (v0.30's floor)
 REC_AUTO_MARGIN = 4.0                     # 12 dB over the quietest recent block's peak
 REC_AUTO_RISE = 1.0005                    # how fast the floor creeps up: +6.5 dB a second at 1500 blocks

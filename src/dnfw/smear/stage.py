@@ -196,7 +196,7 @@ def _track(p: Prog, S: SLayout) -> None:
             p.iop(9, 10, "+", 9)                # x 1.5
             # RIFT v0.28 (franny: "Smear also seems to drop out pretty easily"): at least SMR_FLOOR only on the
             # block that triggers the track (the frame's trigger word, bit 16 + t), G.IDLE_FLOOR on any other;
-            # v0.16..v0.27 asked 60,000 of every block (a SMEAR voice costs 21,000 to 27,000, rprof)
+            # v0.16..v0.27 asked 60,000 of every block (a SMEAR voice costs 21,000 (PLAY) to 70,000 (GRN, dense), rprof, rcost)
             from ..perc import program as PPg
             p.ld(10, PPg.TRIG_WORD)
             p.lsh(10, 10, -16)
@@ -277,7 +277,7 @@ def _track(p: Prog, S: SLayout) -> None:
 
 # RIFT v0.18: a VOC lane's worst block on the unit, cycles: instructions + 0.95 x (4 L2 + 10 DDR)
 # accesses, measured in the runner over a hop (scripts/sharc_waverider_m5.py step smrcost holds it)
-SMR_FLOOR = 40_000                 # RIFT v0.28: a SMEAR voice's least cost on its trigger block
+SMR_FLOOR = 74_000                 # RIFT v0.28: a SMEAR voice's least cost on its trigger block: GRN at DENS and OVLP 127, 70,438 (rcost), and 5 % (QA's review, C3)
 VOC_PEAK = 270_000
 
 

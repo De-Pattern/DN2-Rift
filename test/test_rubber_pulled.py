@@ -20,7 +20,8 @@ def test_no_glass_chunk_or_layout():
 
 
 def test_stock_sites_untouched():
-    sites = [P.LIST_ALLOC, P.LIST_END, P.LIST_CAP, P.LIST_BEGIN, P.LOAD_BOUND, P.SLOT_SITE] + [s[0] for s in P.NAME_SITES]
+    sites = [P.LIST_ALLOC, P.LIST_END, P.LIST_CAP, P.LIST_BEGIN, P.LOAD_BOUND, P.SLOT_SITE, P.GRAPH_SITE, P.OVER_SITE] \
+        + [s[0] for s in P.NAME_SITES]                 # (QA's review of v0.28, C4: the curve's and the descriptor's too)
     for e in SPEC["edits"]:
         n = len(e["new"]) // 2
         assert not any(e["va"] <= va < e["va"] + n for va in sites), hex(e["va"])
