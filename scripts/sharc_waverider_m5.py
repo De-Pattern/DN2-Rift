@@ -5304,6 +5304,33 @@ def step_rprof(init, sound, machines) -> dict:
         }
         ibase = parts[-1]
         print(f"    rprof idle frame parts (instructions, L2, DDR): {ibase}", flush=True)
+        if only and "STAGES" in only:                                   # RIFT v0.28: our stages' own cost, a block
+            marks = {}
+            names = (("perc", dsp.PERC_SW), ("smp", dsp.SMP_SW), ("smear", dsp.SMEAR_SW), ("walk", dsp.FSC_SW),
+                     ("tail", dsp.PING_SW), ("mverb", dsp.MVERB_SW))
+
+            def mk(nm):
+                def f(r):
+                    marks[nm] = (getattr(r, "steps_n", 0), counts["L2"], counts["DDR"])
+                return f
+            scen = {"idle (FM Tone on 16)": lambda b: fsc_frame(sound, machines, {}, trig=()),
+                    "16 idle FASCIA": lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(16)}, trig=()),
+                    "16 ONESHOT no note": lambda b: base_frame(sound, machines, t0=SM.TYPE_OF["ONESHOT"], overrides=smp_words(),
+                                                               others={t: SM.TYPE_OF["ONESHOT"] for t in range(1, 16)}, trigger=False).to_bytes()}
+            for sn, fb_ in scen.items():
+                st_ = init
+                for b in range(4):
+                    marks.clear()
+                    for k_ in ("L1", "L2", "DDR"):
+                        counts[k_] = 0
+                    counts["on"] = True
+                    rr_ = run_blocks(st_, fb_, 1, extra_hooks={a_: mk(n_) for n_, a_ in names})
+                    counts["on"] = False
+                    st_ = rr_["state"]
+                order = sorted(marks.items(), key=lambda kv: kv[1][0])
+                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0]) for i in range(len(order) - 1)]
+                print(f"    rprof STAGES {sn}: entries {[(n_, v_[0]) for n_, v_ in order]}; from each to the next (steps) {seg}; "
+                      f"block total {rr_.get('instructions')}", flush=True)
         if only and "MVERB" in only:                                    # RIFT v0.28: the master reverb's own cost
             from dnfw.mverb import program as MVP_       # noqa: PLC0415
             mark = {}
