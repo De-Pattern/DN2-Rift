@@ -175,7 +175,7 @@ QUEUE_SEND, UI_QUEUE, RECV_RET = 0x40001896, 0x4059D214, 0x4002F184
 ITEMS_AT = 0x46A30000                   # emulator RAM above the call stack: the injected items
 
 
-def inject_latency(build, snap, stock, frame_units, bursts=12, keys=7):
+def inject_latency(build, snap, stock, frame_units, bursts=int(__import__("os").environ.get("INJ_BURSTS", "12")), keys=7):
     """RIFT v0.30 (QA's review: bypass the panel scan): KEYS [TRIG] key items put straight into the UI queue
     together (queue_send 0x40001896(queue 0x4059d214, item, 2, 0), as the panel driver at 0x4011fb38 sends
     them: 16 bytes, type 0, code 25.., flags 1 press / 0x10 release), during live recording (REC + PLAY);
@@ -208,12 +208,22 @@ def inject_latency(build, snap, stock, frame_units, bursts=12, keys=7):
             seen_ptr[it] = seen_ptr.get(it, 0) + 1
             got.append((clock.now - sent.pop(k)) / frame_units)
     c.uc.hook_add(UC_HOOK_CODE, recv, begin=RECV_RET, end=RECV_RET)
+    cnt = {"all": 0, "ours": 0, "on": False}
+    import os as _os                                             # noqa: PLC0415
+    if _os.environ.get("INJ_COUNT"):                             # every UI instruction in the bursts (slow)
+        def every(uc, addr, size, ud):
+            if cnt["on"]:
+                cnt["all"] += 1
+                if any(a <= addr < b for a, b in OUR):
+                    cnt["ours"] += 1
+        c.uc.hook_add(UC_HOOK_CODE, every)
 
     def held(code, on, n=2):
         c.machine.pc = (P.press if on else P.release)(c.machine.m, c.panel.profile, *key(code))
         c.periods(n)
     held(19, True); held(20, True); held(20, False); held(19, False)
     c.periods(20)
+    cnt["on"] = True
     lost = 0
     for b in range(bursts):
         for flags in (1, 0x10):
@@ -227,7 +237,7 @@ def inject_latency(build, snap, stock, frame_units, bursts=12, keys=7):
             lost += len(sent)
             sent.clear()
     got.sort()
-    return {"frames": [round(x, 2) for x in got], "n": len(got), "lost": lost,
+    return {"frames": [round(x, 2) for x in got], "n": len(got), "lost": lost, "count": dict(cnt),
             "median": round(statistics.median(got), 2) if got else None, "max": round(max(got), 2) if got else None,
             "halt": c.halt}
 
@@ -248,7 +258,7 @@ def main_latency() -> int:
     rep = {"frame_units": fu, "stock": fn(a.stock, a.snapshot, a.stock, fu),
            "build": fn(a.build, a.snapshot, a.stock, fu)}
     for k in ("stock", "build"):
-        print(f"{k}: a trig key's press or release to its receive, frames (0.67 ms each): n {rep[k]['n']}, lost {rep[k].get('lost')}, median {rep[k]['median']}, max {rep[k]['max']}; {rep[k]['frames']}", flush=True)
+        print(f"{k}: a trig key's press or release to its receive, frames (0.67 ms each): n {rep[k]['n']}, lost {rep[k].get('lost')}, instructions {rep[k].get('count')}, median {rep[k]['median']}, max {rep[k]['max']}; {rep[k]['frames']}", flush=True)
     if a.json:
         pathlib.Path(a.json).write_text(json.dumps(rep, indent=1))
     return 0
