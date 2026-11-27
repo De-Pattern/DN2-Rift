@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-27T01:21:50+00:00",
+ "updated": "2026-11-27T01:24:52+00:00",
  "note": "v0.28 STABLE: full gate in its last steps (63 passed, none failed). v0.29 MONO ready for its gate next; v0.30 (FLEX buffer waveforms) step runs pass.",
  "gates": [
   {
