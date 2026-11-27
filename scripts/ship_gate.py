@@ -256,6 +256,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("flex", "FLEX: a recorder trig's take played by a note, on both processors (coupled)"),
        ("flexplay", "FLEX buffers played by a ONESHOT track, on both processors (coupled)"),
        ("flexlag", "FLEX: a take plays back on the step, the sequencer's own notes, on both processors (coupled)"),
+       ("tempoyes", "TEMPO + YES on a slice track is stock's (ColdFire)"),
        ("keystream", "keys first: a steady stream of key presses starves no poll (ColdFire)"),
        ("mute", "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)"),
        ("fineswap", "STRT/LEN/LOOP fine records swapped in and out (ColdFire)"),
@@ -1863,6 +1864,38 @@ def main() -> int:
                 return good, ("a stock question's YES is the question's; TRIG + YES is stock's; the page's "
                               "own YES still opens its menu; SAVING's and its message's keys are stock's" if good else why)
             later("question", "stock questions and held keys (ColdFire)", "stock questions and held keys (ColdFire)", [q_cmd, sorted(EMU_ENV.items())], q_body)
+
+        # 6j2. v0.30 (the owner, 2026-11-27: TEMPO + YES and TRIG + YES must not open a slice
+        # track's menus): on a GRID track's page (the same held-key test guards SLICE's menu and
+        # GRID's ALLOCATE SLICE, before either), TEMPO held + YES: no menu; let go, TEMPO is not
+        # held; a plain YES still opens the menu, NO closes it
+        if "smp_tempo_held" in lay:
+            kit = 0x4210C08C
+            H, S = lay["smp_held_lo"], lay["slc_state"]
+            # a plain YES first (the menu opens: the page is up), NO; then TEMPO + YES (no menu);
+            # let go, back on the page, YES opens it again
+            ts = (f"wait:3,poke:{kit + 52 + 0xDE:#x}:0c,wait:4,tap:2,wait:6,yes,wait:6,mem:{S:#x}:4,no,wait:6,"
+                  f"mem:{S:#x}:4,press:9,wait:2,yes,wait:4,mem:{S:#x}:4,release:9,wait:6,mem:{H:#x}:4,"
+                  f"tap:2,wait:6,yes,wait:6,mem:{S:#x}:4,no,wait:6")
+            tjs = work / "tempoyes.json"
+            t_cmd = [a.venv, "-u", "scripts/emu_waverider_menu.py", "--root", ROOT, "--build", bdir,
+                     "--snapshot", snap, "--steps", ts, "--json", tjs]
+
+            def t_body(tdir):
+                rc, out = run("tempo yes", t_cmd, logs, env=EMU_ENV, trace=tdir)
+                if rc != 0 or not tjs.exists():
+                    return False, out[-800:]
+                m = json.loads(tjs.read_text())["memory"]
+                facts = {"a plain YES opens the menu (the control), NO closes it":
+                         int(m[hex(S)], 16) != 0 and int(m[f"{hex(S)}@1"], 16) == 0,
+                         "TEMPO + YES: stock's, no menu": int(m[f"{hex(S)}@2"], 16) == 0,
+                         "let go: TEMPO not held": (int(m[hex(H)], 16) >> 9) & 1 == 0,
+                         "back on the page, a plain YES opens it again": int(m[f"{hex(S)}@4"], 16) != 0}
+                good = all(facts.values())
+                return good, ("TEMPO + YES is stock's (no slice menu); a plain YES still opens it" if good
+                              else f"{facts} mem={m}")
+            later("tempoyes", "TEMPO + YES on a slice track is stock's (ColdFire)",
+                  "TEMPO + YES on a slice track is stock's (ColdFire)", [t_cmd, sorted(EMU_ENV.items())], t_body)
 
         # 6k. v0.30: MACHINE SEL from one sample machine to another keeps SAMP (owner: the stock
         # commit resets the sound to the new machine's defaults, SAMP to OFF). Track 1 on

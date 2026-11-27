@@ -1966,6 +1966,16 @@ int smp_trig_held(void)
     return 0;
 }
 u32 smp_held_hi __attribute__((section(".data"), aligned(4))) = 0;
+u32 smp_tempo_at __attribute__((section(".data"), aligned(4))) = 0;
+
+/* v0.30 (the owner, 2026-11-27: TEMPO + YES must not open a SLICE track's menus): TEMPO held
+ * now, by the same rule as a [TRIG]: down, and pressed in the last 10 s (its release may go to
+ * the TEMPO view, leaving the bit set) */
+int smp_tempo_held(void)
+{
+    u32 now = *(volatile u32 *)0x4058E8D4u;
+    return ((smp_held_lo >> 9) & 1u) && now - smp_tempo_at < 15000u;
+}
 
 int smp_knob_d __attribute__((section(".data"))) = 0;       /* v0.32: the last knob turn (fmt.c func_turn) */
 u32 smp_knob_at __attribute__((section(".data"))) = 0;
@@ -2040,6 +2050,8 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
         *h = down ? *h | bit : *h & ~bit;
         if (down && code >= 25 && code <= 40)   /* v0.33: when each [TRIG] went down */
             smp_trig_at[code - 25] = *(volatile u32 *)0x4058E8D4u;
+        if (down && code == 9)                  /* v0.30: and TEMPO (TEMPO + YES is stock's) */
+            smp_tempo_at = *(volatile u32 *)0x4058E8D4u;
     }
     /* v0.64 KEYBOARD HOLD: PTN held, a fresh KEYBOARD without FUNC turns it on or off (stock:
      * KEYBOARD's own toggle, taken before any view; dropped here), KB HOLD ON / OFF on the PTN
