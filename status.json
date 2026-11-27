@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-27T01:55:16+00:00",
- "note": "v0.28 STABLE: full gate in its last steps (63 passed, none failed). v0.29 MONO ready for its gate next; v0.30 (FLEX buffer waveforms) step runs pass.",
+ "updated": "2026-11-27T10:15:05+00:00",
+ "note": "v0.28 STABLE is released. v0.29 MONO: full gate running (no failures so far). v0.30 LEAN (UI and interrupt trims, FLEX buffer waveforms): step runs pass; its gate starts once v0.29 clears.",
  "gates": [
   {
-   "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 72,
+   "label": "v0.29 MONO \u00b7 full gate",
+   "done": 58,
    "total": 75,
-   "frac": 0.96,
-   "status": "CLEARED TO FLASH",
-   "state": "ok",
+   "frac": 0.773,
+   "status": "running: coupled_thres",
+   "state": "run",
    "last": [
-    "boot from reset: booted and drew its UI, no fault; the start-up animation's first frame, his",
-    "UI fuzz, two seeds, the audio interrupt at its real rate (ColdFire): 3/3 runs pass (the arp scenario an",
-    "sample link, dead link (ColdFire): dead (nothing gets through): the RAM check gives up after four secon",
-    "SHARC runner: stock: all steps PASS, incl. types 0-4 bit-identical to stock; stress: all steps PASS, in"
+    "the arp's offsets and the track's transpose in key: arpscale, degreetranspose (ColdFire): arp offsets m",
+    "microtuning: KB SETUP's TUNE, the TUNING page, the frame's retune (ColdFire): tn_retune tunes only tune",
+    "microtuning: each project's tuning record (ColdFire): each project's tuning: written after two seconds ",
+    "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire): the slice ed"
    ],
-   "log_written": "20:42"
+   "log_written": "05:14"
   }
  ]
 }
