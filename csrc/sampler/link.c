@@ -3060,12 +3060,34 @@ static int mod_scale(int k, int n)              /* a stock offset (+-127) -> +-n
  * stock apply adds on top is the modulation alone. */
 #define SMOOTH_STATE(b, s) ((volatile u32 *)(0x8000DE60u + 4u * (101u * (u32)(b) + 17u + (u32)(s))))
 
-static void snap_slots(void)
+/* RIFT v0.31 (oksami: features that "interrupt even when not enabled"): the frame's sample voices
+ * (types 8..13) and FLEX voices, found in one pass; the three passes below visit only those (no
+ * sample or FLEX voice: none of them runs a voice). VOICE_SOUND does not change within the ISR */
+static u32 smp_voices __attribute__((section(".data"))) = 0;
+static u32 flex_voices __attribute__((section(".data"))) = 0;
+static void voice_kinds(void)
 {
+    u32 s = 0, f = 0;
     for (u32 b = 0; b < 16; b++) {
         u8 *snd = VOICE_SOUND(b);
-        if (!snd || snd[SOUND_TYPE] < 8 || snd[SOUND_TYPE] > 13)
+        if (!snd)
             continue;
+        u32 ty = snd[SOUND_TYPE];
+        if (ty >= 8 && ty <= 13)
+            s |= 1u << b;
+        else if (ty == BOUNCE_TYPE)
+            f |= 1u << b;
+    }
+    smp_voices = s;
+    flex_voices = f;
+}
+
+static void snap_slots(void)
+{
+    for (u32 b = 0; smp_voices >> b; b++) {
+        if (!(smp_voices >> b & 1u))
+            continue;
+        u8 *snd = VOICE_SOUND(b);
         u16 s = *TARGET_CELL(b, SAMP_SLOT);
         *MIRROR_CELL(b, SAMP_SLOT) = s;
         *SMOOTH_STATE(b, SAMP_SLOT) = (u32)s << 16;
@@ -3079,6 +3101,7 @@ static void snap_slots(void)
 
 void smp_mod_apply(void *mirror)
 {
+    voice_kinds();
     snap_slots();
     MOD_APPLY(mirror);
     extern void rt_frame(void);
@@ -3086,10 +3109,10 @@ void smp_mod_apply(void *mirror)
     /* v0.49 FLEX: each FLEX voice hears its buffer (or OFF), with or without a pool directory.
      * v0.44..v0.48 did this after the return below, so with no pool image (a unit nothing was
      * sent to) a BOUNCE voice never got its buffer: SAMP 0, silence (emu_coupled_flex) */
-    for (u32 b = 0; b < 16; b++) {
-        u8 *snd = VOICE_SOUND(b);
-        if (!snd)
+    for (u32 b = 0; (smp_voices | flex_voices) >> b; b++) {
+        if (!((smp_voices | flex_voices) >> b & 1u))
             continue;
+        u8 *snd = VOICE_SOUND(b);
         if (snd[SOUND_TYPE] >= 8 && snd[SOUND_TYPE] <= 13) {
             /* v0.55: a sample machine on a FLEX buffer (its SAMP the buffer's code, the sound's
              * or a lock's) hears the buffer's playing half, or OFF while it is empty */
@@ -3123,12 +3146,10 @@ void smp_mod_apply(void *mirror)
      * for every modulated voice, up to 4,096 checks a frame with SAMP modulated on 16) */
     u8 loaded[POOL_SLOTS];
     int nl = -1;
-    for (u32 b = 0; b < 16; b++) {
+    for (u32 b = 0; smp_voices >> b; b++) {
+        if (!(smp_voices >> b & 1u))
+            continue;                           /* not a sample machine (RIFT v0.31: voice_kinds) */
         u8 *snd = VOICE_SOUND(b);
-        if (!snd)
-            continue;
-        if (snd[SOUND_TYPE] < 8 || snd[SOUND_TYPE] > 13)
-            continue;                           /* not a sample machine */
         u32 set = *TARGET_CELL(b, SAMP_SLOT) >> 8;   /* the sound's or the lock's: 0 OFF, k: slot k - 1 */
         if (set > POOL_SLOTS)
             continue;                           /* v0.55: a FLEX buffer (above) */

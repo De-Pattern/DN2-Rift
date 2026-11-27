@@ -808,6 +808,9 @@ u32 ms_playing_mask __attribute__((section(".data"))) = 0;   /* (the gate reads 
  * it); the playing itself is emu_coupled_flex --pool's, with a real take */
 u32 ms_play_force __attribute__((section(".data"))) = 0;
 
+static u32 ms_flex __attribute__((section(".data"))) = 0;     /* RIFT v0.31: the FLEX tracks, this frame */
+static u32 ms_low __attribute__((section(".data"))) = 0;      /* RIFT v0.31: voices whose gain is under 256 */
+
 static int ms_track_plays(u32 t)
 {
     volatile u16 *f = CTL_FRAME;
@@ -822,10 +825,19 @@ static u32 ms_mask_now(void)
     u32 m = 0, playing = 0;
     volatile u16 *f = CTL_FRAME;
     ms_gate = (ms_gate & ~(u32)f[FRAME_NOTE_OFF]) | f[FRAME_NOTE_ON];
-    if (!KIT_POINTER)
+    const u8 *kit = KIT_POINTER;
+    if (!kit)
         return 0;
-    for (u32 t = 0; t < 16; t++) {
-        if (!rt_is_bounce(t) || !fx_valid(t) || !fx_get(t, FX_MUTE))
+    /* RIFT v0.31 (oksami: features that "interrupt even when not enabled"): the FLEX tracks found
+     * in one pass over the kit's sound types (rt_is_bounce's test, inlined), the rest only for them */
+    u32 flex = 0;
+    const u8 *snd = kit + SOUND_BASE + SOUND_TYPE;
+    for (u32 t = 0; t < 16; t++, snd += SOUND_STRIDE)
+        if (*snd == BOUNCE_TYPE)
+            flex |= 1u << t;
+    ms_flex = flex;
+    for (u32 t = 0; flex >> t; t++) {
+        if (!(flex >> t & 1u) || !fx_valid(t) || !fx_get(t, FX_MUTE))
             continue;
         /* v0.55: no take in the track's buffer (its playing half), nothing to take over */
         if (!rt_buf_samp(rt_buf_of(t))) {
@@ -857,6 +869,12 @@ void ms_frame(void *dst, const void *src, u32 n)
     ms_frames++;
     u32 m = ms_mask_now();
     ms_mask = m;
+    /* RIFT v0.31: no FLEX track, nothing muted or fading back: nothing to do this frame (the voices'
+     * last tracks and the LEVELs FLEX's takes follow are read again from the frame a FLEX track
+     * comes in; a voice whose track is then new to it starts at its full gain, as before) */
+    if (!ms_flex && !m && !ms_low)
+        return;
+    u32 low = 0;
     for (u32 v = 0; v < 16; v++) {
         u32 t = VOICE_TRACK[v];
         u32 g = ms_gain[v];
@@ -873,11 +891,13 @@ void ms_frame(void *dst, const void *src, u32 n)
         ms_gain[v] = (u16)g;
         if (g >= 256u)
             continue;
+        low |= 1u << v;
         volatile u16 *f = CTL_FRAME;
         f[FRAME_LEVEL(v)] = (u16)((f[FRAME_LEVEL(v)] * g) >> 8);
         for (u32 s = 86; s <= 88; s++)
             f[FRAME_SLOT(v, s)] = (u16)((f[FRAME_SLOT(v, s)] * g) >> 8);
     }
+    ms_low = low;
 }
 
 int rt_q_waiting(void)                          /* a QREC take not started yet */
