@@ -706,7 +706,7 @@ def build() -> str:
                     "After power-on the plate needs a moment (about 12 ms) to clear its memory; it is silent meanwhile."))
     s.append("<h2 id=\"samples\">Sample machines</h2>")
     s.append(p(("ONESHOT, SMEAR (in WERP's place), STRETCH, REPITCH, GRID, SLICE and FLEX" if HAS_SMEAR else "ONESHOT, WERP, STRETCH, REPITCH, GRID, SLICE and FLEX") + ", from the Digitakt II, play samples from the project's sample list and the +Drive library (16,384 samples, in folders)."))
-    s.append(ul("<b>SAMP</b> picks a sample; turning past 127 reaches the eight FLEX buffers <b>B1..B8</b> (\"FLEX BUF n\" when one holds a take): any sample machine can play a FLEX take.",
+    s.append(ul("<b>SAMP</b> picks a sample; turning past 127 reaches the eight FLEX buffers <b>B1..B8</b> (\"FLEX BUF n\" when one holds a take; page 2 draws its waveform as it records, v0.30): any sample machine can play a FLEX take.",
                 "<b>EDIT SLICE POINTS</b> (SLICE, GRID): edits are heard 0.2 s after the knobs rest; the slice that plays is selected; ZOOM shows 128 frames of the sample itself; [FUNC] + START / END snaps to the nearest zero crossing.",
                 "<b>CREATE SLICE GRID:</b> [FUNC] + E jumps SLICES 2 / 4 / 8 / 16 / 32 / 64.",
                 "<b>GRID's ALLOCATE SLICE:</b> a lock per trig; [NO] keeps RANDOM's locks.",
@@ -753,6 +753,9 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.30", "LEAN", ["The firmware's own machinery does less while you play: the code RIFT adds to every audio frame runs only for the features in use (no FLEX track, no MUTE SRC work; no sample track, no sample modulation pass), and the UI's checks are cheaper. A burst of keys (live recording with many keys at once) is now handled before RIFT's own checks and redraws, as on stock (thanks oksami for the measurements).",
+                      "FLEX takes land on their step: a recorder trig's take was heard a sixth of a step late (41 ms at 60 BPM, 18 at 120). It now starts a tick after the step changes, as the sequencer's notes do (from DN2 mk2 v0.76; thanks Dubmaster, spknfx and NiKo).",
+                      "A FLEX buffer on a sample machine (SAMP B1..B8) shows its waveform on page 2, drawn as the take records, instead of its name."]),
     ("0.29", "MONO", ["SMEAR plays one voice a track: a new note fades the one before it out (in under a millisecond) and takes its place. Held or overlapping notes no longer pile up into the drop-outs and crackle of v0.25 to v0.28.",
                       "SMEAR's STRT and SIZE run 0.00 to 120.00, as ONESHOT's. SIZE went on to 127 before, and 121 to 127 read past the end of its table: odd loop lengths (thanks InductiveOne). A project saved with SIZE above 120 plays the whole loop.",
                       "DIGIDRUM: the DSP's time guard expects what each drum type really costs (BD, SD BASIC and PC about half of before). A kick beside SPALL and other busy tracks is left out far less (thanks InductiveOne).",
