@@ -1,21 +1,16 @@
 {
- "updated": "2026-11-27T18:29:12+00:00",
- "note": "v0.28 STABLE is released. v0.29 MONO: full gate running (no failures so far). v0.30 LEAN (UI and interrupt trims, FLEX buffer waveforms): step runs pass; its gate starts once v0.29 clears.",
+ "updated": "2026-11-27T23:48:30+00:00",
+ "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
-   "label": "v0.29 MONO \u00b7 full gate",
-   "done": 60,
+   "label": "v0.29 \u00b7 full gate (laptop)",
+   "done": 0,
    "total": 75,
-   "frac": 0.8,
-   "status": "running: coupled_flex",
+   "frac": 0.0,
+   "status": "running: setting up",
    "state": "run",
-   "last": [
-    "microtuning: each project's tuning record (ColdFire): each project's tuning: written after two seconds ",
-    "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire): the slice ed",
-    "THRES on both processors (coupled): 2/2 checks: on the ColdFire and the DSP together, a -34 dB tone on ",
-    "FLEX: a recorder trig's take played by a note, on both processors (coupled): on the ColdFire and the DS"
-   ],
-   "log_written": "13:27"
+   "last": [],
+   "log_written": "18:48"
   }
  ]
 }
