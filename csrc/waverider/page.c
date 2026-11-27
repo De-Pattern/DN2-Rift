@@ -411,15 +411,18 @@ extern void smp_boot(void);
 
 int wr_poll(void *screen)
 {
-    /* RIFT v0.31: keys first. A pass whose frame received a UI item (smp_ui_pop) does none of our polls
-     * and asks for no redraw, so the items queued behind it come out first; at most 8 frames in a row
-     * (a knob turned without a pause still lets the polls run 190 times a second) */
-    extern u32 smp_item_frame;
-    static u32 poll_frame __attribute__((section(".data"))) = 0;
-    u32 now = FRAMES_NOW;
-    if (smp_item_frame == (now | 1u) && (int)(now - poll_frame) < 8)
+    /* RIFT v0.30: keys first. A pass that received a key or a knob (smp_ui_pop) does none of our polls and
+     * asks for no redraw, so the items queued behind it come out first; at most 8 such passes in a row
+     * (a knob turned without a pause still lets the polls run) */
+    extern u32 smp_item_new;
+    static u32 skipped __attribute__((section(".data"))) = 0;
+    if (smp_item_new && skipped < 8) {
+        smp_item_new = 0;
+        skipped++;
         return IS_DIRTY(screen);
-    poll_frame = now;
+    }
+    smp_item_new = 0;
+    skipped = 0;
     extern void rec_poll(void);
     extern int rec_visible(void);
     extern void jmp_poll(void);
