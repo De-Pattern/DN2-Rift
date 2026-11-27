@@ -256,6 +256,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("flex", "FLEX: a recorder trig's take played by a note, on both processors (coupled)"),
        ("flexplay", "FLEX buffers played by a ONESHOT track, on both processors (coupled)"),
        ("flexlag", "FLEX: a take plays back on the step, the sequencer's own notes, on both processors (coupled)"),
+       ("keystream", "keys first: a steady stream of key presses starves no poll (ColdFire)"),
        ("mute", "FLEX MUTE SRC: the SRC track out of the mix, still recorded, on both processors (coupled)"),
        ("fineswap", "STRT/LEN/LOOP fine records swapped in and out (ColdFire)"),
        ("fineknob", "STRT's knob against stock's fine FREQ (ColdFire)"),
@@ -4174,6 +4175,26 @@ def main() -> int:
             later("flexlag", "FLEX: a take plays back on the step, the sequencer's own notes, on both processors (coupled)",
                   "FLEX: a take plays back on the step, the sequencer's own notes, on both processors (coupled)",
                   [fl_cmd, sorted(EMU_ENV.items())], fl_body)
+
+        # RIFT v0.30 LEAN, keys first (QA v0.29): 300 key items fed into the UI queue at a steady rate;
+        # every one is received, rec_poll and smp_er_poll keep running (at least once per 9 items:
+        # keys first skips them for at most 8 passes) and the ISR keeps its period (scripts/emu_keystream.py)
+        if "rec_poll" in lay:
+            ks_js = work / "keystream.json"
+            ks_cmd = [a.coupled_py, "-u", "scripts/emu_keystream.py", "--build", a.build, "--stock", a.stock,
+                      "--snapshot", snap, "--stream", "300", "--json", ks_js]
+
+            def ks_body(tdir):
+                rc, out = run("keystream", ks_cmd, logs, env=EMU_ENV, trace=tdir)
+                last = out.strip().splitlines()[-1] if out.strip() else ""
+                if rc != 0 or not last.startswith("PASS"):
+                    return False, out[-900:]
+                n = json.loads(ks_js.read_text()) if ks_js.exists() else {}
+                return True, (f"{n.get('sent')} key items sent, {n.get('recv')} received, {n.get('left')} left; "
+                              f"rec_poll ran {n.get('rec_poll')} times, smp_er_poll {n.get('er_poll')}; no halt")
+            later("keystream", "keys first: a steady stream of key presses starves no poll (ColdFire)",
+                  "keys first: a steady stream of key presses starves no poll (ColdFire)",
+                  [ks_cmd, sorted(EMU_ENV.items())], ks_body)
 
         # v0.52 FLEX MUTE SRC (owner, option B): knob H on REC SETUP turns it ON; a note on the SRC
         # track: its voices' frame LEVEL and FX sends 0 (the DSP's LEVEL too), the other voices' as
