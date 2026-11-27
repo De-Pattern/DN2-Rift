@@ -5274,7 +5274,7 @@ def _print_hist(hist_pc: dict, name: str) -> None:
     for pc, n in hist_pc.items():
         by[at.get(pc, "(not fascia.asm)")] = by.get(at.get(pc, "(not fascia.asm)"), 0) + n
     tot = sum(by.values())
-    print(f"    rprof {name} PC histogram (12 blocks, {tot} steps): " +
+    print(f"    rprof {name} PC histogram ({tot} steps): " +
           ", ".join(f"{k} {v}" for k, v in sorted(by.items(), key=lambda kv: -kv[1])[:40]), flush=True)
 
 
@@ -5410,13 +5410,16 @@ def step_rprof(init, sound, machines) -> dict:
             print(f"    rprof {name} no note parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(pi, ibase))}", flush=True)
             r = rows(lambda b: fb((0,) if b == 1 else ()), 40)
             if os.environ.get("RPROF_HIST"):          # RIFT v0.30: where the ringing block's instructions go
-                hist_pc = {}
-                fx.PCHIST = hist_pc
-                try:
-                    rows(lambda b: fb((0,) if b == 1 else ()), 12)
-                finally:
-                    fx.PCHIST = None
-                _print_hist(hist_pc, name)
+                hs = []
+                for nb_ in (30, 40):                     # blocks 30..39 (ringing): 40 blocks' less 30's
+                    hist_pc = {}
+                    fx.PCHIST = hist_pc
+                    try:
+                        rows(lambda b: fb((0,) if b == 1 else ()), nb_)
+                    finally:
+                        fx.PCHIST = None
+                    hs.append(hist_pc)
+                _print_hist({k: v - hs[0].get(k, 0) for k, v in hs[1].items()}, name + " blocks 30..39")
             print(f"    rprof {name} ringing (block 40) parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(parts[-1], ibase))}", flush=True)
             res[name] = {"idle": round(max(r_idle[:3]) - base) if r_idle else None,
                          "strike": round(r[1] - base) if r else None,
