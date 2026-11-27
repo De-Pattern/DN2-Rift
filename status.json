@@ -1,16 +1,21 @@
 {
- "updated": "2026-11-27T18:29:06+00:00",
- "note": "Gates are moving to the owner's laptop runner (they kept restarting in the cloud workspace). Its first run, a re-gate of the released v0.28 that must match byte for byte, is under way; from the next run this box shows the laptop's live progress. v0.29 MONO (60/75, no failures) and v0.30 LEAN gate there next.",
+ "updated": "2026-11-27T18:29:12+00:00",
+ "note": "v0.28 STABLE is released. v0.29 MONO: full gate running (no failures so far). v0.30 LEAN (UI and interrupt trims, FLEX buffer waveforms): step runs pass; its gate starts once v0.29 clears.",
  "gates": [
   {
-   "label": "v0.28 \u00b7 test gate (laptop)",
-   "done": 0,
+   "label": "v0.29 MONO \u00b7 full gate",
+   "done": 60,
    "total": 75,
-   "frac": 0.0,
-   "status": "running on the laptop: progress shown from the next run",
+   "frac": 0.8,
+   "status": "running: coupled_flex",
    "state": "run",
-   "last": [],
-   "log_written": "--"
+   "last": [
+    "microtuning: each project's tuning record (ColdFire): each project's tuning: written after two seconds ",
+    "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire): the slice ed",
+    "THRES on both processors (coupled): 2/2 checks: on the ColdFire and the DSP together, a -34 dB tone on ",
+    "FLEX: a recorder trig's take played by a note, on both processors (coupled): on the ColdFire and the DS"
+   ],
+   "log_written": "13:27"
   }
  ]
 }
