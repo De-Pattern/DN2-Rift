@@ -5405,6 +5405,17 @@ def step_rprof(init, sound, machines) -> dict:
             if only and name not in only:
                 continue
             r_idle = rows(lambda b: fb(()), 40)                      # the machine on slot 0, no note
+            if os.environ.get("RPROF_HIST"):          # RIFT v0.30: an idle slot's instructions, blocks 30..39
+                hs = []
+                for nb_ in (30, 40):
+                    hist_pc = {}
+                    fx.PCHIST = hist_pc
+                    try:
+                        rows(lambda b: fb(()), nb_)
+                    finally:
+                        fx.PCHIST = None
+                    hs.append(hist_pc)
+                _print_hist({k: v - hs[0].get(k, 0) for k, v in hs[1].items()}, name + " no note, blocks 30..39")
             print(f"    rprof {name} no note: first {[round(x - base) for x in r_idle[:3]]}, last {[round(x - idle[min(k, 59)]) for k, x in list(enumerate(r_idle))[-3:]]} (against the idle frame's same block)", flush=True)
             pi = parts[-1]
             print(f"    rprof {name} no note parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(pi, ibase))}", flush=True)
