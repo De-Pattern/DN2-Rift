@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-27T14:01:13+00:00",
+ "updated": "2026-11-27T14:04:16+00:00",
  "note": "v0.28 STABLE is released. v0.29 MONO: full gate running (no failures so far). v0.30 LEAN (UI and interrupt trims, FLEX buffer waveforms): step runs pass; its gate starts once v0.29 clears.",
  "gates": [
   {
