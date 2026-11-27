@@ -239,15 +239,30 @@ u32 smp_command(u32 cmd, u32 src, u32 chan, u32 thres, u32 dest_frames)
     return cmd_seq;
 }
 
-/* the DSP's status from the SPI reply's tail, if it checks out: 16 halves */
+/* the DSP's status from the SPI reply's tail, if it checks out: 16 halves. RIFT v0.31 (oksami: the
+ * UI's polls): the tail changes once a period (the audio ISR), so a second read in the same period
+ * gives the first's copy and verdict, unless the tail's own words moved (the first and last halves
+ * checked), without the sum again */
+extern volatile u32 smp_periods;
+static u16 st_last[16] __attribute__((section(".data")));
+static u32 st_at __attribute__((section(".data"))) = 0;
+static int st_ok __attribute__((section(".data"))) = 0;
 int smp_status(u16 *out)
 {
+    u32 now = smp_periods | 1u;
+    if (st_at == now && REPLY_TAIL[0] == st_last[0] && REPLY_TAIL[15] == st_last[15]) {
+        for (int k = 0; k < 16; k++)
+            out[k] = st_last[k];
+        return st_ok;
+    }
     u32 sum = LINK_SEED;
     for (int k = 0; k < 16; k++)
-        out[k] = REPLY_TAIL[k];
+        out[k] = st_last[k] = REPLY_TAIL[k];
     for (int k = 0; k < 15; k++)
         sum += out[k];
-    return (out[0] & 0xFF00u) == STATUS_MAGIC && (u16)sum == out[15];
+    st_ok = (out[0] & 0xFF00u) == STATUS_MAGIC && (u16)sum == out[15];
+    st_at = now;
+    return st_ok;
 }
 
 /* -- what is being sent to the DSP: a job of pool words, from a stage ------------------------ */
@@ -331,12 +346,12 @@ int smp_dsp_load(void)
     return (int)((smp_load_peak + 5u) / 10u);      /* percent */
 }
 
+static volatile u32 smp_skip_last __attribute__((section(".data"))) = 0;   /* RIFT v0.31: the newest of smp_skip_at */
 int smp_skipped_any(void)                       /* any voice, within the last half second */
 {
-    for (int t = 0; t < 16; t++)
-        if (smp_skipped(t))
-            return 1;
-    return 0;
+    /* RIFT v0.31 (oksami: the UI's polls): the newest skip's stamp, not sixteen: the same answer
+     * (a stamp is only ever set to periods | 1, so the newest is the one still inside the window) */
+    return smp_skip_last && (int)(periods - smp_skip_last) < 750;
 }
 
 /* track T's playhead as a fraction x POS_ONE, or -1: none (nothing playing, or no news from
@@ -500,7 +515,7 @@ void smp_tdm(u32 h)
         smp_pos_in(v + 1);
         for (int t = 0; t < 16; t++)            /* v0.30: the slots the DSP's guard skipped */
             if (v[17] >> t & 1u)
-                smp_skip_at[t] = periods | 1u;
+                smp_skip_at[t] = smp_skip_last = periods | 1u;
         if (v[18] <= 1000u && v[18] != 0) {     /* v0.32: the DSP's load (permille), its peak */
             if (v[18] >= smp_load_peak || periods - smp_load_at > 750u) {   /* over half a second */
                 smp_load_peak = v[18];

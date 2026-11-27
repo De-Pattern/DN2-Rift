@@ -33,15 +33,14 @@ def profile(build, snap, stock, periods, attribute, lay):
     from unicorn import UC_HOOK_CODE                            # noqa: PLC0415
     syms = sorted((v, k) for k, v in lay.items() if isinstance(v, int) and any(a <= v < b for a, b in OUR))
     addrs = [a for a, _ in syms]
-    by = {}
+    by, ui = {}, {}
     state = {"in": False}
     if attribute:
         def code(uc, addr, size, ud):
-            if not state["in"]:
-                return
             i = bisect.bisect_right(addrs, addr) - 1
             k = syms[i][1] if i >= 0 else "?"
-            by[k] = by.get(k, 0) + 1
+            d = by if state["in"] else ui
+            d[k] = d.get(k, 0) + 1
         for a, b in OUR:
             c.uc.hook_add(UC_HOOK_CODE, code, begin=a, end=b - 1)
     orig_call = c.call
@@ -55,21 +54,45 @@ def profile(build, snap, stock, periods, attribute, lay):
                 state["in"] = False
         return orig_call(fn, *args, **kw)
     c.call = call
+    P = c.panel.panelin
+    key = lambda code: divmod(code - 1, 8)                       # noqa: E731
+
+    def held(code, on, n=2):
+        c.machine.pc = (P.press if on else P.release)(c.machine.m, c.panel.profile, *key(code))
+        c.periods(n)
     out = {}
-    for phase in ("stopped", "playing"):
+    for phase in ("stopped", "playing", "liverec"):
         if phase == "playing":
-            c.press_play() if hasattr(c, "press_play") else None
+            held(20, True); held(20, False)                      # PLAY
+        if phase == "liverec":                                   # RECORD + PLAY... (REC held, PLAY: live)
+            held(21, True); held(21, False)                      # STOP
+            held(19, True); held(20, True); held(20, False); held(19, False)
         by.clear()
+        ui.clear()
         c.isr_units.clear()
-        for _ in range(periods):
+        n = 0
+        while n < periods:
+            if phase == "liverec" and n % 12 == 0:               # seven trig keys at once, then let go
+                for k in range(25, 32):
+                    c.machine.pc = P.press(c.machine.m, c.panel.profile, *key(k))
+                c.periods(3)
+                for k in range(25, 32):
+                    c.machine.pc = P.release(c.machine.m, c.panel.profile, *key(k))
+                n += 3
+                continue
             if not c.period():
                 break
+            n += 1
         u = list(c.isr_units)
         out[phase] = {"periods": len(u), "isr_median": statistics.median(u) if u else None,
                       "isr_max": max(u) if u else None,
                       "ours_by_function": {k: round(v / max(1, len(u))) for k, v in
                                            sorted(by.items(), key=lambda kv: -kv[1])[:30]},
-                      "ours_total": round(sum(by.values()) / max(1, len(u)))}
+                      "ours_total": round(sum(by.values()) / max(1, len(u))),
+                      "ui_ours_by_function": {k: round(v / max(1, len(u))) for k, v in
+                                              sorted(ui.items(), key=lambda kv: -kv[1])[:30]},
+                      "ui_ours_total": round(sum(ui.values()) / max(1, len(u))),
+                      "ui_units": getattr(c, "ui_units", None)}
     out["halt"] = c.halt
     return out
 
@@ -81,16 +104,20 @@ def main() -> int:
     p.add_argument("--snapshot", default=str(HERE.parent.parent / "digikit/out/snapshots/dn2-1.11/ui800M-v014.snap"))
     p.add_argument("--layout", default=str(HERE.parent / "src/dnfw/mods/waverider_code.json"))
     p.add_argument("--periods", type=int, default=120)
+    p.add_argument("--syms", default=None, help="every C symbol (WR_ALL_SYMS=FILE gen_waverider_code.py), statics too")
     p.add_argument("--json", default=None)
     a = p.parse_args()
     lay = json.loads(pathlib.Path(a.layout).read_text())["layout"]
+    if a.syms:
+        lay = {**lay, **json.loads(pathlib.Path(a.syms).read_text())}
     rep = {"stock": profile(a.stock, a.snapshot, a.stock, a.periods, False, lay),
            "build": profile(a.build, a.snapshot, a.stock, a.periods, True, lay)}
-    for k in ("stopped", "playing"):
+    for k in ("stopped", "playing", "liverec"):
         s, b = rep["stock"][k], rep["build"][k]
         print(f"{k}: ISR a period, stock median {s['isr_median']} max {s['isr_max']}; build median {b['isr_median']} "
               f"max {b['isr_max']}; our code {b['ours_total']} instructions a period", flush=True)
         print("   ours by function:", b["ours_by_function"], flush=True)
+        print(f"   UI side, our code {b['ui_ours_total']} a period:", b["ui_ours_by_function"], flush=True)
     if a.json:
         pathlib.Path(a.json).write_text(json.dumps(rep, indent=1))
     return 0

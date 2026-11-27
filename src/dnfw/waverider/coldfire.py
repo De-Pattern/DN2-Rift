@@ -689,6 +689,10 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
     cimage, csyms, cbss = compile_c(pages.c_header() + glass_pages.c_header() + SL.c_header(stock) + TU.c_header()
                                     + modversion.c_define(),
                                      base=pages.C_LOAD)
+    import os as _os
+    if _os.environ.get("WR_ALL_SYMS"):          # RIFT v0.31: every C symbol, statics too (emu_cf_profile's map)
+        import json as _json, pathlib as _pl
+        _pl.Path(_os.environ["WR_ALL_SYMS"]).write_text(_json.dumps(csyms, indent=0))
     if cbss:
         raise ComposeError(f"the page renderer has {cbss} bytes of BSS; nothing zeroes it")
     if len(cimage) > pages.C_SPAN:
