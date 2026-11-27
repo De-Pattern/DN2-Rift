@@ -447,14 +447,14 @@ def run_voice(L: Layout, read, t: int, mem=None):
 # (instructions + 0.95 x (4 L2 + 10 DDR)), measured in the runner (rcost holds it to this).
 # RIFT v0.27 (the owner, 2026-11-25: "contour is having a very hard time playing more than 1 voice"): the
 # guard expected CTR_PEAK on every block of every voice whose FDBK was up, whatever its note, so a second
-# CONTOUR voice with feedback seldom fitted beside the first. Now only on the block that triggers the voice
-# (the one block its last cost says nothing about), and by the steps its pitch will take: CTR_PEAK from half
+# CONTOUR voice with feedback seldom fitted beside the first. Now by the steps its pitch will take (v0.27 on the
+# trigger block only; v0.28, QA's B1: on every block with FDBK up): CTR_PEAK from half
 # a semitone under B4 (4 steps), CTR_MID from half a semitone under B3 (2 steps), the walk's floor below
 # (1 step, as a voice without feedback). On every other block the voice's own last cost x 1.25 speaks (a
 # bend or an LFO across B3 or B4 mid-note is under by one step's cost for one block: inside the limit's
 # P/8). The pitch here: the frame's note word and the TUNE record, never under the voice's own.
-CTR_PEAK = 110_000
-CTR_MID = 64_000
+CTR_PEAK = 88_000                      # v0.28: the runner's rcost/rprof worst at 4 steps, 82,541, and 6 % (was 110,000)
+CTR_MID = 48_000                       # v0.28: at 2 steps, 45,145 and 6 % (was 64,000)
 
 
 def guard_expect(t_word: int):
@@ -495,7 +495,11 @@ def guard_expect(t_word: int):
         p.ifz(4, "NE", lambda: pitch(p))
 
     def expect(p):
-        p.ifz(10, "NE", lambda: triggered(p))
+        # RIFT v0.28 (QA's review of v0.27, B1): on every block, not only the trigger block. FDBK turned up from 0
+        # during a high note (the knob, a p-lock, an LFO) took the voice from 1 step to 4 on a block expected at its
+        # 1-step cost; two such voices on one block overran the frame. The expectation stays by the pitch (v0.27),
+        # and a sounding 4-step voice's own last cost x 1.25 is above CTR_PEAK anyway, so it costs nothing there
+        triggered(p)
     return expect
 
 

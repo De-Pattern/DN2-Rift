@@ -187,7 +187,7 @@ TESTS = ["test/test_safety.py", "test/test_mods_list.py", "test/test_mods_platfo
          "test/test_ligature_program.py", "test/test_ligature_machines.py", "test/test_ligature_live.py",
          "test/test_mon.py", "test/test_tunings.py",
          # RIFT v0.20: the v0.17..v0.19 machines' programs (run mode = live.py) and GLASS's ColdFire side
-         "test/test_plateau_program.py", "test/test_glass_program.py", "test/test_glass_coldfire.py",
+         "test/test_plateau_program.py", "test/test_glass_program.py", "test/test_glass_coldfire.py", "test/test_rubber_pulled.py",
          "test/test_contour_program.py", "test/test_spall_program.py",
          "test/test_mverb_program.py"]                  # RIFT v0.21: the master reverb (run mode = live.py)                                # RIFT v0.14: MON on the RECORDER (the mod's v0.59)                  # RIFT: DIGIDRUM (run mode = live.py)
 HIT = re.compile(r"^\s+([0-9a-f]{8}):", re.M)
@@ -2896,8 +2896,13 @@ def main() -> int:
                             and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
                         "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
                         "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
-                        "the LFO list names each control (short)": shorts[:len(named)] == [FSg.LABELS[c] for c in FSg.CONTROLS],
-                        "... and long": longs == [FSg.LONG_NAMES[c] for c in FSg.CONTROLS],
+                        # RIFT v0.28 (franny): O1..O4 named by the drum type (TYPE at its default, BD MODERN)
+                        "the LFO list names each control (short), O1..O4 by TYPE": shorts[:len(named)] == [
+                            FSg.OWN[FSg.TYPES[FSg.OPT_DEFAULTS["TYPE"]]][int(c[1]) - 1] if c in ("O1", "O2", "O3", "O4") else FSg.LABELS[c]
+                            for c in FSg.CONTROLS],
+                        "... and long (the header's line while a knob turns)": longs == [
+                            FSg.OWN_LONG[FSg.OWN[FSg.TYPES[FSg.OPT_DEFAULTS["TYPE"]]][int(c[1]) - 1]] if c in ("O1", "O2", "O3", "O4")
+                            else FSg.LONG_NAMES[c] for c in FSg.CONTROLS],
                         "... and its unused records -": all(x == "-" for x in shorts[len(named):]),
                         "every control an LFO destination": len(masks) == nn and all((x != 0) == (c not in FSg.NO_LFO)
                                                                 for c, x in zip(FSg.CONTROLS, masks[:len(named)])),

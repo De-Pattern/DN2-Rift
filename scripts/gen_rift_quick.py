@@ -18,7 +18,7 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
-COVERS = "0.27"            # the release the guide describes (not VERSION: the tree may be ahead)
+COVERS = "0.28"            # the release the guide describes (not VERSION: the tree may be ahead)
 LOGO_REF = "v26"           # logos as this release draws them (SPALL's, MIDI's; CONTOUR's crosshair)
 TEAL = (111, 199, 180)
 
@@ -309,7 +309,7 @@ PAGES = [
     dict(id="flex", title="FLEX / LIVE RECORDING", tag="SAMPLING", logo="flex",
          sub="A direct guide to every recording decision, from source to saved sample.",
          panels=[("steps", [("CHOOSE FLEX", "Place FLEX on a track; BUF selects buffer B1-B8. Any sample machine can also play B1-B8."),
-                            ("OPEN REC", "[FUNC]+[VOICE] opens the FLEX recorder. LEFT / RIGHT: REC TRIGS / REC SETUP / REC BUS."),
+                            ("OPEN REC", "[FUNC]+[UNISON] (the key that opens VOICE SETUP) opens the FLEX recorder. LEFT / RIGHT: REC TRIGS / REC SETUP / REC BUS."),
                             ("SOURCE / SRC", "TRK1-16 = a track; IN = input; MAIN = mix; BUS = chosen tracks (pick them on REC BUS with the [TRIG] keys)."),
                             ("R.LEN", "Recorded take length in pattern steps; [FUNC]+turn moves 16 steps."),
                             ("TRIG / Q.REC", "On REC TRIGS: [TRIG] = one-shot, [FUNC]+[TRIG] = every pass, [PAGE] = next 16 steps. Or [YES] while playing: records at the next Q.REC boundary; [NO] cancels."),
@@ -322,11 +322,7 @@ PAGES = [
          first=("CPU SAVER", "Record a heavy track into B1 -> FLEX note trig on step 1 plays it -> MUTE SRC ON"), foot="RECORD / RESAMPLE"),
     dict(id="fx", title="EFFECTS / PERFORMANCE", tag="GLOBAL", logo=None,
          sub="The essential controls and shortcuts, with their audible result.",
-         panels=[("kv", "RUBBER FILTER (FLTR: RUBBER)", [("FREQ", "Cutoff (24 dB ladder, SH-101 style)"), ("RES", "Resonance -> self-oscillation at top"),
-                                                       ("DRIV", "TYPE's place: clean -> thick, rubbery drive"), ("ENV", "Envelope amount +/-; centre = none"),
-                                                       ("ATK / DEC", "Filter envelope attack and decay (SUS/REL blank)"),
-                                                       ("ABND / DBND", "Page 2 knobs: attack / decay curve, exp <- straight -> log"),
-                                                       ("KEY.T", "Tracks played note pitch")]),
+         panels=[
                  ("kv", "PLATE REVERB (FX: REVERB)", [("PRE", "Delay before tail (up to 0.3 s)"), ("DEC", "Small room -> long plate"),
                                                       ("FREQ", "Brightness shelf frequency"), ("GAIN", "Amount of treble surviving in tail"),
                                                       ("HPF / LPF", "Stock: filter the reverb"), ("MIX VOL", "Stock: reverb level")]),

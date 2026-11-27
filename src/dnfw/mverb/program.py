@@ -60,6 +60,11 @@ WORDS = tuple(sorted(set(re.findall(r'\bc\("([A-Za-z_0-9]+)"\)', _SRC))
 
 
 HOT = ("shA", "shB", "endA", "endB")
+# RIFT v0.28 (the owner, 2026-11-26: "can we try optimizing the reverb ... less heavy while retaining sound and
+# behavior"): the sample loop with its values in registers and the line addresses computed inline (MG.sample_fast),
+# the same operations in the same order: bit for bit live.Verb, as v0.21..v0.27's loop (MG.sample, kept: False
+# puts it back). The runner's rprof MVERB: 27,284 instructions and 43,263 cycles a block before.
+FAST = True
 
 
 class Layout:
@@ -197,7 +202,7 @@ class MG(PLP.PG):
         self.set(c("fq"), c("fw") * k(LV.INV_T))
         self.set(c("g_sh"), c("gw") * k(LV.INV_T))
         self.set(c("u"), k(1.0) - c("d"))
-        self.set(c("gdec"), mn(k(0.1) + k(0.88) * (k(1.0) - c("u") * c("u")), k(0.98)))
+        self.set(c("gdec"), mn(k(0.1) + k(LV.GDEC_SPAN) * (k(1.0) - c("u") * c("u")), k(LV.GDEC_MAX)))   # (v0.28: 0.87, 0.97)
         self.trunc_to("pred", c("p") * k(LV.PRED_K))
         self.set(c("gd2"), mn(mx(c("gdec") + k(0.15), k(0.25)), k(0.5)))
         self.set(c("c_sh"), PLP.onepole(k(500.0) * exp2f(c("fq") * k(5.25))))
@@ -218,7 +223,7 @@ class MG(PLP.PG):
         # the same values, no DDR access a sample)
         for n in HOT:
             self.set(c("h" + n), s(n))
-        p.loop(C["cnt0"], BLOCK, self.sample)
+        p.loop(C["cnt0"], BLOCK, self.sample_fast if FAST else self.sample)
         for n in HOT:
             self.set(s(n), c("h" + n))
         self.set(s("ph"), c("ph1"))
@@ -286,6 +291,155 @@ class MG(PLP.PG):
         p.ld(9, C["wi"])
         p.iconst(12, 1)
         p.iop(9, 9, "+", 12)
+        p.iconst(12, LV.WMASK)
+        p.iop(9, 9, "AND", 12)
+        p.st(C["wi"], 9)
+        self.bump("ip", 4)
+
+    # -- RIFT v0.28: the same sample, its values in registers -----------------------------------------------
+    # Floats in R0..R7, integers in R8..R15: R14 the write index (wi) for the whole sample; R9, R10, R12 the
+    # address's; I1 a line's word, I4 the input and output words. Every float operation is live.Verb's, in its
+    # order, on the same operands (the products' and sums' operand order only where IEEE gives the same bits).
+    def _at(self, line: str, d=None, ireg: int = 1) -> None:
+        """I<ireg> = line's word at (wi - d) & mask, as bytes: base + ((4 wi - 4 d) & (4 size - 1)) (R15 = 4 wi);
+        D None (d 0), an int, or ("r", n) (d in Rn). The mask in R13, the base in R12: repeated, their loads
+        are left out (Prog's known registers)"""
+        p = self.p
+        if d is None or (not isinstance(d, tuple) and d == 0):
+            p.iconst(13, 4 * LV.SIZE[line] - 1)
+            p.iop(9, 15, "AND", 13)
+        else:
+            if isinstance(d, tuple):
+                p.lsh(10, d[1], 2)
+            else:
+                p.iconst(10, 4 * d)
+            p.iop(9, 15, "-", 10)
+            p.iconst(13, 4 * LV.SIZE[line] - 1)
+            p.iop(9, 9, "AND", 13)
+        p.iconst(12, self.L.line(line))
+        p.iop(9, 9, "+", 12)
+        p.seti(ireg, 9)
+
+    def _ap_r(self, line: str, d: int, g: int) -> None:
+        """F0 = live.ap(line, F0, d, Fg): z (F1), v = x - g z (F3) written, z + g v. Clobbers F1, F3"""
+        p = self.p
+        self._at(line, d)
+        p.ldi(1, 0, 1)                          # z
+        p.fop(3, g, "*", 1)
+        p.fop(3, 0, "-", 3)                     # v = x - g z
+        self._at(line)
+        p.sti(0, 1, 3)
+        p.fop(3, g, "*", 3)
+        p.fop(0, 1, "+", 3)                     # z + g v
+
+    def _apf_r(self, line: str) -> None:
+        """F0 = live.apf(line, F0, F5, F7): di = trunc(d), fr = d - di, z = b0 + (b1 - b0) fr, as _ap_r.
+        Clobbers F1..F3, F6, R11"""
+        p = self.p
+        p.trunc(11, 5)                          # di
+        p.iconst(12, 0)
+        p.float_(6, 11, 12)
+        p.fop(6, 5, "-", 6)                     # fr = d - di
+        self._at(line, ("r", 11))
+        p.ldi(1, 0, 1)                          # b0
+        p.lsh(10, 11, 2)
+        p.iop(9, 15, "-", 10)
+        p.iconst(10, 4)
+        p.iop(9, 9, "-", 10)                    # 4 (wi - di - 1)
+        p.iconst(13, 4 * LV.SIZE[line] - 1)
+        p.iop(9, 9, "AND", 13)
+        p.iconst(12, self.L.line(line))
+        p.iop(9, 9, "+", 12)
+        p.seti(1, 9)
+        p.ldi(2, 0, 1)                          # b1
+        p.fop(2, 2, "-", 1)
+        p.fop(2, 2, "*", 6)
+        p.fop(1, 1, "+", 2)                     # z = b0 + (b1 - b0) fr
+        p.fop(3, 7, "*", 1)
+        p.fop(3, 0, "-", 3)                     # v = x - g z
+        self._at(line)
+        p.sti(0, 1, 3)
+        p.fop(3, 7, "*", 3)
+        p.fop(0, 1, "+", 3)                     # z + g v
+
+    def sample_fast(self) -> None:
+        p, C = self.p, self.L.C
+        p.ld(14, C["wi"])
+        p.lsh(15, 14, 2)                        # 4 wi: the lines' byte offsets
+        p.ld(12, C["ip"])
+        p.seti(4, 12)
+        p.ldi(0, 0, 4)                          # x
+        p.iconst(12, 0x7FFFFFFF)
+        p.iop(1, 0, "AND", 12)                  # |x|
+        p.fconst(2, float(LV.IN_MAX))
+        p.if_(1, "LT", 2, lambda: None, lambda: p.fconst(0, 0.0))
+        self._at("pre")
+        p.sti(0, 1, 0)                          # wr pre
+        p.ld(11, C["pred"])
+        p.ifz(11, "GT", lambda: (self._at("pre", ("r", 11)), p.ldi(0, 0, 1)))
+        for name, g in (("i0", LV.GI1), ("i1", LV.GI1), ("i2", LV.GI2), ("i3", LV.GI2)):
+            p.fconst(6, float(g))
+            self._ap_r(name, LV.LEN[name], 6)
+        p.ipass(4, 0)                           # x, kept for both sides (F4)
+        for side, other, sh, end, m in (("a", "hendB", "hshA", "na", "ma"), ("b", "hendA", "hshB", "nb", "mb")):
+            p.iconst(10, LV.LEN[side + "_ap"])
+            p.iconst(12, 0)
+            p.float_(5, 10, 12)
+            p.ld(1, C[m])
+            p.fop(5, 5, "+", 1)                 # dd = len + m
+            p.ld(1, C["gdec"])
+            p.ld(2, C[other])
+            p.fop(1, 1, "*", 2)
+            p.fop(0, 4, "+", 1)                 # x + gdec end
+            p.fconst(7, float(LV.GD1))
+            self._apf_r(side + "_ap")
+            self._at(side + "_d1")
+            p.sti(0, 1, 0)
+            self._at(side + "_d1", LV.LEN[side + "_d1"])
+            p.ldi(0, 0, 1)                      # t1
+            p.ld(1, C[sh])                      # the shelf: hs += c_sh (t1 - hs)
+            p.fop(2, 0, "-", 1)
+            p.ld(3, C["c_sh"])
+            p.fop(2, 3, "*", 2)
+            p.fop(1, 1, "+", 2)
+            p.st(C[sh], 1)
+            p.fop(2, 0, "-", 1)                 # t1 = (hs + g_sh (t1 - hs)) gdec
+            p.ld(3, C["g_sh"])
+            p.fop(2, 3, "*", 2)
+            p.fop(2, 1, "+", 2)
+            p.ld(3, C["gdec"])
+            p.fop(0, 2, "*", 3)
+            p.ld(6, C["gd2"])
+            self._ap_r(side + "_ap2", LV.LEN[side + "_ap2"], 6)
+            self._at(side + "_d2")
+            p.sti(0, 1, 0)
+            self._at(side + "_d2", LV.LEN[side + "_d2"])
+            p.ldi(0, 0, 1)
+            p.st(C[end], 0)
+        p.ld(0, C["na"])
+        p.st(C["hendA"], 0)
+        p.ld(0, C["nb"])
+        p.st(C["hendB"], 0)
+        p.fconst(3, float(LV.OUT_K))
+        for j, ptr in ((0, "op_l"), (1, "op_r")):
+            p.fconst(2, 0.0)
+            for kk in range(7 * j, 7 * j + 7):
+                line, _t, sg = LV.TAPS[kk]
+                self._at(line, LV.TAPK[kk])
+                p.ldi(1, 0, 1)
+                p.fop(2, 2, "+" if sg > 0 else "-", 1)
+            p.fop(2, 2, "*", 3)
+            p.ld(12, C[ptr])
+            p.seti(4, 12)
+            p.sti(0, 4, 2)
+            self.bump(ptr, 4)
+        for m in ("ma", "mb"):
+            p.ld(0, C[m])
+            p.ld(1, C["d" + m])
+            p.fop(0, 0, "+", 1)
+            p.st(C[m], 0)
+        p.iconst(12, 1)
+        p.iop(9, 14, "+", 12)
         p.iconst(12, LV.WMASK)
         p.iop(9, 9, "AND", 12)
         p.st(C["wi"], 9)

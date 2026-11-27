@@ -934,6 +934,37 @@ static u8 ln_old[8] __attribute__((section(".data")));
 static u32 ln_at[8] __attribute__((section(".data")));
 static int ln_kind __attribute__((section(".data"))) = -1;
 static int ln_page __attribute__((section(".data"))) = -1;
+/* RIFT v0.28 (franny: "a lot of param animations are laggy, especially the reel window type params"): a
+ * choice's word scrolls in over 180 frames (120 ms), but nothing asked for a redraw while it moved: it
+ * advanced only when stock redrew the page (a value change, or idle about every 0.4 s), a step or two
+ * at most. While the last screen drawn was this page and a word was still moving, smp_wants_redraw asks
+ * for the next (wr_poll: 37 a second at most) */
+extern u32 wr_draws;
+static int ln_anim __attribute__((section(".data"))) = 0;
+static u32 ln_draw_n __attribute__((section(".data"))) = 0xFFFFFFFFu;
+
+/* RIFT v0.28 (franny's laggy pages): a rectangle cleared as SET_PIXEL(c, x, y, 0) on each of its pixels did, a
+ * column's word at a time in invert()'s layout (bit 31 - (y & 31) of word y >> 5 of the column), clipped to
+ * the canvas. The LINE pages' body alone was 6,642 calls of the stock's SET_PIXEL every draw */
+__attribute__((noipa)) static void rclear(void *c, int x0, int y0, int x1, int y1)
+{
+    const int *cv = (const int *)c;
+    u32 *bits = (u32 *)cv[4];
+    int stride = cv[3];
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 > cv[1] - 1) x1 = cv[1] - 1;
+    if (y1 > cv[2] - 1) y1 = cv[2] - 1;
+    if (x0 > x1 || y0 > y1)
+        return;
+    for (int w = y0 >> 5; w <= y1 >> 5; w++) {
+        int a = w == y0 >> 5 ? y0 & 31 : 0, b = w == y1 >> 5 ? y1 & 31 : 31;
+        u32 m = (0xFFFFFFFFu >> a) & ~(b == 31 ? 0u : 0xFFFFFFFFu >> (b + 1));
+        u32 *q = bits + x0 * stride + w;
+        for (int x = x0; x <= x1; x++, q += stride)
+            *q &= ~m;
+    }
+}
 
 static void lig_page1(void *view, void *c);
 extern u32 lig_word(int k, int j);
@@ -998,9 +1029,9 @@ static void fsc_page_body(void *view, void *c, int page, int kind)
     ln_kind = kind;
     ln_page = page;
     u32 now = FRAMES_NOW;
-    for (int x = 0; x < 123; x++)               /* the page is ours below the header (the page dots stay): nothing of the grid's under it */
-        for (int y = 0; y <= 53; y++)
-            SET_PIXEL(c, x, y, 0);
+    ln_anim = 0;
+    ln_draw_n = wr_draws;
+    rclear(c, 0, 0, 122, 53);                   /* the page is ours below the header (the page dots stay): nothing of the grid's under it */
     for (int i = 0; i < 8; i++) {
         int j = 8 * page + i;
         if (j >= M->n)
@@ -1042,6 +1073,7 @@ static void fsc_page_body(void *view, void *c, int page, int kind)
             u32 el = now - ln_at[i];
             int f = el < 180u ? (int)(el * 10u / 180u) : 10;
             if (f < 10) {
+                ln_anim = 1;                    /* RIFT v0.28: still moving: the next screen is asked for */
                 const char *ow = M->choice_box[M->choice_at[j] + ln_old[i]];
                 stext(c, cx - TW(slen(ow, 4)) / 2, r + 5 - f, ow, 4, 1, r + 2, r + 12);
                 stext(c, cx - TW(slen(w, 4)) / 2, r + 15 - f, w, 4, 1, r + 2, r + 12);
@@ -1148,7 +1180,6 @@ static int ph_was __attribute__((section(".data"))) = -1;         /* the playhea
  * the column the playhead falls in differs from the one drawn (nothing else on the page is
  * drawn from the position: the playhead, SLICE / GRID's playing-slice bar), 37 a second at
  * most; a still playhead asks for none */
-extern u32 wr_draws;
 static u32 ph_draw_n __attribute__((section(".data"))) = 0xFFFFFFFFu;   /* wr_draws when last drawn */
 static int ph_x0 __attribute__((section(".data"))) = 0, ph_w __attribute__((section(".data"))) = 2;
 static int ph_col __attribute__((section(".data"))) = -1;        /* the column drawn (-1 none) */
@@ -1162,6 +1193,8 @@ static int ph_column(int ph)                    /* the playhead's column, or -1 
  * slice it lights) would be drawn elsewhere now */
 int smp_wants_redraw(void)
 {
+    if (ln_anim && ln_draw_n == wr_draws)       /* RIFT v0.28: a choice's word still scrolling in */
+        return 1;
     if (ph_draw_n != wr_draws)                  /* the last screen drawn was not the page */
         return 0;
     return ph_column(smp_playhead(UI_TRACK)) != ph_col;
@@ -3467,9 +3500,7 @@ static void lig_grid(void *c, int k, int sel)
 
 static void lig_clear(void *c)
 {
-    for (int x = 0; x < 123; x++)
-        for (int y = 0; y <= 53; y++)
-            SET_PIXEL(c, x, y, 0);
+    rclear(c, 0, 0, 122, 53);                   /* RIFT v0.28: as the LINE pages */
 }
 
 /* a strip cell: knob Q's place (0..7), NAME inverted, then TEXT */

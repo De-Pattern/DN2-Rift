@@ -194,8 +194,19 @@ def _track(p: Prog, S: SLayout) -> None:
             p.iop(9, 9, "MIN", 10)
             p.lsh(10, 9, -1)
             p.iop(9, 10, "+", 9)                # x 1.5
-            p.iconst(10, G.FLOOR)
-            p.iop(9, 9, "MAX", 10)
+            # RIFT v0.28 (franny: "Smear also seems to drop out pretty easily"): at least SMR_FLOOR only on the
+            # block that triggers the track (the frame's trigger word, bit 16 + t), G.IDLE_FLOOR on any other;
+            # v0.16..v0.27 asked 60,000 of every block (a SMEAR voice costs 21,000 (PLAY) to 70,000 (GRN, dense), rprof, rcost)
+            from ..perc import program as PPg
+            p.ld(10, PPg.TRIG_WORD)
+            p.lsh(10, 10, -16)
+            p.ld(11, S.T)
+            p.iconst(12, 1)
+            p.e("R12 = LSHIFT R12 BY R11;")
+            p.iop(10, 10, "AND", 12)
+            p.iconst(11, G.IDLE_FLOOR)
+            p.ifz(10, "NE", lambda: p.iconst(11, SMR_FLOOR))
+            p.iop(9, 9, "MAX", 11)
             # RIFT v0.18 (the owner's unit: a VOC note, a burst, then silence until a reboot): a voice
             # holding a VOC lane is expected to cost VOC's measured peak, whatever its last block
             # cost. Its light blocks (the hop's other jobs) no longer hide the heavy ones, so a VOC
@@ -231,6 +242,14 @@ def _track(p: Prog, S: SLayout) -> None:
             p.iconst(9, 1)
             p.iop(8, 8, "+", 9)
             p.st(G.SKIPS, 8)
+            # RIFT (the owner on v0.27: SMEAR cuts out, no CPU on its page): the slot flagged for the
+            # pages' CPU marker, as guard.skipped() does for every other machine
+            p.ld(9, S.T)
+            p.iconst(10, 1)
+            _shl_by(p, 10, 9)
+            p.ld(8, G.SKIPMASK)
+            p.iop(8, 8, "OR", 10)
+            p.st(G.SKIPMASK, 8)
             _zero_out(p, V)
             p.place(done)
         p.ifz(0, "GT", play, lambda: _zero_out(p, V))
@@ -266,6 +285,7 @@ def _track(p: Prog, S: SLayout) -> None:
 
 # RIFT v0.18: a VOC lane's worst block on the unit, cycles: instructions + 0.95 x (4 L2 + 10 DDR)
 # accesses, measured in the runner over a hop (scripts/sharc_waverider_m5.py step smrcost holds it)
+SMR_FLOOR = 74_000                 # RIFT v0.28: a SMEAR voice's least cost on its trigger block: GRN at DENS and OVLP 127, 70,438 (rcost), and 5 % (QA's review, C3)
 VOC_PEAK = 270_000
 
 

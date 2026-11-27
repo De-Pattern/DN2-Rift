@@ -1042,6 +1042,11 @@ def compose(stock: bytes, assemble, compile_c) -> dict:
     # (dnfw.glass.coldfire: the FLTR list's 'Glass', the filter names, the LOAD bound, slot_to_id,
     # the descriptor, the curve, in PING's former chunk at 0x4670f000)
     from ..glass import coldfire as glass_cf
+    if not glass_cf.ON:                                # RIFT v0.28: RUBBER pulled: the stock FLTR list and LOAD
+        return {"content": bytes(content), "edits": edits, "layout": layout,
+                "chunk": {"load": pages.LOAD, "code": chunk},
+                "c_chunk": {"load": pages.C_LOAD, "code": cimage},
+                "machines_chunk": {"load": MCHUNK, "code": bytes(mchunk)}}
     gbuilt = glass_cf.compose(content, edit, assemble)
     clash = sorted(set(gbuilt["layout"]) & set(layout))
     if clash:                                          # v0.18: a chunk label may not hide a C symbol

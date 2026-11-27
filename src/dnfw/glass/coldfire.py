@@ -46,6 +46,11 @@ from __future__ import annotations
 import struct
 
 BASE = 0x40000400
+# RIFT v0.28 (the owner, 2026-11-26, after franny's and InductiveOne's reports: RUBBER made voices go quiet
+# after a few notes, crackled on FM Tone, dropped out in an empty project): RUBBER is pulled. False leaves
+# its ColdFire chunk out (the FLTR list, names and LOAD bound stock's: a saved filter 6 loads as Multi-Mode)
+# and its pass out of the DSP (dnfw.fascia.program). True puts it back as v0.24..v0.27 had it.
+ON = False
 NEW_FILTER = 6                          # GLASS
 NEW_FILTERS = (6,)                      # GLASS (7 and 8 load as Multi-Mode, as on stock)
 CLONE = 0                               # Multi-Mode

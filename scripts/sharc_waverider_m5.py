@@ -413,7 +413,8 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                             "steps": p_.steps, "nw": nw, "type": ty}
             # RIFT v0.18: GLASS on every slot whose filter is 6, after the walk (its own pass): each such
             # slot's buffer, record and frame as GLASS reads them, kept for live; the walk's models re-read
-            gl = [t for t in range(16) if frame_word(st, FR.header_offset(FR.FILTER, t)) == 6]
+            from dnfw.glass import coldfire as _GLC       # noqa: PLC0415  (RIFT v0.28: RUBBER pulled: no pass)
+            gl = [t for t in range(16) if frame_word(st, FR.header_offset(FR.FILTER, t)) == 6] if _GLC.ON else []
             if gl:
                 tap["glass_in"] = {t: {"x": [mem.get((m2.word(st, PP.BUFFERS + 4 * t) or 0) + 4 * k) for k in range(BLOCK)],
                                        "rec": {o: mem.get(V.track_record(t) + o) for o in GLP.LV.FIELDS},
@@ -692,7 +693,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,spall,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,gstress,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,spall,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -827,6 +828,8 @@ def main(argv=None):
                                 lambda: step_fsilence(warm(), sound, machines)),
                                ("fstress", "sixteen FASCIA voices, the clock made to move (v0.45)",
                                 lambda: step_fstress(warm(), sound, machines)),
+                               ("gstress", "sixteen sample voices retriggered together over ringing notes, the clock made to move (RIFT v0.29)",
+                                lambda: step_gstress(warm(), sound, machines)),
                                ("fkeep", "a held chord kept under a melody, the clock made to move (v0.11)",
                                 lambda: step_fkeep(warm(), sound, machines)),
                                ("fcost", "a FASCIA voice's cost, each audition patch (v0.45)",
@@ -3016,14 +3019,16 @@ def step_flexlevel(init, sound, machines) -> dict:
         return 2 | 0x8000 | level << 8
     l100, l20, l127, rec20 = run(low, lv(100)), run(low, lv(20)), run(low, lv(127)), run(0, lv(20))
 
-    def ratio_ok(a, b, k, least=200):
+    def ratio_ok(a, b, k):
         """b's unclipped frames are a's x k within 1 % (at least 200 of them, a's at 0.01 or more:
-        an int16 frame's step, 1 / 32768, is 0.3 % of that)"""
+        an int16 frame's step, 1 / 32768, is 0.3 % of that). DN2 mk2 v0.75 (dac720c), RIFT v0.28 (QA's review of
+        v0.27, C1: v0.27 asked 40 pairs here): plus two int16 steps, for a k well under 1 (b's frames then sit a
+        few steps from zero, where one step is many %), and 200 pairs again"""
         if a is None or b is None:
             return False
-        pairs = [(x, y) for x, y in zip(a["take"], b["take"])       # (v0.75: and b's at 0.01 or more)
-                 if abs(y) < 0.99 and abs(x) >= max(0.01, 0.01 / k)]
-        return len(pairs) >= least and all(abs(y / x - k) <= 0.01 * k for x, y in pairs)
+        pairs = [(x, y) for x, y in zip(a["take"], b["take"]) if abs(y) < 0.99 and abs(x) >= 0.01]
+        return len(pairs) >= 200 and all(abs(y - k * x) <= 0.01 * k * abs(x) + 2.0 / 32768
+                                         for x, y in pairs)
     checks = {
         "v0.50: a FLEX take of a track at v0.50's unity (GAIN -24 since v0.63) reaches its track's chain "
         "at its source's level: the take's render against the source's, within 0.5 dB (RMS)":
@@ -3045,9 +3050,7 @@ def step_flexlevel(init, sound, machines) -> dict:
         "v0.75: the source track at LEVEL 100 records the take as before, frame for frame (within 1 %)":
             ratio_ok(unity, l100, 1.0),
         "v0.75: at LEVEL 20, x (20/100)^2 = 0.04 frame for frame; at 127, x (127/100)^2 = 1.613":
-            # (RIFT: TRK_HW_DB is 6, so this take peaks at 0.86 and only 45 of its frames are 0.25 or more, the
-            # least LEVEL 20's int16 frames can be held to 1 % on; DN2 mk2's take has over 200. At least 40 here)
-            ratio_ok(l100, l20, 0.04, least=40) and ratio_ok(l100, l127, (127 / 100) ** 2),
+            ratio_ok(l100, l20, 0.04) and ratio_ok(l100, l127, (127 / 100) ** 2),
         "v0.75: the RECORDER's command (no GAIN) ignores the LEVEL bits: the same take as without them":
             rec20 is not None and recorder is not None and rec20["take"] == recorder["take"],
         "v0.75 negative control: LEVEL 20's take is not LEVEL 100's":
@@ -5072,7 +5075,26 @@ def step_glass(init, sound, machines) -> dict:
     """RIFT v0.18: GLASS's assembled code against live.Voice, bit for bit, on what it read: two WaveTone
     tracks (stock voices) and a FASCIA track on filter 6, each its own settings (RES high, the morph, ENV
     with bends, LPG); the walk's model of every FASCIA slot still exact; a track on Multi-Mode beside them
-    untouched by GLASS; a negative control (FREQ + 1/128 in live)."""
+    untouched by GLASS; a negative control (FREQ + 1/128 in live).
+    RIFT v0.28 (RUBBER pulled, glass.coldfire.ON False): filter 6 is the stock's (its unpack: no filter): no
+    GLASS code in fascia.asm, and the same frames (WaveTone and FASCIA on filter 6) play: every block returns,
+    every buffer finite, the FASCIA slot bit-exact to its model."""
+    from dnfw.glass import coldfire as _GLC      # noqa: PLC0415
+    if not _GLC.ON:
+        fp = fsc_audition()["01_tubular_bell"][0]
+        s0 = {67: 0x5800, 68: 0x7400, 66: 0x0000}
+        s3 = {67: 0x6000, 68: 0x5000, 66: 0x3F80, 70: 0x7F00, 72: 0x4000}
+        rr = run_blocks(init, lambda b: glass_frame(sound, machines, {1: s0, 2: s0}, {3: (fp, 60, 1.0, s3)},
+                                                    trig=(1, 2, 3) if b in (1, 12) else ()), 16)
+        ex = fsc_exact(rr)
+        asm = (ROOT / "csrc/waverider/sharc/fascia.asm").read_text()
+        fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+        heard = rr["ok"] and any(3 in b_ and V.peak(b_[3]["out"]) > 1e-4 for b_ in rr["fsc"])   # (FASCIA's output, at its walk's end)
+        checks = {"v0.28: RUBBER pulled: no GLASS routine in fascia.asm": "wr_fs_rt_g_slot" not in asm,
+                  "v0.28: tracks with filter 6 in the frame: every block returns, every buffer finite": fin,
+                  "v0.28: a FASCIA track on filter 6 sounds, bit-exact to its model": heard and ex[1:] == (0, 0)}
+        print(f"    glass (pulled): {checks} walk_model={ex}", flush=True)
+        return {"ok": all(checks.values()), "checks": checks, "numbers": {"walk_model": ex}}
     res = {}
     fp = fsc_audition()["01_tubular_bell"][0]
     s0 = {67: 0x5800, 68: 0x7400, 66: 0x0000}                          # LP, RES high
@@ -5213,8 +5235,9 @@ def step_rcost(init, sound, machines) -> dict:
     finally:
         undo()
     voc = out["SMEAR VOC (BLND 0)"]["worst_delta"] or 1e12
+    from dnfw.glass import coldfire as _GLC      # noqa: PLC0415  (RIFT v0.28: RUBBER pulled: filter 6 is the stock's)
     g15, m15 = out["15 WaveTone tracks on GLASS (RES high, ENV, LPG)"]["worst_delta"], out["15 WaveTone tracks, Multi-Mode"]["worst_delta"]
-    glass_slot = (g15 - m15) / 15 if g15 is not None and m15 is not None else 1e12
+    glass_slot = ((g15 - m15) / 15 if g15 is not None and m15 is not None else 1e12) if _GLC.ON else 0.0
     print(f"    rcost GLASS a slot: {glass_slot:,.0f}", flush=True)
     checks = {"an idle frame measured": base > 0,
               f"SMEAR's VOC worst block within the guard's VOC_PEAK ({SMS.VOC_PEAK:,})": voc <= SMS.VOC_PEAK,
@@ -5271,11 +5294,72 @@ def step_rprof(init, sound, machines) -> dict:
             "DIGIDRUM": lambda tr: dd_frame(sound, machines, {0: (DB.panel_knobs(), 55.0)}, trig=tr),
             "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
             "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
+            "ONESHOT": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["ONESHOT"], overrides=smp_words(),
+                                             trigger=bool(tr)).to_bytes(),
+            "GRID": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["GRID"], overrides=smp_words({SM.SAMP_REC: 4}),
+                                          trigger=bool(tr)).to_bytes(),
+            "STRETCH": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["STRETCH"], overrides=smp_words(), trigger=bool(tr)).to_bytes(),
+            "REPITCH": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["REPITCH"], overrides=smp_words(), trigger=bool(tr)).to_bytes(),
+            "SLICE": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["SLICE"], overrides=smp_words({SM.SAMP_REC: 4}), trigger=bool(tr)).to_bytes(),
+            "CONTOUR4 FDBK up mid-note": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy() if not tr else {**_ctr_heavy(), "FDBK": 0}, 84.0)}, trig=tr),
+            "SMEAR PLAY": lambda tr: smr_frame(sound, machines, {0: dict(BLND=64)}, trig=tr),
+            "SMEAR VOC": lambda tr: smr_frame(sound, machines, {0: dict(BLND=0)}, trig=tr),
+            "SMEAR GRN": lambda tr: smr_frame(sound, machines, {0: dict(BLND=127, DENS=127, OVLP=127)}, trig=tr),
             "CONTOUR2": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 66.0)}, trig=tr),    # FDBK up, 2 steps
             "CONTOUR4": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 84.0)}, trig=tr),    # 4 steps
         }
         ibase = parts[-1]
         print(f"    rprof idle frame parts (instructions, L2, DDR): {ibase}", flush=True)
+        if only and "STAGES" in only:                                   # RIFT v0.28: our stages' own cost, a block
+            marks = {}
+            names = (("perc", dsp.PERC_SW), ("smp", dsp.SMP_SW), ("smear", dsp.SMEAR_SW), ("walk", dsp.FSC_SW),
+                     ("tail", dsp.PING_SW), ("mverb", dsp.MVERB_SW))
+
+            def mk(nm):
+                def f(r):
+                    marks[nm] = (getattr(r, "steps_n", 0), counts["L2"], counts["DDR"])
+                return f
+            scen = {"idle (FM Tone on 16)": lambda b: fsc_frame(sound, machines, {}, trig=()),
+                    "16 idle FASCIA": lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(16)}, trig=()),
+                    "16 ONESHOT no note": lambda b: base_frame(sound, machines, t0=SM.TYPE_OF["ONESHOT"], overrides=smp_words(),
+                                                               others={t: SM.TYPE_OF["ONESHOT"] for t in range(1, 16)}, trigger=False).to_bytes()}
+            for sn, fb_ in scen.items():
+                st_ = init
+                for b in range(4):
+                    marks.clear()
+                    for k_ in ("L1", "L2", "DDR"):
+                        counts[k_] = 0
+                    counts["on"] = True
+                    rr_ = run_blocks(st_, fb_, 1, extra_hooks={a_: mk(n_) for n_, a_ in names})
+                    counts["on"] = False
+                    st_ = rr_["state"]
+                order = sorted(marks.items(), key=lambda kv: kv[1][0])
+                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0]) for i in range(len(order) - 1)]
+                print(f"    rprof STAGES {sn}: entries {[(n_, v_[0]) for n_, v_ in order]}; from each to the next (steps) {seg}; "
+                      f"block total {rr_.get('instructions')}", flush=True)
+        if only and "MVERB" in only:                                    # RIFT v0.28: the master reverb's own cost
+            from dnfw.mverb import program as MVP_       # noqa: PLC0415
+            mark = {}
+
+            def at_in(r):
+                mark["in"] = (getattr(r, "steps_n", 0), counts["L2"], counts["DDR"])
+
+            def at_out(r):
+                a_ = mark.get("in")
+                if a_:
+                    mark.setdefault("d", []).append((getattr(r, "steps_n", 0) - a_[0], counts["L2"] - a_[1], counts["DDR"] - a_[2]))
+            st_ = init
+            for b in range(40):
+                for k_ in ("L1", "L2", "DDR"):
+                    counts[k_] = 0
+                counts["on"] = True
+                rr_ = run_blocks(st_, lambda _b: mv_frame(sound, machines, (0x2000, 0x6000, 0x4000, 0x4000)), 1,
+                                 extra_hooks={dsp.MVERB_SW: at_in, MVP_.RESUME_SW: at_out})
+                counts["on"] = False
+                st_ = rr_["state"]
+            d_ = mark.get("d", [])
+            print(f"    rprof MVERB a block (steps, L2, DDR), last 3 of {len(d_)}: {d_[-3:]}; rcost "
+                  f"{[round(x + 0.95 * (4 * y + 10 * z)) for x, y, z in d_[-3:]]}", flush=True)
         if only and "IDLES" in only:                                    # idle FASCIA slots, by how many
             for n in ():
                 rows(lambda b: fsc_frame(sound, machines, {t: (fp, 60, 1.0) for t in range(n)}, trig=()), 16)
@@ -5725,6 +5809,64 @@ def step_fkeep(init, sound, machines, K: float = 1.0) -> dict:
         "the two held notes sound to the end (REUSE re-strikes)": out["reuse"]["held_to_the_end"],
         "the newest note heard in most blocks": all(o["newest_heard"] >= 0.8 for o in out.values()),
         "every buffer finite": all(o["finite"] for o in out.values()),
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+def step_gstress(init, sound, machines) -> dict:
+    """RIFT v0.29 (QA's reviews of v0.27 and v0.28, C1 / C2 / addendum B1: the guard's floors had no case that fails
+    if they are wrong): sixteen ONESHOT tracks, all struck together every fourth block while the last notes still
+    ring (a retrigger renders twice: the old note's fade, then the new), the clock made to move as fstress's (every
+    read of EMUCLK gets the block's start plus K x the instructions so far). Every block returns, our voices done by
+    0.8 of the frame (the limit holds with the new floors), every buffer finite, most tracks heard between the
+    downbeats"""
+    from dnfw.perc import guard as G
+    K, P = 3, 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia")) | set(_after_emuclk("smear"))
+    ONE = SM.TYPE_OF["ONESHOT"]
+    b_now = {"b": 0}
+
+    def clock(r):
+        base = (b_now["b"] + 1) * P
+        r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const((base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+    def at_perc(r):
+        base = (b_now["b"] + 1) * P
+        m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+        m2.poke(r.state, G.MARK, (base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+    hooks = {dsp.PERC_SW: at_perc}
+    hooks.update({s_: clock for s_ in sites})
+    nb = 18
+
+    def fb(b):
+        b_now["b"] = b
+        f = base_frame(sound, machines, t0=ONE, overrides=smp_words(), others={t: ONE for t in range(1, 16)},
+                       trigger=b % 4 == 1, trigger_others=True)
+        for t in range(1, 16):
+            for slot, w in smp_words().items():
+                f.param(t, slot, w)
+        return f.to_bytes()
+    rr = run_blocks(init, fb, nb, extra_hooks=hooks)
+    st = rr.get("state")
+    skips = m2.word(st.state, G.SKIPS) if rr["ok"] else None
+    end = m2.word(st.state, G.OURS_END) if rr["ok"] else None
+    mark0 = m2.word(st.state, G.MARK0) if rr["ok"] else None
+    rr.pop("state", None)
+    fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    heard = []
+    for b in range(2, nb):
+        blk = rr["smp"][b] if b < len(rr["smp"]) else {}
+        heard.append(sum(1 for t in range(16) if t in blk and V.peak(blk[t]["out"]) > 1e-4))
+    out = {"ok": rr["ok"], "skips": skips, "finite": fin, "heard_per_block": heard,
+           "our_end_over_P": round(((end - mark0) & 0xFFFFFFFF) / P, 3) if end is not None else None,
+           "instructions_per_block": rr.get("instructions", 0) // nb}
+    print(f"    gstress: {out}", flush=True)
+    checks = {
+        "every block returns": out["ok"],
+        "our voices done by 0.8 of the frame (the guard's limit holds with the new floors)":
+            out["our_end_over_P"] is not None and out["our_end_over_P"] <= 0.8,
+        "every buffer finite": fin,
+        "between the downbeats, at least six of the sixteen tracks heard (the clock at three times the instructions)": bool(heard) and sorted(heard)[len(heard) // 2] >= 6,   # (v0.29: 8 of 16 at K = 3, three times the instructions)
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
 

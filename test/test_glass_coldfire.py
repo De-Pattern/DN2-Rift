@@ -4,12 +4,17 @@ import json
 import pathlib
 import struct
 
+import pytest
+
 from dnfw.glass import coldfire as P
 from dnfw.glass import pages as PP
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPEC = json.loads((ROOT / "src/dnfw/mods/waverider_code.json").read_text())
 LAY = SPEC["layout"]
+if not P.ON:                                   # RIFT v0.28: RUBBER pulled
+    pytest.skip("RUBBER is pulled (glass.coldfire.ON): no chunk; test_rubber_pulled holds the stock sites",
+                allow_module_level=True)
 CHUNK = SPEC["glass_chunk"]
 CODE = bytes.fromhex(CHUNK["code"])
 

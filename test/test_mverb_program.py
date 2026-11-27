@@ -109,3 +109,10 @@ def test_emits():
     n = sum(1 for x in text.splitlines() if x.startswith("      ") and not x.strip().startswith("//"))
     print("instructions", n)
     assert 300 < n < 1400 and "JUMP 0xb83715" in text
+
+
+def test_the_kept_loop_still_matches(monkeypatch):
+    """RIFT v0.28 (QA's review, C7): MG.sample, v0.21..v0.27's loop kept behind mverb.program.FAST, still equals
+    live.Verb, so switching back stays a one-word change"""
+    monkeypatch.setattr(P, "FAST", False)
+    test_noise_through_the_plate((0, 0x6000, 0x4000, 0x4000))

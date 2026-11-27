@@ -3947,7 +3947,8 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     # tail (guard.tail_limit's TAIL) and the voices' limit leaves room for it. v0.18..v0.21 marked it
     # after: GLASS on several tracks ran after voices that had filled the frame to the limit, past it
     G.end_mark(p)                              # our voices' time, for the guard's limit
-    gg = GLP.walk(p, GLP.Layout(L, _dsp.GLASS_STATE_DDR))
+    from ..glass import coldfire as _GLC
+    gg = GLP.walk(p, GLP.Layout(L, _dsp.GLASS_STATE_DDR)) if _GLC.ON else None   # RIFT v0.28: RUBBER pulled
     sanitize(p, L)                             # RIFT v0.18: nothing non-finite or runaway leaves our code
     p.e(f"JUMP {next_sw:#x};", "the shared tail (ping.asm's wr_ping: restores the registers)")
     p.scr_on = True                            # the routines and leaves run inside a voice only
@@ -3960,7 +3961,8 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
         xg[0].emit_rts()                       # PLATEAU's (p_render, p_ap, p_apf)
     cg[0].emit_rts()                           # CONTOUR's (c_render, the surfaces)
     sg2[0].emit_rts()                          # SPALL's (sp_render, sp_tick, sp_event, sp_tonal: v0.25, apart from SILT's s_render)
-    gg.emit_rts()                              # GLASS's (g_slot, g_bend)
+    if gg is not None:
+        gg.emit_rts()                          # GLASS's (g_slot, g_bend)
     p.emit_subs()
     p.scr_on = False
     p.raw(".wr_fsc..end:")

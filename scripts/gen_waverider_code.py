@@ -72,14 +72,15 @@ def main() -> int:
         "names": [CF.LONG_NAME, CF.SHORT_NAME],
         "edits": edits,
         "guards": [{"va": va, "bytes": want, "what": why}
-                   for va, want, why in CF.GUARDS + CF.JUMP_GUARDS + CF.SLIDE_DRAW_GUARDS + glass_cf.GUARDS],
+                   for va, want, why in CF.GUARDS + CF.JUMP_GUARDS + CF.SLIDE_DRAW_GUARDS + (tuple(glass_cf.GUARDS) if glass_cf.ON else ())],
         "layout": {k: v for k, v in sorted(built["layout"].items())},
         "chunk": {"load": built["chunk"]["load"], "code": built["chunk"]["code"].hex()},
         "c_chunk": {"load": built["c_chunk"]["load"], "code": built["c_chunk"]["code"].hex()},
         "machines_chunk": {"load": built["machines_chunk"]["load"],
                            "code": built["machines_chunk"]["code"].hex()},
-        "glass_chunk": {"load": built["glass_chunk"]["load"], "code": built["glass_chunk"]["code"].hex()},
     }
+    if "glass_chunk" in built:                  # RIFT v0.28: absent while RUBBER is pulled (glass.coldfire.ON)
+        code["glass_chunk"] = {"load": built["glass_chunk"]["load"], "code": built["glass_chunk"]["code"].hex()}
     text = (json.dumps(code, indent=1) + "\n").encode()
     if "--check" in sys.argv[1:]:               # v0.33: the gate's: the committed code is the sources'
         same = OUT_JSON.read_bytes() == text

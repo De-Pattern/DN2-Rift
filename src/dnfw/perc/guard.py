@@ -227,6 +227,13 @@ def perc_limit(p, smp_types, smp_state: int, smp_stride: int, on_word: int, trig
     p.st(STRUCK, 8)
     p.iconst(0, 0)
     p.st(RESERVE, 0)
+    from .program import RIFT as _RIFT
+    if _RIFT:
+        # RIFT v0.28: no PERC or Monomachine voice reads LIMIT_PERC (RIFT has neither engine), so the sixteen
+        # slots' RESERVE walk is left out (about a thousand instructions a block): LIMIT_PERC = LIMIT
+        p.ld(8, LIMIT)
+        p.st(LIMIT_PERC, 8)
+        return
 
     def body():
         p.ld(9, RES_I)
