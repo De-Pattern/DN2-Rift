@@ -123,5 +123,73 @@ def main() -> int:
     return 0
 
 
+
+
+
+def latency(build, snap, stock, frame_units, bursts=16, keys=7):
+    """RIFT v0.31 (claude/rift-ui-latency-reading-2026-11-27.md; oksami's 3 ms stock / 101 ms mod): live
+    recording's key latency, the frame fixed at FRAME_UNITS (stock's: a heavier ISR leaves the UI less,
+    as on the unit). REC + PLAY, then KEYS trig keys pressed together and released together, BURSTS
+    times; for each trig key item, from its press (or release) to the UI loop's receive returning it
+    (the instruction after the stock call site, 0x4002f17e + 6: stock's own receive, or ours around it),
+    in the emulator's clock units and in frames"""
+    from unicorn import UC_HOOK_CODE                             # noqa: PLC0415
+    from unicorn import m68k_const as K                          # noqa: PLC0415
+    c = Coupled(build, snap, stock, dsp=False)
+    c.frame_units = frame_units
+    c.set_timing("faithful")
+    P = c.panel.panelin
+    key = lambda code: divmod(code - 1, 8)                       # noqa: E731
+    clock = c.panel.timers
+    sent, got = {}, []
+
+    def after_receive(uc, addr, size, ud):
+        it = uc.reg_read(K.UC_M68K_REG_D0)
+        if not it:
+            return
+        b = bytes(uc.mem_read(it, 8))
+        code = int.from_bytes(b[4:8], "big")
+        if b[0] == 0 and 25 <= code < 25 + keys and code in sent:
+            got.append((clock.now - sent.pop(code)) / frame_units)
+    c.uc.hook_add(UC_HOOK_CODE, after_receive, begin=0x4002F17E + 6, end=0x4002F17E + 6)
+
+    def held(code, on, n=2):
+        c.machine.pc = (P.press if on else P.release)(c.machine.m, c.panel.profile, *key(code))
+        c.periods(n)
+    held(19, True); held(20, True); held(20, False); held(19, False)
+    c.periods(20)
+    for _ in range(bursts):
+        for on in (True, False):
+            for k in range(25, 25 + keys):
+                c.machine.pc = (P.press if on else P.release)(c.machine.m, c.panel.profile, *key(k))
+                sent[k] = clock.now
+            c.periods(40)
+            sent.clear()
+    got.sort()
+    return {"frames": [round(x, 2) for x in got], "n": len(got),
+            "median": round(statistics.median(got), 2) if got else None, "max": round(max(got), 2) if got else None,
+            "halt": c.halt}
+
+
+def main_latency() -> int:
+    p = argparse.ArgumentParser()
+    p.add_argument("--build", required=True)
+    p.add_argument("--stock", default=str(HERE.parent.parent / "Digitone_II_OS1.11.syx"))
+    p.add_argument("--snapshot", default=str(HERE.parent.parent / "digikit/out/snapshots/dn2-1.11/ui800M-v014.snap"))
+    p.add_argument("--latency", action="store_true")
+    p.add_argument("--json", default=None)
+    a, _ = p.parse_known_args()
+    c = Coupled(a.stock, a.snapshot, a.stock, dsp=False)
+    c.set_timing("faithful")
+    fu = c.frame_units
+    rep = {"frame_units": fu, "stock": latency(a.stock, a.snapshot, a.stock, fu),
+           "build": latency(a.build, a.snapshot, a.stock, fu)}
+    for k in ("stock", "build"):
+        print(f"{k}: a trig key's press or release to its receive, frames (0.67 ms each): n {rep[k]['n']}, median {rep[k]['median']}, max {rep[k]['max']}; {rep[k]['frames']}", flush=True)
+    if a.json:
+        pathlib.Path(a.json).write_text(json.dumps(rep, indent=1))
+    return 0
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main_latency() if "--latency" in sys.argv else main())
