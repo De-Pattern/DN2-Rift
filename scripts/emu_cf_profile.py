@@ -171,21 +171,84 @@ def latency(build, snap, stock, frame_units, bursts=16, keys=7):
             "halt": c.halt}
 
 
+QUEUE_SEND, UI_QUEUE, RECV_RET = 0x40001896, 0x4059D214, 0x4002F184
+ITEMS_AT = 0x46A30000                   # emulator RAM above the call stack: the injected items
+
+
+def inject_latency(build, snap, stock, frame_units, bursts=12, keys=7):
+    """RIFT v0.30 (QA's review: bypass the panel scan): KEYS [TRIG] key items put straight into the UI queue
+    together (queue_send 0x40001896(queue 0x4059d214, item, 2, 0), as the panel driver at 0x4011fb38 sends
+    them: 16 bytes, type 0, code 25.., flags 1 press / 0x10 release), during live recording (REC + PLAY);
+    each item's wait until the UI loop's receive returns it (0x4002f184), in frames, the frame fixed at
+    FRAME_UNITS (stock's)"""
+    import struct as _st                                         # noqa: PLC0415
+    from unicorn import UC_HOOK_CODE                             # noqa: PLC0415
+    from unicorn import m68k_const as K                          # noqa: PLC0415
+    c = Coupled(build, snap, stock, dsp=False)
+    c.frame_units = frame_units
+    c.set_timing("faithful")
+    P = c.panel.panelin
+    key = lambda code: divmod(code - 1, 8)                       # noqa: E731
+    clock = c.panel.timers
+    sent, got, depth = {}, [], []
+
+    seen_ptr = {}
+
+    def recv(uc, addr, size, ud):
+        it = uc.reg_read(K.UC_M68K_REG_D0)
+        if not it:
+            return
+        try:
+            b = bytes(uc.mem_read(it, 16))
+        except Exception:                                        # noqa: BLE001
+            return
+        t, code, flags = _st.unpack(">III", b[:12])
+        k = (code, flags & 0x11)
+        if t == 0 and k in sent:
+            seen_ptr[it] = seen_ptr.get(it, 0) + 1
+            got.append((clock.now - sent.pop(k)) / frame_units)
+    c.uc.hook_add(UC_HOOK_CODE, recv, begin=RECV_RET, end=RECV_RET)
+
+    def held(code, on, n=2):
+        c.machine.pc = (P.press if on else P.release)(c.machine.m, c.panel.profile, *key(code))
+        c.periods(n)
+    held(19, True); held(20, True); held(20, False); held(19, False)
+    c.periods(20)
+    lost = 0
+    for b in range(bursts):
+        for flags in (1, 0x10):
+            for k in range(keys):
+                at = ITEMS_AT + 16 * (k + keys * (b % 4) + (0 if flags == 1 else 64))
+                c.write(at, _st.pack(">IIII", 0, 25 + k, flags, 0)) if hasattr(c, "write") else \
+                    c.uc.mem_write(at, _st.pack(">IIII", 0, 25 + k, flags, 0))
+                sent[(25 + k, flags)] = clock.now
+                c.call(QUEUE_SEND, UI_QUEUE, at, 2, 0)
+            c.periods(40)
+            lost += len(sent)
+            sent.clear()
+    got.sort()
+    return {"frames": [round(x, 2) for x in got], "n": len(got), "lost": lost,
+            "median": round(statistics.median(got), 2) if got else None, "max": round(max(got), 2) if got else None,
+            "halt": c.halt}
+
+
 def main_latency() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--build", required=True)
     p.add_argument("--stock", default=str(HERE.parent.parent / "Digitone_II_OS1.11.syx"))
     p.add_argument("--snapshot", default=str(HERE.parent.parent / "digikit/out/snapshots/dn2-1.11/ui800M-v014.snap"))
     p.add_argument("--latency", action="store_true")
+    p.add_argument("--inject", action="store_true", help="key items straight into the UI queue (QA's method)")
     p.add_argument("--json", default=None)
     a, _ = p.parse_known_args()
     c = Coupled(a.stock, a.snapshot, a.stock, dsp=False)
     c.set_timing("faithful")
     fu = c.frame_units
-    rep = {"frame_units": fu, "stock": latency(a.stock, a.snapshot, a.stock, fu),
-           "build": latency(a.build, a.snapshot, a.stock, fu)}
+    fn = inject_latency if "--inject" in sys.argv else latency
+    rep = {"frame_units": fu, "stock": fn(a.stock, a.snapshot, a.stock, fu),
+           "build": fn(a.build, a.snapshot, a.stock, fu)}
     for k in ("stock", "build"):
-        print(f"{k}: a trig key's press or release to its receive, frames (0.67 ms each): n {rep[k]['n']}, median {rep[k]['median']}, max {rep[k]['max']}; {rep[k]['frames']}", flush=True)
+        print(f"{k}: a trig key's press or release to its receive, frames (0.67 ms each): n {rep[k]['n']}, lost {rep[k].get('lost')}, median {rep[k]['median']}, max {rep[k]['max']}; {rep[k]['frames']}", flush=True)
     if a.json:
         pathlib.Path(a.json).write_text(json.dumps(rep, indent=1))
     return 0
