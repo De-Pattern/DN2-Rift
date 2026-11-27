@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.27** | 2026-11-26 | The time guard: no false CPU marker, several CONTOUR voices with FDBK; from DN2 mk2: live-record lag, FLEX level, the MIDI arp, arp in scale, in-key transpose | `builds/v0.27-FLOW/` | yes |
+| **v0.28** | 2026-11-26 | Stability: RUBBER pulled; the sample machines and SMEAR hold up under load (SMEAR's 30-50 s cut-outs fixed); CONTOUR with FDBK raised mid-note; the plate a third cheaper, its tail shorter; DIGIDRUM's names by type | `builds/v0.28-STABLE/` | yes |
+| v0.27 | 2026-11-26 | The time guard: no false CPU marker, several CONTOUR voices with FDBK; from DN2 mk2: live-record lag, FLEX level, the MIDI arp, arp in scale, in-key transpose | `builds/v0.27-FLOW/` | yes |
 | v0.26 | 2026-11-25 | SMEAR's VOC back, on a keyframe time stretch after heavylight's (credited); CONTOUR's FDBK as it first was; RUBBER's silent track fixed | `builds/v0.26-VOC/` | yes |
 | v0.25 | 2026-11-25 | SPALL, a new synth machine (tiny events rung through two resonators), its logo; the MIDI machine's DIN logo; Download PDF on the manual and the quick guide | `builds/v0.25-SPALL/` | yes |
 | v0.24 | 2026-11-25 | RUBBER (an SH-101-style ladder) in GLASS's place, its curves as FLTR page 2 knobs; SMEAR: pitch and speed apart; clean knob icons | `builds/v0.24-APART/` | yes |
@@ -54,6 +55,40 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.28 · STABLE
+
+- **File:** `RIFT_v0.28_STABLE_OS1.11.syx` (`builds/v0.28-STABLE/`)
+- **sha256:** `9572904e77e176be3afdf2d177ce633821ece199c0eeac80693f8aca6a53c5e6`
+- **Gated:** 2026-11-26 20:42, `CLEARED TO FLASH`
+- **Source:** `9b5e2c3` (this repository; frozen as `rc/v0.28`)
+
+**Changes**
+
+- **RUBBER pulled** (owner, 2026-11-26, from the Discord reports: voices going quiet, crackle on FM Tone, drop-outs in an empty project). `glass/coldfire.py` `ON = False`: no GLASS chunk, no guard, no walk slot; a saved RUBBER sound loads as Multi-Mode. Unit test `test_rubber_pulled`; the runner's glass step checks FASCIA's output with RUBBER gone. Its code is kept for a slimmed return.
+- **The sample machines' time guard as RIFT's machines'** (lumbre, franny: sample voices dropping out with time free). Expected cost = last block's x 1.25; `SMP_FLOOR` 64,000 only on the block that triggers the voice (a retrigger renders twice). Measured: ONESHOT/REPITCH/SLICE about 30,000, STRETCH 12,000.
+- **SMEAR** (franny: cut-outs after 30 to 50 s): its sampler glue (`SMEAR_GLUE` 6,000) is never stopped by the left-out-twice rule, the render guard's floor is `SMR_FLOOR` 74,000 on a trigger block (GRN measured at 70,438), and a skip sets SKIPMASK (QA `qa/v0.27-smear-guard`, ported by hand; `docs/qa/TAKEN-v0.28.md`).
+- **CONTOUR**: its expectation by pitch (`CTR_PEAK` 88,000, `CTR_MID` 48,000) on every block while FDBK is up, so FDBK raised mid-note is covered (QA).
+- **The master plate**: `mverb.program.FAST` (registers for the write index, `sample_fast`), bit-exact with the kept loop (`FAST = False`, `test_the_kept_loop_still_matches`): 43,263 -> 28,581 cycles a block. Tail shortened (owner: `GDEC_SPAN` 0.87, `GDEC_MAX` 0.97; DEC 127 about 42 s -> 32 s).
+- **DIGIDRUM**: O1..O4 and the LFO destination names follow TYPE (`dgd_own_long`); gate step `digidrum` checks them on CP VINTAGE.
+- **Pages**: a choice's word scrolls in (`ln_anim`), `rclear` clears by words.
+- **Manual and quick guide**: FLEX REC / the recorder is [FUNC] + [UNISON].
+- RIFT's `perc_limit` skips the RESERVE walk (no RESERVE machines in RIFT).
+- The runner: rprof cases for every sample machine, SMEAR's three modes, CONTOUR's steps, the plate; `gstress` (16 ONESHOT tracks retriggered every fourth block on a K=3 clock: every block returns, our end under 0.8 of the frame, at least six heard); flexlevel's ratio check as DN2 mk2's (dac720c).
+
+**Tests**
+
+1. A busy project with sample tracks and SMEAR: fewer drop-outs, the CPU marker rarer; SMEAR held for a minute keeps sounding.
+2. CONTOUR: raise FDBK while a note is held.
+3. The plate: the same character, a shorter tail at high DEC.
+4. DIGIDRUM: O1..O4 on each TYPE, named in the header.
+5. A project that used RUBBER: those tracks Multi-Mode.
+
+**Known issues**
+
+- SMEAR is still polyphonic: many held notes on one track can still pile up (v0.29: one voice per track).
+- A sample machine on a FLEX buffer (B1..B8) shows the buffer's name on page 2, not its waveform (v0.30).
+- CONTOUR above B4 with FDBK costs about 82,000 cycles a voice.
 
 ## v0.27 · FLOW
 
