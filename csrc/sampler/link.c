@@ -239,7 +239,7 @@ u32 smp_command(u32 cmd, u32 src, u32 chan, u32 thres, u32 dest_frames)
     return cmd_seq;
 }
 
-/* the DSP's status from the SPI reply's tail, if it checks out: 16 halves. RIFT v0.31 (oksami: the
+/* the DSP's status from the SPI reply's tail, if it checks out: 16 halves. RIFT v0.31 (a tester: the
  * UI's polls): the tail changes once a period (the audio ISR), so a second read in the same period
  * gives the first's copy and verdict, unless the tail's own words moved (the first and last halves
  * checked), without the sum again */
@@ -349,7 +349,7 @@ int smp_dsp_load(void)
 static volatile u32 smp_skip_last __attribute__((section(".data"))) = 0;   /* RIFT v0.31: the newest of smp_skip_at */
 int smp_skipped_any(void)                       /* any voice, within the last half second */
 {
-    /* RIFT v0.31 (oksami: the UI's polls): the newest skip's stamp, not sixteen: the same answer
+    /* RIFT v0.31 (a tester: the UI's polls): the newest skip's stamp, not sixteen: the same answer
      * (a stamp is only ever set to periods | 1, so the newest is the one still inside the window) */
     return smp_skip_last && (int)(periods - smp_skip_last) < 750;
 }
@@ -3075,7 +3075,7 @@ static int mod_scale(int k, int n)              /* a stock offset (+-127) -> +-n
  * stock apply adds on top is the modulation alone. */
 #define SMOOTH_STATE(b, s) ((volatile u32 *)(0x8000DE60u + 4u * (101u * (u32)(b) + 17u + (u32)(s))))
 
-/* RIFT v0.31 (oksami: features that "interrupt even when not enabled"): the frame's sample voices
+/* RIFT v0.31 (a tester: features that "interrupt even when not enabled"): the frame's sample voices
  * (types 8..13) and FLEX voices, found in one pass; the three passes below visit only those (no
  * sample or FLEX voice: none of them runs a voice). VOICE_SOUND does not change within the ISR */
 static u32 smp_voices __attribute__((section(".data"))) = 0;

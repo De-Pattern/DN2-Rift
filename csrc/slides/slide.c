@@ -433,7 +433,7 @@ int sl_clear(void *model, int track, int step)
     /* the model's lock table (vtable +40). Declared as returning an integer: stock returns it
      * in d0, and GCC would take a returned pointer from a0 */
     u8 *table = (u8 *)((u32 (*)(void *))((*(void ***)model)[10]))(model);
-    /* v0.74 (oksami, live recording with 6+ keys: the sequencer drags): one pass over the 80
+    /* v0.74 (a tester, live recording with 6+ keys: the sequencer drags): one pass over the 80
      * records, the track's tag byte first (v0.40..v0.73: three passes, one per lock, each
      * reading both bytes of every record: about 3,400 instructions a call, and live recording
      * calls this for each key it records). The same result: each of our records on the track

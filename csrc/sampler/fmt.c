@@ -844,7 +844,7 @@ int smp_fine_mask(int kind)
         return 7;                               /* ONESHOT: STRT, LEN, LOOP */
     if (kind == SMP_STRETCH_KIND || kind == SMP_REPITCH_KIND || kind == SMP_BOUNCE_KIND)
         return 3;                               /* STRT, LEN */
-    /* RIFT v0.29 (InductiveOne: SIZE "0-120 makes the loop longer, 121-127 other divisions"): SMEAR's
+    /* RIFT v0.29 (a tester: SIZE "0-120 makes the loop longer, 121-127 other divisions"): SMEAR's
      * STRT and SIZE ride these records and are read against 120 (machines.SMEAR_TOPS), but kept
      * WaveTone's 0..127 with its own labels past 120: now 0.00..120.00, as ONESHOT's */
     if (kind == SMP_WERP_KIND)

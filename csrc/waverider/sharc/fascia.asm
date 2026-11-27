@@ -3291,8 +3291,8 @@ wr_fs_else_241.:
       R12 = 0xffff;
       R4 = R4 AND R12;
       R4 = LSHIFT R4 BY -8;
-      R12 = 0x28;
-      R13 = 0x64;
+      R12 = 0x29;
+      R13 = 0x65;
       COMP(R4, R12);
       IF LT JUMP 0xbe0ba1;                   // -> wr_fs_else_242.
       R10 = 0xf230;

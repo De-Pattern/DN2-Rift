@@ -936,7 +936,7 @@ static u8 ln_old[8] __attribute__((section(".data")));
 static u32 ln_at[8] __attribute__((section(".data")));
 static int ln_kind __attribute__((section(".data"))) = -1;
 static int ln_page __attribute__((section(".data"))) = -1;
-/* RIFT v0.28 (franny: "a lot of param animations are laggy, especially the reel window type params"): a
+/* RIFT v0.28 (a tester: "a lot of param animations are laggy, especially the reel window type params"): a
  * choice's word scrolls in over 180 frames (120 ms), but nothing asked for a redraw while it moved: it
  * advanced only when stock redrew the page (a value change, or idle about every 0.4 s), a step or two
  * at most. While the last screen drawn was this page and a word was still moving, smp_wants_redraw asks
@@ -945,7 +945,7 @@ extern u32 wr_draws;
 static int ln_anim __attribute__((section(".data"))) = 0;
 static u32 ln_draw_n __attribute__((section(".data"))) = 0xFFFFFFFFu;
 
-/* RIFT v0.28 (franny's laggy pages): a rectangle cleared as SET_PIXEL(c, x, y, 0) on each of its pixels did, a
+/* RIFT v0.28 (a tester's laggy pages): a rectangle cleared as SET_PIXEL(c, x, y, 0) on each of its pixels did, a
  * column's word at a time in invert()'s layout (bit 31 - (y & 31) of word y >> 5 of the column), clipped to
  * the canvas. The LINE pages' body alone was 6,642 calls of the stock's SET_PIXEL every draw */
 __attribute__((noipa)) static void rclear(void *c, int x0, int y0, int x1, int y1)

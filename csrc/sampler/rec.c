@@ -1992,7 +1992,7 @@ void kh_set(u32 on)                             /* PTN + KEYBOARD */
         SUSTAIN(t, on);
 }
 
-/* RIFT v0.30 (claude/rift-ui-latency-reading-2026-11-27.md; oksami: on the mod a press waited out a whole
+/* RIFT v0.30 (claude/rift-ui-latency-reading-2026-11-27.md; a tester: on the mod a press waited out a whole
  * recording callback, 3 ms on stock, 101 ms on the mod): the UI loop's pass received a key or a knob.
  * page.c's wr_poll leaves its polls and its redraw requests to a pass that took none, so a burst of keys
  * is drained before our polls and a draw run between them, as stock drains it */

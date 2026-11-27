@@ -1,4 +1,4 @@
-"""RIFT v0.30 (oksami, 2026-11-26, on DN2 mk2 v0.74: "quite a few things ... accumulate performance debt
+"""RIFT v0.30 (a tester, 2026-11-26, on DN2 mk2 v0.74: "quite a few things ... accumulate performance debt
 that are triggering interrupts often ... sample communication, sampler modulation and recording, and a
 few other features seem to interrupt even when not enabled"): where the ColdFire's audio ISR spends its
 time, stock against a build, period by period.
@@ -127,7 +127,7 @@ def main() -> int:
 
 
 def latency(build, snap, stock, frame_units, bursts=16, keys=7):
-    """RIFT v0.31 (claude/rift-ui-latency-reading-2026-11-27.md; oksami's 3 ms stock / 101 ms mod): live
+    """RIFT v0.31 (claude/rift-ui-latency-reading-2026-11-27.md; a tester's 3 ms stock / 101 ms mod): live
     recording's key latency, the frame fixed at FRAME_UNITS (stock's: a heavier ISR leaves the UI less,
     as on the unit). REC + PLAY, then KEYS trig keys pressed together and released together, BURSTS
     times; for each trig key item, from its press (or release) to the UI loop's receive returning it

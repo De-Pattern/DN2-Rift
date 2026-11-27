@@ -520,7 +520,7 @@ static u8 *pat_table(void)
 /* every frame (link.c smp_mod_apply, the audio interrupt): the recorder trigs of each BOUNCE
  * track at its new step, the master steps, the QPLAY switches and the QREC start that fall
  * on this step's boundary */
-/* RIFT v0.30, from DN2 mk2 v0.76 (6928474, 3c35d60; Dubmaster, 2026-11-25: a FLEX take played back
+/* RIFT v0.30, from DN2 mk2 v0.76 (6928474, 3c35d60; a tester, 2026-11-25: a FLEX take played back
  * 41 ms late at 60 BPM, 25 at 90, 18 at 120; microtime -4/24 put it right): one sequencer tick (a
  * sixth of a step) less some 2 ms, at every tempo. A take started as the track's step (TRACK_CUR)
  * changes is heard a tick late on playback; a recorder trig now starts its take one tick after the
@@ -828,7 +828,7 @@ static u32 ms_mask_now(void)
     const u8 *kit = KIT_POINTER;
     if (!kit)
         return 0;
-    /* RIFT v0.31 (oksami: features that "interrupt even when not enabled"): the FLEX tracks found
+    /* RIFT v0.31 (a tester: features that "interrupt even when not enabled"): the FLEX tracks found
      * in one pass over the kit's sound types (rt_is_bounce's test, inlined), the rest only for them */
     u32 flex = 0;
     const u8 *snd = kit + SOUND_BASE + SOUND_TYPE;

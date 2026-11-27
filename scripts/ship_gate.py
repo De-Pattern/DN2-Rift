@@ -2912,7 +2912,7 @@ def main() -> int:
                             and all(float((cell(shots["k0"], i) != cell(shots["l0"], i)).mean()) < 0.002 for i in range(8) if i != 2),
                         "... and no other cell changed": all(flip[i] < 0.02 for i in range(8) if i not in locked),
                         "SYN held: the labels give way to the values": float((shots["v0"] != shots["r2"]).mean()) > 0.005,
-                        # RIFT v0.28 (franny): O1..O4 named by the drum type (TYPE at its default, BD MODERN)
+                        # RIFT v0.28 (a tester): O1..O4 named by the drum type (TYPE at its default, BD MODERN)
                         "the LFO list names each control (short), O1..O4 by TYPE": shorts[:len(named)] == [
                             FSg.OWN[FSg.TYPES[FSg.OPT_DEFAULTS["TYPE"]]][int(c[1]) - 1] if c in ("O1", "O2", "O3", "O4") else FSg.LABELS[c]
                             for c in FSg.CONTROLS],
@@ -4153,7 +4153,7 @@ def main() -> int:
                   "FLEX buffers played by a ONESHOT track, on both processors (coupled)",
                   [fp_cmd, sorted(EMU_ENV.items())], fp_body)
 
-        # RIFT v0.30, from DN2 mk2 v0.76 (Dubmaster: FLEX takes a tick late on playback): a two-step
+        # RIFT v0.30, from DN2 mk2 v0.76 (a tester: FLEX takes a tick late on playback): a two-step
         # pattern, track 2's note recorded by track 1's one-shot recorder trig in pass 1 and played by
         # track 1's own note in pass 2; track 1's pass-2 audio correlated with track 2's: on time within
         # 3 ms (scripts/emu_coupled_flexlag.py; v0.29, its negative control, a tick late)

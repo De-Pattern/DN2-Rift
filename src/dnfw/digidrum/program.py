@@ -752,7 +752,7 @@ def layout() -> Layout:
     return Layout(FP_.layout(), dsp.DIGIDRUM_TABLES_DDR)
 
 
-# RIFT v0.29 (InductiveOne: a default DIGIDRUM kick beside SPALL "dropped out 75% of the time"): the guard
+# RIFT v0.29 (a tester: a default DIGIDRUM kick beside SPALL "dropped out 75% of the time"): the guard
 # expected every DIGIDRUM hit to cost FLOOR (60,000) on its trigger block; the runner's rprof, each type struck
 # (heaviest block): BD 27,977, SD BASIC 25,046, SD VINTAGE 48,798, CP 39,751, CY 39,711, PC 23,132. Now the
 # floor is LIGHT (36,000) and a trigger block of SD VINTAGE, CP or CY expects DGD_HEAVY
@@ -771,8 +771,8 @@ def guard_expect(t_word: int):
         PP.t146(p, 11, 10)
         PP.half(p, 4, 168 + 2 * SLOTS["TYPE"][1], 11)
         p.lsh(4, 4, -8)                        # the record, 0..120
-        p.iconst(12, 40)
-        p.iconst(13, 100)
+        p.iconst(12, 41)                       # RIFT v0.30 (QA C4): SD VINTAGE is records 41..59, CY ALLOY 81..100
+        p.iconst(13, 101)
 
         def mid():
             p.iconst(10, DGD_HEAVY)

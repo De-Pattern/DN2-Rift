@@ -452,7 +452,7 @@ def smear_glue(p: Prog, L: Layout) -> None:
             p.fop(4, 4, "*", 12)
             p.trunc(4, 4)
             # RIFT v0.29: never past 127 (a coarse 121..127, saved before STRT and SIZE were fine,
-            # indexed past SMEAR's 128-entry tables: InductiveOne's "other divisions")
+            # indexed past SMEAR's 128-entry tables: a tester's "other divisions")
             p.iconst(12, 127)
             p.iop(4, 4, "MIN", 12)
         p.sti(SG.MB_KN + k, 5, 4)
@@ -3304,7 +3304,7 @@ def program(L: Layout, next_sw: int, prefix: str = "sm") -> str:
         p.ld(10, L.C["type"])
         p.iconst(11, SM.TYPE_OF["WERP"])
         p.if_(10, "EQ", 11, lambda: p.iconst(9, SMEAR_GLUE), kind="i")
-    # RIFT v0.28 (franny, lumbre, 2026-11-25: the sample machines laggy, glitching, "sound quality isn't as
+    # RIFT v0.28 (testers, 2026-11-25: the sample machines laggy, glitching, "sound quality isn't as
     # before"): a sample voice was expected to cost at least 60,000 cycles on every block, twice what one
     # costs (ONESHOT and GRID about 30,000, the runner's rprof), so with a few tracks playing and the plate's
     # longer tail, voices were left out (and, twice in a note, stopped) with time to spare. As the RIFT

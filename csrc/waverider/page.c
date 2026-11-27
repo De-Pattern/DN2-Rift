@@ -147,7 +147,7 @@ static const char *stock_long[WR_NAMED] __attribute__((section(".data")));
 static const char *stock_short[WR_NAMED] __attribute__((section(".data")));
 static int names_on __attribute__((section(".data"))) = -1;
 
-/* RIFT v0.28 (franny: DIGIDRUM's O1..O4 read "Type Control 1".. in the header while turned): the active
+/* RIFT v0.28 (a tester: DIGIDRUM's O1..O4 read "Type Control 1".. in the header while turned): the active
  * track's DIGIDRUM TYPE (0..5), from its sound in the kit as perc_type reads PERC's: the record's value
  * (word >> 8, less its low end), the panel's 0..127 as smp_page.c's fsc_knob, then the option */
 static int dgd_type(void)

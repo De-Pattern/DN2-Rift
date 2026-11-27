@@ -195,7 +195,7 @@ def _track(p: Prog, S: SLayout) -> None:
             p.iop(9, 9, "MIN", 10)
             p.lsh(10, 9, -1)
             p.iop(9, 10, "+", 9)                # x 1.5
-            # RIFT v0.28 (franny: "Smear also seems to drop out pretty easily"): at least SMR_FLOOR only on the
+            # RIFT v0.28 (a tester: "Smear also seems to drop out pretty easily"): at least SMR_FLOOR only on the
             # block that triggers the track (the frame's trigger word, bit 16 + t), G.IDLE_FLOOR on any other;
             # v0.16..v0.27 asked 60,000 of every block (a SMEAR voice costs 21,000 (PLAY) to 70,000 (GRN, dense), rprof, rcost)
             from ..perc import program as PPg
@@ -327,7 +327,7 @@ MONO = True
 
 
 def _route(p: Prog, d: int, v: int) -> None:
-    """Rd = the track DSP voice Rv plays (the s16 at TRK_ROUTE + 2v; 0x7fff bits only). d, v in R8..R15;
+    """Rd = the track DSP voice Rv plays (the s16 at TRK_ROUTE + 2v; its low 16 bits). d, v in R8..R15;
     clobbers R11..R13, I1"""
     from ..sampler import machines as SM
     p.lsh(12, v, 1)
@@ -345,14 +345,21 @@ def _route(p: Prog, d: int, v: int) -> None:
 
 
 def _mono(p: Prog, S: SLayout) -> None:
-    """FADE = the SMEAR voices to fade out this block: for each mailbox t on, triggered and playing (frames > 0),
-    every other mailbox u on and not triggered whose voice plays the same track"""
-    def mb_word(d: int, t_reg: int, w: int) -> None:   # Rd = mailbox (Rt)'s word W; clobbers R12, I4
+    """FADE = the SMEAR voices to fade out this block. RIFT v0.30 (QA's review of v0.29, B1: notes on one
+    block all kept running): a rule on state, not on the edge. Of a track's mailboxes that are on, only one
+    stays: a triggered one before one that is not, and among equals the higher mailbox. So t (on, playing:
+    frames > 0) fades u (on, the same track, u != t) when trig(t) > trig(u), or trig(t) == trig(u) and t > u.
+    (A chord's notes on one block: one of them sounds; two left on by a skipped block: the newer index.)"""
+    def mb_word(d: int, t_reg: int, w: int) -> None:   # Rd = mailbox (Rt)'s word W; clobbers R11, R12, I4
         p.lsh(12, t_reg, 7)
         p.iconst(11, S.MBOX)
         p.iop(12, 11, "+", 12)
         p.seti(4, 12)
         p.ldi(d, w, 4)
+
+    def trig01(d: int) -> None:                 # Rd = Rd != 0 (0 or 1); clobbers R11
+        p.iconst(11, 1)
+        p.ifz(d, "NE", lambda: p.ipass(d, 11))
 
     def per_t():
         p.ld(9, S.MT)
@@ -360,10 +367,9 @@ def _mono(p: Prog, S: SLayout) -> None:
         p.iop(9, 9, "-", 12)                    # t
         mb_word(0, 9, MB_ON)
         p.iconst(1, MB_MAGIC)
-        mb_word(2, 9, MB_TRIG)
         mb_word(3, 9, MB_FRAMES)
 
-        def trig_t():
+        def live_t():
             p.ld(9, S.MT)
             p.iconst(12, 1)
             p.iop(9, 9, "-", 12)
@@ -380,25 +386,42 @@ def _mono(p: Prog, S: SLayout) -> None:
                 def other():
                     mb_word(0, 10, MB_ON)
                     p.iconst(1, MB_MAGIC)
-                    mb_word(2, 10, MB_TRIG)
 
-                    def same():
+                    def on_u():
                         _route(p, 15, 10)
 
-                        def fade_u():
+                        def same():
                             p.ld(10, S.MU)
                             p.iconst(12, 1)
                             p.iop(10, 10, "-", 12)
-                            p.iconst(8, 1)
-                            _shl_by(p, 8, 10)
-                            p.ld(0, S.FADE)
-                            p.iop(0, 0, "OR", 8)
-                            p.st(S.FADE, 0)
-                        p.if_(15, "EQ", 14, fade_u, kind="i")
-                    p.if_(0, "EQ", 1, lambda: p.ifz(2, "EQ", same), kind="i")
+                            mb_word(2, 10, MB_TRIG)
+                            trig01(2)           # R2: trig(u)
+                            p.ld(9, S.MT)
+                            p.iconst(12, 1)
+                            p.iop(9, 9, "-", 12)
+                            mb_word(3, 9, MB_TRIG)
+                            trig01(3)           # R3: trig(t)
+
+                            def fade_u():
+                                p.ld(10, S.MU)
+                                p.iconst(12, 1)
+                                p.iop(10, 10, "-", 12)
+                                p.iconst(8, 1)
+                                _shl_by(p, 8, 10)
+                                p.ld(0, S.FADE)
+                                p.iop(0, 0, "OR", 8)
+                                p.st(S.FADE, 0)
+
+                            def tie():                  # trig(t) == trig(u): the higher mailbox stays
+                                p.ld(10, S.MU)
+                                p.ld(9, S.MT)
+                                p.if_(9, "GT", 10, fade_u, kind="i")   # (both loop words: t > u as t+1 > u+1)
+                            p.if_(3, "GT", 2, fade_u, lambda: p.if_(3, "EQ", 2, tie, kind="i"), kind="i")
+                        p.if_(15, "EQ", 14, same, kind="i")
+                    p.if_(0, "EQ", 1, on_u, kind="i")
                 p.if_(10, "NE", 9, other, kind="i")
             p.loop(S.MU, NTRACKS, per_u)
-        p.if_(0, "EQ", 1, lambda: p.ifz(2, "NE", lambda: p.ifz(3, "GT", trig_t)), kind="i")
+        p.if_(0, "EQ", 1, lambda: p.ifz(3, "GT", live_t), kind="i")
     p.loop(S.MT, NTRACKS, per_t)
 
 

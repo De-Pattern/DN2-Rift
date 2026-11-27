@@ -5317,7 +5317,7 @@ def step_rprof(init, sound, machines) -> dict:
             "SILT": lambda tr: sl_frame(sound, machines, {0: (SB.panel_knobs(), 55.0, 110)}, trig=tr),
             "LIGATURE": lambda tr: lg_frame(sound, machines, {0: (LB.panel_knobs(PATCH="INIT"), 55.0, 110)}, trig=tr),
             "DIGIDRUM": lambda tr: dd_frame(sound, machines, {0: (DB.panel_knobs(), 55.0)}, trig=tr),
-            # RIFT v0.29 (InductiveOne: a DIGIDRUM kick beside SPALL dropped out): every drum type
+            # RIFT v0.29 (a tester: a DIGIDRUM kick beside SPALL dropped out): every drum type
             **{f"DIGIDRUM {nm}": (lambda tr, k=k: dd_frame(sound, machines, {0: (DB.panel_knobs(TYPE=k * 128 // 6 + 5), 55.0)}, trig=tr))
                for k, nm in enumerate(("BD", "SD BASIC", "SD VINTAGE", "CP", "CY", "PC"))},
             "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
@@ -5563,6 +5563,14 @@ def step_sanitize(init, sound, machines) -> dict:
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"zeroed": zeroed, "kept": kept}}
 
 
+def _route_identity(r):
+    """RIFT v0.30 (QA's review of v0.29, C1): voice v plays track v, as the unit's allocator leaves a fresh
+    kit (the runner left TRK_ROUTE at zero: every voice on track 0, so SMEAR's one-voice rule faded every
+    other SMEAR voice and the several-voice cases played one at a time)"""
+    for v in range(0, 16, 2):
+        m2.poke(r.state, SM.TRK_ROUTE + 2 * v, v | (v + 1) << 16)
+
+
 def step_smear(init, sound, machines) -> dict:
     """RIFT v0.16: SMEAR's stage (smear.asm) against its program run on the DSP's own memory each
     block (dnfw.smear.stage, itself held to live.Voice by test_smear_stage), bit for bit: VOC
@@ -5580,7 +5588,8 @@ def step_smear(init, sound, machines) -> dict:
     }
     for name, (tracks, trigs) in cases.items():
         rr = run_blocks(init, lambda b, tracks=tracks, trigs=trigs: smr_frame(
-            sound, machines, tracks, trig=tuple(t for t, bs in trigs.items() if b in bs)), n)
+            sound, machines, tracks, trig=tuple(t for t, bs in trigs.items() if b in bs)), n,
+            extra_hooks={m3.DISPATCH: _route_identity})
         c = smr_check(rr)
         need = name != "an empty slot"
         c["ok"] = bool(c["ok"] and c["blocks"] >= n - 2 and c["out_mismatches"] == 0 and c["words_ok"]
@@ -5593,6 +5602,27 @@ def step_smear(init, sound, machines) -> dict:
     # the second note on block 20: the first fades out within that block (MONO), the second sounds;
     # negative control: the two voices on two tracks, both still sounding
     from dnfw.smear import stage as SG           # noqa: PLC0415
+    # RIFT v0.30 (QA's B1): two notes on one block on one track: the rule on state keeps one (the higher
+    # voice), the other silent from the block after; control: the same two on two tracks, both sounding
+    for same in (True, False):
+        def hook2(r, same=same):
+            m2.poke(r.state, SM.TRK_ROUTE, 0 if same else 1 << 16)
+        tr = {0: dict(BLND=64, SPD=90), 1: dict(BLND=64, SPD=90)}
+        rr = run_blocks(init, lambda b, tr=tr: smr_frame(sound, machines, tr, trig=(0, 1) if b == 1 else ()),
+                        20, extra_hooks={m3.DISPATCH: hook2})
+        c = smr_check(rr)
+        blocks = rr.get("smr", [])
+
+        def pk2(v, lo, hi):
+            return max((abs(V.bits_f32(x)) for b in blocks[lo:hi] if b for x in b["tracks"].get(v, {}).get("bits", [])
+                        if math.isfinite(V.bits_f32(x))), default=0.0)
+        c.update({"v0_after": pk2(0, 3, 20), "v1_after": pk2(1, 3, 20)})
+        exact = c["ok"] and c["out_mismatches"] == 0 and c["words_ok"] and c["state_mismatches"] == 0 and c["finite"]
+        key = "v0.30 MONO: two notes on one block, one track" if same else "v0.30 MONO (control): two notes on one block, two tracks"
+        ok = exact and (c["v0_after"] == 0.0 and c["v1_after"] > 1e-3 if same else c["v0_after"] > 1e-3 and c["v1_after"] > 1e-3)
+        res[key] = c
+        print(f"    smear {key}: {c}", flush=True)
+        checks[f"{key}: bit-exact; " + ("one voice left (the higher)" if same else "both sounding")] = ok
     for same in (True, False):
         def hook(r, same=same):
             # voices 0, 1 (the word's low and high halves): both track 0, or tracks 0 and 1 (the runner
@@ -5626,7 +5656,8 @@ def step_mstress(init, sound, machines) -> dict:
     every block returns, every buffer finite, the stage bit-exact to its program"""
     tracks = {t: dict(BLND=(t * 9) % 128, DENS=110, OVLP=110) for t in range(16)}
     nb = 24
-    rr = run_blocks(init, lambda b: smr_frame(sound, machines, tracks, trig=(b % 16,) if b >= 1 else ()), nb)
+    rr = run_blocks(init, lambda b: smr_frame(sound, machines, tracks, trig=(b % 16,) if b >= 1 else ()), nb,
+                    extra_hooks={m3.DISPATCH: _route_identity})   # RIFT v0.30 (QA C1): sixteen tracks, sixteen voices
     c = smr_check(rr)
     fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
     out = {**c, "buffers_finite": fin, "instructions_per_block": rr.get("instructions", 0) // nb}

@@ -1,10 +1,10 @@
-"""v0.76: the FLEX step lag through both processors (Dubmaster, 2026-11-25: a FLEX take played
+"""v0.76: the FLEX step lag through both processors (a tester, 2026-11-25: a FLEX take played
 back 41 ms late at 60 BPM, 25 ms at 90, 18 ms at 120 -- a sequencer tick, a sixth of a step).
 
 The sequencer plays it, as a user's pattern does: a two-step pattern; track 1 is FLEX, recording
 the input (SRC IN) with a one-shot recorder trig on step 1 and R.LEN 2 (the whole pattern), and
 has a note of its own on step 1. Pass 1 records; pass 2 plays the take on the note. The input is
-a known noise, a function of the sample's own number. What a user hears (Dubmaster's lag) is when
+a known noise, a function of the sample's own number. What a user hears (a tester's lag) is when
 an event recorded in pass 1 sounds again against its own next pass: the playback's start less the
 take's, less the pattern's length P. Both starts are measured, not inferred: the take's from its
 own samples in the DSP's memory (the input it holds, found by correlation), the playback's from the
@@ -26,7 +26,7 @@ A negative control: v0.75's build must fail at 4 (a tick late).
 
 Usage: emu_coupled_flexlag.py --build BUILD.syx [--step 1|0] [--layout waverider_code.json] [--json OUT]
   --step 1 (the default): the trig and the note on step 2, a step change while it plays
-  (Dubmaster's case); --step 0: step 1, PLAY's own first step"""
+  (a tester's case); --step 0: step 1, PLAY's own first step"""
 
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ def main() -> int:
     p.add_argument("--json", default=None)
     p.add_argument("--step", type=int, default=1, choices=(0, 1),
                    help="the recorder trig's and the note's step: 1 (step 2, a step change while it plays: "
-                        "Dubmaster's case) or 0 (step 1, PLAY's own first step)")
+                        "a tester's case) or 0 (step 1, PLAY's own first step)")
     a = p.parse_args()
     lay = json.loads(pathlib.Path(a.layout).read_text())["layout"]
     c = Coupled(a.build, a.snapshot, a.stock, verbose=False)
