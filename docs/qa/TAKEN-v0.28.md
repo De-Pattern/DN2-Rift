@@ -25,3 +25,14 @@ v0.28's gate was stopped 40 minutes in and restarted with these: two findings we
 | 02aae7e a block SMEAR's own guard leaves out sets the CPU marker | **Taken, v0.28** |
 | e686a17 SMEAR's render guard x 1.25, FLOOR on the trigger block, 30,000 otherwise | Declined: v0.28 already has its own measured version (x 1.5 kept for GRN's swings, SMR_FLOOR 74,000 on the trigger block, IDLE_FLOOR otherwise) |
 | docs/qa/SMEAR-cutout-v0.27.md's open question (30 to 50 s) | Open: the guard's left-out-twice stop explains silence until a later note; v0.28's gstress and the owner's test on v0.28 will say if anything else remains |
+
+## The deferred items, in v0.29 (2026-11-26, evening)
+
+| Item | Now |
+|---|---|
+| C1 a gate case for the floors | **Done**: the runner's `gstress` (sixteen ONESHOT voices retriggered together over ringing notes, the clock made to move: every block returns, our voices done by 0.8 of the frame, at least six heard); in v0.28's gate too |
+| C4 the glass step's negative control | Still deferred: the step only checks FASCIA's output with RUBBER gone; a control comes with RUBBER's return |
+| C5 RUBBER's page code | **Done**: under `#if GLASS_ON`, 505 bytes back |
+| C8 DIGIDRUM's names at a second TYPE | **Done**: the gate's digidrum step turns TYPE to CP VINTAGE and checks O1..O4 |
+| The short lines in L2 | **Done**: `mverb L2_LINES` (i0..i3, a_ap in SMEAR's unused VOC lane), bit for bit, 26,575 cycles |
+| e686a17 SMEAR's render guard x 1.25 | Declined again with a measurement: SMEAR GRN's cost grows up to x 1.235 from one block to the next while its grains build (rprof: 29,298 -> 36,195); x 1.25 would leave no margin |
