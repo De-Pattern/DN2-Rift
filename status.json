@@ -1,16 +1,16 @@
 {
- "updated": "2026-11-27T18:26:12+00:00",
- "note": "v0.28 STABLE is released. v0.29 MONO: full gate running (no failures so far). v0.30 LEAN (UI and interrupt trims, FLEX buffer waveforms): step runs pass; its gate starts once v0.29 clears.",
+ "updated": "2026-11-27T18:29:06+00:00",
+ "note": "Gates are moving to the owner's laptop runner (they kept restarting in the cloud workspace). Its first run, a re-gate of the released v0.28 that must match byte for byte, is under way; from the next run this box shows the laptop's live progress. v0.29 MONO (60/75, no failures) and v0.30 LEAN gate there next.",
  "gates": [
   {
-   "label": "v0.29 MONO \u00b7 full gate",
+   "label": "v0.28 \u00b7 test gate (laptop)",
    "done": 0,
    "total": 75,
    "frac": 0.0,
-   "status": "running: ",
+   "status": "running on the laptop: progress shown from the next run",
    "state": "run",
    "last": [],
-   "log_written": "13:26"
+   "log_written": "--"
   }
  ]
 }
