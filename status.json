@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-27T00:39:21+00:00",
+ "updated": "2026-11-27T00:42:23+00:00",
  "note": "v0.28 STABLE: full gate in its last steps (63 passed, none failed). v0.29 MONO ready for its gate next; v0.30 (FLEX buffer waveforms) step runs pass.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 66,
+   "done": 67,
    "total": 75,
-   "frac": 0.88,
-   "status": "running: erase",
+   "frac": 0.893,
+   "status": "running: boot_engine",
    "state": "run",
    "last": [
-    "STRT/LEN/LOOP fine records swapped in and out (ColdFire): 27/27 passed: STRT/LEN/LOOP carry FREQ's fine",
     "STRT's knob against stock's fine FREQ (ColdFire): 1/1 cases; every knob step whose inputs a stock FREQ ",
     "sample link (ColdFire): save, fast (a lost packet resent); every byte loaded and saved; the frame's rou",
-    "per-project pools (ColdFire): per-project pools: LOAD / NEW / SAVE AS through the OS's own code, each p"
+    "per-project pools (ColdFire): per-project pools: LOAD / NEW / SAVE AS through the OS's own code, each p",
+    "ERASE MOD DATA (ColdFire): ERASE MOD DATA: NO at each question and LEFT erase nothing; three YES: 20458"
    ],
-   "log_written": "19:29"
+   "log_written": "19:40"
   }
  ]
 }
