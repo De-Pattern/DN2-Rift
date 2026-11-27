@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-27T01:09:42+00:00",
+ "updated": "2026-11-27T01:12:44+00:00",
  "note": "v0.28 STABLE: full gate in its last steps (63 passed, none failed). v0.29 MONO ready for its gate next; v0.30 (FLEX buffer waveforms) step runs pass.",
  "gates": [
   {
    "label": "v0.28 STABLE \u00b7 full gate",
-   "done": 68,
+   "done": 69,
    "total": 75,
-   "frac": 0.907,
-   "status": "running: boot_check",
+   "frac": 0.92,
+   "status": "running: fuzz_ui",
    "state": "run",
    "last": [
-    "sample link (ColdFire): save, fast (a lost packet resent); every byte loaded and saved; the frame's rou",
     "per-project pools (ColdFire): per-project pools: LOAD / NEW / SAVE AS through the OS's own code, each p",
     "ERASE MOD DATA (ColdFire): ERASE MOD DATA: NO at each question and LEFT erase nothing; three YES: 20458",
-    "engine + LOAD/SAVE: evaluator clean, CODE intact, machine and filter types round-trip"
+    "engine + LOAD/SAVE: evaluator clean, CODE intact, machine and filter types round-trip",
+    "boot from reset: booted and drew its UI, no fault; the start-up animation's first frame, his"
    ],
-   "log_written": "19:49"
+   "log_written": "20:10"
   }
  ]
 }
