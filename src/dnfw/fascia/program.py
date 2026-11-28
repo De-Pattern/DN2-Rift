@@ -3892,7 +3892,8 @@ def program(L: Layout, next_sw: int, prefix: str = "fs", organ_tables: int | Non
     DL_ = DP.Layout(L, _dsp.DIGIDRUM_TABLES_DDR)
     rg = []
     G.around(p, L.C["t"], L.cost, BUFFERS, lambda: rg.append(DP.voice(p, DL_)),
-             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip)
+             rests=L.stolen, rest_blocks=1, strikes=L.strikes, steal_at=2, grow=2, trig=TRIG_WORD, shared=gskip,
+             expect=DP.guard_expect(L.C["t"]), floor=LIGHT_FLOOR)   # RIFT v0.29: by the drum type
     p.jump("", nxt)
     xg = []
     if _XM.ON_DSP:

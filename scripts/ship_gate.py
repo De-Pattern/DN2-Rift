@@ -2827,6 +2827,12 @@ def main() -> int:
             gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in named + list(FSg.UNUSED_RECORDS)]
             gs += [f"mem:{recs + 60 * r + 0x28:#x}:4" for r in named]
             gs += [f"call:{lay['wr_lfo_mask']:#x}:{r}" for r in named + list(FSg.UNUSED_RECORDS)]
+            # RIFT v0.29 (QA's review of v0.28, C8): TYPE turned to CP VINTAGE, O1..O4's names follow it
+            ty2 = 3
+            gs += [f"poke:{snd0 + 20 + 2 * FSg.SLOTS['TYPE'][1]:#x}:{FSg.rep_word('TYPE', ty2):04x}", "wait:8"]
+            o_ids = [FSg.SLOTS[c][0] for c in ("O1", "O2", "O3", "O4")]
+            gs += [f"mem:{recs + 60 * r + 0x30:#x}:4" for r in o_ids]
+            gs += [f"mem:{recs + 60 * r + 0x28:#x}:4" for r in o_ids]
             # RIFT v0.4: TRK + CLEAR (hooks.S fsc_clear_hook): every control's word moved off its
             # default, then [TRK] held with [FUNC] + [PLAY] (CLEAR): the machine's defaults come back
             # (stock's would leave WaveTone's and FM Tone's; no clear would leave the moved words)
@@ -2880,6 +2886,8 @@ def main() -> int:
                     longs = [cstr(x) for x in long_p]
                     masks = [c["d0"] for c in r["direct_calls"] if int(str(c["fn"]), 0) == lay["wr_lfo_mask"]]
                     cleared = [int(m[k], 16) for k in keys[-len(FSg.CONTROLS):]]   # after TRK + CLEAR
+                    t2 = [int(m[k], 16) for k in keys[-len(FSg.CONTROLS) - 8:-len(FSg.CONTROLS)]]   # v0.29: at TYPE 3
+                    own2 = FSg.OWN[FSg.TYPES[ty2]]
                     facts = {
                         "MACHINE SEL's commit to DIGIDRUM: track 1 is DIGIDRUM": types[0] == FSg.TYPE,
                         f"its {len(FSg.CONTROLS)} controls at its model's DEFAULTS": words == want,
@@ -2907,6 +2915,8 @@ def main() -> int:
                         "every control an LFO destination": len(masks) == nn and all((x != 0) == (c not in FSg.NO_LFO)
                                                                 for c, x in zip(FSg.CONTROLS, masks[:len(named)])),
                         "... the unused records left out": all(x == 0 for x in masks[len(named):]),
+                        "v0.29: TYPE turned to CP VINTAGE: O1..O4 named by it (short and long)":
+                            [cstr(x) for x in t2[:4]] == list(own2) and [cstr(x) for x in t2[4:]] == [FSg.OWN_LONG[o] for o in own2],
                         "TRK + CLEAR: every control back at its machine's defaults (RIFT v0.4), not stock's":
                             cleared == want,
                         "no fault reported, no stack freed": not r.get("fault_reports") and not r.get("stack_frees"),

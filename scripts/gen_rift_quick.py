@@ -18,7 +18,7 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
-COVERS = "0.28"            # the release the guide describes (not VERSION: the tree may be ahead)
+COVERS = "0.29"            # the release the guide describes (not VERSION: the tree may be ahead)
 LOGO_REF = "v26"           # logos as this release draws them (SPALL's, MIDI's; CONTOUR's crosshair)
 TEAL = (111, 199, 180)
 
@@ -278,7 +278,7 @@ PAGES = [
          panels=[("knobs", "SYN1 / TAPE + CLOUD", "START AT BLND 0", K(
              ("TUNE", "Pitch only (VOC, PLAY, grains); SPD stays the speed."), ("SPD", "Speed only, -4..+4; center freezes the read point."),
              ("BLND", "0 = VOC stretch; 64 = PLAY; 127 = grains."), ("SAMP", "Choose the source sample or FLEX take."),
-             ("STRT", "Where the loop begins in the sample."), ("SIZE", "Loop length / sampled region size."),
+             ("STRT", "Where the loop begins in the sample."), ("SIZE", "Loop length, 0.00-120.00 (120 = all)."),
              ("DENS", "How many grains play each second."), ("LEV", "Output volume of the machine."))),
              ("knobs", "SYN2 / GRAINS", "MORE = CLOUD-LIKE", K(
                  ("OVLP", "Length / overlap of each tiny grain."), ("SPRY", "Scatter grain start positions."),
@@ -294,7 +294,7 @@ PAGES = [
                  ("SAMP", "Turn to open the project sample list."), ("[YES]", "Keep selected sample."),
                  ("[NO]", "Cancel selection."), ("[FUNC]+[YES]", "Open the +Drive browser."),
                  ("B1-B8", "FLEX buffers appear after 127."), ("LOOP", "Use STRT + SIZE to isolate a segment."),
-                 ("TRANS", "Notes and TUNE transpose the sound."), ("VOC", "BLND 0: keyframe stretch (after heavylight). SPD = time, TUNE = pitch.")))],
+                 ("MONO", "One voice a track: a new note takes over."), ("VOC", "BLND 0: keyframe stretch (after heavylight). SPD = time, TUNE = pitch.")))],
          first=("FROZEN CLOUD", "SAMP choose sample -> BLND from 0 upward -> DENS -> SPRY -> FRZ ON"), foot="KNOB BY KNOB"),
     dict(id="samples", title="SAMPLE MACHINES", tag="SAMPLING", logo="dt2",
          sub="A visual chooser for Digitakt II playback modes and slicing.",

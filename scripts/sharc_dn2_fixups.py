@@ -391,12 +391,18 @@ def as_2c(insn):
                                fields={"compute[11:0]": first & 0xFFF}, note="G5: read as 2c")
 
 
+PCHIST = None
+
+
 def run(runner, max_steps: int, fix: Fixups, stop_at=()):
     """Step RUNNER with FIX. -> ("stop", pc, n) | ("halt", Halt, n) | ("max", pc, n)."""
     stop_at = set(stop_at)
     n = 0
+    h = PCHIST
     while n < max_steps:
         pc = runner.state.pc_sw
+        if h is not None:                       # RIFT v0.30: a probe's PC histogram (rprof RPROF_HIST)
+            h[pc] = h.get(pc, 0) + 1
         if pc in stop_at and n:
             return ("stop", pc, n)
         fix.last.append(pc)

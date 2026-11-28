@@ -29,7 +29,9 @@ def c_header() -> str:
 
     def row(t, col):
         return "{" + ", ".join(q + SETS[t][r][col] + q if r in SETS[t] else "0" for r in order) + "}"
-    return (f"#define GLASS_SETS {len(filters)}\n"
+    from . import coldfire as _gc
+    return (f"#define GLASS_ON {1 if _gc.ON else 0}\n"     # RIFT v0.29: RUBBER's page code only when it is in the build
+            f"#define GLASS_SETS {len(filters)}\n"
             f"static const signed char glass_filters[GLASS_SETS] = {{{', '.join(map(str, filters))}}};\n"
             f"#define GLASS_NAMED {len(order)}\n"
             f"static const unsigned short glass_named_ids[GLASS_NAMED] = {{{', '.join(map(str, order))}}};\n"

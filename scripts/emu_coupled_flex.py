@@ -111,6 +111,8 @@ def main() -> int:
     p.add_argument("--break", dest="brk", default=None, choices=("notrig", "nosamp", "wrongbuf", "noclear", "poolsamp", "nohold"))
     p.add_argument("--pool", action="store_true",
                    help="v0.55: after the take (links 0..4), a ONESHOT track on SAMP B1 plays it (links P1..P3)")
+    p.add_argument("--viaset", action="store_true",
+                   help="v0.29: --pool's SAMP B1 set as the list and the knob set it (smp_set_samp), not written into the sound")
     p.add_argument("--json", default=None)
     p.add_argument("--raw-smoother", action="store_true",
                    help="leave the stock smoother to the emulated EMAC (its fractional products halved): "
@@ -524,8 +526,12 @@ def pool(c, a, lay, rep, link, finish, held, tap, key, P, owner, kit, take, SM):
     T2 = 2
     snd2 = kit + 52 + STRIDE * T2
     code = SM.BUF_SAMP0 if a.brk != "poolsamp" else 127
-    c.poke(snd2 + 20 + 2 * SLOT_SAMP, struct.pack(">H", code << 8))
-    rep["setup"].append(("track 2 ONESHOT, SAMP B1", "direct: smp_machine_commit; the sound's SAMP word"))
+    if a.viaset and "smp_set_samp" in lay:
+        r = c.call(lay["smp_set_samp"], T2, code)[0]
+        rep["setup"].append(("track 2 ONESHOT, SAMP B1", f"smp_set_samp (the list's and the knob's path) -> {r}"))
+    else:
+        c.poke(snd2 + 20 + 2 * SLOT_SAMP, struct.pack(">H", code << 8))
+        rep["setup"].append(("track 2 ONESHOT, SAMP B1", "direct: smp_machine_commit; the sound's SAMP word"))
     held(16, True)
     tap(24 + T2 + 1)                                             # [TRK] + [TRIG 3]: track 2
     held(16, False)

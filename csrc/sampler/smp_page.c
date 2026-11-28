@@ -364,12 +364,14 @@ static void w_knob_at(void *c, int x, int y, int v, int top, int dotted)
     }
 }
 
+#if GLASS_ON
 /* RIFT v0.24: RUBBER's ABND and DBND on FLTR page 2 (page.c wr_cell): the sample pages' knob, its value
  * 0..127, in the cell at (x, y) */
 void rub_knob(void *c, int x, int y, int v)
 {
     w_knob_at(c, x + RUB_KX, y + RUB_KY, v, 127, 0);
 }
+#endif
 
 static void w_fader(void *c, int x, int y, int v, int top)
 {

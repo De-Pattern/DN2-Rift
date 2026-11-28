@@ -5253,6 +5253,31 @@ def step_rcost(init, sound, machines) -> dict:
     return {"ok": all(checks.values()), "checks": checks, "numbers": {"idle": base, "glass_slot": glass_slot, **out}}
 
 
+def _print_hist(hist_pc: dict, name: str) -> None:
+    """RIFT v0.30: a PC histogram by fascia.asm's labels (the nearest label before each instruction)"""
+    src = (ROOT / "csrc/waverider/sharc/fascia.asm").read_text().splitlines()
+    meta = json.loads((ROOT / "csrc/waverider/sharc/fascia.json").read_text())
+    offs, base = meta["instruction_offsets"], int(str(meta["load_sw"]), 0)
+    lab, k, at = "?", 0, {}
+    for ln in src:
+        t = ln.strip()
+        if not t or t.startswith("//") or t.startswith("."):
+            continue
+        if t.endswith(":") and " " not in t:
+            if t.startswith(("wr_fs_rt_", "wr_fs_sub_")) or not t.startswith("wr_fs_"):
+                lab = t[:-1]                    # routines, leaves, entries: not the branches' labels
+            continue
+        if k < len(offs):
+            at[base + offs[k] // 2] = lab
+        k += 1
+    by = {}
+    for pc, n in hist_pc.items():
+        by[at.get(pc, "(not fascia.asm)")] = by.get(at.get(pc, "(not fascia.asm)"), 0) + n
+    tot = sum(by.values())
+    print(f"    rprof {name} PC histogram ({tot} steps): " +
+          ", ".join(f"{k} {v}" for k, v in sorted(by.items(), key=lambda kv: -kv[1])[:40]), flush=True)
+
+
 def step_rprof(init, sound, machines) -> dict:
     """RIFT v0.27 (the optimization pass): a probe, not a gate step. Each RIFT machine's cost a block on the
     unit's cost model (rcost's), less an idle frame's: a slot of the machine with no note (idle), its strike
@@ -5292,6 +5317,9 @@ def step_rprof(init, sound, machines) -> dict:
             "SILT": lambda tr: sl_frame(sound, machines, {0: (SB.panel_knobs(), 55.0, 110)}, trig=tr),
             "LIGATURE": lambda tr: lg_frame(sound, machines, {0: (LB.panel_knobs(PATCH="INIT"), 55.0, 110)}, trig=tr),
             "DIGIDRUM": lambda tr: dd_frame(sound, machines, {0: (DB.panel_knobs(), 55.0)}, trig=tr),
+            # RIFT v0.29 (InductiveOne: a DIGIDRUM kick beside SPALL dropped out): every drum type
+            **{f"DIGIDRUM {nm}": (lambda tr, k=k: dd_frame(sound, machines, {0: (DB.panel_knobs(TYPE=k * 128 // 6 + 5), 55.0)}, trig=tr))
+               for k, nm in enumerate(("BD", "SD BASIC", "SD VINTAGE", "CP", "CY", "PC"))},
             "CONTOUR": lambda tr: ct_frame(sound, machines, {0: (_ctr_heavy(), 48.0)}, trig=tr),
             "SPALL": lambda tr: sp_frame(sound, machines, {0: (_spl_heavy(), 48.0)}, trig=tr),
             "ONESHOT": lambda tr: base_frame(sound, machines, t0=SM.TYPE_OF["ONESHOT"], overrides=smp_words(),
@@ -5334,7 +5362,8 @@ def step_rprof(init, sound, machines) -> dict:
                     counts["on"] = False
                     st_ = rr_["state"]
                 order = sorted(marks.items(), key=lambda kv: kv[1][0])
-                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0]) for i in range(len(order) - 1)]
+                seg = [(order[i][0], order[i + 1][1][0] - order[i][1][0], order[i + 1][1][1] - order[i][1][1],
+                        order[i + 1][1][2] - order[i][1][2]) for i in range(len(order) - 1)]   # (steps, L2, DDR)
                 print(f"    rprof STAGES {sn}: entries {[(n_, v_[0]) for n_, v_ in order]}; from each to the next (steps) {seg}; "
                       f"block total {rr_.get('instructions')}", flush=True)
         if only and "MVERB" in only:                                    # RIFT v0.28: the master reverb's own cost
@@ -5380,6 +5409,18 @@ def step_rprof(init, sound, machines) -> dict:
             pi = parts[-1]
             print(f"    rprof {name} no note parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(pi, ibase))}", flush=True)
             r = rows(lambda b: fb((0,) if b == 1 else ()), 40)
+            if os.environ.get("RPROF_HIST"):          # RIFT v0.30: where the ringing block's instructions go
+                hs = []
+                for nb_ in (30, 40):                     # blocks 30..39 (ringing): 40 blocks' less 30's
+                    hist_pc = {}
+                    fx.PCHIST = hist_pc
+                    try:
+                        rows(lambda b: fb((0,) if b == 1 else ()), nb_)
+                    finally:
+                        fx.PCHIST = None
+                    hs.append(hist_pc)
+                _print_hist({k: v - hs[0].get(k, 0) for k, v in hs[1].items()}, name + " blocks 30..39")
+            print(f"    rprof {name} ringing (block 40) parts less idle (instructions, L2, DDR): {tuple(x - y for x, y in zip(parts[-1], ibase))}", flush=True)
             res[name] = {"idle": round(max(r_idle[:3]) - base) if r_idle else None,
                          "strike": round(r[1] - base) if r else None,
                          "after": [round(x - idle[min(k + 2, 59)]) for k, x in enumerate(r[2:])] if r else None,
@@ -5537,6 +5578,35 @@ def step_smear(init, sound, machines) -> dict:
         print(f"    smear {name}: {c}", flush=True)
     checks = {f"{k}: bit-exact (outputs, words, states), finite, {'sounding' if k != 'an empty slot' else 'silent'}": v["ok"]
               for k, v in res.items()}
+    # RIFT v0.29 (owner: "we should limit smear to one voice"): two DSP voices on one track (TRK_ROUTE),
+    # the second note on block 20: the first fades out within that block (MONO), the second sounds;
+    # negative control: the two voices on two tracks, both still sounding
+    from dnfw.smear import stage as SG           # noqa: PLC0415
+    for same in (True, False):
+        def hook(r, same=same):
+            # voices 0, 1 (the word's low and high halves): both track 0, or tracks 0 and 1 (the runner
+            # leaves the routing at zero otherwise: every voice track 0)
+            m2.poke(r.state, SM.TRK_ROUTE, 0 if same else 1 << 16)
+        tr = {0: dict(BLND=64, SPD=90), 1: dict(BLND=64, SPD=90)}
+        rr = run_blocks(init, lambda b, tr=tr: smr_frame(sound, machines, tr, trig=(0,) if b == 1 else (1,) if b == 20 else ()),
+                        34, extra_hooks={m3.DISPATCH: hook})
+        c = smr_check(rr)
+        blocks = rr.get("smr", [])
+
+        def pk(v, lo, hi):
+            return max((abs(V.bits_f32(x)) for b in blocks[lo:hi] if b for x in b["tracks"].get(v, {}).get("bits", [])
+                        if math.isfinite(V.bits_f32(x))), default=0.0)
+        c.update({"v0_before": pk(0, 10, 20), "v0_after": pk(0, 21, 34), "v1_after": pk(1, 21, 34)})
+        exact = c["ok"] and c["out_mismatches"] == 0 and c["words_ok"] and c["state_mismatches"] == 0 and c["finite"]
+        key = "v0.29 MONO: two voices on one track" if same else "v0.29 MONO (control): two tracks"
+        if same:
+            ok = exact and c["v0_before"] > 1e-3 and c["v0_after"] == 0.0 and c["v1_after"] > 1e-3 and SG.MONO
+        else:
+            ok = exact and c["v0_after"] > 1e-3 and c["v1_after"] > 1e-3
+        res[key] = c
+        print(f"    smear {key}: {c}", flush=True)
+        checks[f"{key}: bit-exact; " + ("the first note gone after the second, the second sounding" if same
+                                         else "both notes still sounding")] = ok
     return {"ok": all(checks.values()), "checks": checks, "numbers": res}
 
 

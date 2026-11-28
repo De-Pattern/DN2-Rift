@@ -451,6 +451,10 @@ def smear_glue(p: Prog, L: Layout) -> None:
             p.fconst(12, 127.0 / top)
             p.fop(4, 4, "*", 12)
             p.trunc(4, 4)
+            # RIFT v0.29: never past 127 (a coarse 121..127, saved before STRT and SIZE were fine,
+            # indexed past SMEAR's 128-entry tables: InductiveOne's "other divisions")
+            p.iconst(12, 127)
+            p.iop(4, 4, "MIN", 12)
         p.sti(SG.MB_KN + k, 5, 4)
     p.iconst(0, SG.MB_MAGIC)
     p.sti(SG.MB_ON, 5, 0)

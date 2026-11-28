@@ -16,7 +16,7 @@ pytestmark = pytest.mark.skipif(P.ON, reason="RUBBER is in the build")
 
 def test_no_glass_chunk_or_layout():
     assert "glass_chunk" not in SPEC
-    assert not [k for k in SPEC["layout"] if k.startswith("glass_") and k != "glass_names"]   # (page.c's C function stays: idle with no filter 6)
+    assert not [k for k in SPEC["layout"] if k.startswith("glass_")]   # (v0.29: page.c's RUBBER code out too)
 
 
 def test_stock_sites_untouched():
