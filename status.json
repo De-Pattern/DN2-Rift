@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T03:09:29+00:00",
+ "updated": "2026-11-28T03:11:48+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
    "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 59,
+   "done": 60,
    "total": 75,
-   "frac": 0.787,
+   "frac": 0.8,
    "status": "running: coupled_flex",
    "state": "run",
    "last": [
-    "microtuning: KB SETUP's TUNE, the TUNING page, the frame's retune (ColdFire): tn_retune tunes only tune",
     "microtuning: each project's tuning record (ColdFire): each project's tuning: written after two seconds ",
     "SLICE editor: live edits, zero-crossing snap, deep zoom, a played slice picked (ColdFire): the slice ed",
-    "THRES on both processors (coupled): 2/2 checks: on the ColdFire and the DSP together, a -34 dB tone on "
+    "THRES on both processors (coupled): 2/2 checks: on the ColdFire and the DSP together, a -34 dB tone on ",
+    "FLEX: a recorder trig's take played by a note, on both processors (coupled): on the ColdFire and the DS"
    ],
-   "log_written": "21:49"
+   "log_written": "22:11"
   }
  ]
 }
