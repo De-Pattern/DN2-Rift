@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T00:37:05+00:00",
+ "updated": "2026-11-28T00:39:23+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
@@ -15,7 +15,7 @@
     "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire): LIGATURE's PATCH screen:",
     "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)"
    ],
-   "log_written": "19:36"
+   "log_written": "19:39"
   }
  ]
 }
