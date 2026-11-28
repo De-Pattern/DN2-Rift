@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T13:19:12+00:00",
+ "updated": "2026-11-28T13:21:31+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 01e7a03).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 54,
+   "done": 55,
    "total": 75,
-   "frac": 0.72,
+   "frac": 0.733,
    "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "RECORDER text inside its places, every state and R.LEN value (ColdFire): 7/7 checks: every centre-box m",
     "KEYBOARD kept through grid recording (ColdFire): KEYBOARD on; RECORD (grid recording): off as stock; RE",
     "KEYBOARD HOLD: PTN + KEYBOARD, held notes, chords, release (ColdFire): PTN + KEYBOARD turns stock's sus",
-    "the arp on MIDI tracks (ColdFire): the arp on a MIDI track: menu-free routing checked on the key forks "
+    "the arp on MIDI tracks (ColdFire): the arp on a MIDI track: menu-free routing checked on the key forks ",
+    "the arp's offsets and the track's transpose in key: arpscale, degreetranspose (ColdFire): arp offsets m"
    ],
-   "log_written": "08:16"
+   "log_written": "08:20"
   }
  ]
 }
