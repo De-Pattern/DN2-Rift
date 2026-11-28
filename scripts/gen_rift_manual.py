@@ -47,6 +47,7 @@ def _glass_on() -> bool:
 HAS_GLASS = _glass_on()                          # RIFT v0.18: the FLTR type GLASS (v0.24 RUBBER; v0.28: pulled)
 HAS_CONTOUR = have("dnfw.contour.machines")      # RIFT v0.19: wave terrain
 HAS_SPALL = have("dnfw.spall.machines")          # RIFT v0.25: particles
+HAS_CONTACT = have("dnfw.contact.machines")      # RIFT v0.31: the FX machine
 
 
 def has_smear() -> bool:
@@ -191,6 +192,18 @@ DIGIDRUM = {
     "FLTF": "Filter base: the bottom of the band-pass window (high-pass from 0 up).",
     "FLTW": "Filter width: how wide the window is above FLTF (127 open).",
     "LEV": "Level.",
+}
+CONTACT = {
+    "SRC": "What CONTACT plays: IN (both inputs, averaged), IN L, IN R, or another track T1..T16 (that track's sound after its own filter, amp and pan). Its own track is never its source (silence).",
+    "GAIN": "The source's level going in: OFF, then -36.8 to +12 dB. 0.0 (the default) is the source as it is.",
+    "LEV": "CONTACT's output level, before the track's own amp.",
+    "SENS": "(next stage) How readily a hit in the source rings the body. Reads -- for now.",
+    "EXC": "(next stage) The exciter: THRU, the source as it is, for now.",
+    "CLST": "(next stage) Reads -- for now.", "TONE": "(next stage) Reads -- for now.", "MIX": "(next stage) Reads -- for now.",
+    "BODY": "(next stage) The resonant body: NONE for now.",
+    "TUNE": "(next stage) Reads -- for now.", "DCAY": "(next stage) Reads -- for now.", "DAMP": "(next stage) Reads -- for now.",
+    "SPRD": "(next stage) Reads -- for now.", "SIZE": "(next stage) Reads -- for now.", "BRIT": "(next stage) Reads -- for now.",
+    "WATR": "(next stage) Reads -- for now.",
 }
 SPALL = {
     "TYPE": "The particle: IMP (one sharp impulse: a click), DUST (a burst of noise), TONE (a tiny grain of the six oscillators), CHIP (a hard, digital pulse: one oscillator's sign times the next's).",
@@ -478,6 +491,9 @@ def build() -> str:
         nav.append(("contour", "CONTOUR"))
     if SPM:
         nav.append(("spall", "SPALL"))
+    CNM = importlib.import_module("dnfw.contact.machines") if HAS_CONTACT else None
+    if CNM:
+        nav.append(("contact", "CONTACT (FX)"))
     if TM:
         nav.append(("tholet", "THOLET"))
     if PM:
@@ -640,6 +656,15 @@ def build() -> str:
         s.append(p("<span class=\"credit\">Concept: De-Pattern, after lowercase and clicks-and-cuts music (our own code).</span>"))
         s.append(table(SPM, SPALL))
 
+    if CNM:
+        s.append("<h2 id=\"contact\">CONTACT (an FX machine)</h2>")
+        s.append(p("RIFT's FX machine: a track whose voice is another sound, your <b>input</b> or <b>another track</b>, played through the CONTACT track's own filter, amp, pan, sends, LFOs and p-locks. "
+                   "It is in MACHINE SEL's <b>FX</b> section. This is its first stage: the source as it is. Its next stage adds what the name says: hits in the source (a contact mic, a drum loop) ring resonant bodies built from FASCIA's resonators.",
+                   "<b>To use it:</b> MACHINE SEL: Contact on a free track. Set <b>SRC</b> and <b>GAIN</b>, then give it a note: while the note sounds (a long trig, a held key, KEYBOARD HOLD) the source plays, so the track's AMP envelope is its gate. "
+                   "One effect a track: a second note takes over from the first. The source keeps its own dry sound; lower its level for CONTACT alone.",
+                   "<b>Controls that read --</b> belong to the next stage and do nothing yet."))
+        s.append(table(CNM, CONTACT))
+
     if TM:
         s.append("<h2 id=\"tholet\">THOLET</h2>")
         s.append(p("A piano that leans toward a Rhodes: one of six real grand-piano hammer transients starts each note, two detuned sets of twelve string partials ring under it, a felt layer softens it after Nils Frahm, EP morphs it toward an electric piano, and a grain cloud (page 2) lets the note break up into grains as it fades.",
@@ -760,6 +785,8 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.31", "CONTACT", ["<b>CONTACT</b>, RIFT's FX machine (MACHINE SEL's FX section), its first stage: SRC (IN, IN L, IN R, T1..T16), GAIN (OFF, -36.8 .. +12 dB) and LEV; the source plays through the CONTACT track's own filter, amp, sends and LFOs while it has a note. One effect a track.",
+                         "More room in the firmware: RIFT no longer carries the DN2 mk2 mod's PERC and Monomachine tables (about 11 KB)."]),
     ("0.30", "LEAN", ["<b>RIFT SETTINGS</b>, a menu of RIFT's own: on the sample browser's +DRIVE, [RIGHT] then SETTINGS. Its first setting is the <b>GUARD</b>: SAFE (as before), LOOSE or OFF, kept on the +Drive. LOOSE and OFF let heavy patches play more voices before the guard leaves one out; see Performance.",
                        "DIGIDRUM (and every RIFT machine on a track that held another one before) no longer drops its first notes after it is loaded: the guard expected what the track's previous machine last cost. Now a cost counts only for the machine that measured it.",
                       "The firmware's own machinery does less while you play: the code RIFT adds to every audio frame runs only for the features in use (no FLEX track, no MUTE SRC work; no sample track, no sample modulation pass), and the UI's checks are cheaper. A burst of keys (live recording with many keys at once) is now handled before RIFT's own checks and redraws, as on stock .",
