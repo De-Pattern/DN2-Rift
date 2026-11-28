@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T11:28:52+00:00",
+ "updated": "2026-11-28T11:31:08+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 01e7a03).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 39,
+   "done": 40,
    "total": 75,
-   "frac": 0.52,
+   "frac": 0.533,
    "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "GRID allocate slice locks (ColdFire): GRID's ALLOCATE SLICE: LINEAR locks slices 1..3 on three placed t",
     "multi-select delete (ColdFire): FUNC + YES marks a folder's samples; SELECT ALL a folder's; DELETE take",
     "SELECT UNUSED (ColdFire): SELECT UNUSED marks the loaded slots no pattern's kit or SAMP lock uses (5 of",
-    "overlays let go (ColdFire): the sample list lets go when another track is active; YES on a SLICE page a"
+    "overlays let go (ColdFire): the sample list lets go when another track is active; YES on a SLICE page a",
+    "recorder flow (ColdFire): SAVING on to TRIM; TRIM's ends move; FUNC + YES previews while held, its play"
    ],
-   "log_written": "06:28"
+   "log_written": "06:30"
   }
  ]
 }
