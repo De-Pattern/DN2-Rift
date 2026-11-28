@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T06:47:56+00:00",
+ "updated": "2026-11-28T06:50:15+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 30,
    "total": 75,
    "frac": 0.4,
-   "status": "running: waverider_menu",
+   "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
     "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire): ORGAN (on FASCIA's records): MACHINE SEL's co",
@@ -15,7 +15,7 @@
     "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): LIGATURE (on FASCIA's records",
     "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire): LIGATURE's PATCH screen:"
    ],
-   "log_written": "01:47"
+   "log_written": "01:48"
   }
  ]
 }
