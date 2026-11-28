@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T06:17:32+00:00",
+ "updated": "2026-11-28T06:19:50+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 18,
+   "done": 20,
    "total": 75,
-   "frac": 0.24,
+   "frac": 0.267,
    "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
-    "unit tests: 941 passed, 13 skipped, 12 warnings in 617.39s (0:10:17)",
-    "DSP load meter (ColdFire): the DSP load meter: the half second's peak in percent, none when the DSP is ",
     "SAMP kept across sample machines (ColdFire): MACHINE SEL from ONESHOT to the next sample machine keeps ",
-    "FUNC + turn (ColdFire): FUNC + turn: PERC's first control keeps stock's octave jumps; other controls of"
+    "FUNC + turn (ColdFire): FUNC + turn: PERC's first control keeps stock's octave jumps; other controls of",
+    "FLEX buffers in every sample machine's SAMP (ColdFire): SAMP past 127 to the FLEX buffers B1..B8 by the",
+    "start-up animation, every frame: all 80 frames, each his, in order, to the intro's end; the panel showe"
    ],
-   "log_written": "01:16"
+   "log_written": "01:19"
   }
  ]
 }
