@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T00:25:35+00:00",
+ "updated": "2026-11-28T00:27:53+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
@@ -15,7 +15,7 @@
     "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire): ORGAN (on FASCIA's records): MACHINE SEL's co",
     "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SILT (on FASCIA's records): MACHI"
    ],
-   "log_written": "19:25"
+   "log_written": "19:27"
   }
  ]
 }
