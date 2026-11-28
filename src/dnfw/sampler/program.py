@@ -121,6 +121,16 @@ def ctl(p: Prog, d: int, rec: int, k146: int) -> None:
 # blocks (16 ms) covers that; a turn of SLCE that soon after a note means that note.
 RELATCH = 0x2E0100
 RELATCH_BLOCKS = 24
+# RIFT v0.31 (the owner, 2026-11-27: SLICE "a little shaky ... as if it lags a step behind", a slice
+# "doesn't always make the sound it should"; measured: each slice-locked trig reaches the DSP on its
+# own block, but on a fresh voice, and the step before's slice played on under it). As the DT2's
+# SLICE and GRID, one voice a track: a SLICE or GRID note claims its track (OWNER + 4 track = voice +
+# 1); every other SLICE or GRID voice of that track then fades out over its next block (the
+# retrigger's own fade, C['kill']) and ends. The words lie in the recorder GAIN span's zeros (after
+# RELATCH's 256 bytes; nothing else reads 0x2e0200..0x2e0240); an owner outside 1..16 is none.
+OWNER = 0x2E0200
+ONE_VOICE = True
+BLOCKS_DM = 0x2DE118                     # block_count.asm's running count of blocks (mod 2^32)
 
 
 def relatch(p: Prog, L: Layout) -> None:
@@ -273,6 +283,8 @@ def voice(p: Prog, L: Layout, t: int | None = None) -> None:
         p.ld(0, C["trig"])
         p.ifz(0, "NE", lambda: (v(p, 0, "on"), p.ifz(0, "NE", lambda: (p.iconst(0, 1), p.st(C["kill"], 0)))),
               lambda: werp_clock(p, L))
+        if ONE_VOICE:
+            one_voice(p, L)
 
         def a_pass():
             p.ld(0, C["pass"])
@@ -330,6 +342,68 @@ def voice(p: Prog, L: Layout, t: int | None = None) -> None:
             p._branch(lambda: p.r[0] == p.r[12], "EQ", lambda: render(p, L), not_werp)
         p.loop(C["lp"], 2, a_pass)
     p.if_(0, "EQ", 12, lambda: smear_glue(p, L), rest, kind="i")
+
+
+def one_voice(p: Prog, L: Layout) -> None:
+    """RIFT v0.31: SLICE and GRID, one voice a track (OWNER, above). A note of either stamps its track's
+    word and its own (RELATCH's fourth word of its slot) with the DSP's block count; a voice of either
+    that is on, with no note, and whose track was stamped on a later block than its own note (and before
+    this block), is given C['kill'] (faded over this block, then off). Notes on one block (a chord) keep
+    each other.
+    Clobbers R0, R8..R15, I1."""
+    from ..smear.stage import _route
+    C = L.C
+    lo_t, hi_t = SM.TYPE_OF["GRID"], SM.TYPE_OF["SLICE"]
+    assert hi_t == lo_t + 1
+
+    def owner_word():                           # I1 = the voice's track's word
+        p.ld(9, C["t"])
+        _route(p, 14, 9)
+        p.lsh(12, 14, 2)
+        p.iconst(11, OWNER)
+        p.iop(12, 11, "+", 12)
+        p.seti(1, 12, "its track's stamp")
+
+    def own_word():                             # I1 = the voice's own stamp (RELATCH slot word 3)
+        p.ld(9, C["t"])
+        p.lsh(12, 9, 4)
+        p.iconst(11, RELATCH + 12)
+        p.iop(12, 11, "+", 12)
+        p.seti(1, 12, "its own stamp")
+
+    def ours(then):                             # R0 = a machine type: SLICE or GRID -> then()
+        p.iconst(12, lo_t)
+        p.if_(0, "GE", 12, lambda: (p.iconst(12, hi_t), p.if_(0, "LE", 12, then, kind="i")), kind="i")
+
+    def claim():
+        p.ld(15, BLOCKS_DM)
+        owner_word()
+        p.sti(0, 1, 15)
+        own_word()
+        p.sti(0, 1, 15)
+
+    def check_on():
+        def stale():
+            owner_word()
+            p.ldi(8, 0, 1)                      # the track's stamp
+            own_word()
+            p.ldi(10, 0, 1)                     # its own
+            p.ld(13, BLOCKS_DM)
+            p.iop(13, 13, "-", 8)               # now less the track's stamp: > 0 when stamped on an earlier
+            p.iop(8, 8, "-", 10)                # block (a stamp this block waits a block: the voices run in any
+            p.iconst(12, 0)                     # order, each on the memory as it entered); the track's less its own
+
+            def later():
+                p.if_(13, "GT", 12, lambda: (p.iconst(0, 1), p.st(C["kill"], 0)), kind="i")
+            p.if_(8, "GT", 12, later, kind="i")
+        v(p, 0, "mach")
+        ours(stale)
+
+    def check():
+        v(p, 0, "on")
+        p.ifz(0, "NE", check_on)
+    p.ld(0, C["trig"])
+    p.ifz(0, "NE", lambda: (p.ld(0, C["type"]), ours(claim)), check)
 
 
 def smear_latch(p: Prog, L: Layout) -> None:

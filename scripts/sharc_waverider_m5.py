@@ -1948,7 +1948,54 @@ def step_smp_chords(init, sound, machines, blocks=12, only=()) -> tuple[dict, di
                     rr["ok"] and fin and all_sound and om == 0 and sm == 0 and not same)
         nums[f"smp {name}"]["seconds"] = round(time.perf_counter() - t0)
         print(f"    smp {name}: {nums[f'smp {name}']}", flush=True)
+    if not only or "SLICE" in only:
+        _slice_one_voice(init, sound, machines, res, nums)
     return res, nums
+
+
+def _slice_one_voice(init, sound, machines, res, nums):
+    """RIFT v0.31 (the owner: SLICE "as if it lags a step behind"): SLICE, one voice a track, as the
+    DT2's. Two voices of one track (TRK_ROUTE), a note on voice 0 at block 1 (slice 0) and on voice 1 at
+    block 8 (slice 4): voice 0 sounds before, fades over the block after voice 1's note and is silent
+    from then on; voice 1 sounds. Control: the same on two tracks, both sounding. The DSP equals its
+    model throughout."""
+    typ = SM.TYPE_OF["SLICE"]
+    words = smp_words({SM.SAMP_REC: 4, SM.SLICE_REC: 0})
+    sn = ((24 + 0) << 8, (24 + 4) << 8)
+    for same in (True, False):
+        def hook(r, same=same):
+            m2.poke(r.state, SM.TRK_ROUTE, 0 if same else 1 << 16)
+
+        def fb(b):
+            f = base_frame(sound, machines, t0=typ, overrides=words, trigger=b == 1, others={1: typ})
+            if b == 8:
+                f.trigger(1)
+            for t in range(2):
+                for slot, w in words.items():
+                    f.param(t, slot, w)
+                f.header(FR.NOTE, t, sn[t])
+            return f.to_bytes()
+        rr = run_blocks(init, fb, 24, extra_hooks={m3.DISPATCH: hook})
+        rr.pop("state", None)
+        blks = rr.get("smp", [])
+
+        def pk(t, lo, hi):
+            return max((V.peak(b[t]["out"]) for b in blks[lo:hi] if t in b), default=0.0)
+        n, om, sm = smp_exact(rr) if rr["ok"] else (0, -1, -1)
+        c = {"mismatch_blocks": [(i, t, b[t]["out_mismatches"], b[t]["state_mismatches"]) for i, b in enumerate(blks)
+                                 for t in b if b[t]["out_mismatches"] or b[t]["state_mismatches"]][:8],
+             "v0_before": pk(0, 3, 8), "v0_after": pk(0, 10, 24), "v1_after": pk(1, 10, 24),
+             "model_blocks": n, "out_mismatches": om, "state_mismatches": sm}
+        exact = bool(rr["ok"]) and om == 0 and sm == 0
+        if same:
+            key = "SLICE one voice a track (v0.31): a second note on the track ends the first (faded), the second sounds; the DSP equals its model"
+            ok = exact and c["v0_before"] > 1e-4 and c["v0_after"] == 0.0 and c["v1_after"] > 1e-4
+        else:
+            key = "SLICE one voice a track (v0.31, control): the same two notes on two tracks both sound; the DSP equals its model"
+            ok = exact and c["v0_after"] > 1e-4 and c["v1_after"] > 1e-4
+        nums[key[:40] + (" same" if same else " two")] = c
+        print(f"    slice one voice ({'one track' if same else 'two tracks'}): {c}", flush=True)
+        res[key] = ok
 
 
 def _count_memory():
