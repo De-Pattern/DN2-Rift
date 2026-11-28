@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T00:20:51+00:00",
+ "updated": "2026-11-28T00:23:08+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 27,
    "total": 75,
    "frac": 0.36,
-   "status": "running: waverider_menu",
+   "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
     "stock questions and held keys (ColdFire): a stock question's YES is the question's; TRIG + YES is stock",
@@ -15,7 +15,7 @@
     "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire): FASCIA: MACHINE SEL's commit gives it its mo",
     "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire): ORGAN (on FASCIA's records): MACHINE SEL's co"
    ],
-   "log_written": "19:19"
+   "log_written": "19:21"
   }
  ]
 }
