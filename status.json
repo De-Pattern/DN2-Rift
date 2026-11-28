@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T05:03:20+00:00",
+ "updated": "2026-11-28T05:05:39+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
    "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 67,
+   "done": 68,
    "total": 75,
-   "frac": 0.893,
-   "status": "running: boot_engine",
+   "frac": 0.907,
+   "status": "running: boot_check",
    "state": "run",
    "last": [
-    "STRT's knob against stock's fine FREQ (ColdFire): 1/1 cases; every knob step whose inputs a stock FREQ ",
     "sample link (ColdFire): save, fast (a lost packet resent); every byte loaded and saved; the frame's rou",
     "per-project pools (ColdFire): per-project pools: LOAD / NEW / SAVE AS through the OS's own code, each p",
-    "ERASE MOD DATA (ColdFire): ERASE MOD DATA: NO at each question and LEFT erase nothing; three YES: 20458"
+    "ERASE MOD DATA (ColdFire): ERASE MOD DATA: NO at each question and LEFT erase nothing; three YES: 20458",
+    "engine + LOAD/SAVE: evaluator clean, CODE intact, machine and filter types round-trip"
    ],
-   "log_written": "00:00"
+   "log_written": "00:05"
   }
  ]
 }
