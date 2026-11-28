@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T01:18:37+00:00",
+ "updated": "2026-11-28T01:20:56+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 44,
    "total": 75,
    "frac": 0.587,
-   "status": "running: machine_boot",
+   "status": "running: machine_sweep",
    "state": "run",
    "last": [
     "stock NAME screen: NO, and its fallback (ColdFire): the stock NAME screen opens on TRIM's YES and its N",
@@ -15,7 +15,7 @@
     "sample list, browser, playhead (ColdFire): the playhead drawn where the DSP says; v0.40: the newest not",
     "MACHINE SEL columns, SYN held (ColdFire): MACHINE SEL: RIGHT from GRID shows the FLTR column from its t"
    ],
-   "log_written": "20:14"
+   "log_written": "20:19"
   }
  ]
 }
