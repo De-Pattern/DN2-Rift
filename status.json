@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T00:16:12+00:00",
+ "updated": "2026-11-28T00:18:32+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 26,
    "total": 75,
    "frac": 0.347,
-   "status": "running: waverider_menu",
+   "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
     "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S",
@@ -15,7 +15,7 @@
     "Monomachine start values (ColdFire): MACHINE SEL to SID: its eight controls at its own start (PULS, PW ",
     "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire): FASCIA: MACHINE SEL's commit gives it its mo"
    ],
-   "log_written": "19:15"
+   "log_written": "19:16"
   }
  ]
 }
