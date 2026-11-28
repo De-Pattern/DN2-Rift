@@ -28,6 +28,7 @@ from ..perc.dsl import Mem, Prog
 from . import fft as FT
 from . import live as LV
 from . import program as P
+from .route import _route   # noqa: F401  (RIFT v0.30: numpy-free, for the sampler's one_voice too)
 
 # the mailbox smp.asm leaves a track (words)
 MB_ON, MB_TRIG, MB_TR, MB_RATE, MB_BASE, MB_FRAMES, MB_FMT, MB_KN = 0, 1, 2, 3, 4, 5, 6, 7
@@ -324,24 +325,6 @@ VOC_PEAK = 270_000
 # voice a track: a note on voice t fades out (over its block) and ends every other SMEAR voice of the same
 # track (the ColdFire's voice -> track map, TRK_ROUTE). Two SMEAR tracks never touch each other.
 MONO = True
-
-
-def _route(p: Prog, d: int, v: int) -> None:
-    """Rd = the track DSP voice Rv plays (the s16 at TRK_ROUTE + 2v; its low 16 bits). d, v in R8..R15;
-    clobbers R11..R13, I1"""
-    from ..sampler import machines as SM
-    p.lsh(12, v, 1)
-    p.iconst(11, SM.TRK_ROUTE)
-    p.iop(12, 11, "+", 12)
-    p.iconst(11, 2)
-    p.iop(13, 12, "AND", 11)
-    p.iconst(11, -4)
-    p.iop(12, 12, "AND", 11)
-    p.seti(1, 12)
-    p.ldi(d, 0, 1)
-    p.ifz(13, "NE", lambda: p.lsh(d, d, -16))
-    p.iconst(11, 0xFFFF)
-    p.iop(d, d, "AND", 11)
 
 
 def _mono(p: Prog, S: SLayout) -> None:

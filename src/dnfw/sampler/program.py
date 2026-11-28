@@ -351,7 +351,7 @@ def one_voice(p: Prog, L: Layout) -> None:
     this block), is given C['kill'] (faded over this block, then off). Notes on one block (a chord) keep
     each other.
     Clobbers R0, R8..R15, I1."""
-    from ..smear.stage import _route
+    from ..smear.route import _route        # (numpy-free: the ColdFire emulator's venv has none)
     C = L.C
     lo_t, hi_t = SM.TYPE_OF["GRID"], SM.TYPE_OF["SLICE"]
     assert hi_t == lo_t + 1
