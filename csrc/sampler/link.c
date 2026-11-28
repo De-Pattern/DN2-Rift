@@ -746,7 +746,7 @@ static u16 st[16] __attribute__((section(".data")));
  * the count, so the page can name the slots, and nothing points at frames not yet there);
  * then each used slot's frames, the recorder's included, and at once that slot's entry,
  * so a slot plays as soon as it is in; last the whole directory page again. -> 0 when done */
-enum { K_BLANK, K_FRAMES, K_ENTRY, K_FULL, K_AREA, K_TABLES, K_READY, K_PREVIEW, K_HEAD, K_WIRE };
+enum { K_BLANK, K_FRAMES, K_ENTRY, K_FULL, K_AREA, K_TABLES, K_READY, K_PREVIEW, K_HEAD, K_WIRE, K_SETS };
 /* v0.38 (the testers' "new samples are silent until a restart"): the DSP plays a slot below
  * REC_FIRST only if it is below the directory's count (word 1; dnfw.sampler.program.start),
  * and only the whole page (BLANK, FULL: a power-on or a project's load) carried the count.
@@ -769,9 +769,23 @@ static int wire_magic __attribute__((section(".data"))) = 0;
 static u32 wire_bits[4] __attribute__((section(".data")));
 u32 smp_wire_sent __attribute__((section(".data"))) = 0;          /* (ranges sent: the gate reads it) */
 _Static_assert(WIRE_AREA >= TABLE_AREA + 0x20000u && WIRE_AREA + WIRE_BYTES <= TABLE_READY, "the WIRE area in the tables' room");
+/* RIFT v0.31: RIFT's settings for the DSP (SETS_MAGIC, the GUARD: jump.c's jmp_guard) to the WIRE
+ * area's end (dnfw.sampler.machines.SETS_AREA): at power-on (jump.c, once the sector is read), at
+ * a project's load (with the wirings) and when RIFT SETTINGS changes it */
+int smp_sets_due __attribute__((section(".data"))) = 0;            /* (the gate reads it) */
+u32 smp_sets_asked __attribute__((section(".data"))) = 0;
+static u32 sets_words[2] __attribute__((section(".data")));
+u32 smp_sets_sent __attribute__((section(".data"))) = 0;           /* (ranges sent: the gate reads it) */
+_Static_assert(SETS_AREA >= WIRE_AREA + 4u * LIG_WTABLE_WORDS && SETS_AREA + 8u <= WIRE_AREA + WIRE_BYTES, "the settings past the wirings");
+void smp_sets_push(void)
+{
+    smp_sets_due = 1;
+    smp_sets_asked++;
+}
 void smp_wire_push(int slot)
 {
     if (slot < 0) {
+        smp_sets_due = 1;
         wire_all = 1;
         for (int k = 0; k < 4; k++)
             wire_bits[k] = 0;
@@ -780,7 +794,7 @@ void smp_wire_push(int slot)
 }
 static int wire_due(void)
 {
-    return wire_all || wire_magic || wire_bits[0] || wire_bits[1] || wire_bits[2] || wire_bits[3];
+    return smp_sets_due || wire_all || wire_magic || wire_bits[0] || wire_bits[1] || wire_bits[2] || wire_bits[3];
 }
 static int l_area_read __attribute__((section(".data"))) = 0;   /* K_AREA from the +Drive (else from the copy) */
 int smp_area_ok(void);
@@ -1024,6 +1038,16 @@ static int next_range(void)
         l_end = CMD_OFFSET;                     /* up to the command block: the DSP's */
         return 1;
     }
+    if (smp_sets_due) {                         /* RIFT v0.31: the settings' two words */
+        extern u8 jmp_guard;
+        smp_sets_due = 0;
+        put_le32((u8 *)&sets_words[0], SETS_MAGIC);
+        put_le32((u8 *)&sets_words[1], jmp_guard <= 2u ? jmp_guard : 0u);
+        l_kind = K_SETS;
+        l_off = SETS_AREA;
+        l_end = SETS_AREA + 8u;
+        return 1;
+    }
     if (wire_all && lig_wsize() <= WIRE_BYTES) {    /* RIFT v0.12: every wiring, the magic after */
         wire_all = 0;
         wire_magic = 1;
@@ -1260,7 +1284,7 @@ static void load_poll(void)
         u32 n = l_end - l_off;
         if (n > CHUNK)
             n = CHUNK;
-        if (l_kind == K_TABLES || l_kind == K_READY || l_kind == K_PREVIEW || l_kind == K_WIRE || (l_kind == K_AREA && !l_area_read))
+        if (l_kind == K_TABLES || l_kind == K_READY || l_kind == K_PREVIEW || l_kind == K_WIRE || l_kind == K_SETS || (l_kind == K_AREA && !l_area_read))
             span_drop(l_off, l_off + n);                    /* v0.38: not the image's bytes */
         if (l_kind == K_AREA) {                             /* v0.23: from the copy */
             if (l_area_read) {
@@ -1280,6 +1304,11 @@ static void load_poll(void)
             for (u32 k = 0; k < n; k++)
                 STAGE(0)[k] = w[l_off - WIRE_AREA + k];
             smp_wire_sent++;
+        } else if (l_kind == K_SETS) {                      /* RIFT v0.31: RIFT's settings */
+            const u8 *w = (const u8 *)sets_words;
+            for (u32 k = 0; k < n; k++)
+                STAGE(0)[k] = w[l_off - SETS_AREA + k];
+            smp_sets_sent++;
         } else if (l_kind == K_TABLES) {                    /* v0.26: from the ColdFire's RAM */
             for (u32 k = 0; k < n; k++)
                 STAGE(0)[k] = TBL[8 + (l_off - TABLE_AREA) + k];

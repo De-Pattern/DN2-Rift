@@ -2171,7 +2171,7 @@ static int er_draw(void *c)
     extern int smp_er_shown(void), smp_er_err, smp_er_can_resume(void);
     extern u32 smp_er_percent(void), smp_er_sector;
     int es = smp_er_shown();
-    if (smp_fb_menu < 4 && !es)
+    if ((smp_fb_menu < 4 || smp_fb_menu == 7) && !es)    /* (7: RIFT SETTINGS, set_draw) */
         return 0;
     LABEL(c, 64, 57, "%s", "ERASE MOD DATA");
     hline(c, 0, 127, 55, 0);
@@ -2207,6 +2207,33 @@ static int er_draw(void *c)
         TEXT(c, FONT, 64, 30, CENTRED, "%s", "IT CANNOT BE UNDONE");
         LABEL(c, 64, 14, "%s", "YES / NO");
     }
+    return 1;
+}
+
+/* RIFT v0.31 (the owner, 2026-11-28: "i want an option to lessen or remove it for users", "lets put it
+ * in +drive settings"): RIFT SETTINGS, +DRIVE's menu's second item (smp_fb_menu 7, rec.c's keys): the
+ * GUARD, SAFE / LOOSE / OFF (jump.c keeps it on the +Drive; dnfw.perc.guard.mode what each does) */
+static const char *const guard_name[3] = {"SAFE", "LOOSE", "OFF"};
+static const char *const guard_say0[3] = {"LEAVES A VOICE OUT BEFORE", "LEAVES A VOICE OUT LATER:", "ONLY WHEN THE TIME IS UP:"};
+static const char *const guard_say1[3] = {"THE DSP CAN RUN LATE", "MORE VOICES, MAY CRACKLE", "FULL PATCHES CRACKLE"};   /* (two arrays: no 8-byte stride) */
+static int set_draw(void *c)
+{
+    extern u8 jmp_guard;
+    if (smp_fb_menu != 7)
+        return 0;
+    int g = jmp_guard <= 2u ? jmp_guard : 0;
+    LABEL(c, 64, 57, "%s", "RIFT SETTINGS");
+    hline(c, 0, 127, 55, 0);
+    TEXT(c, FONT, 6, 41, 0, "%s", "GUARD");
+    TEXT(c, FONT, 92, 41, CENTRED, "%s", guard_name[g]);
+    box(c, 64, 39, 121, 49, 0);
+    if (g > 0)
+        LABEL(c, 69, 43, "%s", "<");
+    if (g < 2)
+        LABEL(c, 116, 43, "%s", ">");
+    LABEL(c, 64, 27, "%s", guard_say0[g]);
+    LABEL(c, 64, 19, "%s", guard_say1[g]);
+    LABEL(c, 64, 5, "%s", "LEFT/RIGHT CHANGE  NO BACK");
     return 1;
 }
 
@@ -2278,7 +2305,7 @@ void smp_fb_draw(void *c, int samp)
     for (int y = 0; y <= 63; y++)
         for (int x = 0; x <= 127; x++)
             SET_PIXEL(c, x, y, 0);
-    if (er_draw(c))
+    if (er_draw(c) || set_draw(c))
         return;
     char num[4];
     num3(num, samp);
@@ -2382,7 +2409,11 @@ void smp_fb_draw(void *c, int samp)
         vline(c, 65, 0, 54, 1);
         TEXT(c, FONT, 68, 46, 0, "%s", "ERASE MOD");
         TEXT(c, FONT, 68, 37, 0, "%s", "DATA");
-        box(c, 66, 35, 124, 54, 0);
+        TEXT(c, FONT, 68, 26, 0, "%s", "SETTINGS");    /* RIFT v0.31: RIFT SETTINGS (set_draw) */
+        if (smp_fb_mcur == 1)
+            box(c, 66, 24, 124, 34, 0);
+        else
+            box(c, 66, 35, 124, 54, 0);
         return;
     }
     if (smp_fb_menu) {                          /* SAMPLE ACTION, as the DT2's: a list at the right */

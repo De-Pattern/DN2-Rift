@@ -173,6 +173,13 @@ TABLE_MAGIC = 0x4D4E5442                   # "BTNM" in memory
 # sent by the ColdFire from the project's list; in the table area's free room, past the tables
 WIRE_AREA = TABLE_AREA + (256 << 10)
 WIRE_BYTES = 16 << 10
+# RIFT v0.31: RIFT's settings for the DSP (the GUARD: SAFE 0, LOOSE 1, OFF 2), two words at the WIRE
+# area's end (past any wiring table: WTABLE_WORDS x 4 = 12,808 bytes): SETS_MAGIC, then the mode.
+# The ColdFire sends them (link.c's K_SETS) at power-on, at a project's load and when the setting
+# changes; the DSP reads them once a frame (dnfw.perc.guard.entry). No magic there: SAFE.
+SETS_AREA = WIRE_AREA + WIRE_BYTES - 16
+SETS_MAGIC = 0x53544652                    # "RFTS" in memory
+GUARD_SAFE, GUARD_LOOSE, GUARD_OFF = 0, 1, 2
 TABLE_LOAD = 0x47000000                    # their bytes in the ColdFire's RAM (a CODE chunk): magic, length, data
 REC_BYTES = TABLE_AREA - REC_OFFSET        # v0.23: the recordings' area ends at the slice area (v0.26: the tables)
 USER_HOLE = (REC_OFFSET, REC_END)           # yours: 0..96 MB, then 128..400 MB (dn2samples.py skips the hole)

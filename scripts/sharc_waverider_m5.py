@@ -693,7 +693,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,gstress,organ,silt,sstress,ligature,lstress,digidrum,dstress,contour,spall,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,gstress,organ,silt,sstress,ligature,lstress,digidrum,dstress,gmode,contour,spall,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -848,6 +848,8 @@ def main(argv=None):
                                 lambda: step_digidrum(warm(), sound, machines)),
                                ("dstress", "sixteen DIGIDRUM voices under the guard (RIFT)",
                                 lambda: step_dstress(warm(), sound, machines)),
+                               ("gmode", "the GUARD setting (SAFE, LOOSE, OFF) and the walk's cost stamps (RIFT v0.31)",
+                                lambda: step_gmode(warm(), sound, machines)),
                                ("contour", "CONTOUR bit-exact to live.Voice, in FASCIA's walk (RIFT v0.20)",
                                 lambda: step_contour(warm(), sound, machines)),
                                ("spall", "SPALL bit-exact to live.Voice, in FASCIA's walk (RIFT v0.25)",
@@ -4842,6 +4844,109 @@ def step_dstress(init, sound, machines) -> dict:
         "every buffer finite": out["finite"],
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": out}
+
+
+def step_gmode(init, sound, machines) -> dict:
+    """RIFT v0.31 (the owner, 2026-11-28: "i want an option to lessen or remove it for users"): RIFT
+    SETTINGS' GUARD (voices rendered: block buffers with sound in them), as the ColdFire's two words at the WIRE area's end give it (SM.SETS_AREA, poked at
+    PERC's entry every block, as link.c's K_SETS leaves them), on dstress's load (sixteen DIGIDRUM
+    voices, CY ALLOY, a note a block, the clock made to move). No words, a wrong magic and a mode
+    that is none (3) must all be SAFE: every buffer bit for bit the run with SAFE's own words; under
+    each setting every block returns, every buffer is finite and our voices end inside the frame (OFF:
+    by 0.95 of it, the limit still kept before a voice starts). Where the setting decides (all sixteen
+    struck on one block, each slot's last cost 200,000 cycles), LOOSE leaves out fewer voices than SAFE
+    and OFF fewer than LOOSE, each running further into the frame.
+    Then the walk's cost stamps (a tester: DIGIDRUM dropping its first notes after it was loaded):
+    every slot's cost word poked to 200,000 cycles on the block that strikes all sixteen. Stamped by
+    DIGIDRUM itself (its last cost: it speaks), far more voices are left out than when stamped by
+    FASCIA (another machine's cost: none, only the floors speak) or garbage (0xFFFFFFFF); FASCIA's
+    and garbage's alike. The negative control: without the stamps the two would be the same."""
+    from dnfw.perc import guard as G
+    from dnfw.digidrum import bench as DB           # noqa: PLC0415
+    from dnfw.sampler import machines as SMg        # noqa: PLC0415
+    K, P = 2, 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    kn = DB.panel_knobs(TYPE=90, DEC=127, OVER=60, EQG=100, AMD=50, FLTF=10, FLTW=80)
+    sets = dsp.SMP_POOL_DDR + SMg.SETS_AREA
+    tracks = {t: (kn, 36.0 + (t * 5) % 24) for t in range(16)}
+    nb = 24
+
+    def run(words, cost_word=None, trig_all=False):
+        b_now = {"b": 0}
+
+        def clock(r):
+            base = (b_now["b"] + 1) * P
+            r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const((base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+        def at_perc(r):
+            base = (b_now["b"] + 1) * P
+            m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+            m2.poke(r.state, G.MARK, (base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+            for k, w in enumerate(words if words is not None else (0, 0)):
+                m2.poke(r.state, sets + 4 * k, w & 0xFFFFFFFF)
+            if cost_word is not None and b_now["b"] == 8:
+                for t in range(16):
+                    m2.poke(r.state, FSC_L.cost + 4 * t, cost_word)
+                m2.poke(r.state, G.SKIPS, 0)
+        hooks = {dsp.PERC_SW: at_perc}
+        hooks.update({s_: clock for s_ in sites})
+
+        def fb(b):
+            b_now["b"] = b
+            if trig_all:
+                return dd_frame(sound, machines, tracks, trig=tuple(range(16)) if b == 8 else ())
+            return dd_frame(sound, machines, tracks, trig=(b % 16,) if b >= 2 else ())
+        rr = run_blocks(init, fb, 9 if trig_all else nb, extra_hooks=hooks)
+        st = rr.get("state")
+        out = {"ok": rr["ok"], "halt": rr.get("halt")}
+        if rr["ok"]:
+            out["skips"] = m2.word(st.state, G.SKIPS)
+            out["mode"] = m2.word(st.state, G.GMODE)
+            out["end"] = round(((m2.word(st.state, G.OURS_END) - m2.word(st.state, G.MARK0)) & 0xFFFFFFFF) / P, 3)
+            out["finite"] = all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+            out["bits"] = [tuple(blk[t]) for blk in rr["buffers"] for t in range(16)]
+            # the voices rendered: a block's track buffer with sound in it (a voice left out is zeroed)
+            out["rendered"] = sum(1 for blk in rr["buffers"] for t in range(16) if max(abs(x) for x in blk[t]) > 1e-6)
+            out["per_block"] = [sum(1 for t in range(16) if max(abs(x) for x in blk[t]) > 1e-6) for blk in rr["buffers"]]
+        print(f"    gmode {words} {cost_word}: { {k: v for k, v in out.items() if k != 'bits'} }", flush=True)
+        return out
+    M = SMg.SETS_MAGIC
+    r = {"safe": run((M, 0)), "none": run(None), "magic": run((M ^ 1, 2)), "three": run((M, 3)),
+         "loose": run((M, 1)), "off": run((M, 2))}
+    good = all(x["ok"] and x["finite"] for x in r.values())
+    sk = {k: x.get("skips") for k, x in r.items()}
+    checks = {
+        "every block returns, every buffer finite, under each setting": good,
+        "GMODE as the words say (SAFE 0 for none, a wrong magic, a 3)":
+            good and [r[k]["mode"] for k in ("safe", "none", "magic", "three", "loose", "off")] == [0, 0, 0, 3, 1, 2],
+        "no words, a wrong magic, a 3: SAFE bit for bit": good and all(r[k]["bits"] == r["safe"]["bits"] for k in ("none", "magic", "three")),
+        "SAFE leaves voices out on this load (the control)": good and sk["safe"] > 0,
+        "our voices end inside the frame (SAFE, LOOSE by 0.8; OFF by 0.95)":
+            good and r["safe"]["end"] <= 0.8 and r["loose"]["end"] <= 0.8 and r["off"]["end"] <= 0.95,
+    }
+    # the setting where it decides: all sixteen struck on one block, each slot's cost word DIGIDRUM's own
+    # 200,000 cycles (expected 250,000), so how far into the frame a voice may start is the expected cost's
+    # (on dstress's load the limit itself binds, so every setting renders alike there)
+    own_word = (5 << G.STAMP_SHIFT) | 200_000
+    md = {k: run((M, k), own_word, True) for k in (0, 1, 2)}
+    okm = all(x["ok"] and x["finite"] for x in md.values())
+    # (a voice's first sound is the block after its strike: the strike block's measure is the voices left
+    # out on it, the skips, and how far into the frame our voices ran)
+    checks["the voices struck together: LOOSE leaves out fewer than SAFE, OFF fewer than LOOSE, each running further into the frame"] = \
+        okm and md[0]["skips"] > md[1]["skips"] > md[2]["skips"] and md[0]["end"] < md[1]["end"] < md[2]["end"]
+    checks["OFF still ends inside the frame (by 0.95) with all sixteen struck"] = okm and md[2]["end"] <= 0.95
+    own = md[0]
+    other, junk = run((M, 0), (1 << G.STAMP_SHIFT) | 200_000, True), run((M, 0), 0xFFFFFFFF, True)
+    ok2 = all(x["ok"] and x["finite"] for x in (own, other, junk))
+    checks["a cost DIGIDRUM measured speaks: more voices left out than with FASCIA's cost or garbage (none)"] = \
+        ok2 and own["skips"] > other["skips"] and own["skips"] > junk["skips"]
+    checks["FASCIA's cost and garbage alike: neither speaks for DIGIDRUM"] = ok2 and other["skips"] == junk["skips"] \
+        and other["bits"] == junk["bits"]
+    nums = {k: {kk: vv for kk, vv in x.items() if kk != "bits"} for k, x in r.items()}
+    nums.update({f"struck_{('safe', 'loose', 'off')[k]}": {kk: vv for kk, vv in x.items() if kk != "bits"} for k, x in md.items()})
+    nums.update({"stamp_fascia": {kk: vv for kk, vv in other.items() if kk != "bits"},
+                 "stamp_garbage": {kk: vv for kk, vv in junk.items() if kk != "bits"}})
+    return {"ok": all(checks.values()), "checks": checks, "numbers": nums}
 
 
 # -- RIFT v0.17: PLATEAU, the first FX machine -----------------------------------------------------

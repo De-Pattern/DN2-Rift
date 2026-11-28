@@ -74,11 +74,16 @@ typedef signed char s8;
 #define SET_MAGIC 0x444E3253u                                   /* 'DN2S': the mod's settings */
 #define SET_VERSION 1u
 #define SET_JUMP 1u                                             /* flags bit 0: DIRECT JUMP on */
+#define SET_GUARD_SHIFT 1u                                      /* RIFT v0.31: flags bits 1..2, the GUARD */
 _Static_assert(SET_SECTOR >= POOL_STORE_END && SET_SECTOR < LIB_SECTOR && SET_SECTOR >= STOCK_STORE_END,
                "the settings sector lies in our region, between the pool's image and the library");
 
 /* the state, exported for the emulator check (scripts/emu_jump.py) */
 u8 jmp_on __attribute__((section(".data"))) = 0;          /* the setting */
+/* RIFT v0.31: RIFT SETTINGS' GUARD (rec.c's +DRIVE menu): SAFE 0, LOOSE 1, OFF 2, kept here beside
+ * DIRECT JUMP (an older build reads bit 0 only); the DSP has it from link.c's K_SETS */
+u8 jmp_guard __attribute__((section(".data"))) = 0;
+extern void smp_sets_push(void);
 u8 jmp_armed __attribute__((section(".data"))) = 0;       /* a cue to take on the next tick */
 u8 jmp_pending __attribute__((section(".data"))) = 0;     /* armed by us: the switch is ours */
 u8 jmp_fix __attribute__((section(".data"))) = 0;         /* the tracks' steps to wrap */
@@ -118,8 +123,13 @@ void jmp_poll(void)
         if (!jmp_dirty && BLK_READ(SET_SECTOR, 512u, sector) == 0) {
             jmp_reads++;
             if (sector[0] == SET_MAGIC && sector[1] == SET_VERSION && sector[3] == set_check(sector))
+            {
                 jmp_on = (sector[2] & SET_JUMP) != 0;
+                u32 g = (sector[2] >> SET_GUARD_SHIFT) & 3u;
+                jmp_guard = g <= 2u ? (u8)g : 0;
+            }
         }
+        smp_sets_push();                        /* RIFT v0.31: the GUARD to the DSP, read or not */
     }
     extern int smp_er_lock;                     /* v0.39: ERASE MOD DATA (erase.c): nothing written */
     if (jmp_dirty && !smp_er_lock) {
@@ -128,7 +138,7 @@ void jmp_poll(void)
             sector[k] = 0;
         sector[0] = SET_MAGIC;
         sector[1] = SET_VERSION;
-        sector[2] = jmp_on ? SET_JUMP : 0;
+        sector[2] = (jmp_on ? SET_JUMP : 0) | ((u32)(jmp_guard <= 2u ? jmp_guard : 0) << SET_GUARD_SHIFT);
         sector[3] = set_check(sector);
         if (BLK_WRITE(SET_SECTOR, 512u, sector) == 0)
             jmp_writes++;

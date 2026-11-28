@@ -264,6 +264,7 @@ EMU = (("meter", "DSP load meter (ColdFire)"),
        ("link16", "sample link (ColdFire)"),
        ("pools", "per-project pools (ColdFire)"),
        ("erase", "ERASE MOD DATA (ColdFire)"),
+       ("settings", "RIFT SETTINGS: the GUARD (ColdFire)"),
        ("engine", "engine + LOAD/SAVE"),
        ("boot", "boot from reset"),
        ("fuzz", "UI fuzz, two seeds, the audio interrupt at its real rate (ColdFire)"),
@@ -876,6 +877,31 @@ def main() -> int:
                     return good, why
                 later("erase", "ERASE MOD DATA (ColdFire)", "ERASE MOD DATA (ColdFire)",
                       [er_cmd, sorted(EMU_ENV.items())], er_body)
+
+            # 6e2. RIFT v0.31: RIFT SETTINGS (+DRIVE, RIGHT, DOWN, YES; scripts/emu_settings.py): the GUARD's
+            # keys, each change written to the settings sector (DIRECT JUMP kept) and the DSP's words asked
+            # again, nothing else written; ERASE's keys as before; a power-on on six sectors reads each right
+            if "jmp_guard" in lay:
+                se_js = work / "settings.json"
+                se_cmd = [a.venv, "-u", "scripts/emu_settings.py", "--build", bdir, "--snapshot", snap,
+                          "--json", se_js, "--png-dir", work / "settings"]
+
+                def se_body(tdir):
+                    rc, out = run("settings", se_cmd, logs, env=EMU_ENV, trace=tdir)
+                    why, good = out[-800:], False
+                    if rc == 0 and se_js.exists():
+                        r = json.loads(se_js.read_text())
+                        checks = r.get("checks", {})
+                        good = bool(r.get("ok")) and len(checks) >= 22 and all(c["ok"] for c in checks.values())
+                        why = json.dumps({k: c for k, c in checks.items() if not c["ok"]})[:800] or out[-800:]
+                        if good:
+                            why = (f"RIFT SETTINGS: +DRIVE, RIGHT, DOWN, YES; the GUARD SAFE/LOOSE/OFF by LEFT, RIGHT and YES, "
+                                   f"each change the settings sector written (DIRECT JUMP kept) and the DSP's words asked, "
+                                   f"no other write; ERASE's keys as before; {len(r.get('boot', {}))} power-ons read their "
+                                   f"sectors right; {len(checks)} checks")
+                    return good, why
+                later("settings", "RIFT SETTINGS: the GUARD (ColdFire)", "RIFT SETTINGS: the GUARD (ColdFire)",
+                      [se_cmd, sorted(EMU_ENV.items())], se_body)
 
         # 6c. the RECORDER screen (v0.22): FUNC+VOICE opens it over any page, its knobs
         # change the recorder and never the track's sound, NO closes it, and the UI keeps

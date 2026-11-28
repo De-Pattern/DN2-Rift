@@ -59,7 +59,13 @@ RESERVE = GUARD + 0xD4           # the sample voices' expected cost this block (
 LIMIT_PERC = GUARD + 0xD8        # LIMIT less RESERVE: PERC's and the Monomachine's limit
 STRUCK = GUARD + 0xDC            # bit t: sample slot t left out once in its current note
 RES_I = GUARD + 0xE0             # perc_limit's loop counter
-END = GUARD + 0xE4
+GMODE = GUARD + 0xE4             # RIFT v0.31: the GUARD setting this frame (SAFE 0, LOOSE 1, OFF 2; mode())
+GSTAMP = GUARD + 0xE8            # RIFT v0.31: the shared walk's machine now (_around_shared's STAMP)
+GSHIFT = GUARD + 0xEC            # RIFT v0.31: mode()'s shift (-2 LOOSE, else -32: nothing taken off)
+GMASK = GUARD + 0xF0             # RIFT v0.31: mode()'s mask (0 OFF, else all ones)
+END = GUARD + 0xF4
+STAMP_SHIFT = 24                 # RIFT v0.31: a shared walk's cost word: the cycles (bits 0..23), its machine's stamp above
+COST_MASK = (1 << STAMP_SHIFT) - 1
 WHERE_NONE = 0xFFFF              # the voice's delay lines held nothing non-finite (its state, input or effects did)
 WHERE_DELAY = 0x8000             # | the first non-finite delay-line word's index (0..2047)
 LIMIT_DEFAULT = 400_000          # until a frame has been measured: 0.6 of 666,667 (1 GHz, 1,500 frames a second)
@@ -71,7 +77,8 @@ PERIOD_MIN, PERIOD_MAX = 300_000, 3_000_000
 
 
 def entry(p) -> None:
-    """Once a frame, at PERC's entry: the frame's length, and the limit from it."""
+    """Once a frame, at PERC's entry: the GUARD setting (mode_read), the frame's length, and the limit from it."""
+    mode_read(p)
     p.comment("v0.27: the frame's length (MARK0 - the last MARK0) and the limit, 0.6 of it")
     keep = p.label("gkeep")
     ok = p.label("gok")
@@ -102,6 +109,49 @@ def entry(p) -> None:
     p.iconst(8, LIMIT_DEFAULT)
     p.st(LIMIT, 8)
     p.place(ok)
+
+
+def mode_read(p) -> None:
+    """RIFT v0.31 (the owner, 2026-11-28: "i want an option to lessen or remove it for users"): the GUARD
+    setting into GMODE, once a frame, from the two words the ColdFire sends to the WIRE area's end
+    (dnfw.sampler.machines.SETS_AREA: SETS_MAGIC, the mode). No magic there (nothing sent yet, garbage
+    at power-on): 0, SAFE. Any mode but 1 and 2 acts as SAFE (mode()). Clobbers R8..R11, I4."""
+    from ..sampler import machines as SM
+    from ..waverider import dsp as D
+    p.comment("RIFT v0.31: the GUARD setting (SAFE 0, LOOSE 1, OFF 2) from the ColdFire's words in DDR")
+    p.iconst(10, D.SMP_POOL_DDR + SM.SETS_AREA)
+    p.seti(4, 10)
+    p.ldi(9, 0, 4)
+    p.ldi(8, 1, 4)
+    p.iconst(10, SM.SETS_MAGIC)
+    p.if_(9, "NE", 10, lambda: p.iconst(8, 0), kind="i")
+    p.st(GMODE, 8)
+    p.iconst(9, -32)                           # mode()'s two words, so each voice's test is branch-free
+    p.iconst(10, -1)
+    p.iconst(11, 1)
+    p.if_(8, "EQ", 11, lambda: p.iconst(9, -2), kind="i")
+    p.iconst(11, 2)
+    p.if_(8, "EQ", 11, lambda: p.iconst(10, 0), kind="i")
+    p.st(GSHIFT, 9)
+    p.st(GMASK, 10)
+
+
+def mode(p) -> None:
+    """RIFT v0.31: R9, the voice's expected cost, as the GUARD setting has it. SAFE (0, and any word
+    but 1 and 2): as it was. LOOSE (1): three quarters of it, so a voice is left out only when the
+    frame is nearly full. OFF (2): none, so a voice is left out only once the frame's time up to
+    the limit is already spent (the limit itself stays: the stock's tail and the frame's last
+    eighth are never given away, so a heavy patch crackles rather than overrunning the frame).
+    Branch-free, from mode_read's two words: R9 - (R9 >> -GSHIFT), AND GMASK.
+    Keeps R8; clobbers R10, R11."""
+    p.ld(10, GSHIFT)
+    p.e("R11 = LSHIFT R9 BY R10;")
+    if p.run:
+        n = -((p.r[10] ^ 0x80000000) - 0x80000000)
+        p.setR(11, p.r[9] >> n if n < 32 else 0)
+    p.iop(9, 9, "-", 11)
+    p.ld(10, GMASK)
+    p.iop(9, 9, "AND", 10)
 
 
 def tail_limit(p) -> None:
@@ -297,7 +347,8 @@ def perc_limit(p, smp_types, smp_state: int, smp_stride: int, on_word: int, trig
 def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = None,
            rest_blocks: int = 0, strikes: int | None = None, steal_at: int = 1,
            limit: int = LIMIT, struck: int | None = None, stop=None, expect=None,
-           grow: int = 1, trig: int | None = None, floor: int = FLOOR, shared: str | None = None) -> None:
+           grow: int = 1, trig: int | None = None, floor: int = FLOOR, shared: str | None = None,
+           stamp: int | None = None) -> None:
     """VOICE() if it fits, else the slot's buffer zeroed and the skip counted. T_WORD:
     the scratch word holding the slot; COST: the slots' cost words; BUFFERS: the track
     buffers' pointers (0x254a60). v0.36: RESTS (the slots' rest counters) given, a voice
@@ -320,8 +371,10 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     SPALL voice under 30,000, so the walk's last slots were left out (silent already: nothing
     heard) and flagged with a quarter of the frame still free."""
     if shared is not None:
-        _around_shared(p, t_word, cost, voice, limit, expect, grow, trig, floor, shared)
+        assert stamp is not None and 1 <= stamp <= 0xFF, "a shared walk's slot names its machine (STAMP)"
+        _around_shared(p, t_word, cost, voice, limit, expect, grow, trig, floor, shared, stamp)
         return
+    assert stamp is None
     skip = p.label("gskip")
     done = p.label("gdone")
     p.e("R8 = EMUCLK;")
@@ -360,6 +413,7 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
         p.iop(9, 9, "MAX", 11)
     if expect is not None:
         expect(p)                              # RIFT v0.20: may raise R9 (keeps R8)
+    mode(p)                                    # RIFT v0.31: the GUARD setting
     p.iop(8, 8, "+", 9)
     p.ld(10, limit)
     p.e("COMP(R8, R10);")
@@ -381,12 +435,17 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
 
 
 def _around_shared(p, t_word: int, cost: int, voice, limit: int, expect, grow: int, trig: int,
-                   floor: int, shared: str) -> None:
+                   floor: int, shared: str, stamp: int) -> None:
     """RIFT v0.27: around() for a walk whose slots all share the guard's words (FASCIA's: seven machines):
     the test before the voice and the cost after it are leaf subroutines (one copy each), and a voice left
     out goes to SHARED, the walk's one copy of skipped(), which the caller places (and which goes on to the
     walk's next slot; its RESTS given, so it sets I5 itself). The same instructions as around()'s, in the
-    same order. Emit only, as the rest of the guard. Clobbers R8..R13, I5, I12."""
+    same order. Emit only, as the rest of the guard. Clobbers R8..R13, I5, I12.
+    RIFT v0.31 (a tester: DIGIDRUM dropping its first notes after it was loaded): the walk's machines share
+    each slot's cost word, so a slot switched from a heavy FASCIA patch to DIGIDRUM was expected to cost what
+    FASCIA last cost there, and left out (and stolen) until the eased cost came down. Now each cost word
+    carries the machine that measured it (STAMP, above bit STAMP_SHIFT; GSTAMP the machine now, set here):
+    a cost another machine measured (or garbage) reads as none, so only the floors speak for the first block."""
     assert trig is not None and not p.run
 
     def absolute(body):
@@ -410,6 +469,11 @@ def _around_shared(p, t_word: int, cost: int, voice, limit: int, expect, grow: i
         p.iop(9, 10, "+", 9)
         p.seti(5, 9)
         p.ldi(9, 0, 5, "this slot's last cost")
+        p.lsh(10, 9, -STAMP_SHIFT)             # RIFT v0.31: measured by this machine, or none
+        p.ld(11, GSTAMP)
+        p.iconst(12, COST_MASK)
+        p.iop(9, 9, "AND", 12)
+        p.if_(10, "NE", 11, lambda: p.iconst(9, 0), kind="i")
         p.iconst(10, 0)
         p.iop(9, 9, "MAX", 10)
         p.iconst(10, COST_CAP)
@@ -425,10 +489,13 @@ def _around_shared(p, t_word: int, cost: int, voice, limit: int, expect, grow: i
         p.iconst(11, IDLE_FLOOR)
         p.ifz(10, "NE", lambda: p.e("R11 = PASS R13;"))
         p.iop(9, 9, "MAX", 11)
+    p.iconst(13, stamp)
+    p.st(GSTAMP, 13)                           # RIFT v0.31: this slot's machine
     p.iconst(13, floor)                        # R13: the least on a trigger block
     p.call(f"gbefore{grow}", absolute(before))
     if expect is not None:
         expect(p)                              # may raise R9 (keeps R8); R10 is not 0 on a trigger block
+    mode(p)                                    # RIFT v0.31: the GUARD setting
     p.iop(8, 8, "+", 9)
     p.ld(10, limit)
     p.e("COMP(R8, R10);")
@@ -439,6 +506,13 @@ def _around_shared(p, t_word: int, cost: int, voice, limit: int, expect, grow: i
         p.e("R8 = EMUCLK;")
         p.ld(9, START)
         p.e("R8 = R8 - R9;", "what the voice cost")
+        p.iconst(10, 0)                        # RIFT v0.31: 0..COST_MASK, and this machine's stamp
+        p.iop(8, 8, "MAX", 10)
+        p.iconst(10, COST_MASK)
+        p.iop(8, 8, "MIN", 10)
+        p.ld(10, GSTAMP)
+        p.lsh(10, 10, STAMP_SHIFT)
+        p.iop(8, 8, "OR", 10)
         p.ld(9, t_word)
         p.lsh(9, 9, 2)
         p.iconst(10, cost)
@@ -449,7 +523,8 @@ def _around_shared(p, t_word: int, cost: int, voice, limit: int, expect, grow: i
 
 
 def skipped(p, t_word: int, cost: int, buffers: int, rests: int | None = None, rest_blocks: int = 0,
-            strikes: int | None = None, steal_at: int = 1, struck: int | None = None, stop=None) -> None:
+            strikes: int | None = None, steal_at: int = 1, struck: int | None = None, stop=None,
+            stamped: bool = False) -> None:
     """around()'s voice left out: stolen or struck, its cost eased, counted, flagged, its buffer zeroed.
     On entry I5 is the slot's cost word (around()'s), unless RESTS or STRUCK is given (they set it again)."""
     p.comment("no time left in this frame: the voice is silent this block (its state kept),")
@@ -500,8 +575,16 @@ def skipped(p, t_word: int, cost: int, buffers: int, rests: int | None = None, r
         p.iop(9, 10, "+", 9)
         p.seti(5, 9)
     p.ldi(9, 0, 5)                             # I5: the slot's cost word, still
-    p.lsh(10, 9, -2)
-    p.e("R9 = R9 - R10;")
+    if stamped:                                # RIFT v0.31: the cycles eased, the stamp kept
+        p.iconst(11, COST_MASK)
+        p.iop(10, 9, "AND", 11)
+        p.iop(9, 9, "-", 10)
+        p.lsh(11, 10, -2)
+        p.iop(10, 10, "-", 11)
+        p.iop(9, 9, "OR", 10)
+    else:
+        p.lsh(10, 9, -2)
+        p.e("R9 = R9 - R10;")
     p.sti(0, 5, 9)
     p.ld(8, SKIPS)
     p.iconst(9, 1)

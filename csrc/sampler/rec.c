@@ -1685,6 +1685,24 @@ static void rpt_start(u32 code)
 static u32 lrpt_code __attribute__((section(".data"))) = 0;
 static u32 lrpt_next __attribute__((section(".data"))) = 0;
 static void lst_step(u32 code);
+/* RIFT v0.31: RIFT SETTINGS' GUARD set (SAFE 0, LOOSE 1, OFF 2): kept on the +Drive (jump.c) and
+ * sent to the DSP (link.c's K_SETS) */
+u32 smp_guard_sets __attribute__((section(".data"))) = 0;   /* changes made (the gate reads it) */
+static void guard_set(int v)
+{
+    extern u8 jmp_guard, jmp_dirty;
+    extern void smp_sets_push(void);
+    if (v < 0)
+        v = 0;
+    if (v > 2)
+        v = 2;
+    if (v == (int)jmp_guard)
+        return;
+    jmp_guard = (u8)v;
+    jmp_dirty = 1;
+    smp_sets_push();
+    smp_guard_sets++;
+}
 /* v0.39: one step, then (held) on by itself: the browser's every level and its action menu
  * (v0.30..v0.38 repeated only the browser's list: the two stores and the action menu, LOAD
  * TO PROJECT's among them, stepped once a press; the owner) */
@@ -2305,7 +2323,7 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
         /* v0.39: ERASE MOD DATA (erase.c) under way, or its result up: the screen takes every
          * key and knob; once it has ended, YES or NO closes the browser */
         extern int smp_er_state;
-        if (smp_fb_menu >= 6 || smp_er_state != 0) {
+        if (smp_fb_menu == 6 || smp_er_state != 0) {   /* (7: RIFT SETTINGS, v0.31) */
             if (it[0] == IT_KEY) {
                 int press = (flags & F_PRESS) && !(flags & F_RELEASE);
                 if (press && code < 32)
@@ -2335,6 +2353,11 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
                 smp_fb_mcur += d;
                 if (smp_fb_mcur < 0) smp_fb_mcur = 0;
                 if (smp_fb_mcur > last) smp_fb_mcur = last;
+            } else if (smp_fb_menu == 3 && d) {         /* RIFT v0.31: ERASE MOD DATA, SETTINGS */
+                smp_fb_mcur = d < 0 ? 0 : 1;
+            } else if (smp_fb_menu == 7 && d) {         /* RIFT v0.31: the GUARD's value */
+                extern u8 jmp_guard;
+                guard_set((int)jmp_guard + (d < 0 ? -1 : 1));
             } else if (!smp_fb_menu) {
                 smp_fb_cur += d;
                 if (smp_fb_cur < 0)
@@ -2369,6 +2392,24 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
             int slot, f = smp_fb_item(smp_fb_cur, &slot);
             int t = (int)UI_TRACK_NOW;
             int on_folder = slot < 0 && f != -1;
+            if (smp_fb_menu == 7) {             /* RIFT v0.31: RIFT SETTINGS: the GUARD */
+                extern u8 jmp_guard;
+                if (code == K_LEFT || code == K_RIGHT)
+                    guard_set((int)jmp_guard + (code == K_LEFT ? -1 : 1));
+                else if (code == K_YES)
+                    guard_set(jmp_guard >= 2u ? 0 : (int)jmp_guard + 1);
+                else if (code == K_NO)
+                    smp_fb_menu = 3;            /* back to +DRIVE's menu, SETTINGS selected */
+                return (u32)it;
+            }
+            if (smp_fb_menu == 3 && smp_fb_mcur == 1 && (code == K_YES || code == K_RIGHT)) {
+                smp_fb_menu = 7;                /* RIFT v0.31: RIFT SETTINGS */
+                return (u32)it;
+            }
+            if (smp_fb_menu == 3 && (code == K_UP || code == K_DOWN)) {
+                lst_press(code);                /* RIFT v0.31: ERASE MOD DATA, SETTINGS */
+                return (u32)it;
+            }
             if (smp_fb_menu >= 3) {             /* v0.39: ERASE MOD DATA's menu and its two questions */
                 extern int smp_er_start(void);
                 if (code == K_YES && smp_fb_menu == 5) {
@@ -2385,7 +2426,8 @@ u32 smp_ui_pop(void *queue)                   /* -> the item, in d0 as the stock
                 if (code == K_UP || code == K_DOWN)
                     lst_press(code);
                 else if (code == K_RIGHT && f == -4) {
-                    smp_fb_menu = 3;            /* v0.39: +DRIVE's menu: ERASE MOD DATA */
+                    smp_fb_menu = 3;            /* v0.39: +DRIVE's menu: ERASE MOD DATA (v0.31: and SETTINGS) */
+                    smp_fb_mcur = 0;
                 }
                 else if (code == K_YES && (f == -4 || f == -5)) {
                     smp_fb_store = f == -4 ? 1 : 0;
@@ -2553,6 +2595,10 @@ static void lst_step(u32 code)
 {
     if (smp_fb_open) {
         smp_overlay_dirty = 1;
+        if (smp_fb_menu == 3) {                 /* RIFT v0.31: ERASE MOD DATA, SETTINGS */
+            smp_fb_mcur = code == K_UP ? 0 : 1;
+            return;
+        }
         if (smp_fb_menu >= 2)                   /* DELETE asked, or ERASE's menu (v0.39): nothing to move */
             return;
         /* v0.39: FUNC + an arrow, a page (the menu: its first or last), as Elektron's lists */

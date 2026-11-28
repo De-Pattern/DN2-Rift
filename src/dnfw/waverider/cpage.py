@@ -36,7 +36,7 @@ LINK_ENTRIES = ["smp_rx_hook", "kb_rec_hook", "smp_hi", "smp_walk", "smp_booted"
                 # DIRECT JUMP (csrc/jump, docs/jump.md)
                 "jmp_cue", "jmp_tick", "jmp_arm", "jmp_switch", "jmp_tracks", "jmp_key", "jmp_poll",
                 "jmp_on", "jmp_armed", "jmp_pending", "jmp_count", "jmp_last", "jmp_loaded", "jmp_dirty",
-                "jmp_reads", "jmp_writes", "jmp_to", "jmp_from",
+                "jmp_reads", "jmp_writes", "jmp_to", "jmp_from", "jmp_guard", "smp_sets_asked", "smp_sets_due", "smp_sets_sent", "smp_guard_sets",  # RIFT v0.31: RIFT SETTINGS
                 # v0.38: per-project pools (pools.c, hooks.S)
                 "smp_pj_begin_hook", "smp_pj_loaded_hook", "smp_pj_end_hook", "smp_pj_new_hook", "smp_pj_begins", "smp_pj_ends", "smp_pj_loads", "smp_pj_news", "smp_pj_slot", "smp_pj_newslot", "smp_pj_last", "smp_blank_req", "smp_blank_sent", "smp_pl_on", "smp_pl_owner", "smp_pl_state", "smp_pl_writes", "smp_pl_switches", "smp_pl_lists_written", "smp_pl_events", "smp_pl_src", "smp_pl_boot_case", "smp_pl_gen", "smp_pl_skipped", "smp_pl_mismatch", "smp_discard", "smp_rename",
                  # v0.38: the count to the DSP after a live add (link.c K_HEAD)
@@ -84,7 +84,7 @@ def compile_page(header: str, *, base: int) -> tuple[bytes, dict[str, int], int]
         from ..ligature import wire as _lw          # RIFT v0.12: LIGATURE's wirings (link.c, pools.c)
         for name in ("WSLOTS", "WHDR", "WWORDS", "WTABLE_WORDS"):
             defines["LIG_" + name] = int(getattr(_lw, name))
-        for name in ("POOL_BYTES", "REC_OFFSET", "REC_END", "RAM_PROVEN", "SLICE_AREA", "TABLE_AREA", "WIRE_AREA", "WIRE_BYTES", "TABLE_ROOM", "TABLE_READY", "TABLE_MAGIC", "TABLE_LOAD", "CMD_OFFSET", "STATUS_MAGIC", "TDM_TAG",
+        for name in ("POOL_BYTES", "REC_OFFSET", "REC_END", "RAM_PROVEN", "SLICE_AREA", "TABLE_AREA", "WIRE_AREA", "WIRE_BYTES", "SETS_AREA", "SETS_MAGIC", "TABLE_ROOM", "TABLE_READY", "TABLE_MAGIC", "TABLE_LOAD", "CMD_OFFSET", "STATUS_MAGIC", "TDM_TAG",
                      "RX_MAGIC", "TX_MAGIC", "POS_MAGIC", "POS_NONE", "POS_ONE", "META_PTR", "META_PTR_MAGIC", "META_MAGIC", "META_FOLDERS",
                      "META_FOLDER_BYTES", "META_SLOT_BYTES", "META_NAME_BYTES", "META_BYTES", "LIBID_OFFSET"):      # v0.16; v0.25 POS
             defines[name] = hex(getattr(SM, name)) + "u"

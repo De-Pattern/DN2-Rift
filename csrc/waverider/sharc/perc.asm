@@ -2671,6 +2671,34 @@ wr_pk_else_337.:
       R0 = R0 - R12;
       DM(0x200a70c4) = R0;
       IF NE JUMP 0xbdf07c;                   // -> wr_pk_loop_321.
+      // RIFT v0.31: the GUARD setting (SAFE 0, LOOSE 1, OFF 2) from the ColdFire's words in DDR
+      R10 = -0x7405c010;
+      I4 = R10;
+      R9 = DM(0, I4);
+      R8 = DM(1, I4);
+      R10 = 0x53544652;
+      COMP(R9, R10);
+      IF EQ JUMP 0xbdf15b;                   // -> wr_pk_else_338.
+      R8 = 0x0;
+.GLOBAL wr_pk_else_338.;
+wr_pk_else_338.:
+      DM(0x2de0e4) = R8;
+      R9 = -0x20;
+      R10 = -0x1;
+      R11 = 0x1;
+      COMP(R8, R11);
+      IF NE JUMP 0xbdf16a;                   // -> wr_pk_else_339.
+      R9 = -0x2;
+.GLOBAL wr_pk_else_339.;
+wr_pk_else_339.:
+      R11 = 0x2;
+      COMP(R8, R11);
+      IF NE JUMP 0xbdf172;                   // -> wr_pk_else_340.
+      R10 = 0x0;
+.GLOBAL wr_pk_else_340.;
+wr_pk_else_340.:
+      DM(0x2de0ec) = R9;
+      DM(0x2de0f0) = R10;
       // v0.27: the frame's length (MARK0 - the last MARK0) and the limit, 0.6 of it
       R8 = DM(0x2de13c);
       R9 = DM(0x2de004);
@@ -2678,10 +2706,10 @@ wr_pk_else_337.:
       R9 = R8 - R9;                     // the frame's length
       R10 = 0x493e0;
       COMP(R9, R10);
-      IF LT JUMP 0xbdf1cf;                   // -> wr_pk_gkeep_338.
+      IF LT JUMP 0xbdf1fe;                   // -> wr_pk_gkeep_341.
       R10 = 0x2dc6c0;
       COMP(R9, R10);
-      IF GT JUMP 0xbdf1cf;                   // -> wr_pk_gkeep_338.
+      IF GT JUMP 0xbdf1fe;                   // -> wr_pk_gkeep_341.
       DM(0x2de010) = R9;
       R8 = LSHIFT R9 BY -1;
       R10 = LSHIFT R9 BY -4;
@@ -2697,24 +2725,24 @@ wr_pk_else_337.:
       R10 = DM(0x2de020);
       DM(0x2de020) = R8;
       R8 = R8 - R10;                    // AFTER's move: the last stretch from our entry
-      IF EQ JUMP 0xbdf1a7;                   // -> wr_pk_tno_340.
+      IF EQ JUMP 0xbdf1d6;                   // -> wr_pk_tno_343.
       R10 = DM(0x2de028);
       R11 = DM(0x2de024);
       R10 = R10 - R11;                  // our own time then
       R8 = R8 - R10;                    // the stock's tail
-      IF LE JUMP 0xbdf1a7;                   // -> wr_pk_tno_340.
+      IF LE JUMP 0xbdf1d6;                   // -> wr_pk_tno_343.
       R10 = LSHIFT R13 BY -1;
       R11 = LSHIFT R13 BY -3;
       R10 = R10 + R11;
       R11 = LSHIFT R13 BY -4;
       R10 = R10 + R11;
       COMP(R8, R10);
-      IF GE JUMP 0xbdf1a7;                   // -> wr_pk_tno_340.
+      IF GE JUMP 0xbdf1d6;                   // -> wr_pk_tno_343.
       R10 = DM(0x2de01c);
       R8 = MAX(R8, R10);
       DM(0x2de01c) = R8;
-.GLOBAL wr_pk_tno_340.;
-wr_pk_tno_340.:
+.GLOBAL wr_pk_tno_343.;
+wr_pk_tno_343.:
       R8 = DM(0x2de01c);
       R10 = LSHIFT R8 BY -12;
       R8 = R8 - R10;                    // eased by 1/4096 (about 3 s)
@@ -2726,25 +2754,25 @@ wr_pk_tno_340.:
       R10 = R10 - R11;                  // less P/8
       R11 = LSHIFT R13 BY -2;
       COMP(R10, R11);
-      IF GE JUMP 0xbdf1c5;                   // -> wr_pk_tdone_341.
+      IF GE JUMP 0xbdf1f4;                   // -> wr_pk_tdone_344.
       R10 = PASS R11;                   // at least P/4
-.GLOBAL wr_pk_tdone_341.;
-wr_pk_tdone_341.:
+.GLOBAL wr_pk_tdone_344.;
+wr_pk_tdone_344.:
       R8 = DM(0x2de000);
       COMP(R10, R8);
-      IF GE JUMP 0xbdf1cf;                   // -> wr_pk_tkeep_342.
+      IF GE JUMP 0xbdf1fe;                   // -> wr_pk_tkeep_345.
       DM(0x2de000) = R10;
-.GLOBAL wr_pk_tkeep_342.;
-wr_pk_tkeep_342.:
-.GLOBAL wr_pk_gkeep_338.;
-wr_pk_gkeep_338.:
+.GLOBAL wr_pk_tkeep_345.;
+wr_pk_tkeep_345.:
+.GLOBAL wr_pk_gkeep_341.;
+wr_pk_gkeep_341.:
       R8 = DM(0x2de000);
       R8 = PASS R8;
-      IF NE JUMP 0xbdf1dc;                   // -> wr_pk_gok_339.
+      IF NE JUMP 0xbdf20b;                   // -> wr_pk_gok_342.
       R8 = 0x61a80;
       DM(0x2de000) = R8;
-.GLOBAL wr_pk_gok_339.;
-wr_pk_gok_339.:
+.GLOBAL wr_pk_gok_342.;
+wr_pk_gok_342.:
       // v0.49: the sample voices' time held back from PERC's
       R3 = DM(0x25c4ac);
       R3 = LSHIFT R3 BY -16;
