@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T12:28:25+00:00",
+ "updated": "2026-11-28T12:30:42+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 01e7a03).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 46,
+   "done": 47,
    "total": 75,
-   "frac": 0.613,
-   "status": "running: waverider_menu",
+   "frac": 0.627,
+   "status": "running: jump",
    "state": "run",
    "last": [
-    "sample list, browser, playhead (ColdFire): the playhead drawn where the DSP says; v0.40: the newest not",
     "MACHINE SEL columns, SYN held (ColdFire): MACHINE SEL: RIGHT from GRID shows the FLTR column from its t",
     "every machine through MACHINE SEL's own list; a power-on with ours on the tracks (ColdFire): a power-on",
-    "+DRIVE browser (ColdFire): the two stores, +DRIVE's folders and samples, a tick, LOAD TO PROJECT queued"
+    "+DRIVE browser (ColdFire): the two stores, +DRIVE's folders and samples, a tick, LOAD TO PROJECT queued",
+    "+DRIVE keys and long names (ColdFire): held arrows repeat in the list and the action menu, FUNC + DOWN "
    ],
-   "log_written": "07:24"
+   "log_written": "07:30"
   }
  ]
 }
