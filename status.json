@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T06:12:58+00:00",
+ "updated": "2026-11-28T06:15:13+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 14,
+   "done": 16,
    "total": 75,
-   "frac": 0.187,
-   "status": "running: unit tests",
+   "frac": 0.213,
+   "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "ColdFire: code 0x467a8000..0x467a8688: no scale-8 addressing",
-    "ColdFire: code 0x467b8000..0x467b8684: no scale-8 addressing",
     "ColdFire: MAIN OS: 215 hit(s), all in appended data that never executes",
-    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec"
+    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
+    "unit tests: 941 passed, 13 skipped, 12 warnings in 617.39s (0:10:17)",
+    "DSP load meter (ColdFire): the DSP load meter: the half second's peak in percent, none when the DSP is "
    ],
-   "log_written": "01:02"
+   "log_written": "01:14"
   }
  ]
 }
