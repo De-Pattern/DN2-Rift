@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T06:22:15+00:00",
+ "updated": "2026-11-28T06:24:34+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 22,
+   "done": 23,
    "total": 75,
-   "frac": 0.293,
-   "status": "running: waverider_menu",
+   "frac": 0.307,
+   "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
-    "FLEX buffers in every sample machine's SAMP (ColdFire): SAMP past 127 to the FLEX buffers B1..B8 by the",
     "start-up animation, every frame: all 80 frames, each his, in order, to the intro's end; the panel showe",
     "recorder screen (ColdFire): FUNC+VOICE opens it, knob A moves SRC four detents a choice (3: none, 12: t",
-    "Monomachine pages and detents (ColdFire): the five Monomachine pages drawn, each its own; a two-choice "
+    "Monomachine pages and detents (ColdFire): the five Monomachine pages drawn, each its own; a two-choice ",
+    "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S"
    ],
-   "log_written": "01:22"
+   "log_written": "01:24"
   }
  ]
 }
