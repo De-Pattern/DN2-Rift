@@ -18,7 +18,7 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
-COVERS = "0.31"            # the release the guide describes (not VERSION: the tree may be ahead)
+COVERS = "0.30"            # the release the guide describes (not VERSION: the tree may be ahead)
 LOGO_REF = "v26"           # logos as this release draws them (SPALL's, MIDI's; CONTOUR's crosshair)
 TEAL = (111, 199, 180)
 
@@ -304,7 +304,7 @@ PAGES = [
                             ("GRID", "RHYTHMIC CHOPS", "Even sample divisions", "GRID = number of evenly-spaced slices; SLCE picks one"),
                             ("SLICE", "HAND-PLACED HITS", "Custom marker divisions", "SLCE picks a saved slice; [YES] on its page: EDIT SLICE POINTS / CREATE SLICE GRID (TR.DET = at transients) / LOCKS / CLEAR"),
                             ("FLEX", "LIVE RESAMPLING", "Live buffer playback", "BUF selects recording buffer B1-B8")]),
-                 ("box", "KEYBOARD SLICES", ["On SLICE and GRID with SLCE at NOTE, each key plays its own slice from C1 up.", "One voice a track (v0.31): a new slice fades out the one before; a chord's slices all sound."])],
+                 ("box", "KEYBOARD SLICES", ["On SLICE and GRID with SLCE at NOTE, each key plays its own slice from C1 up.", "One voice a track (v0.30): a new slice fades out the one before; a chord's slices all sound."])],
          first=("SAMPLE SELECT", "Turn SAMP -> [YES] accept / [NO] cancel • [FUNC]+[YES] +Drive • B1-B8 after slot 127"), foot="MACHINE CHOOSER", strip="SAMPLE SELECT"),
     dict(id="flex", title="FLEX / LIVE RECORDING", tag="SAMPLING", logo="flex",
          sub="A direct guide to every recording decision, from source to saved sample.",

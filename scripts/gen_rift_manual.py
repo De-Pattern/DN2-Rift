@@ -754,11 +754,12 @@ def build() -> str:
 
 
 VERSIONS = [
-    ("0.31", "CUT", ["SLICE and GRID play one voice a track, as on the Digitakt: a new slice note fades the one before it out in about a millisecond and takes over. Before, the previous slice kept ringing under each new one, which made sequenced slices sound late or wrong. Notes struck together (a keyboard chord of slices) still sound together."]),
     ("0.30", "LEAN", ["The firmware's own machinery does less while you play: the code RIFT adds to every audio frame runs only for the features in use (no FLEX track, no MUTE SRC work; no sample track, no sample modulation pass), and the UI's checks are cheaper. A burst of keys (live recording with many keys at once) is now handled before RIFT's own checks and redraws, as on stock .",
                       "FLEX takes land on their step: a recorder trig's take was heard a sixth of a step late (41 ms at 60 BPM, 18 at 120). It now starts a tick after the step changes, as the sequencer's notes do (from DN2 mk2 v0.76).",
                       "A FLEX buffer on a sample machine (SAMP B1..B8) shows its waveform on page 2, drawn as the take records, instead of its name.",
-                      "TEMPO + YES on a SLICE or GRID track is stock's again: it no longer opens the slice menus (as TRIG + YES already didn't)."]),
+                      "TEMPO + YES on a SLICE or GRID track is stock's again: it no longer opens the slice menus (as TRIG + YES already didn't).",
+                      "SLICE and GRID play one voice a track, as on the Digitakt: a new slice note fades the one before it out in about a millisecond and takes over. Before, the previous slice kept ringing under each new one, which made sequenced slices sound late or wrong. Notes struck together (a keyboard chord of slices) still sound together.",
+                      "SMEAR's SPD runs -4.00 to +4.00 evenly (it started at -4.06) and lands on every half: 0.5, 1, 1.5, 2 and on, both ways (2.03 is 2)."]),
     ("0.29", "MONO", ["SMEAR plays one voice a track: a new note fades the one before it out (in under a millisecond) and takes its place. Held or overlapping notes no longer pile up into the drop-outs and crackle of v0.25 to v0.28.",
                       "SMEAR's STRT and SIZE run 0.00 to 120.00, as ONESHOT's. SIZE went on to 127 before, and 121 to 127 read past the end of its table: odd loop lengths . A project saved with SIZE above 120 plays the whole loop.",
                       "DIGIDRUM: the DSP's time guard expects what each drum type really costs (BD, SD BASIC and PC about half of before). A kick beside SPALL and other busy tracks is left out far less .",

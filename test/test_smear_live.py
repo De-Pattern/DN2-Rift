@@ -44,7 +44,10 @@ def test_freeze_holds_level():
 def test_voice_speed_table_detents():
     assert L.TABLES["SPD"][64] == 0.0
     assert L.TABLES["SPD"][80] == 1.0 and L.TABLES["SPD"][48] == -1.0
-    assert L.TABLES["SPD"][127] == 4.0 and L.TABLES["SPD"][0] < -4.0
+    # RIFT v0.30 (a tester: "starts at -4.06 but ends at 4", "2 is unselectable"): even ends, every half reached
+    assert L.TABLES["SPD"][127] == 4.0 and L.TABLES["SPD"][0] == -4.0 and L.TABLES["SPD"][1] == -4.0
+    halves = {float(x) for x in L.TABLES["SPD"]}
+    assert all(h / 2 in halves for h in range(-8, 9)), sorted(halves)
 
 
 def test_voice_paths_finite_and_frozen_holds():

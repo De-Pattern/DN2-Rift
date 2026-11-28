@@ -600,13 +600,15 @@ static void f_slen(int v, char *buf)            /* GRID's LEN: how many slices, 
     put_num(buf, (coarse(v, SMP_SLEN_ID) >> 1) + 1);
 }
 
-/* RIFT v0.16 SMEAR (dnfw.smear.live._speed): SPD, -4.00..+4.00 (64 frozen, +-1 within 0.06);
+/* RIFT v0.16 SMEAR (dnfw.smear.live._speed): SPD, -4.00..+4.00 (64 frozen; v0.31: halves within 0.05);
  * WIN, the grain window's name (live.WIN_NAMES, k * 7 >> 7) */
 static void f_spd(int v, char *buf)
 {
-    int k = coarse(v, 254), h = (k - 64) * 400 / 63;
-    if (h > 94 && h < 106) h = 100;
-    if (h < -94 && h > -106) h = -100;
+    int k = coarse(v, 254), x = (k - 64) * 400, h = x / 63;   /* x: hundredths x 63 */
+    if (h < -400) h = -400, x = -400 * 63;     /* RIFT v0.31: -4.00 at 0 and 1, as +4.00 at 127 */
+    int m = (h >= 0 ? h + 25 : h - 25) / 50 * 50;   /* within 0.05 of a half: that half (2.03 -> 2.00), */
+    if (x - 63 * m < 315 && 63 * m - x < 315)  /* exactly as _speed: |x / 63 - m| < 5 hundredths */
+        h = m;
     if (k == 64) {
         put(buf, "FRZ", 4);
         return;

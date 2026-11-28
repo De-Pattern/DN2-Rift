@@ -326,10 +326,13 @@ HEAD_INC = 1.0 / HEAD_LEN
 
 
 def _speed(k: int) -> float:
-    """SPD 0..127: 64 is 0 (frozen); +-4 at the ends; within 0.06 of +-1 it is +-1 (80, 48)."""
-    s = (k - 64) / 63.0 * 4.0
-    if abs(abs(s) - 1.0) < 0.06:
-        s = math.copysign(1.0, s)
+    """SPD 0..127: 64 is 0 (frozen); -4 at 0 and 1, +4 at 127 (RIFT v0.31, a tester: "starts at -4.06
+    but ends at 4"); within 0.05 of a half (0.5, 1, 1.5, 2 .. 4, either way) it is that half (v0.31:
+    the same tester, "2 is unselectable": 2.03 became 2; v0.16..v0.30 snapped +-1 alone)."""
+    s = max(-4.0, (k - 64) / 63.0 * 4.0)
+    h = round(2.0 * s) / 2.0
+    if abs(s - h) < 0.05:
+        s = h
     return s
 
 
