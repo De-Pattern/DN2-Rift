@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T10:48:03+00:00",
+ "updated": "2026-11-28T10:50:22+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 01e7a03).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 14,
+   "done": 27,
    "total": 75,
-   "frac": 0.187,
-   "status": "running: unit tests",
+   "frac": 0.36,
+   "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "ColdFire: code 0x467a8000..0x467a8688: no scale-8 addressing",
-    "ColdFire: code 0x467b8000..0x467b8684: no scale-8 addressing",
-    "ColdFire: MAIN OS: 224 hit(s), all in appended data that never executes",
-    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec"
+    "stock questions and held keys (ColdFire): a stock question's YES is the question's; TRIG + YES is stock",
+    "Monomachine start values (ColdFire): MACHINE SEL to SID: its eight controls at its own start (PULS, PW ",
+    "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire): FASCIA: MACHINE SEL's commit gives it its mo",
+    "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire): ORGAN (on FASCIA's records): MACHINE SEL's co"
    ],
-   "log_written": "05:37"
+   "log_written": "05:49"
   }
  ]
 }
