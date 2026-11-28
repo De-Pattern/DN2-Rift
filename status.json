@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T05:42:47+00:00",
+ "updated": "2026-11-28T05:45:10+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
    "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 69,
+   "done": 70,
    "total": 75,
-   "frac": 0.92,
-   "status": "running: fuzz_ui",
+   "frac": 0.933,
+   "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "per-project pools (ColdFire): per-project pools: LOAD / NEW / SAVE AS through the OS's own code, each p",
     "ERASE MOD DATA (ColdFire): ERASE MOD DATA: NO at each question and LEFT erase nothing; three YES: 20458",
     "engine + LOAD/SAVE: evaluator clean, CODE intact, machine and filter types round-trip",
-    "boot from reset: booted and drew its UI, no fault; the start-up animation's first frame, his"
+    "boot from reset: booted and drew its UI, no fault; the start-up animation's first frame, his",
+    "UI fuzz, two seeds, the audio interrupt at its real rate (ColdFire): 3/3 runs pass (the arp scenario an"
    ],
-   "log_written": "00:20"
+   "log_written": "00:43"
   }
  ]
 }
