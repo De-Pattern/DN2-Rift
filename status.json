@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T01:37:06+00:00",
+ "updated": "2026-11-28T01:39:21+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
    "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 44,
+   "done": 45,
    "total": 75,
-   "frac": 0.587,
-   "status": "running: machine_sweep",
+   "frac": 0.6,
+   "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "stock NAME screen: NO, and its fallback (ColdFire): the stock NAME screen opens on TRIM's YES and its N",
     "SLICE menus and SLICES keys (ColdFire): menu, grid dialog and editor drawn; RIGHT picks slice 2, E move",
     "sample list, browser, playhead (ColdFire): the playhead drawn where the DSP says; v0.40: the newest not",
-    "MACHINE SEL columns, SYN held (ColdFire): MACHINE SEL: RIGHT from GRID shows the FLTR column from its t"
+    "MACHINE SEL columns, SYN held (ColdFire): MACHINE SEL: RIGHT from GRID shows the FLTR column from its t",
+    "every machine through MACHINE SEL's own list; a power-on with ours on the tracks (ColdFire): a power-on"
    ],
-   "log_written": "20:19"
+   "log_written": "20:37"
   }
  ]
 }
