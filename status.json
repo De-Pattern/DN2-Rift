@@ -1,21 +1,16 @@
 {
- "updated": "2026-11-28T05:45:50+00:00",
- "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
+ "updated": "2026-11-28T05:47:26+00:00",
+ "note": "Gating on the owner's laptop runner (v0.30, source 0dc29eb).",
  "gates": [
   {
-   "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 72,
+   "label": "v0.30 \u00b7 full gate (laptop)",
+   "done": 0,
    "total": 75,
-   "frac": 0.96,
-   "status": "CLEARED TO FLASH",
-   "state": "ok",
-   "last": [
-    "boot from reset: booted and drew its UI, no fault; the start-up animation's first frame, his",
-    "UI fuzz, two seeds, the audio interrupt at its real rate (ColdFire): 3/3 runs pass (the arp scenario an",
-    "sample link, dead link (ColdFire): dead (nothing gets through): the RAM check gives up after four secon",
-    "SHARC runner: stock: all steps PASS, incl. types 0-4 bit-identical to stock [reused: no input changed];"
-   ],
-   "log_written": "00:45"
+   "frac": 0.0,
+   "status": "running: setting up",
+   "state": "run",
+   "last": [],
+   "log_written": "00:47"
   }
  ]
 }
