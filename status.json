@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T06:43:17+00:00",
+ "updated": "2026-11-28T06:45:37+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 28,
+   "done": 29,
    "total": 75,
-   "frac": 0.373,
+   "frac": 0.387,
    "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
-    "Monomachine start values (ColdFire): MACHINE SEL to SID: its eight controls at its own start (PULS, PW ",
     "FASCIA: MACHINE SEL, pages, p-locks, LFO names (ColdFire): FASCIA: MACHINE SEL's commit gives it its mo",
     "ORGAN: MACHINE SEL, pages, p-locks, LFO names (ColdFire): ORGAN (on FASCIA's records): MACHINE SEL's co",
-    "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SILT (on FASCIA's records): MACHI"
+    "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SILT (on FASCIA's records): MACHI",
+    "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): LIGATURE (on FASCIA's records"
    ],
-   "log_written": "01:42"
+   "log_written": "01:45"
   }
  ]
 }
