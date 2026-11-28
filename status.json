@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T01:57:50+00:00",
+ "updated": "2026-11-28T02:00:12+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
@@ -15,7 +15,7 @@
     "+DRIVE browser (ColdFire): the two stores, +DRIVE's folders and samples, a tick, LOAD TO PROJECT queued",
     "+DRIVE keys and long names (ColdFire): held arrows repeat in the list and the action menu, FUNC + DOWN "
    ],
-   "log_written": "20:57"
+   "log_written": "21:00"
   }
  ]
 }
