@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T06:52:33+00:00",
+ "updated": "2026-11-28T06:54:51+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
@@ -7,7 +7,7 @@
    "done": 31,
    "total": 75,
    "frac": 0.413,
-   "status": "running: waverider_menu",
+   "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
     "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SILT (on FASCIA's records): MACHI",
@@ -15,7 +15,7 @@
     "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire): LIGATURE's PATCH screen:",
     "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)"
    ],
-   "log_written": "01:51"
+   "log_written": "01:53"
   }
  ]
 }
