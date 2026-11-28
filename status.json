@@ -1,16 +1,21 @@
 {
- "updated": "2026-11-28T06:01:20+00:00",
+ "updated": "2026-11-28T06:03:39+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
    "label": "v0.30 \u00b7 full gate (laptop)",
-   "done": 0,
+   "done": 14,
    "total": 75,
-   "frac": 0.0,
-   "status": "running: setting up",
+   "frac": 0.187,
+   "status": "running: unit tests",
    "state": "run",
-   "last": [],
-   "log_written": "01:01"
+   "last": [
+    "ColdFire: code 0x467a8000..0x467a8688: no scale-8 addressing",
+    "ColdFire: code 0x467b8000..0x467b8684: no scale-8 addressing",
+    "ColdFire: MAIN OS: 215 hit(s), all in appended data that never executes",
+    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec"
+   ],
+   "log_written": "01:02"
   }
  ]
 }
