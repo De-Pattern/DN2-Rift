@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T00:02:23+00:00",
+ "updated": "2026-11-28T00:04:43+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
    "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 17,
+   "done": 19,
    "total": 75,
-   "frac": 0.227,
-   "status": "running: waverider_menu",
+   "frac": 0.253,
+   "status": "running: aniz_check",
    "state": "run",
    "last": [
-    "Overbridge's code untouched: 1907 instructions of Overbridge's path, 0 touched by the build; 38 indirec",
-    "unit tests: 941 passed, 13 skipped, 12 warnings in 583.79s (0:09:43)",
     "DSP load meter (ColdFire): the DSP load meter: the half second's peak in percent, none when the DSP is ",
-    "SAMP kept across sample machines (ColdFire): MACHINE SEL from ONESHOT to the next sample machine keeps "
+    "SAMP kept across sample machines (ColdFire): MACHINE SEL from ONESHOT to the next sample machine keeps ",
+    "FUNC + turn (ColdFire): FUNC + turn: PERC's first control keeps stock's octave jumps; other controls of",
+    "FLEX buffers in every sample machine's SAMP (ColdFire): SAMP past 127 to the FLEX buffers B1..B8 by the"
    ],
-   "log_written": "19:02"
+   "log_written": "19:04"
   }
  ]
 }
