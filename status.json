@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T00:39:23+00:00",
+ "updated": "2026-11-28T00:41:51+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
    "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 31,
+   "done": 32,
    "total": 75,
-   "frac": 0.413,
+   "frac": 0.427,
    "status": "running: sharc_waverider_m5",
    "state": "run",
    "last": [
-    "SILT: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): SILT (on FASCIA's records): MACHI",
     "LIGATURE: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): LIGATURE (on FASCIA's records",
     "LIGATURE's PATCH screen: EDIT, BLOCK, a wiring edited, pages named (ColdFire): LIGATURE's PATCH screen:",
-    "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)"
+    "DIGIDRUM: MACHINE SEL, page, p-locks, LFO names, TRK + CLEAR (ColdFire): DIGIDRUM (on FASCIA's records)",
+    "CONTOUR: MACHINE SEL, pages, p-locks, LFO names, TRK + CLEAR (ColdFire): CONTOUR (on FASCIA's records):"
    ],
-   "log_written": "19:39"
+   "log_written": "19:40"
   }
  ]
 }
