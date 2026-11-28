@@ -82,6 +82,7 @@ from dnfw.ligature import program as LGP                        # noqa: E402  (R
 from dnfw.digidrum import program as DDP                           # noqa: E402  (RIFT: DIGIDRUM's, in FASCIA's walk)
 from dnfw.contour import program as CTP                            # noqa: E402  (RIFT v0.20: CONTOUR's, in FASCIA's walk)
 from dnfw.spall import program as SPLP                            # noqa: E402  (RIFT v0.25: SPALL's, in FASCIA's walk)
+from dnfw.contact import program as CNP                           # noqa: E402  (RIFT: CONTACT's, the FX machine, in FASCIA's walk)
 from dnfw.plateau import program as PLP                            # noqa: E402  (RIFT v0.17: PLATEAU's, in FASCIA's walk)
 from dnfw.glass import program as GLP                              # noqa: E402  (RIFT v0.18: GLASS, at the walk's end)
 from dnfw.perc.program import RIFT as PP_RIFT                    # noqa: E402
@@ -112,6 +113,7 @@ DD_L = DDP.layout()             # RIFT: DIGIDRUM (type 22), in FASCIA's walk
 PL_L = PLP.layout()             # RIFT v0.17: PLATEAU (type 24), in FASCIA's walk
 CT_L = CTP.layout()             # RIFT v0.20: CONTOUR (type 25), in FASCIA's walk
 SP_L = SPLP.layout()            # RIFT v0.25: SPALL (type 26), in FASCIA's walk
+CN_L = CNP.layout()             # RIFT: CONTACT (type 27), the FX machine, in FASCIA's walk
 GL_L = GLP.layout()             # RIFT v0.18: GLASS (filter 6), at FASCIA's walk's end
 
 
@@ -376,7 +378,7 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 lt = FSC_L.lasttype + 4 * t
                 if mem.get(lt) != ty:
                     mem.put(lt, ty)
-                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], PLP.VOICE["magic"], CTP.VOICE["magic"], SPLP.VOICE["magic"]):
+                    for k_ in (0, 1, 2, OGP.VOICE["magic"], SLP.VOICE["magic"], LGP.VOICE["magic"], DDP.VOICE["magic"], PLP.VOICE["magic"], CTP.VOICE["magic"], SPLP.VOICE["magic"], CNP.VOICE["magic"]):
                         mem.put(fsc_base(t) + 4 * k_, 0)
                 if ty == FSM.TYPE:
                     p_, mem = FSP.run_voice(FSC_L, None, t, mem)
@@ -399,6 +401,13 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                 elif ty == SPLP.TYPE:                # RIFT v0.25: SPALL (dnfw.spall.program), in the same walk
                     p_, mem = SPLP.run_voice(SP_L, None, t, mem)
                     nw = SPLP.VOICE_WORDS
+                elif ty == CNP.TYPE:                 # RIFT: CONTACT (dnfw.contact.program), in the same walk;
+                    # its sources as it reads them (TRK_BUF, IN_BUF), kept for live
+                    tap["trk"] = [[m2.word(st, SM.TRK_BUF + SM.TRK_STRIDE * k + 4 * i) or 0 for i in range(64)]
+                                  for k in range(16)]
+                    tap["inb"] = [m2.word(st, SM.IN_BUF + 4 * i) or 0 for i in range(64)]
+                    p_, mem = CNP.run_voice(CN_L, None, t, mem)
+                    nw = CNP.VOICE_WORDS
                 elif ty == PLP.TYPE:                 # RIFT v0.17: PLATEAU (dnfw.plateau.program), in the same walk;
                     # its input, the tracks' blocks as it reads them (TRK_BUF), kept for live
                     tap["trk"] = [[m2.word(st, SM.TRK_BUF + SM.TRK_STRIDE * k + 4 * i) or 0 for i in range(64)]
@@ -518,7 +527,8 @@ def run_blocks(init, frames, blocks: int, extra_hooks=None):
                                "out": [V.bits_f32(x) for x in got.get(t, {}).get("out", [])],
                                "bits": list(got.get(t, {}).get("out", [])),
                                "model_steps": model[t]["steps"],
-                               **({"trk": tap["trk"]} if model[t]["type"] == PLP.TYPE and "trk" in tap else {})}
+                               **({"trk": tap["trk"]} if model[t]["type"] in (PLP.TYPE, CNP.TYPE) and "trk" in tap else {}),
+                               **({"inb": tap["inb"]} if model[t]["type"] == CNP.TYPE and "inb" in tap else {})}
                            for t in model})
         out["glass"].append({t: {**g_, "model": tap.get("glass_model", {}).get(t), "dsp": tap.get("glass_dsp", {}).get(t)}
                              for t, g_ in tap.get("glass_in", {}).items()})
@@ -693,7 +703,7 @@ def main(argv=None):
     p.add_argument("--frame-be", help="a frame as the ColdFire holds it at 0x80005e60 (16-bit BE)")
     p.add_argument("--frames", help="a glob of per-block frames (DSP order), sorted")
     p.add_argument("--no-selmap", action="store_true", help="skip selmap (no WSL)")
-    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,gstress,organ,silt,sstress,ligature,lstress,digidrum,dstress,gmode,contour,spall,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
+    p.add_argument("--steps", default="decode,map,voice,guard,stress,chords,garbage,wipe,smp,link,rec,flexlevel,mainmark,mainrec,recwhole,pvmix,tdm,stock,mnm,frame,fascia,fchords,fgarbage,fsilence,fstress,fkeep,gstress,organ,silt,sstress,ligature,lstress,digidrum,dstress,gmode,contour,spall,contact,mverb,glass,sanitize,rcost,smear,mstress")   # v0.27: shft, gran removed; v0.45: ping removed   # voice: PERC
     p.add_argument("--tag", default="", help="names this run's frame WAVs and report: m5_frame_TAG_*.wav, m5_report_TAG.json")
     a = p.parse_args(argv)
     if a.seconds < 2:
@@ -860,6 +870,8 @@ def main(argv=None):
                                 lambda: step_pstress(warm(), sound, machines)),
                                ("glass", "GLASS (filter 6) bit-exact to live.Voice on FM Tone and FASCIA tracks (RIFT v0.18)",
                                 lambda: step_glass(warm(), sound, machines)),
+                               ("contact", "CONTACT (the FX machine's phase 0) bit-exact, its sources, one voice a track, garbage, beside FASCIA (RIFT)",
+                                lambda: step_contact(warm(), sound, machines)),
                                ("mverb", "the master reverb in the stock core's place, bit-exact to live.Verb (RIFT v0.21)",
                                 lambda: step_mverb(warm, sound, machines)),
                                ("rcost", "each RIFT machine's worst block on the unit's cost model; SMEAR's VOC within its guard's peak (RIFT v0.18)",
@@ -4561,6 +4573,199 @@ def step_spall(init, sound, machines) -> dict:
         "the comparison tells live with TUNE one step off apart (negative control)":
             res["negative control: TUNE + 1 in live only"]["ok"],
         "a track switched from FASCIA to SPALL: a fresh voice, bit-exact": ok_sw,
+    }
+    return {"ok": all(checks.values()), "checks": checks, "numbers": res}
+
+
+def cn_frame(sound, machines, cns: dict, trig=(), fascias=None) -> bytes:
+    """RIFT: a frame: CNS = {t: knobs} on CONTACT, FASCIAS = {t: (panel, note, vel)} on FASCIA; every slot
+    routed to its own track (0xa5a + 2 t, as PLATEAU's frames)"""
+    from dnfw.fascia import bench as FB          # noqa: PLC0415
+    from dnfw.contact import bench as CB         # noqa: PLC0415
+    t0 = CNP.TYPE if 0 in cns else FSM.TYPE
+    f = base_frame(sound, machines, t0=t0, trigger=False)
+    for t, kn in cns.items():
+        f.header(FR.MACHINE, t, CNP.TYPE)
+        for w, ride in zip(CB.knobs_words(kn), CB.RIDES):
+            f.param(t, FSM.SLOTS[ride][1], w)
+        f.header(FR.NOTE, t, FB.note_word(60.0))
+        f.header(FSP.VEL_OFFSET, t, 127 << 8)
+    for t, (panel, note, vel) in (fascias or {}).items():
+        f.header(FR.MACHINE, t, FSM.TYPE)
+        for c, word in FB.panel_words(panel).items():
+            f.param(t, FSM.SLOTS[c][1], word)
+        f.header(FR.NOTE, t, FB.note_word(note))
+        f.header(FSP.VEL_OFFSET, t, FB.vel_word(vel))
+    for t in trig:
+        f.trigger(t, masks=(34,))
+    for t in range(16):
+        f.put(0xA5A + 2 * t, t)
+    return f.to_bytes()
+
+
+def cn_live(rr, t: int, knobs_of, on_from: int):
+    """live.block for slot T from ON_FROM on (silence before), on the sources the DSP read at FASCIA's entry"""
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.contact import bench as CB, live as CNV   # noqa: PLC0415
+    out = []
+    for b, blk in enumerate(rr.get("fsc", [])):
+        e = blk.get(t, {})
+        if b < on_from or "trk" not in e:
+            out.append(np.zeros(32, np.float32))
+            continue
+        k = CB.live_knobs(CB.knobs_seen(CB.knobs_words(knobs_of(b))))
+        o = CNV.option(k["SRC"], CNV.NSRC)
+        words = e["inb"] if o < 3 else e["trk"][o - 3]
+        lr = np.array(words, np.uint32).view(np.float32)
+        out.append(np.asarray(CNV.block(k, lr[:32], lr[32:], t), np.float32))
+    return out
+
+
+def step_contact(init, sound, machines) -> dict:
+    """RIFT (the FX machine's phase 0, owner 2026-11-27: "prove that an fx machine can even work without
+    cluttering the cpu/dsp"): CONTACT's assembled code against its model (every slot, every block) and
+    live.block (on the sources the DSP read), bit for bit, in FASCIA's walk: SRC T2 with a FASCIA note on
+    track 2, every input source (the input block noise, poked as the converter would fill it) at GAIN off,
+    unity and top; its own track (silence); one voice a track (a second note on another slot of the same
+    track takes over at once); the input's garbage (NaN, inf, 1e30) leaving no non-finite or runaway sample;
+    and beside fifteen FASCIA voices under the guard, the clock made to move, no more voices left out than
+    with the sixteenth track a silent FASCIA (the effect is cheap). Its cost a block, measured."""
+    import math                                  # noqa: PLC0415
+    import numpy as np                           # noqa: PLC0415
+    from dnfw.contact import bench as CB         # noqa: PLC0415
+    from dnfw.perc import guard as G             # noqa: PLC0415
+    res, bad = {}, []
+    rng = np.random.default_rng(27)
+    noise = [int(x) for x in rng.uniform(-0.8, 0.8, 64).astype(np.float32).view(np.uint32)]
+
+    def poke_in(words):
+        def at(r):
+            for i, w in enumerate(words):
+                m2.poke(r.state, SM.IN_BUF + 4 * i, w)
+        return {dsp.PERC_SW: at}
+
+    def judge(name, rr, want, t=0, need_sound=True):
+        ex = fsc_exact(rr)
+        lb, dmax = fsc_vs_live(rr, t, want)
+        got = [np.array(b_, np.uint32).view(np.float32) for b_ in fsc_bits(rr, t) if b_ is not None]
+        pk = float(max((np.max(np.abs(g)) for g in got), default=0.0))
+        ok = bool(rr["ok"] and ex[1:] == (0, 0) and lb == 0 and (pk > 0.001 if need_sound else pk == 0.0))
+        res[name] = {"ok": ok, "model_mismatch": ex[1:], "live_blocks_differing": lb, "max_abs_diff": dmax,
+                     "peak": pk, "halt": rr.get("halt")}
+        if not ok:
+            bad.append(name)
+        print(f"    contact {name}: {'ok' if ok else 'FAIL'} (max |dsp - live| {dmax:.3g}, peak {pk:.3g})", flush=True)
+    fpanel = fsc_audition()["01_tubular_bell"][0]
+    n = 10
+    k2 = CB.panel_knobs(SRC=CB.src_knob(3 + 1))
+    noise2 = [int(x) for x in rng.uniform(-0.6, 0.6, 64).astype(np.float32).view(np.uint32)]
+
+    def trk2(r):                                 # track 2's block (0x1c244d fills it on the unit, the stock's per-track
+        for i, w in enumerate(noise2):           # stream; the runner leaves it as it was: the recorder's parts poke it too)
+            m2.poke(r.state, SM.TRK_BUF + SM.TRK_STRIDE * 1 + 4 * i, w)
+    rr = run_blocks(init, lambda b: cn_frame(sound, machines, {0: k2}, trig=(0,) if b == 1 else (),
+                                            fascias={1: (fpanel, 60, 1.0)}), n, extra_hooks={dsp.PERC_SW: trk2})
+    judge("SRC T2 (track 2's block, beside a FASCIA note on track 2)", rr, cn_live(rr, 0, lambda b: k2, 1))
+    for o in range(3):
+        for gain in (0, 96, 127):
+            kn = CB.panel_knobs(SRC=CB.src_knob(o), GAIN=gain)
+            rr = run_blocks(init, lambda b, kn=kn: cn_frame(sound, machines, {0: kn}, trig=(0,) if b == 1 else ()), 6,
+                            extra_hooks=poke_in(noise))
+            judge(f"SRC {CB.CM.SOURCES[o]}, GAIN {gain}", rr, cn_live(rr, 0, lambda b, kn=kn: kn, 1), need_sound=gain > 0)
+    ko = CB.panel_knobs(SRC=CB.src_knob(3 + 0))
+    rr = run_blocks(init, lambda b: cn_frame(sound, machines, {0: ko}, trig=(0,) if b == 1 else ()), 6,
+                    extra_hooks=poke_in(noise))
+    judge("its own track (T1 on track 1): silence", rr, cn_live(rr, 0, lambda b: ko, 1), need_sound=False)
+    # one voice a track: slot 0 struck at block 1, slot 1 (routed to track 0 too) at block 4
+    kin = CB.panel_knobs(SRC=CB.src_knob(0))
+
+    from dnfw.fascia import bench as _FB     # noqa: PLC0415
+
+    def one_frame(b):
+        f = base_frame(sound, machines, t0=CNP.TYPE, trigger=False)
+        for t in (0, 1):
+            f.header(FR.MACHINE, t, CNP.TYPE)
+            for w, ride in zip(CB.knobs_words(kin), CB.RIDES):
+                f.param(t, FSM.SLOTS[ride][1], w)
+            f.header(FR.NOTE, t, _FB.note_word(60.0))
+            f.header(FSP.VEL_OFFSET, t, 127 << 8)
+        for t in range(16):
+            f.put(0xA5A + 2 * t, 0 if t < 2 else t)
+        for t in ((0,) if b == 1 else (1,) if b == 4 else ()):
+            f.trigger(t, masks=(34,))
+        return f.to_bytes()
+    rr = run_blocks(init, one_frame, 8, extra_hooks=poke_in(noise))
+    ex = fsc_exact(rr)
+    b0 = [np.array(x or [0] * 32, np.uint32).view(np.float32) for x in fsc_bits(rr, 0)]
+    b1 = [np.array(x or [0] * 32, np.uint32).view(np.float32) for x in fsc_bits(rr, 1)]
+    one_ok = bool(rr["ok"] and ex[1:] == (0, 0) and all(np.any(b0[b]) for b in (2, 3)) and all(not np.any(b0[b]) for b in range(4, 8))
+                  and all(np.any(b1[b]) for b in range(4, 8)))
+    res["one voice a track"] = {"ok": one_ok, "model_mismatch": ex[1:]}
+    if not one_ok:
+        bad.append("one voice a track")
+    print(f"    contact one voice a track: {'ok' if one_ok else 'FAIL'}", flush=True)
+    # garbage on the input: nothing non-finite or past 64 leaves our code
+    junk = [0x7FC00000, 0x7F800000, 0xFF800000, 0x7149F2CA] * 16          # NaN, inf, -inf, 1e30
+    kg = CB.panel_knobs(SRC=CB.src_knob(0), GAIN=127, LEV=127)
+    rr = run_blocks(init, lambda b: cn_frame(sound, machines, {0: kg}, trig=(0,) if b == 1 else ()), 6,
+                    extra_hooks=poke_in(junk))
+    fin = rr["ok"] and all(math.isfinite(x) and abs(x) <= 64 for blk in rr["buffers"] for t in range(16) for x in blk[t])
+    res["garbage input"] = {"ok": bool(fin), "halt": rr.get("halt")}
+    if not fin:
+        bad.append("garbage input")
+    print(f"    contact garbage input: {'ok' if fin else 'FAIL'}", flush=True)
+    # its cost: the walk's instructions a block with one CONTACT voice sounding, against none
+    kc = CB.panel_knobs(SRC=CB.src_knob(0))
+    r_on = run_blocks(init, lambda b: cn_frame(sound, machines, {0: kc}, trig=(0,) if b == 1 else ()), 6, extra_hooks=poke_in(noise))
+    r_off = run_blocks(init, lambda b: cn_frame(sound, machines, {0: kc}, trig=()), 6, extra_hooks=poke_in(noise))
+    cost = (r_on.get("instructions", 0) - r_off.get("instructions", 0)) // 4 if r_on["ok"] and r_off["ok"] else None
+    res["cost"] = {"instructions_a_block": cost}
+    print(f"    contact cost: {cost} instructions a block over an idle slot", flush=True)
+    # beside fifteen FASCIA voices under the guard, the clock made to move (fstress's way)
+    K, P = 2, 666_667
+    sites = set(_after_emuclk("perc")) | set(_after_emuclk("smp")) | set(_after_emuclk("fascia"))
+    pats = fsc_audition()
+    names = sorted(pats)
+
+    def stress(with_cn):
+        b_now = {"b": 0}
+
+        def clock(r):
+            base = (b_now["b"] + 1) * P
+            r.state.uregs[fx.UREG_CODES["R8"]] = fx.Const((base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+
+        def at_perc(r):
+            base = (b_now["b"] + 1) * P
+            m2.poke(r.state, G.MARK0, base & 0xFFFFFFFF)
+            m2.poke(r.state, G.MARK, (base + K * getattr(r, "steps_n", 0)) & 0xFFFFFFFF)
+            for i, w in enumerate(noise):
+                m2.poke(r.state, SM.IN_BUF + 4 * i, w)
+        hooks = {dsp.PERC_SW: at_perc}
+        hooks.update({s_: clock for s_ in sites})
+        fas = {t: (pats[names[t % len(names)]][0], 48 + t, 1.0) for t in range(1, 16)}
+
+        def fb(b):
+            b_now["b"] = b
+            if with_cn:
+                return cn_frame(sound, machines, {0: kc}, trig=tuple(range(16)) if b == 2 else (), fascias=fas)
+            return cn_frame(sound, machines, {}, trig=tuple(range(1, 16)) if b == 2 else (),
+                            fascias={**fas, 0: (fpanel, 40, 0.0)})
+        rr = run_blocks(init, fb, 16, extra_hooks=hooks)
+        sk = m2.word(rr["state"].state, G.SKIPS) if rr["ok"] else None
+        fin = rr["ok"] and all(math.isfinite(x) for blk in rr["buffers"] for t in range(16) for x in blk[t])
+        return rr["ok"], sk, fin
+    ok_a, sk_a, fin_a = stress(True)
+    ok_b, sk_b, fin_b = stress(False)
+    st_ok = bool(ok_a and ok_b and fin_a and fin_b and sk_a is not None and sk_b is not None and sk_a <= sk_b + 1)
+    res["beside fifteen FASCIA voices"] = {"ok": st_ok, "skips_with_contact": sk_a, "skips_without": sk_b}
+    print(f"    contact beside fifteen FASCIA: {'ok' if st_ok else 'FAIL'} (skips {sk_a} with, {sk_b} without)", flush=True)
+    checks = {
+        "every case bit-exact to the model and live (sources, gains, its own track)":
+            not [b_ for b_ in bad if b_ not in ("one voice a track", "garbage input")],
+        "one voice a track: a second note on the track takes over, the first goes silent": one_ok,
+        "the input's garbage: nothing non-finite or past 64 leaves our code": bool(fin),
+        "beside fifteen FASCIA voices under the guard: no more than one more voice left out than without it": st_ok,
+        "its cost measured": cost is not None,
     }
     return {"ok": all(checks.values()), "checks": checks, "numbers": res}
 

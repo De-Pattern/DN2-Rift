@@ -168,7 +168,7 @@ static int dgd_type(void)
 static void wr_names(void)
 {
     int on = wr_active();
-    int key = on == 1 ? 16 + perc_type() : on;   /* PERC: one set of names a machine */
+    int key = !WR_RIFT && on == 1 ? 16 + perc_type() : on;   /* PERC: one set of names a machine (RIFT: none) */
     if (on == DGD_KIND)
         key = 128 + dgd_type();                 /* RIFT v0.28: DIGIDRUM: one set a drum type */
     if (key == names_on)
@@ -183,7 +183,7 @@ static void wr_names(void)
         }
         const char *l = on ? wr_named_long[on - 1][k] : 0;
         const char *sh = on ? wr_named_short[on - 1][k] : 0;
-        if (on == 1)
+        if (!WR_RIFT && on == 1)
             for (int j = 0; j < 8; j++)
                 if (perc_param_ids[j] == id) {
                     l = perc_longs[perc_long[key - 16][j]];
@@ -307,6 +307,7 @@ static int lg_logo_of(int t, int *label)
     case 22: *label = 2; return LOGO_DIGIDRUM;
     case 17: *label = 3; return LOGO_FLEX;
     case 24: *label = 4; return LOGO_PLATEAU;           /* RIFT v0.18: its own logo, FX (owner) */
+    case 27: *label = 4; return LOGO_CONTACT;           /* RIFT: CONTACT, the FX machine: a contact disc on a ringing surface, FX */
     case 9: *label = 1; return LOGO_SMEAR;              /* RIFT v0.18: SMEAR's own logo, SAMP */
     case 25: return LOGO_CONTOUR;
     case 26: return LOGO_SPALL;                         /* RIFT v0.25: chips thrown off a struck surface */
@@ -741,12 +742,12 @@ void wr_page_draw(void *view, void *canvas)
     const wr_mach_t *fm = wr_mach_kind(kind);   /* v0.45: FASCIA; RIFT: ORGAN */
     if (page < 0 || page >= (smp ? 2 : mnm ? 1 : fm ? fm->pages : WR_PAGES))
         page = 0;
-    if (kind == 1) {                            /* PERC: the names TYPE has now */
+    if (!WR_RIFT && kind == 1) {                /* PERC: the names TYPE has now */
         u8 flag;
         perc_seen = perc_of(GET_VALUE(view, PERC_TYPE_ID, &flag));
     }
     wr_names();
-    if (kind == 1) {                            /* v0.20: the Machinedrum's own screen */
+    if (!WR_RIFT && kind == 1) {                /* v0.20: the Machinedrum's own screen */
         extern int md_page_draw(void *view, void *canvas, int page, int type);
         if (md_page_draw(view, canvas, page, perc_seen))
             return;
@@ -791,6 +792,11 @@ void wr_page_draw(void *view, void *canvas)
             PAGE_DOTS(view, canvas, n, page, 7);
         return;
     }
+#if WR_RIFT
+    /* RIFT: every machine has its own page above (the sample machines, FASCIA's walk's); PERC's grid
+     * and picture below are the DN2 mk2 mod's (its tables fall away) */
+    return;
+#endif
     if (smp)
         smp_picture(canvas, view, kind);
     else

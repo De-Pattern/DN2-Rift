@@ -57,7 +57,8 @@ from ..digidrum import machines as _dgd            # noqa: E402  (RIFT: DIGIDRUM
 from ..plateau import machines as _plt             # noqa: E402  (RIFT v0.17: PLATEAU, type 24; 23 is THOLET's, gone)
 from ..contour import machines as _ctr             # noqa: E402  (RIFT v0.20: CONTOUR, type 25)
 from ..spall import machines as _spl               # noqa: E402  (RIFT v0.25: SPALL, type 26)
-NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE, _plt.TYPE, _ctr.TYPE, _spl.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
+from ..contact import machines as _cnt             # noqa: E402  (RIFT: CONTACT, type 27, the FX machine)
+NEW_TYPES = tuple(range(5, max(13, *_mnm.TYPES, _smpm.BOUNCE_TYPE, _fsc.TYPE, _org.TYPE, _slt.TYPE, _lig.TYPE, _dgd.TYPE, _plt.TYPE, _ctr.TYPE, _spl.TYPE, _cnt.TYPE) + 1))   # v0.44: to 17, BOUNCE; v0.45: 18, FASCIA
 CLONE = 1                               # WaveTone
 LONG_NAME, SHORT_NAME = "Perc", "PRC"           # v0.11: PERC in Waverider's place
 MACHINE_NAMES = {5: ("Perc", "PRC"),
@@ -72,7 +73,8 @@ MACHINE_NAMES = {5: ("Perc", "PRC"),
                  _plt.TYPE - 1: ("Tholet", "THO"),            # RIFT v0.17: THOLET's 23, gone (never listed; loads as FM Tone)
                  _plt.TYPE: (_plt.LONG, _plt.SHORT),          # RIFT v0.17: PLATEAU, the first FX machine, after DIGIDRUM
                  _ctr.TYPE: (_ctr.LONG, _ctr.SHORT),
-                 _spl.TYPE: (_spl.LONG, _spl.SHORT),          # RIFT v0.25: SPALL, a synth: after CONTOUR          # RIFT v0.20: CONTOUR, a synth: after DIGIDRUM, before PLATEAU's section
+                 _spl.TYPE: (_spl.LONG, _spl.SHORT),
+                 _cnt.TYPE: (_cnt.LONG, _cnt.SHORT),          # RIFT: CONTACT, the FX machine (MACHINE SEL's FX section)          # RIFT v0.25: SPALL, a synth: after CONTOUR          # RIFT v0.20: CONTOUR, a synth: after DIGIDRUM, before PLATEAU's section
                  **{t: _mnm.LIST_NAMES[n] for t, n in zip(_mnm.TYPES, _mnm.NAMES)}}   # v0.26
 if set(MACHINE_NAMES) != set(NEW_TYPES):
     raise ImportError(f"machine types {sorted(set(NEW_TYPES) - set(MACHINE_NAMES))} have no machine")
@@ -98,7 +100,7 @@ LIST_DN2MK2 = (0, 2, 1, 3, 5, *_mnm.TYPES, *((_fsc.TYPE,) if _fsc.LISTED else ()
 from ..perc import program as _pp           # noqa: E402
 GONE_TYPES = (5, *_mnm.TYPES, _plt.TYPE - 1, *(() if _plt.ON_DSP else (_plt.TYPE,))) if _pp.RIFT else ()   # RIFT v0.17: and THOLET's 23; v0.21: PLATEAU's 24 while off the DSP
 LIST_NEW = tuple(t for t in LIST_DN2MK2 if t not in GONE_TYPES) if not _pp.RIFT else \
-    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()), *((_ctr.TYPE,) if _ctr.LISTED else ()), *((_spl.TYPE,) if _spl.LISTED else ()), *((_plt.TYPE,) if _plt.LISTED else ()),
+    (0, 2, 1, 3, _fsc.TYPE, *((_org.TYPE,) if _org.LISTED else ()), *((_slt.TYPE,) if _slt.LISTED else ()), *((_lig.TYPE,) if _lig.LISTED else ()), *((_dgd.TYPE,) if _dgd.LISTED else ()), *((_ctr.TYPE,) if _ctr.LISTED else ()), *((_spl.TYPE,) if _spl.LISTED else ()), *((_plt.TYPE,) if _plt.LISTED else ()), *((_cnt.TYPE,) if _cnt.LISTED else ()),
      *(9,), *(t for t in LIST_DN2MK2 if t not in GONE_TYPES and t not in (0, 1, 2, 3, 4, 9, _fsc.TYPE)), 4)   # v0.18: SMEAR (9) first of the sample machines (owner)
 LIST_ALLOC = 0x4004D8E0                 # pea 0x14 -- the vector's storage, 5 longs
 LIST_END = 0x4004D900                   # pea 0x401ddd6c -- the copy's end
@@ -264,6 +266,8 @@ slot_shim:
     cmpi.l  #{_ctr.TYPE},%d0                    | RIFT v0.20: and CONTOUR
     beq.s   3f
     cmpi.l  #{_spl.TYPE},%d0                    | RIFT v0.25: and SPALL
+    beq.s   3f
+    cmpi.l  #{_cnt.TYPE},%d0                    | RIFT: and CONTACT
     bne.s   2f
 3:  moveq   #{_fsc.FM_SLOT_FIRST},%d0
     cmp.l   %a0,%d0
@@ -417,6 +421,8 @@ canon_valid:
     cmpi.l  #{_ctr.TYPE},%d3                    | RIFT v0.20: and CONTOUR
     beq.s   5f
     cmpi.l  #{_spl.TYPE},%d3                    | RIFT v0.25: and SPALL
+    beq.s   5f
+    cmpi.l  #{_cnt.TYPE},%d3                    | RIFT: and CONTACT
     bne.s   3f
 5:  moveq   #0,%d3
     cmpi.l  #{_fsc.FM_OWNED[1][0]},%d2
@@ -484,6 +490,8 @@ group_fn:
     moveq   #{FX_GROUP},%d0
     cmpi.l  #{FX_FIRST - 4},%d1
     beq.s   9f                                  | (v0.20: PLATEAU alone; CONTOUR, 25, is a synth)
+    cmpi.l  #{_cnt.TYPE - 4},%d1
+    beq.s   9f                                  | (RIFT: and CONTACT, 27)
     moveq   #{SAMPLER_GROUP},%d0
     subq.l  #{SAMPLER_FIRST - 4},%d1
     bcs.s   8f

@@ -51,6 +51,8 @@ def main(argv=None) -> int:
     CP.write_ddr_json()                     # RIFT v0.20: and CONTOUR (type 25)
     from dnfw.spall import program as SPP    # noqa: PLC0415
     SPP.write_ddr_json()                    # RIFT v0.25: and SPALL (type 26)
+    from dnfw.contact import program as CNP    # noqa: PLC0415
+    CNP.write_ddr_json()                    # RIFT: and CONTACT (type 27, the FX machine)
     text = build()
     if not a.no_resolve:
         import sharc_resolve_jumps as R  # noqa: PLC0415  (selas)

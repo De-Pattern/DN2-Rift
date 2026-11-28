@@ -156,6 +156,10 @@ CTR_SLIDE = tuple(_ctr.SLOTS[c][1] for c in _ctr.CONTROLS if not _ctr.is_choice(
 from .spall import machines as _spl    # noqa: E402
 SPL_TYPE = _spl.TYPE
 SPL_SLIDE = tuple(_spl.SLOTS[c][1] for c in _spl.CONTROLS if not _spl.is_choice(c))
+# RIFT: CONTACT (type 27, the FX machine): its knobs slide (SRC, EXC and BODY, choices, do not)
+from .contact import machines as _cnt    # noqa: E402
+CNT_TYPE = _cnt.TYPE
+CNT_SLIDE = tuple(_cnt.SLOTS[c][1] for c in _cnt.CONTROLS if not _cnt.is_choice(c))
 # RIFT: DIGIDRUM (type 22): its eight knobs slide
 from .digidrum import machines as _dgd    # noqa: E402
 DGD_TYPE = _dgd.TYPE
@@ -235,4 +239,6 @@ def c_header(stock: bytes) -> str:
             f"#define SL_CTR_TYPE {CTR_TYPE}\n"
             f"static const unsigned int sl_ctr[4] = {words(sum(1 << x for x in CTR_SLIDE))};\n"
             f"#define SL_SPL_TYPE {SPL_TYPE}\n"
-            f"static const unsigned int sl_spl[4] = {words(sum(1 << x for x in SPL_SLIDE))};\n#endif\n")
+            f"static const unsigned int sl_spl[4] = {words(sum(1 << x for x in SPL_SLIDE))};\n"
+            f"#define SL_CNT_TYPE {CNT_TYPE}\n"
+            f"static const unsigned int sl_cnt[4] = {words(sum(1 << x for x in CNT_SLIDE))};\n#endif\n")

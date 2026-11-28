@@ -175,7 +175,8 @@ def mnm_ages(p: Prog, L: M.Layout) -> None:
         from ..plateau import machines as PLx       # RIFT v0.17: and PLATEAU (24)
         from ..contour import machines as CTx       # RIFT v0.19: and CONTOUR (25)
         from ..spall import machines as SPx         # RIFT v0.25: and SPALL (26)
-        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE, SLx.TYPE, LGx.TYPE, DGx.TYPE, PLx.TYPE, CTx.TYPE, SPx.TYPE))):
+        from ..contact import machines as CNx       # RIFT: and CONTACT (27), the FX machine
+        for lo, hi in _runs(((() if RIFT else (MACHINE_TYPE,)) + (*SMx.TYPES, FSx.TYPE, OGx.TYPE, SLx.TYPE, LGx.TYPE, DGx.TYPE, PLx.TYPE, CTx.TYPE, SPx.TYPE, CNx.TYPE))):
             p.iconst(12, lo)
             if lo == hi:
                 p.if_(2, "EQ", 12, lambda: p.iconst(14, 1), kind="i")

@@ -270,7 +270,7 @@ static int func_kind(u8 *s, int slot, u32 id)
     }
     if (id < OWN_REC_FIRST || id > OWN_REC_LAST)
         return F_OFF;
-    if (ty == 5)                                /* PERC */
+    if (!WR_RIFT && ty == 5)                    /* PERC (RIFT: none) */
         return slot == PERC_PTCH_SLOT || slot == PERC_TYPE_SLOT ? F_KEEP : F_NONE;
     int mi = mnm_index(ty - 4);
     if (mi >= 0) {
@@ -339,7 +339,7 @@ int smp_quant(u8 *s, int slot, int value, u32 id)
     int old0 = *(volatile u16 *)(s + SOUND_VALUES + 2 * slot);
     if (fk == F_NONE)
         return old0;
-    if (fk == F_TUNE)
+    if (!WR_RIFT && fk == F_TUNE)               /* (the Monomachine's: RIFT has none) */
         return mnm_tune_step(old0, smp_knob_d > 0 ? 1 : -1);
     if (fk == F_OCT) {
         /* RIFT v0.3: FASCIA's TUNE is +-24 semitones over the knob ((k - 64) x 24 / 64), so an
@@ -733,6 +733,34 @@ SPL_F(8) SPL_F(9) SPL_F(10) SPL_F(11) SPL_F(12) SPL_F(13) SPL_F(14) SPL_F(15)
 static void (*const spl_fns[])(int, char *) = {spl_f0, spl_f1, spl_f2, spl_f3, spl_f4, spl_f5, spl_f6, spl_f7,
     spl_f8, spl_f9, spl_f10, spl_f11, spl_f12, spl_f13, spl_f14, spl_f15};
 _Static_assert(sizeof spl_fns / sizeof spl_fns[0] == SPL_N, "one formatter a SPALL control");
+/* RIFT: a CONTACT control phase 0 does not use yet (cnt_live 0) reads "--", as SMEAR's empty values do */
+#define CNT_F(j) static void cnt_f##j(int v, char *b) { if (!cnt_live[j]) { b[0] = '-'; b[1] = '-'; b[2] = 0; } else fsc_text(&wr_mach_cnt, j, v, b); }
+CNT_F(0) CNT_F(2) CNT_F(3) CNT_F(4) CNT_F(5) CNT_F(6) CNT_F(7)   /* RIFT: CONTACT's 16 (GAIN: dB, cnt_gain) */
+CNT_F(8) CNT_F(9) CNT_F(10) CNT_F(11) CNT_F(12) CNT_F(13) CNT_F(14) CNT_F(15)
+/* RIFT: CONTACT's GAIN: 0 OFF, else (v - 96) x 12/31 dB to a tenth ("+12.0", "-36.8", "0.0") */
+static void cnt_f1(int v, char *b)
+{
+    int k = fsc_kn(&wr_mach_cnt, 1, (v >> 8) & 0xFF);
+    if (k <= 0) {
+        b[0] = 'O'; b[1] = 'F'; b[2] = 'F'; b[3] = 0;
+        return;
+    }
+    int t = (k - 96) * 120;                     /* tenths of a dB x 31 */
+    int neg = t < 0;
+    if (neg) t = -t;
+    t = (t + 15) / 31;                          /* rounded to a tenth */
+    int i = 0;
+    b[i++] = neg ? '-' : (t ? '+' : ' ');
+    if (t >= 100)
+        b[i++] = (char)('0' + t / 100);
+    b[i++] = (char)('0' + (t / 10) % 10);
+    b[i++] = '.';
+    b[i++] = (char)('0' + t % 10);
+    b[i] = 0;
+}
+static void (*const cnt_fns[])(int, char *) = {cnt_f0, cnt_f1, cnt_f2, cnt_f3, cnt_f4, cnt_f5, cnt_f6, cnt_f7,
+    cnt_f8, cnt_f9, cnt_f10, cnt_f11, cnt_f12, cnt_f13, cnt_f14, cnt_f15};
+_Static_assert(sizeof cnt_fns / sizeof cnt_fns[0] == CNT_N, "one formatter a CONTACT control");
 FSC_F(0) FSC_F(1) FSC_F(2) FSC_F(3) FSC_F(4) FSC_F(5) FSC_F(6) FSC_F(7)
 FSC_F(8) FSC_F(9) FSC_F(10) FSC_F(11) FSC_F(12) FSC_F(13) FSC_F(14) FSC_F(15)
 FSC_F(16) FSC_F(17) FSC_F(18) FSC_F(19) FSC_F(20) FSC_F(21) FSC_F(22) FSC_F(23)
@@ -817,6 +845,9 @@ void smp_formats(int kind)
     if (kind == SPL_KIND)                       /* RIFT v0.25: SPALL's (FASCIA's records too) */
         for (int j = 0; j < SPL_N; j++)
             RECORD_FMT(spl_rid[j]) = (void *)spl_fns[j];
+    if (kind == CNT_KIND)                       /* RIFT: CONTACT's (FASCIA's records too) */
+        for (int j = 0; j < CNT_N; j++)
+            RECORD_FMT(cnt_rid[j]) = (void *)cnt_fns[j];
 }
 
 /* v0.48 (impbox, the owner: "exact dt2"): STRT, LEN and LOOP as the DT2's own controls.

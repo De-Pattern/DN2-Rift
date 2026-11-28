@@ -194,7 +194,7 @@ LOOKUP16_DM = 0x2DEE04                       # 16 words; 0x2dee00 is the [-1] gu
 from ..mnm import machines as _mnm_types    # noqa: E402
 from ..sampler import machines as _smp_types
 from ..fascia import machines as _fsc_types  # noqa: E402
-MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 9)   # RIFT v0.25: 27, SPALL at 26   # RIFT v0.20: 26, CONTOUR at 25   # RIFT v0.17: 25, PLATEAU at 24 (23, THOLET's, gone: FM Tone's engine)   # RIFT v0.17: 23 again (THOLET, 23, removed)   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
+MACHINE_TYPES = max(16, max(_mnm_types.TYPES) + 1, max(_smp_types.TYPES) + 1, _fsc_types.TYPE + 10)   # RIFT: 28, CONTACT at 27 (room to 0x2def00: 63 types)   # RIFT v0.25: 27, SPALL at 26   # RIFT v0.20: 26, CONTOUR at 25   # RIFT v0.17: 25, PLATEAU at 24 (23, THOLET's, gone: FM Tone's engine)   # RIFT v0.17: 23 again (THOLET, 23, removed)   # RIFT: 23, DIGIDRUM at 22   # RIFT: 22, LIGATURE at 21   # RIFT: 21, SILT at 20   # RIFT: 20, ORGAN at 19   # v0.26: 17 with a Monomachine machine at 16; v0.44: 18, BOUNCE at 17; v0.45: 19, FASCIA at 18
 SMP_ENGINE_SLOT = 5                          # the engine slot the sample machines borrow
 SMP_TYPES = _smp_types.TYPES                 # ONESHOT WERP STRETCH REPITCH GRID SLICE (v0.19); v0.44 BOUNCE (17)
 ENGINES = {5: "PERC", 8: "ONESHOT", 12: "GRID"}   # types with an engine of ours
@@ -210,7 +210,8 @@ from ..digidrum import machines as _dgd_types  # noqa: E402
 from ..plateau import machines as _plt_types  # noqa: E402  (RIFT v0.17: PLATEAU, type 24)
 from ..contour import machines as _ctr_types  # noqa: E402  (RIFT v0.20: CONTOUR, type 25)
 from ..spall import machines as _spl_types  # noqa: E402  (RIFT v0.25: SPALL, type 26)
-FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, *((_plt_types.TYPE,) if _plt_types.ON_DSP else ()), _ctr_types.TYPE, _spl_types.TYPE)   # RIFT v0.21: PLATEAU only while on the DSP   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
+from ..contact import machines as _cnt_types  # noqa: E402  (RIFT: CONTACT, type 27, the FX machine)
+FASCIA_TYPES = (_fsc_types.TYPE, _org_types.TYPE, _slt_types.TYPE, _lig_types.TYPE, _dgd_types.TYPE, *((_plt_types.TYPE,) if _plt_types.ON_DSP else ()), _ctr_types.TYPE, _spl_types.TYPE, _cnt_types.TYPE)   # RIFT v0.21: PLATEAU only while on the DSP   # RIFT: ORGAN (19) and SILT (20, dnfw.silt.program.TYPE) borrow the engine slot too
 # v0.45: FASCIA's own program (dnfw.fascia.program, fascia.asm): smp.asm's tail jumps to it, and it
 # jumps on to the shared tail at PING_SW. Its code and its 16 voices' state (STRIDE 3,968 bytes each)
 # in L2, in the room _check_l2 allows (64 KB clear of the stock image and of the non-cacheable
@@ -252,6 +253,11 @@ PLATEAU_DDR = 0x82600000
 CONTOUR_TABLES_DDR = 0x8122B000
 # SPALL (RIFT v0.25, type 26, dnfw.spall.program): its knobs' records and the oscillators' log2 ratios, after CONTOUR's
 SPALL_TABLES_DDR = 0x8122C000
+# CONTACT (RIFT, type 27, dnfw.contact.program; the FX machine's phase 0): its knobs' records, after SPALL's;
+# its sixteen OWN words (each track's claiming slot) in PLATEAU's former lines' room (PLATEAU off the DSP)
+CONTACT_TABLES_DDR = 0x8122D000
+CONTACT_DDR = 0x82600000
+assert not _plt_types.ON_DSP, "CONTACT's OWN words are in PLATEAU's lines' room"
 # GLASS (RIFT v0.18, the FLTR type 6, dnfw.glass.program): each slot's filter, envelope and vactrol
 # state, 64 bytes a slot (after PLATEAU's lines, in THOLET's former ring)
 GLASS_STATE_DDR = 0x82680000
@@ -450,6 +456,7 @@ def ddr_spans() -> list[tuple[str, int, bytes]]:
           if _plt_types.ON_DSP else ()),
         ("CONTOUR's records and ratios (dnfw.contour.program.tables_bytes; RIFT v0.20)", CONTOUR_TABLES_DDR, _ctr_tables()),
         ("SPALL's records and ratios (dnfw.spall.program.tables_bytes; RIFT v0.25)", SPALL_TABLES_DDR, _spl_tables()),
+        ("CONTACT's records (dnfw.contact.program.tables_bytes; RIFT, the FX machine)", CONTACT_TABLES_DDR, _cnt_tables()),
         ("Machinedrum sine and tables (zeros: the DSP decodes them; v0.24)", MD_TABLES_DDR,
          bytes(_md_core().TABLE_LAYOUT[_md_core().SHIPPED][0])),
         # v0.26: what ships (the host's pitch table and zpack) comes over the fast link from
@@ -503,6 +510,11 @@ def smear_layout():
                       ((SMEAR_LANE0_L2, SMEAR_LANE0_DDR), (SMEAR_LANE1_W, SMEAR_LANE1_DDR)), PP.BUFFERS,
                       pairs=SMEAR_PAIRS_DDR, ready=LINK_READY_DDR, cost=SMEAR_MBOX + 16 * 128,
                       smp_pos=SMP_STATE_DM)   # (the guard's cost words after the mailboxes)
+
+
+def _cnt_tables() -> bytes:
+    from ..contact import ddr                  # (no numpy: the committed ddr.json)
+    return ddr.tables_bytes()
 
 
 def _spl_tables() -> bytes:

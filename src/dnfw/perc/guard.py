@@ -374,7 +374,12 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
         assert stamp is not None and 1 <= stamp <= 0xFF, "a shared walk's slot names its machine (STAMP)"
         _around_shared(p, t_word, cost, voice, limit, expect, grow, trig, floor, shared, stamp)
         return
-    assert stamp is None
+    # RIFT: a walk's slot of its own call (CONTACT's: never stolen) names its machine too (STAMP), as the
+    # shared calls do, since its cost word is the walk's
+    if stamp is not None:
+        assert 1 <= stamp <= 0xFF and not p.run
+        p.iconst(9, stamp)
+        p.st(GSTAMP, 9)
     skip = p.label("gskip")
     done = p.label("gdone")
     p.e("R8 = EMUCLK;")
@@ -387,6 +392,12 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.iop(9, 10, "+", 9)
     p.seti(5, 9)
     p.ldi(9, 0, 5, "this slot's last cost")
+    if stamp is not None:                      # measured by this machine, or none
+        p.lsh(10, 9, -STAMP_SHIFT)
+        p.ld(11, GSTAMP)
+        p.iconst(12, COST_MASK)
+        p.iop(9, 9, "AND", 12)
+        p.if_(10, "NE", 11, lambda: p.iconst(9, 0), kind="i")
     # RIFT (2026-11-13): a cost word no voice measured (garbage, a stale one past any voice's
     # cost) is read as COST_CAP at most and never negative: otherwise the guard could leave the
     # slot out every block, so never measure it again (fgarbage)
@@ -422,6 +433,14 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.e("R8 = EMUCLK;")
     p.ld(9, START)
     p.e("R8 = R8 - R9;", "what the voice cost")
+    if stamp is not None:
+        p.iconst(10, 0)
+        p.iop(8, 8, "MAX", 10)
+        p.iconst(10, COST_MASK)
+        p.iop(8, 8, "MIN", 10)
+        p.ld(10, GSTAMP)
+        p.lsh(10, 10, STAMP_SHIFT)
+        p.iop(8, 8, "OR", 10)
     p.ld(9, t_word)
     p.lsh(9, 9, 2)
     p.iconst(10, cost)
@@ -430,7 +449,7 @@ def around(p, t_word: int, cost: int, buffers: int, voice, rests: int | None = N
     p.sti(0, 5, 8)
     p.jump("", done)
     p.place(skip)
-    skipped(p, t_word, cost, buffers, rests, rest_blocks, strikes, steal_at, struck, stop)
+    skipped(p, t_word, cost, buffers, rests, rest_blocks, strikes, steal_at, struck, stop, stamped=stamp is not None)
     p.place(done)
 
 
