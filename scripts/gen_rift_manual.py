@@ -742,6 +742,12 @@ def build() -> str:
             "<b>SLEN NXT</b> (v0.20, from the DN2 mk2 mod, the Analog Four's rule): SLEN's first choice and what a slide trig with no SLEN lock does: the slide lasts until the track's next trig (a note or a lock trig), round the track's length; with no other trig, the whole length. The fixed lengths (1/8 .. 64 steps) are as before."]
     if True:                                   # v0.22: always (v0.15..v0.21 showed it only with THOLET: lost from the manual since)
         perf.append("<b>KEYBOARD HOLD</b> (v0.15): hold [PTN] and press [KEYBOARD]: KB HOLD ON (again: OFF). It is the stock sustain pedal on all 16 tracks: notes already held stay on when let go, new notes held join them, MIDI notes in and the arpeggiator's keys are held too. HOLD OFF releases them all. The sequencer's notes are not held.")
+    perf.append("<b>RIFT SETTINGS: the GUARD</b> (v0.31): open the sample browser ([FUNC] + [YES] on SAMP), select <b>+DRIVE</b>, press [RIGHT], select <b>SETTINGS</b> and press [YES]. "
+                "[LEFT] / [RIGHT] (or [YES], or a knob) set the GUARD; [NO] goes back. Kept on the +Drive through power-off. "
+                "The GUARD leaves a voice out of an audio block when the DSP has no time left for it, so a heavy patch never makes the whole unit fall behind (silence until a restart, or a crash). "
+                "<b>SAFE</b> (the default) leaves a voice out when its expected cost would not fit. <b>LOOSE</b> waits until the block is nearly full: more voices on a heavy patch, a crackle sometimes. "
+                "<b>OFF</b> only stops a voice once the block's time is used up: the most voices, and a full patch crackles. Even OFF keeps the stock's own share of the frame, so the unit never falls behind. "
+                "If the CPU marker shows or notes drop on a patch you love, try LOOSE first.")
     s.append("<h2 id=\"perf\">Performance</h2>" + ul(*perf))
 
     s.append("<h2 id=\"versions\">Versions</h2><p class=\"dim\">Each build contains everything before it; flash only the newest.</p>")
@@ -754,6 +760,8 @@ def build() -> str:
 
 
 VERSIONS = [
+    ("0.31", "GUARD", ["<b>RIFT SETTINGS</b>, a menu of RIFT's own: on the sample browser's +DRIVE, [RIGHT] then SETTINGS. Its first setting is the <b>GUARD</b>: SAFE (as before), LOOSE or OFF, kept on the +Drive. LOOSE and OFF let heavy patches play more voices before the guard leaves one out; see Performance.",
+                       "DIGIDRUM (and every RIFT machine on a track that held another one before) no longer drops its first notes after it is loaded: the guard expected what the track's previous machine last cost. Now a cost counts only for the machine that measured it."]),
     ("0.30", "LEAN", ["The firmware's own machinery does less while you play: the code RIFT adds to every audio frame runs only for the features in use (no FLEX track, no MUTE SRC work; no sample track, no sample modulation pass), and the UI's checks are cheaper. A burst of keys (live recording with many keys at once) is now handled before RIFT's own checks and redraws, as on stock .",
                       "FLEX takes land on their step: a recorder trig's take was heard a sixth of a step late (41 ms at 60 BPM, 18 at 120). It now starts a tick after the step changes, as the sequencer's notes do (from DN2 mk2 v0.76).",
                       "A FLEX buffer on a sample machine (SAMP B1..B8) shows its waveform on page 2, drawn as the take records, instead of its name.",

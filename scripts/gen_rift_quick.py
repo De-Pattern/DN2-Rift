@@ -18,7 +18,7 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOGOS = ROOT / "src" / "dnfw" / "waverider" / "logos"
-COVERS = "0.30"            # the release the guide describes (not VERSION: the tree may be ahead)
+COVERS = "0.31"            # the release the guide describes (not VERSION: the tree may be ahead)
 LOGO_REF = "v26"           # logos as this release draws them (SPALL's, MIDI's; CONTOUR's crosshair)
 TEAL = (111, 199, 180)
 
@@ -329,7 +329,8 @@ PAGES = [
                  ("kv", "PERFORMANCE", [("TRK+CLEAR", "Reset machine start values ([FUNC]+[PLAY] = CLEAR)"), ("PTN+YES", "Direct Jump ON"),
                                         ("PTN+NO", "Direct Jump OFF"), ("PTN+KEYBOARD", "Sustain held keyboard notes"),
                                         ("TRIG PAGE 2", "SLD enables slides; SLEN duration"), ("SLEN NXT", "Slide until next track trig"),
-                                        ("FUNC+TURN", "FASCIA: TUNE in octaves; GEOM / SHIFT snap to 0")]),
+                                        ("FUNC+TURN", "FASCIA: TUNE in octaves; GEOM / SHIFT snap to 0"),
+                                        ("+DRIVE RIGHT", "SETTINGS: GUARD SAFE / LOOSE / OFF")]),
                  ("kv", "TUNING + MONITOR", [("KB SETUP H", "Turn to select a tuning"), ("PUSH H", "Open tuning page"),
                                              ("USER 1-8", "Editable custom microtunings"), ("REC MON", "Knob C monitors input when armed"),
                                              ("MIDI", "MIDI tracks stay in 12-TET"), ("GRID / SLICE", "Slice playback is not retuned")])],
