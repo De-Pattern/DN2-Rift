@@ -28,7 +28,8 @@ Every flash, every version:
 
 | version | date | adds | download | gated |
 |---|---|---|---|---|
-| **v0.28** | 2026-11-26 | Stability: RUBBER pulled; the sample machines and SMEAR hold up under load (SMEAR's 30-50 s cut-outs fixed); CONTOUR with FDBK raised mid-note; the plate a third cheaper, its tail shorter; DIGIDRUM's names by type | `builds/v0.28-STABLE/` | yes |
+| **v0.29** | 2026-11-28 | SMEAR plays one voice a track; SMEAR SIZE/STRT 0.00-120.00 (the 121-127 noise); DIGIDRUM dropped far less (the guard expects each type's real cost); the plate's short lines in faster memory | `builds/v0.29-MONO/` | yes |
+| v0.28 | 2026-11-26 | Stability: RUBBER pulled; the sample machines and SMEAR hold up under load (SMEAR's 30-50 s cut-outs fixed); CONTOUR with FDBK raised mid-note; the plate a third cheaper, its tail shorter; DIGIDRUM's names by type | `builds/v0.28-STABLE/` | yes |
 | v0.27 | 2026-11-26 | The time guard: no false CPU marker, several CONTOUR voices with FDBK; from DN2 mk2: live-record lag, FLEX level, the MIDI arp, arp in scale, in-key transpose | `builds/v0.27-FLOW/` | yes |
 | v0.26 | 2026-11-25 | SMEAR's VOC back, on a keyframe time stretch after heavylight's (credited); CONTOUR's FDBK as it first was; RUBBER's silent track fixed | `builds/v0.26-VOC/` | yes |
 | v0.25 | 2026-11-25 | SPALL, a new synth machine (tiny events rung through two resonators), its logo; the MIDI machine's DIN logo; Download PDF on the manual and the quick guide | `builds/v0.25-SPALL/` | yes |
@@ -55,6 +56,34 @@ Every flash, every version:
 | v0.4 | 2026-11-16 | ORGAN, RIFT's second machine (Ravel's pipe organ: five stops, seven drawbar ranks, chiff, wind, tremulant, celeste); FASCIA starts as the demo vibraphone with CHAR 0; TRK + CLEAR keeps a machine's own defaults; FUNC + turn on GEOM and SHIFT snaps to 0 | `builds/v0.4-ORGAN/` | yes |
 | v0.3 | 2026-11-14 | FLEX from the DN2 mk2 mod's v0.53 (MUTE SRC: the auto-mute; R.LEN at the pattern's scale; a voice plays its own locked BUF; R.LEN a bar a detent; PLAY two detents; INF trig length on a switch to FLEX); FASCIA starts at DAMP 28 and CHAR 127, and FUNC + turn moves its TUNE by octaves | `builds/v0.3-FLEX/` | yes |
 | v0.1 | 2026-11-13 | FASCIA (pass 3: 32 controls on four pages); the Machinedrum and Monomachine engines removed (their tracks open as FM Tone); the sample machines, +Drive library, recorder, Direct Jump and slides kept from the DN2 mk2 mod; stock start-up screen | `builds/v0.1-FASCIA/` | yes |
+
+## v0.29 · MONO
+
+- **File:** `RIFT_v0.29_MONO_OS1.11.syx` (`builds/v0.29-MONO/`)
+- **sha256:** `7ce19eb6a5a8cd3ca2103bd22f5ca4e04d292a9375f9dda6404dc146778416bf`
+- **Gated:** 2026-11-28 00:45, `CLEARED TO FLASH`
+- **Source:** `073a80f` (this repository; frozen as `rc/v0.29`)
+
+**Changes**
+
+- **SMEAR mono** (owner, 2026-11-26: "we should limit smear to one voice ... elegantly"). `smear/stage.py` `MONO`: at a note on a track, every other SMEAR voice on the same track (TRK_ROUTE) fades out over the block (31/32 down to 0 in 1/32 steps) and its sampler voice is freed. The runner's smear step: two voices on one track (the first silent after the second note, the second sounding) and its control (two tracks, both sounding).
+- **SMEAR STRT and SIZE fine, 0.00..120.00** (a tester: 121..127 gave odd loop lengths). SIZE rides LEN's record and is read against 120, but SMEAR kept WaveTone's coarse 0..127: 121..127 scaled to 128..134 and read past SMEAR's 128-entry SQ table. `fmt.c smp_fine_mask` gives the WERP kind STRT and LEN; the DSP caps both at 127 (`sampler/program.py`), so a project saved above 120 plays the whole loop. fineswap's type 9 now fine.
+- **DIGIDRUM's guard by drum type** (a tester: a default kick beside SPALL dropped out most of the time). Measured (rprof, heaviest block): BD 27,977, SD BASIC 25,046, SD VINTAGE 48,798, CP 39,751, CY 39,711, PC 23,132; v0.28 reserved 60,000 for every hit. Now LIGHT_FLOOR (36,000), and 62,000 on a trigger block of SD VINTAGE, CP or CY (`digidrum/program.py guard_expect`).
+- **The plate's short lines in L2** (`mverb L2_LINES`, SMEAR's unused VOC lane): bit-exact, 26,575 cycles a block.
+- RUBBER's page code compiled out (505 bytes back); the ship gate's digidrum step checks O1..O4's names on CP VINTAGE too; the runner's gstress (16 ONESHOT voices retriggered together).
+- pvmix's room 744 bytes (smp.asm keeps 86 spare; 88 bytes of NOPs after pvmix's last jump for the branch rule).
+
+**Tests**
+
+1. SMEAR: two overlapping notes on one track: the first fades, the second takes over; no pile-up, no click.
+2. SMEAR SIZE: 120.00 is the whole loop and the top.
+3. DIGIDRUM kick next to SPALL / ORGAN / CONTOUR: fewer drop-outs.
+4. The plate: unchanged sound.
+
+**Known issues**
+
+- One report (v0.27) of FASCIA silent until its patch was cleared, the CPU marker showing with one note: a heavy patch near the DSP's free time on the unit. Not reproduced in the model.
+- CONTOUR above B4 with FDBK costs about 82,000 cycles a voice.
 
 ## v0.28 · STABLE
 
