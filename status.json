@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-28T07:20:32+00:00",
+ "updated": "2026-11-28T07:22:50+00:00",
  "note": "Gating on the owner's laptop runner (v0.30, source 1564b66).",
  "gates": [
   {
@@ -15,7 +15,7 @@
     "recorder flow (ColdFire): SAVING on to TRIM; TRIM's ends move; FUNC + YES previews while held, its play",
     "stock NAME screen: NO, and its fallback (ColdFire): the stock NAME screen opens on TRIM's YES and its N"
    ],
-   "log_written": "02:19"
+   "log_written": "02:22"
   }
  ]
 }
