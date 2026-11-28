@@ -1,21 +1,21 @@
 {
- "updated": "2026-11-28T00:07:02+00:00",
+ "updated": "2026-11-28T00:09:21+00:00",
  "note": "Gating on the owner's laptop runner (v0.29, source 073a80f).",
  "gates": [
   {
    "label": "v0.29 \u00b7 full gate (laptop)",
-   "done": 21,
+   "done": 23,
    "total": 75,
-   "frac": 0.28,
+   "frac": 0.307,
    "status": "running: waverider_menu",
    "state": "run",
    "last": [
-    "FUNC + turn (ColdFire): FUNC + turn: PERC's first control keeps stock's octave jumps; other controls of",
-    "FLEX buffers in every sample machine's SAMP (ColdFire): SAMP past 127 to the FLEX buffers B1..B8 by the",
     "start-up animation, every frame: all 80 frames, each his, in order, to the intro's end; the panel showe",
-    "recorder screen (ColdFire): FUNC+VOICE opens it, knob A moves SRC four detents a choice (3: none, 12: t"
+    "recorder screen (ColdFire): FUNC+VOICE opens it, knob A moves SRC four detents a choice (3: none, 12: t",
+    "Monomachine pages and detents (ColdFire): the five Monomachine pages drawn, each its own; a two-choice ",
+    "PLAY two detents a choice (ColdFire): PLAY: one detent keeps FWD, the second moves on (two a choice); S"
    ],
-   "log_written": "19:06"
+   "log_written": "19:07"
   }
  ]
 }
